@@ -1,0 +1,841 @@
+{
+  "common": {
+    "show_password": "Hiện mật khẩu",
+    "hide_password": "Ẩn mật khẩu",
+    "loading": "Đang tải…",
+    "logout": "Đăng xuất",
+    "back_to_login": "Quay lại đăng nhập",
+    "save": "Lưu",
+    "saving": "Đang lưu…",
+    "cancel": "Huỷ",
+    "copy": "Sao chép",
+    "copied": "Đã sao chép",
+    "download": "Tải xuống",
+    "done": "Hoàn tất",
+    "retry": "Thử lại",
+    "filter": "Bộ lọc",
+    "apply": "Áp dụng",
+    "reset": "Đặt lại",
+    "clear": "Xoá",
+    "clear_all": "Xoá tất cả",
+    "remove": "Gỡ",
+    "no_results": "Không có kết quả",
+    "breadcrumbs": "Đường dẫn",
+    "empty_state": {
+      "default_title": "Không tìm thấy dữ liệu"
+    },
+    "add_new": "Thêm mới",
+    "add": "Thêm",
+    "new": "Tạo mới",
+    "refresh": "Làm mới",
+    "edit": "Sửa",
+    "delete": "Xoá",
+    "close": "Đóng",
+    "actions": "Thao tác",
+    "pagination": {
+      "page_info": "{{from}}–{{to}} / {{total}}",
+      "prev": "Trước",
+      "next": "Sau"
+    },
+    "language": "Ngôn ngữ",
+    "theme": {
+      "label": "Giao diện",
+      "light": "Sáng",
+      "dark": "Tối",
+      "system": "Theo hệ thống"
+    },
+    "back": "Quay lại",
+    "yes": "Có",
+    "no": "Không"
+  },
+  "image": {
+    "upload": {
+      "trigger": "Tải ảnh lên",
+      "change": "Đổi ảnh",
+      "remove": "Xoá ảnh",
+      "modal_title": "Chọn ảnh",
+      "tabs": {
+        "illustrative": "Ảnh minh họa",
+        "upload": "Tải lên",
+        "camera": "Chụp ảnh"
+      },
+      "actions": {
+        "cancel": "Hủy",
+        "apply": "Áp dụng",
+        "rotate_left": "Xoay trái 45°",
+        "rotate_right": "Xoay phải 45°",
+        "flip_horizontal": "Lật ngang",
+        "flip_vertical": "Lật dọc",
+        "zoom": "Phóng to/thu nhỏ",
+        "reset": "Đặt lại",
+        "shoot": "Chụp",
+        "retake": "Chụp lại"
+      },
+      "help": {
+        "format": "Định dạng: {{formats}}",
+        "max_size": "Kích thước tối đa: {{size}} MB",
+        "drop_or_click": "Kéo thả ảnh hoặc bấm để chọn",
+        "paste_hint": "Hoặc dán ảnh từ clipboard (Ctrl+V)",
+        "pick_another": "Chọn ảnh khác"
+      },
+      "errors": {
+        "too_large": "Ảnh vượt quá kích thước cho phép",
+        "invalid_mime": "Định dạng không được hỗ trợ",
+        "read_failed": "Không đọc được file",
+        "apply_failed": "Không áp dụng được. Hãy thử lại.",
+        "fetch_failed": "Không tải được ảnh minh họa",
+        "shoot_failed": "Không chụp được ảnh",
+        "camera_denied": "Trình duyệt từ chối quyền camera"
+      },
+      "illustrative": {
+        "loading": "Đang tải...",
+        "empty": "Chưa có ảnh minh họa"
+      }
+    }
+  },
+  "nav": {
+    "users": "Người dùng",
+    "rbac": "Vai trò & Quyền",
+    "sessions": "Phiên đăng nhập",
+    "admin": "Quản trị",
+    "account": "Tài khoản",
+    "cms": "CMS",
+    "cms_tags": "Thẻ",
+    "cms_settings": "Cài đặt",
+    "primary": "Điều hướng chính",
+    "toggle": "Mở/đóng thanh bên",
+    "user_menu": "Menu người dùng",
+    "go_to_top": "Lên đầu trang",
+    "section": {
+      "overview": "Tổng quan",
+      "system": "Hệ thống"
+    },
+    "cms_categories": "Chuyên mục",
+    "cms_articles": "Bài viết",
+    "cms_pages": "Trang",
+    "cms_menus": "Menu"
+  },
+  "auth": {
+    "login": {
+      "title": "Đăng nhập",
+      "subtitle": "Đăng nhập vào Velt Console",
+      "email_label": "Email",
+      "email_ph": "ban@vidu.com",
+      "password_label": "Mật khẩu",
+      "password_ph": "Nhập mật khẩu",
+      "submit": "Đăng nhập",
+      "forgot": "Quên mật khẩu?",
+      "code_label": "Mã xác thực 2 bước",
+      "code_ph": "Mã 6 số hoặc mã khôi phục",
+      "code_hint": "Nhập mã 6 số từ ứng dụng xác thực, hoặc một mã khôi phục.",
+      "verify": "Xác minh",
+      "back_to_password": "Quay lại"
+    },
+    "forgot": {
+      "title": "Quên mật khẩu",
+      "subtitle": "Nhập email để nhận link đặt lại mật khẩu",
+      "email_label": "Email",
+      "email_ph": "ban@vidu.com",
+      "submit": "Gửi link đặt lại",
+      "resend": "Gửi lại",
+      "resend_in": "Gửi lại sau {{seconds}}s",
+      "success_generic": "Nếu email tồn tại trong hệ thống, chúng tôi đã gửi link đặt lại mật khẩu. Vui lòng kiểm tra hộp thư."
+    },
+    "reset": {
+      "title": "Đặt lại mật khẩu",
+      "subtitle": "Nhập mật khẩu mới cho tài khoản của bạn",
+      "new_password_label": "Mật khẩu mới",
+      "new_password_ph": "Tối thiểu 12 ký tự",
+      "confirm_label": "Nhập lại mật khẩu",
+      "confirm_ph": "Nhập lại mật khẩu mới",
+      "submit": "Đặt lại mật khẩu",
+      "success": "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.",
+      "token_missing_title": "Link không hợp lệ",
+      "token_missing_body": "Link đặt lại mật khẩu thiếu mã xác thực. Vui lòng yêu cầu link mới.",
+      "token_invalid_title": "Link đã hết hạn hoặc không hợp lệ",
+      "token_invalid_body": "Link đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng. Vui lòng yêu cầu link mới.",
+      "request_new_link": "Yêu cầu link mới"
+    }
+  },
+  "account": {
+    "title": "Tài khoản của tôi",
+    "subtitle": "Quản lý hồ sơ, mật khẩu và bảo mật",
+    "tabs": {
+      "profile": "Thông tin cơ bản",
+      "password": "Đổi mật khẩu",
+      "security": "Bảo mật 2FA"
+    },
+    "profile": {
+      "full_name_label": "Họ tên",
+      "full_name_ph": "Nhập họ tên",
+      "email_label": "Email",
+      "email_locked_hint": "Đổi email ngoài phạm vi hiện tại",
+      "avatar_alt": "Ảnh đại diện",
+      "avatar_upload": "Tải ảnh lên",
+      "avatar_remove": "Xoá ảnh",
+      "saved": "Đã lưu hồ sơ",
+      "avatar_updated": "Đã cập nhật ảnh đại diện",
+      "avatar_removed": "Đã xoá ảnh đại diện",
+      "load_error": "Không tải được hồ sơ"
+    },
+    "password": {
+      "current_label": "Mật khẩu hiện tại",
+      "current_ph": "Nhập mật khẩu hiện tại",
+      "new_label": "Mật khẩu mới",
+      "new_ph": "Tối thiểu 12 ký tự",
+      "confirm_label": "Nhập lại mật khẩu mới",
+      "confirm_ph": "Nhập lại mật khẩu mới",
+      "length_hint": "Tối thiểu 12 ký tự",
+      "success": "Đổi mật khẩu thành công",
+      "logout_all": "Đăng xuất mọi thiết bị khác"
+    },
+    "2fa": {
+      "status_label": "Trạng thái 2FA",
+      "on": "Đã bật",
+      "off": "Chưa bật",
+      "enable": "Bật 2FA",
+      "disable": "Tắt 2FA",
+      "regenerate": "Tạo lại mã khôi phục",
+      "codes_remaining": "Còn {{n}} mã khôi phục",
+      "codes_low": "Sắp hết mã khôi phục — nên tạo lại.",
+      "codes_empty": "Đã hết mã khôi phục — hãy tạo lại ngay.",
+      "scan_hint": "Quét mã QR bằng ứng dụng xác thực (Google Authenticator, Authy…), hoặc nhập khoá thủ công.",
+      "qr_alt": "Mã QR thiết lập 2FA",
+      "manual_key_label": "Khoá thủ công",
+      "code_label": "Mã xác thực",
+      "code_ph": "Mã 6 số",
+      "confirm": "Xác nhận",
+      "password_label": "Mật khẩu",
+      "password_ph": "Nhập mật khẩu để xác nhận",
+      "disable_title": "Tắt 2FA",
+      "disable_desc": "Nhập mật khẩu để tắt xác thực 2 bước. Tài khoản sẽ kém an toàn hơn.",
+      "regenerate_title": "Tạo lại mã khôi phục",
+      "regenerate_desc": "Nhập mật khẩu để tạo bộ mã khôi phục mới. Toàn bộ mã cũ sẽ ngừng hoạt động.",
+      "recovery_title": "Mã khôi phục",
+      "recovery_warning": "Các mã này chỉ hiển thị MỘT LẦN. Hãy lưu lại ngay — toàn bộ mã cũ (nếu có) đã ngừng hoạt động.",
+      "recovery_saved_ack": "Tôi đã lưu các mã khôi phục",
+      "copied": "Đã sao chép mã khôi phục",
+      "enabled": "Đã bật 2FA",
+      "disabled": "Đã tắt 2FA",
+      "load_error": "Không tải được trạng thái 2FA"
+    }
+  },
+  "admin": {
+    "users": {
+      "title": "Quản lý người dùng",
+      "subtitle": "Tạo, sửa, phân quyền và quản lý tài khoản người dùng",
+      "search_ph": "Tìm theo tên hoặc email…",
+      "search_label": "Tìm kiếm",
+      "status_filter_label": "Lọc theo trạng thái",
+      "status_all": "Tất cả trạng thái",
+      "status": {
+        "active": "Đang hoạt động",
+        "disabled": "Vô hiệu hoá",
+        "locked": "Tạm khoá"
+      },
+      "col": {
+        "user": "Người dùng",
+        "status": "Trạng thái",
+        "roles": "Vai trò",
+        "last_login": "Đăng nhập gần nhất",
+        "created": "Ngày tạo",
+        "actions": "Hành động"
+      },
+      "never_logged_in": "Chưa đăng nhập",
+      "roles_more": "+{{n}}",
+      "create_title": "Tạo người dùng",
+      "create_desc": "Hệ thống sẽ gửi email đặt mật khẩu cho người dùng mới.",
+      "edit_title": "Sửa người dùng",
+      "edit_desc": "Cập nhật họ tên và trạng thái tài khoản.",
+      "email_label": "Email",
+      "full_name_label": "Họ tên",
+      "full_name_ph": "Nhập họ tên",
+      "status_label": "Trạng thái",
+      "role_label": "Vai trò",
+      "action_edit": "Sửa",
+      "action_reset": "Gửi mail đặt lại mật khẩu",
+      "action_delete": "Xoá",
+      "delete_title": "Xoá người dùng",
+      "delete_desc": "Vô hiệu hoá tài khoản \"{{name}}\"? Phiên đăng nhập của họ sẽ bị thu hồi.",
+      "reset_title": "Đặt lại mật khẩu",
+      "reset_desc": "Gửi email đặt lại mật khẩu cho \"{{name}}\"?",
+      "created": "Đã tạo người dùng — đã gửi mail đặt mật khẩu",
+      "updated": "Đã cập nhật người dùng",
+      "deleted": "Đã xoá người dùng",
+      "reset_sent": "Đã gửi mail đặt lại mật khẩu"
+    },
+    "rbac": {
+      "title": "Vai trò & Quyền",
+      "subtitle": "Xem vai trò và các quyền tương ứng (chỉ đọc)",
+      "select_role": "Chọn vai trò",
+      "no_perms": "Vai trò này chưa có quyền nào",
+      "show_more": "Xem thêm ({{count}})",
+      "show_less": "Thu gọn"
+    },
+    "sessions": {
+      "title": "Phiên đăng nhập",
+      "subtitle": "Xem và thu hồi phiên đăng nhập của người dùng",
+      "active_only": "Chỉ phiên đang hoạt động",
+      "col": {
+        "user": "Người dùng",
+        "device": "Thiết bị",
+        "ip": "IP",
+        "created": "Tạo lúc",
+        "last_used": "Dùng gần nhất",
+        "expires": "Hết hạn",
+        "status": "Trạng thái",
+        "actions": "Hành động"
+      },
+      "current": "Phiên hiện tại",
+      "revoke": "Thu hồi",
+      "revoke_title": "Thu hồi phiên",
+      "revoke_confirm": "Thu hồi phiên này? Thiết bị đó sẽ phải đăng nhập lại.",
+      "revoke_current_warn": "Đây là phiên hiện tại — bạn sẽ phải đăng nhập lại trên thiết bị này.",
+      "revoke_last_super_admin_warn": "Đây là super admin cuối cùng — thu hồi có thể khoá quyền truy cập khẩn cấp.",
+      "revoked": "Đã thu hồi phiên"
+    },
+    "home": {
+      "title": "Quản trị",
+      "subtitle": "Tổng quan khu quản trị",
+      "users": "Người dùng",
+      "active_sessions": "Phiên đang hoạt động",
+      "roles": "Vai trò"
+    }
+  },
+  "cms": {
+    "pages": {
+      "title": "Trang",
+      "subtitle": "Trang tĩnh có thể nhúng widget.",
+      "delete_confirm_title": "Xoá trang?",
+      "delete_confirm_body": "Xoá \"{{title}}\"? Không thể hoàn tác.",
+      "publish": "Xuất bản",
+      "unpublish": "Gỡ xuất bản",
+      "kind": {
+        "label": "Kiểu trang",
+        "content": "Trang nội dung",
+        "landing": "Trang landing"
+      },
+      "badge": {
+        "landing": "Landing"
+      },
+      "design": {
+        "no_permission": "Bạn không có quyền chỉnh sửa thiết kế của trang này.",
+        "save_failed": "Đã lưu trang, nhưng không lưu được thiết kế. Vui lòng thử lại."
+      },
+      "seo": {
+        "heading": "SEO & Open Graph",
+        "title": "Tiêu đề SEO",
+        "description": "Mô tả SEO",
+        "keywords": "Từ khoá SEO",
+        "canonical_url": "URL chuẩn (canonical)",
+        "noindex": "Không lập chỉ mục",
+        "nofollow": "Không theo liên kết",
+        "og_title": "OG title",
+        "og_description": "OG description"
+      },
+      "field": {
+        "title": "Tiêu đề",
+        "slug": "Slug",
+        "slug_ph": "tự tạo từ tiêu đề",
+        "regenerate_slug": "Tạo lại slug từ tiêu đề",
+        "status": "Trạng thái",
+        "body": "Nội dung"
+      },
+      "editor": {
+        "new_title": "Tạo trang",
+        "edit_title": "Sửa trang",
+        "basic": "Thông tin cơ bản"
+      },
+      "blocks": {
+        "no_editor": "Widget này chưa có form."
+      },
+      "inline": {
+        "insert": "Nội dung",
+        "remove": "Xóa widget",
+        "config": "Cấu hình",
+        "preview": "Xem trước",
+        "collapse": "Thu gọn",
+        "expand": "Mở rộng",
+        "preview_error": "Không tải được bản xem trước.",
+        "preview_empty": "Chưa có nội dung."
+      },
+      "widget": {
+        "games_list": {
+          "name": "Danh sách games",
+          "heading": "Tiêu đề",
+          "age_group": "Độ tuổi",
+          "subject": "Môn",
+          "skill": "Kỹ năng",
+          "limit": "Số lượng",
+          "columns": "Số cột",
+          "layout": "Bố cục",
+          "layout_grid": "Lưới",
+          "layout_carousel": "Băng chuyền"
+        },
+        "articles_list": {
+          "name": "Danh sách bài viết",
+          "heading": "Tiêu đề",
+          "category_id": "ID danh mục",
+          "tag": "Tag (slug)",
+          "limit": "Số lượng",
+          "columns": "Số cột"
+        },
+        "categories_showcase": {
+          "name": "Danh mục",
+          "heading": "Tiêu đề",
+          "limit": "Số lượng"
+        },
+        "rich_text": {
+          "name": "Văn bản",
+          "html": "Nội dung HTML",
+          "html_hint": "Được làm sạch khi lưu (chỉ thẻ an toàn).",
+          "width": "Độ rộng",
+          "width_narrow": "Hẹp",
+          "width_normal": "Vừa",
+          "width_wide": "Rộng"
+        },
+        "cta_banner": {
+          "name": "Banner CTA",
+          "heading": "Tiêu đề",
+          "sub": "Mô tả",
+          "button_label": "Nhãn nút",
+          "button_href": "Liên kết nút",
+          "button_hint": "Nút chỉ hiện khi có cả nhãn và liên kết.",
+          "align": "Căn",
+          "align_left": "Trái",
+          "align_center": "Giữa"
+        }
+      },
+      "toast": {
+        "created": "Đã tạo trang",
+        "saved": "Đã lưu trang",
+        "deleted": "Đã xoá trang",
+        "published": "Đã xuất bản",
+        "unpublished": "Đã gỡ xuất bản"
+      }
+    },
+    "settings": {
+      "title": "Cài đặt CMS",
+      "subtitle": "Quản lý cờ tính năng CMS.",
+      "saved": "Đã lưu cài đặt",
+      "article_categorize": {
+        "label": "Bắt buộc chọn chuyên mục",
+        "help": "Bắt buộc chọn chuyên mục khi tạo bài; không cho bỏ chuyên mục khi sửa."
+      },
+      "article_require_review": {
+        "label": "Duyệt bài trước khi xuất bản",
+        "help": "BẬT: bài do biên tập viên tạo phải qua admin duyệt mới được xuất bản. Bài do admin tạo không cần duyệt."
+      },
+      "article_allow_slug_edit": {
+        "label": "Cho phép sửa slug thủ công",
+        "help": "BẬT: tự nhập slug, trùng sẽ báo lỗi. TẮT: hệ thống tự sinh slug + thêm hậu tố khi trùng."
+      },
+      "publish_allow_now": {
+        "label": "Cho phép xuất bản ngay",
+        "help": "BẬT: chỉ xuất bản ngay (ẩn lên lịch). TẮT: thêm tùy chọn “Chờ xuất bản” (đặt thời gian) — vẫn xuất bản ngay được."
+      },
+      "newsletter_notify": {
+        "label": "Thông báo khi xuất bản",
+        "help": "Gửi mail subscriber khi xuất bản bài."
+      },
+      "homepage": {
+        "label": "Trang chủ",
+        "help": "Chọn trang (đã xuất bản) làm trang chủ (\"/\"). Để trống để dùng trang chủ mặc định. Trang phải được xuất bản thì mới có hiệu lực.",
+        "placeholder": "Trang chủ mặc định (chưa chọn)"
+      }
+    },
+    "tags": {
+      "title": "Thẻ",
+      "subtitle": "Quản lý các thẻ dùng để gắn nhãn bài viết.",
+      "regenerate_slug": "Tạo lại slug từ tên",
+      "search_label": "Tìm kiếm",
+      "search_ph": "Tìm theo tên hoặc slug",
+      "col": {
+        "name": "Tên",
+        "slug": "Slug",
+        "usage": "Lượt dùng",
+        "actions": "Hành động"
+      },
+      "placeholder": {
+        "slug": "Nếu bạn không nhập slug sẽ tự generate từ tên"
+      },
+      "btn": {
+        "merge": "Gộp"
+      },
+      "toast": {
+        "create_success": "Đã thêm thẻ",
+        "update_success": "Đã cập nhật thẻ",
+        "delete_success": "Đã xoá thẻ",
+        "merge_success": "Đã gộp thẻ"
+      },
+      "dialog": {
+        "new_title": "Thêm thẻ",
+        "edit_title": "Sửa thẻ",
+        "merge": {
+          "title": "Gộp thẻ",
+          "desc": "Mọi bài đang gắn “{{name}}” sẽ chuyển sang thẻ đích, và “{{name}}” sẽ bị xoá. Không thể hoàn tác.",
+          "target": "Thẻ đích",
+          "target_ph": "Chọn thẻ đích"
+        },
+        "delete": {
+          "title": "Xoá thẻ",
+          "description": "Thẻ này đang gắn {{count}} bài; xoá sẽ gỡ thẻ khỏi các bài đó. Không thể hoàn tác."
+        }
+      }
+    },
+    "landings": {
+      "field": {
+        "name": "Tên",
+        "key": "Khóa (key)"
+      },
+      "toast": {
+        "saved": "Đã lưu"
+      },
+      "builder": {
+        "meta": "Thông tin",
+        "sections": "Các section",
+        "add_section": "Thêm section",
+        "no_sections": "Chưa có section nào.",
+        "save": "Lưu",
+        "visible": "Hiện",
+        "full_width": "Toàn chiều rộng",
+        "hidden": "Đang ẩn",
+        "move_up": "Lên",
+        "reorder": "Kéo để sắp xếp",
+        "move_down": "Xuống",
+        "config_invalid": "Cấu hình JSON không hợp lệ",
+        "delete_section_title": "Xoá section?"
+      },
+      "preview": {
+        "dynamic_hint": "Nội dung tải khi xuất bản",
+        "html_embed": "Nhúng HTML",
+        "email_placeholder": "Email của bạn",
+        "subscribe": "Đăng ký",
+        "empty": "Chưa có gì để xem trước"
+      },
+      "section": {
+        "hero": "Hero",
+        "slider": "Slider",
+        "featured_articles": "Bài viết nổi bật",
+        "categories_showcase": "Danh mục",
+        "rich_text": "Văn bản",
+        "cta_banner": "Banner CTA",
+        "testimonials": "Cảm nhận",
+        "logos": "Logo",
+        "stats": "Thống kê",
+        "media_text": "Ảnh + Văn bản",
+        "newsletter": "Đăng ký nhận tin",
+        "faq": "Câu hỏi thường gặp",
+        "gallery": "Thư viện ảnh",
+        "html_embed": "Nhúng HTML"
+      },
+      "form": {
+        "upload": "Tải ảnh",
+        "remove": "Xoá",
+        "add_item": "Thêm mục",
+        "eyebrow": "Nhãn nhỏ",
+        "heading": "Tiêu đề",
+        "subheading": "Phụ đề",
+        "image": "Ảnh",
+        "align": "Căn lề",
+        "background": "Nền",
+        "buttons": "Nút bấm",
+        "add_button": "Thêm nút điều hướng",
+        "add_slide": "Thêm slide",
+        "add_testimonial": "Thêm cảm nhận",
+        "add_logo": "Thêm logo",
+        "add_stat": "Thêm chỉ số",
+        "add_faq": "Thêm câu hỏi",
+        "add_gallery": "Thêm ảnh",
+        "button_label": "Nhãn nút",
+        "button_href": "Liên kết",
+        "button_style": "Kiểu nút",
+        "align_left": "Trái",
+        "align_center": "Giữa",
+        "bg_none": "Không",
+        "bg_muted": "Xám nhạt",
+        "bg_primary": "Màu chủ đạo",
+        "style_primary": "Chính",
+        "style_outline": "Viền",
+        "style_ghost": "Trong suốt",
+        "width": "Độ rộng",
+        "width_narrow": "Hẹp",
+        "width_normal": "Vừa",
+        "width_wide": "Rộng",
+        "body": "Nội dung",
+        "title": "Tiêu đề",
+        "columns": "Số cột",
+        "limit": "Số lượng",
+        "category_id": "Chuyên mục",
+        "tag": "Thẻ",
+        "tag_ph": "Chọn thẻ",
+        "sub": "Mô tả",
+        "quote": "Trích dẫn",
+        "author": "Tác giả",
+        "role": "Vai trò",
+        "avatar": "Ảnh đại diện",
+        "alt": "Văn bản thay thế (alt)",
+        "href": "Liên kết",
+        "value": "Giá trị",
+        "label": "Nhãn",
+        "media_side": "Vị trí ảnh",
+        "side_left": "Trái",
+        "side_right": "Phải",
+        "placeholder": "Gợi ý nhập",
+        "question": "Câu hỏi",
+        "answer": "Trả lời (HTML)",
+        "caption": "Chú thích",
+        "html": "Mã HTML",
+        "html_hint": "Chỉ HTML an toàn + iframe YouTube/Vimeo được giữ khi xuất bản; JS/CSS bị lược bỏ.",
+        "slides": "Slide"
+      }
+    },
+    "menus": {
+      "title": "Menu",
+      "subtitle": "Dựng các menu điều hướng hiển thị trên trang công khai.",
+      "create": "Tạo menu",
+      "structure": "Cấu trúc menu",
+      "save": "Lưu menu",
+      "reset": "Đặt lại",
+      "empty_title": "Chưa có menu nào",
+      "empty_desc": "Tạo menu điều hướng đầu tiên.",
+      "placeholder_title": "Chọn một menu",
+      "placeholder_desc": "Chọn một menu ở bên trái để bắt đầu chỉnh sửa các mục.",
+      "field": {
+        "name": "Tên",
+        "location": "Vị trí",
+        "location_ph": "Chọn vị trí",
+        "location_opt": {
+          "header": "Header",
+          "footer": "Footer",
+          "sidebar": "Sidebar"
+        }
+      },
+      "link_type": {
+        "internal": "Liên kết nội bộ",
+        "external": "Liên kết ngoài",
+        "article": "Bài viết",
+        "page": "Trang",
+        "category": "Chuyên mục"
+      },
+      "item": {
+        "new_title": "Thêm liên kết",
+        "edit_title": "Sửa liên kết",
+        "label": "Nhãn",
+        "link_type": "Loại liên kết",
+        "target": "Đối tượng",
+        "target_ph": "Tìm kiếm…",
+        "target_selected": "(mục đã chọn)",
+        "url": "URL",
+        "url_internal_ph": "/gioi-thieu",
+        "url_external_ph": "https://example.com",
+        "open_new_tab": "Mở trong tab mới",
+        "reorder": "Kéo để sắp xếp"
+      },
+      "toast": {
+        "create_success": "Đã tạo menu",
+        "update_success": "Đã cập nhật menu",
+        "delete_success": "Đã xoá menu",
+        "items_saved": "Đã lưu menu"
+      },
+      "dialog": {
+        "new_title": "Menu mới",
+        "edit_title": "Sửa menu",
+        "delete": {
+          "title": "Xoá menu",
+          "description": "Xoá menu sẽ xoá toàn bộ các mục bên trong. Không thể hoàn tác."
+        },
+        "delete_item": {
+          "title": "Xoá mục",
+          "description": "Xoá mục này cùng toàn bộ mục con khỏi menu? Bạn vẫn cần lưu menu để lưu thay đổi."
+        },
+        "discard": {
+          "title": "Bỏ thay đổi chưa lưu?",
+          "description": "Bạn có thay đổi chưa lưu ở menu này. Chuyển sang menu khác sẽ bỏ các thay đổi đó.",
+          "confirm": "Bỏ thay đổi"
+        }
+      }
+    },
+    "categories": {
+      "title": "Chuyên mục",
+      "subtitle": "Sắp xếp bài viết theo cây chuyên mục.",
+      "reorder": "Sắp xếp lại",
+      "parent_ph": "Gốc (không có cha)",
+      "regenerate_slug": "Tạo lại slug từ tên",
+      "placeholder": {
+        "slug": "Nếu bạn không nhập slug sẽ tự generate từ tên"
+      },
+      "col": {
+        "name": "Tên",
+        "slug": "Slug",
+        "parent": "Chuyên mục cha",
+        "sort_order": "Thứ tự",
+        "article_count": "Bài viết",
+        "description": "Mô tả",
+        "actions": "Thao tác"
+      },
+      "seo": {
+        "heading": "SEO",
+        "title": "Tiêu đề SEO",
+        "description": "Mô tả SEO",
+        "keywords": "Từ khoá SEO"
+      },
+      "toast": {
+        "create_success": "Đã thêm chuyên mục",
+        "update_success": "Đã cập nhật chuyên mục",
+        "delete_success": "Đã xoá chuyên mục"
+      },
+      "dialog": {
+        "new_title": "Chuyên mục mới",
+        "edit_title": "Sửa chuyên mục",
+        "delete": {
+          "title": "Xoá chuyên mục",
+          "description": "Không thể xoá chuyên mục còn bài viết hoặc chuyên mục con. Hãy chuyển hoặc xoá chúng trước. Hành động không thể hoàn tác."
+        }
+      },
+      "search_label": "Tìm kiếm",
+      "search_ph": "Tìm theo tên hoặc slug",
+      "editor": {
+        "settings": "Thiết lập",
+        "basic": "Thông tin cơ bản"
+      }
+    },
+    "articles": {
+      "title": "Bài viết",
+      "subtitle": "Soạn và quản lý bài viết.",
+      "image_needs_save": "Lưu nháp trước để chèn ảnh",
+      "btn": {
+        "create": "Tạo bài"
+      },
+      "col": {
+        "title": "Tiêu đề",
+        "status": "Trạng thái",
+        "category": "Chuyên mục",
+        "author": "Tác giả",
+        "published": "Xuất bản",
+        "updated": "Cập nhật",
+        "actions": "Thao tác"
+      },
+      "filter": {
+        "q": "Tìm kiếm",
+        "q_ph": "Tìm theo tiêu đề",
+        "tag": "Thẻ",
+        "any": "Tất cả"
+      },
+      "toast": {
+        "delete_success": "Đã xoá bài viết",
+        "create_success": "Đã tạo bài viết",
+        "update_success": "Đã lưu bài viết"
+      },
+      "dialog": {
+        "delete": {
+          "title": "Xoá bài viết",
+          "description": "Xoá “{{title}}”? Hành động không thể hoàn tác."
+        }
+      },
+      "editor": {
+        "new_title": "Bài viết mới",
+        "edit_title": "Sửa bài viết",
+        "publish": "Xuất bản",
+        "meta": "Chi tiết",
+        "seo": "SEO & Open Graph",
+        "basic": "Thông tin cơ bản"
+      },
+      "field": {
+        "title": "Tiêu đề",
+        "body": "Nội dung",
+        "status": "Trạng thái",
+        "publish_at": "Thời điểm xuất bản",
+        "note": "Lý do trả bài",
+        "slug": "Slug",
+        "slug_ph": "Nếu bạn không nhập slug sẽ tự generate từ tiêu đề",
+        "regenerate_slug": "Tạo lại slug từ tiêu đề",
+        "category": "Chuyên mục",
+        "category_ph": "Chọn chuyên mục",
+        "excerpt": "Mô tả",
+        "featured": "Ảnh đại diện"
+      },
+      "seo": {
+        "title": "Tiêu đề SEO",
+        "description": "Mô tả SEO",
+        "keywords": "Từ khoá SEO",
+        "canonical": "URL chuẩn (canonical)",
+        "noindex": "Không lập chỉ mục",
+        "nofollow": "Không theo liên kết",
+        "og_title": "OG title",
+        "og_description": "OG description",
+        "og_image": "Ảnh OG"
+      }
+    }
+  },
+  "errors": {
+    "unknown": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    "smtp_test_failed": "Gửi email thử thất bại.",
+    "unknown_setting_key": "Khoá cài đặt không hợp lệ.",
+    "unauthorized": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+    "conflict": "Dữ liệu bị trùng hoặc xung đột.",
+    "slug_already_exists": "Slug này đã được dùng.",
+    "access_denied": "Bạn không có quyền thực hiện thao tác này.",
+    "privilege_escalation_denied": "Không thể cấp quyền vượt quá quyền của bạn.",
+    "cannot_modify_self": "Bạn không thể tự thực hiện thao tác này lên chính mình.",
+    "last_super_admin": "Không thể thực hiện: đây là super admin cuối cùng.",
+    "not_found": "Không tìm thấy.",
+    "role_in_use": "Vai trò đang được sử dụng, không thể xoá.",
+    "system_role_locked": "Vai trò hệ thống không thể chỉnh sửa.",
+    "invalid_credentials": "Email hoặc mật khẩu không đúng.",
+    "account_locked": "Tài khoản đang tạm khóa. Vui lòng thử lại sau.",
+    "account_disabled": "Tài khoản đã bị vô hiệu hóa.",
+    "invalid_2fa_code": "Mã xác thực không đúng.",
+    "challenge_expired": "Phiên xác thực 2 bước đã hết hạn. Vui lòng đăng nhập lại.",
+    "invalid_or_expired_token": "Link đã hết hạn hoặc không hợp lệ. Vui lòng yêu cầu link mới.",
+    "password_unchanged": "Mật khẩu mới phải khác mật khẩu hiện tại.",
+    "unsupported_media_type": "Định dạng tệp không được hỗ trợ (chỉ PNG, JPG, WebP).",
+    "payload_too_large": "Tệp quá lớn.",
+    "two_factor_already_enabled": "2FA đã được bật.",
+    "two_factor_not_pending": "Chưa có phiên thiết lập 2FA. Vui lòng bật lại.",
+    "two_factor_not_enabled": "2FA chưa được bật.",
+    "bad_request": "Yêu cầu không hợp lệ.",
+    "rate_limited": "Bạn thao tác quá nhanh. Vui lòng thử lại sau.",
+    "validation_error": "Dữ liệu không hợp lệ.",
+    "internal_server_error": "Lỗi hệ thống. Vui lòng thử lại sau.",
+    "validation": {
+      "required": "Trường này là bắt buộc.",
+      "invalid_email": "Email không hợp lệ.",
+      "invalid_url": "URL không hợp lệ.",
+      "invalid_type": "Giá trị không hợp lệ.",
+      "invalid_value": "Giá trị không hợp lệ.",
+      "invalid_color": "Màu không hợp lệ (định dạng #RRGGBB).",
+      "not_found": "Không tìm thấy.",
+      "too_short": "Mật khẩu quá ngắn (tối thiểu 12 ký tự).",
+      "too_long": "Giá trị quá dài (tối đa 120 ký tự).",
+      "out_of_range": "Giá trị ngoài khoảng cho phép.",
+      "too_common": "Mật khẩu quá phổ biến, vui lòng chọn mật khẩu khác.",
+      "password_mismatch": "Mật khẩu nhập lại không khớp.",
+      "invalid_code": "Mã phải gồm đúng 6 chữ số.",
+      "invalid_slug": "Chỉ gồm chữ thường, số và dấu gạch dưới; bắt đầu bằng chữ."
+    },
+    "category_in_use": "Chuyên mục đang được dùng (còn bài viết hoặc chuyên mục con) nên không thể xoá.",
+    "category_cycle": "Không thể chuyển một chuyên mục vào chính nó hoặc chuyên mục con của nó.",
+    "invalid_status_transition": "Không thể chuyển sang trạng thái này."
+  },
+  "content_status": {
+    "draft": "Nháp",
+    "pending_review": "Chờ duyệt",
+    "needs_revision": "Cần sửa",
+    "scheduled": "Đã lên lịch",
+    "published": "Đã xuất bản",
+    "archived": "Lưu trữ"
+  },
+  "editor": {
+    "aria_label": "Nội dung bài viết",
+    "bold": "Đậm",
+    "italic": "Nghiêng",
+    "strike": "Gạch ngang",
+    "h2": "Tiêu đề 2",
+    "h3": "Tiêu đề 3",
+    "bullet_list": "Danh sách chấm",
+    "ordered_list": "Danh sách số",
+    "blockquote": "Trích dẫn",
+    "image": "Chèn ảnh"
+  }
+}

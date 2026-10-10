@@ -1,0 +1,52 @@
+version: "2"
+
+linters:
+  # "standard" = errcheck, govet, ineffassign, staticcheck, unused.
+  default: standard
+  enable:
+    - revive
+    # Size & complexity gate — see docs/ai/backend-go.md §File & module organization.
+    # funlen enforces the ≤60-line function ceiling (file length stays a manual
+    # heuristic — no linter checks it). gocyclo/gocognit cap branch complexity.
+    - funlen
+    - gocyclo
+    - gocognit
+  settings:
+    funlen:
+      lines: 60
+      statements: 40
+      # Table-driven test funcs are mostly literal data, not logic — don't count them.
+      ignore-comments: true
+    gocyclo:
+      min-complexity: 30
+    gocognit:
+      min-complexity: 30
+  exclusions:
+    rules:
+      # Test files may use dot-style helpers and skip some doc-comment rules.
+      - path: _test\.go
+        linters:
+          - revive
+      # Test functions are mostly table data + setup, not branching logic —
+      # size/complexity gates don't apply (standard funlen practice).
+      - path: _test\.go
+        linters:
+          - funlen
+          - gocyclo
+          - gocognit
+      # main.go run() is dependency wiring (construct deps, mount routes, serve);
+      # statement count there is expected and not a complexity signal.
+      - path: cmd/api/main\.go
+        linters:
+          - funlen
+      # The settings Cache interface intentionally returns the internal
+      # `snapshot` type (an implementation detail used only within the package).
+      - path: internal/modules/settings/cache\.go
+        linters:
+          - revive
+        text: unexported-return
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

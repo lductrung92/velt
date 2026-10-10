@@ -1,0 +1,841 @@
+{
+  "common": {
+    "show_password": "Show password",
+    "hide_password": "Hide password",
+    "loading": "Loading…",
+    "logout": "Sign out",
+    "back_to_login": "Back to sign in",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "copy": "Copy",
+    "copied": "Copied",
+    "download": "Download",
+    "done": "Done",
+    "retry": "Try again",
+    "filter": "Filter",
+    "apply": "Apply",
+    "reset": "Reset",
+    "clear": "Clear",
+    "clear_all": "Clear all",
+    "remove": "Remove",
+    "no_results": "No results",
+    "breadcrumbs": "Breadcrumbs",
+    "empty_state": {
+      "default_title": "No data found"
+    },
+    "add_new": "Add new",
+    "add": "Add",
+    "new": "New",
+    "refresh": "Refresh",
+    "edit": "Edit",
+    "delete": "Delete",
+    "close": "Close",
+    "actions": "Actions",
+    "pagination": {
+      "page_info": "{{from}}–{{to}} / {{total}}",
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "language": "Language",
+    "theme": {
+      "label": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "back": "Back",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "image": {
+    "upload": {
+      "trigger": "Upload image",
+      "change": "Change image",
+      "remove": "Remove image",
+      "modal_title": "Choose an image",
+      "tabs": {
+        "illustrative": "Illustrative",
+        "upload": "Upload",
+        "camera": "Camera"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "apply": "Apply",
+        "rotate_left": "Rotate 45° left",
+        "rotate_right": "Rotate 45° right",
+        "flip_horizontal": "Flip horizontal",
+        "flip_vertical": "Flip vertical",
+        "zoom": "Zoom",
+        "reset": "Reset",
+        "shoot": "Capture",
+        "retake": "Retake"
+      },
+      "help": {
+        "format": "Formats: {{formats}}",
+        "max_size": "Max size: {{size}} MB",
+        "drop_or_click": "Drop an image or click to choose",
+        "paste_hint": "Or paste from clipboard (Ctrl+V)",
+        "pick_another": "Choose another"
+      },
+      "errors": {
+        "too_large": "Image exceeds the maximum size",
+        "invalid_mime": "Unsupported format",
+        "read_failed": "Could not read the file",
+        "apply_failed": "Apply failed. Please try again.",
+        "fetch_failed": "Could not load the illustration",
+        "shoot_failed": "Capture failed",
+        "camera_denied": "Camera permission was denied"
+      },
+      "illustrative": {
+        "loading": "Loading…",
+        "empty": "No illustrations yet"
+      }
+    }
+  },
+  "nav": {
+    "users": "Users",
+    "rbac": "Roles & Permissions",
+    "sessions": "Sessions",
+    "admin": "Administration",
+    "account": "Account",
+    "cms": "CMS",
+    "cms_tags": "Tags",
+    "cms_settings": "Settings",
+    "primary": "Primary navigation",
+    "toggle": "Toggle sidebar",
+    "user_menu": "User menu",
+    "go_to_top": "Back to top",
+    "section": {
+      "overview": "Overview",
+      "system": "System"
+    },
+    "cms_categories": "Categories",
+    "cms_articles": "Articles",
+    "cms_pages": "Pages",
+    "cms_menus": "Menus"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Sign in to Velt Console",
+      "email_label": "Email",
+      "email_ph": "you@example.com",
+      "password_label": "Password",
+      "password_ph": "Enter your password",
+      "submit": "Sign in",
+      "forgot": "Forgot password?",
+      "code_label": "Two-factor code",
+      "code_ph": "6-digit or recovery code",
+      "code_hint": "Enter the 6-digit code from your authenticator app, or a recovery code.",
+      "verify": "Verify",
+      "back_to_password": "Back"
+    },
+    "forgot": {
+      "title": "Forgot password",
+      "subtitle": "Enter your email to receive a reset link",
+      "email_label": "Email",
+      "email_ph": "you@example.com",
+      "submit": "Send reset link",
+      "resend": "Resend",
+      "resend_in": "Resend in {{seconds}}s",
+      "success_generic": "If that email exists in our system, we've sent a password reset link. Please check your inbox."
+    },
+    "reset": {
+      "title": "Reset password",
+      "subtitle": "Enter a new password for your account",
+      "new_password_label": "New password",
+      "new_password_ph": "At least 12 characters",
+      "confirm_label": "Confirm password",
+      "confirm_ph": "Re-enter your new password",
+      "submit": "Reset password",
+      "success": "Password reset successfully. Please sign in again.",
+      "token_missing_title": "Invalid link",
+      "token_missing_body": "This reset link is missing its token. Please request a new one.",
+      "token_invalid_title": "Link expired or invalid",
+      "token_invalid_body": "This reset link has expired or was already used. Please request a new one.",
+      "request_new_link": "Request a new link"
+    }
+  },
+  "account": {
+    "title": "My account",
+    "subtitle": "Manage your profile, password and security",
+    "tabs": {
+      "profile": "Basic info",
+      "password": "Change password",
+      "security": "2FA security"
+    },
+    "profile": {
+      "full_name_label": "Full name",
+      "full_name_ph": "Enter your full name",
+      "email_label": "Email",
+      "email_locked_hint": "Changing email is out of scope for now",
+      "avatar_alt": "Avatar",
+      "avatar_upload": "Upload image",
+      "avatar_remove": "Remove image",
+      "saved": "Profile saved",
+      "avatar_updated": "Avatar updated",
+      "avatar_removed": "Avatar removed",
+      "load_error": "Couldn't load your profile"
+    },
+    "password": {
+      "current_label": "Current password",
+      "current_ph": "Enter your current password",
+      "new_label": "New password",
+      "new_ph": "At least 12 characters",
+      "confirm_label": "Confirm new password",
+      "confirm_ph": "Re-enter your new password",
+      "length_hint": "At least 12 characters",
+      "success": "Password changed successfully",
+      "logout_all": "Sign out of all other devices"
+    },
+    "2fa": {
+      "status_label": "2FA status",
+      "on": "Enabled",
+      "off": "Disabled",
+      "enable": "Enable 2FA",
+      "disable": "Disable 2FA",
+      "regenerate": "Regenerate recovery codes",
+      "codes_remaining": "{{n}} recovery codes left",
+      "codes_low": "Running low on recovery codes — consider regenerating.",
+      "codes_empty": "No recovery codes left — regenerate now.",
+      "scan_hint": "Scan the QR code with an authenticator app (Google Authenticator, Authy…), or enter the manual key.",
+      "qr_alt": "2FA setup QR code",
+      "manual_key_label": "Manual key",
+      "code_label": "Verification code",
+      "code_ph": "6-digit code",
+      "confirm": "Confirm",
+      "password_label": "Password",
+      "password_ph": "Enter your password to confirm",
+      "disable_title": "Disable 2FA",
+      "disable_desc": "Enter your password to disable two-factor authentication. Your account will be less secure.",
+      "regenerate_title": "Regenerate recovery codes",
+      "regenerate_desc": "Enter your password to generate a new set of recovery codes. All old codes will stop working.",
+      "recovery_title": "Recovery codes",
+      "recovery_warning": "These codes are shown ONCE. Save them now — any old codes have stopped working.",
+      "recovery_saved_ack": "I have saved my recovery codes",
+      "copied": "Recovery codes copied",
+      "enabled": "2FA enabled",
+      "disabled": "2FA disabled",
+      "load_error": "Couldn't load your 2FA status"
+    }
+  },
+  "admin": {
+    "users": {
+      "title": "User management",
+      "subtitle": "Create, edit, assign roles and manage user accounts",
+      "search_ph": "Search by name or email…",
+      "search_label": "Search",
+      "status_filter_label": "Filter by status",
+      "status_all": "All statuses",
+      "status": {
+        "active": "Active",
+        "disabled": "Disabled",
+        "locked": "Locked"
+      },
+      "col": {
+        "user": "User",
+        "status": "Status",
+        "roles": "Roles",
+        "last_login": "Last login",
+        "created": "Created",
+        "actions": "Actions"
+      },
+      "never_logged_in": "Never signed in",
+      "roles_more": "+{{n}}",
+      "create_title": "Create user",
+      "create_desc": "A set-password email will be sent to the new user.",
+      "edit_title": "Edit user",
+      "edit_desc": "Update the full name and account status.",
+      "email_label": "Email",
+      "full_name_label": "Full name",
+      "full_name_ph": "Enter full name",
+      "status_label": "Status",
+      "role_label": "Role",
+      "action_edit": "Edit",
+      "action_reset": "Send reset-password email",
+      "action_delete": "Delete",
+      "delete_title": "Delete user",
+      "delete_desc": "Disable the account \"{{name}}\"? Their sessions will be revoked.",
+      "reset_title": "Reset password",
+      "reset_desc": "Send a reset-password email to \"{{name}}\"?",
+      "created": "User created — a set-password email was sent",
+      "updated": "User updated",
+      "deleted": "User deleted",
+      "reset_sent": "Reset-password email sent"
+    },
+    "rbac": {
+      "title": "Roles & Permissions",
+      "subtitle": "View roles and their permissions (read-only)",
+      "select_role": "Select a role",
+      "no_perms": "This role has no permissions",
+      "show_more": "Show more ({{count}})",
+      "show_less": "Show less"
+    },
+    "sessions": {
+      "title": "Sessions",
+      "subtitle": "View and revoke user login sessions",
+      "active_only": "Active sessions only",
+      "col": {
+        "user": "User",
+        "device": "Device",
+        "ip": "IP",
+        "created": "Created",
+        "last_used": "Last used",
+        "expires": "Expires",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "current": "Current session",
+      "revoke": "Revoke",
+      "revoke_title": "Revoke session",
+      "revoke_confirm": "Revoke this session? That device will have to sign in again.",
+      "revoke_current_warn": "This is your current session — you'll have to sign in again on this device.",
+      "revoke_last_super_admin_warn": "This is the last super admin — revoking may lock out emergency access.",
+      "revoked": "Session revoked"
+    },
+    "home": {
+      "title": "Administration",
+      "subtitle": "Admin area overview",
+      "users": "Users",
+      "active_sessions": "Active sessions",
+      "roles": "Roles"
+    }
+  },
+  "cms": {
+    "pages": {
+      "title": "Pages",
+      "subtitle": "Static pages with embeddable widgets.",
+      "delete_confirm_title": "Delete page?",
+      "delete_confirm_body": "Delete \"{{title}}\"? This can't be undone.",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "kind": {
+        "label": "Page type",
+        "content": "Content page",
+        "landing": "Landing page"
+      },
+      "badge": {
+        "landing": "Landing"
+      },
+      "design": {
+        "no_permission": "You don't have permission to edit this page's design.",
+        "save_failed": "The page was saved, but the design couldn't be saved. Please try again."
+      },
+      "seo": {
+        "heading": "SEO & Open Graph",
+        "title": "SEO title",
+        "description": "SEO description",
+        "keywords": "SEO keywords",
+        "canonical_url": "Canonical URL",
+        "noindex": "No-index",
+        "nofollow": "No-follow",
+        "og_title": "OG title",
+        "og_description": "OG description"
+      },
+      "field": {
+        "title": "Title",
+        "slug": "Slug",
+        "slug_ph": "auto from title",
+        "regenerate_slug": "Regenerate slug from title",
+        "status": "Status",
+        "body": "Body"
+      },
+      "editor": {
+        "new_title": "New page",
+        "edit_title": "Edit page",
+        "basic": "Basic"
+      },
+      "blocks": {
+        "no_editor": "No editor for this widget yet."
+      },
+      "inline": {
+        "insert": "Content",
+        "remove": "Remove widget",
+        "config": "Config",
+        "preview": "Preview",
+        "collapse": "Collapse",
+        "expand": "Expand",
+        "preview_error": "Couldn't load the preview.",
+        "preview_empty": "No content yet."
+      },
+      "widget": {
+        "games_list": {
+          "name": "Games list",
+          "heading": "Heading",
+          "age_group": "Age group",
+          "subject": "Subject",
+          "skill": "Skill",
+          "limit": "Limit",
+          "columns": "Columns",
+          "layout": "Layout",
+          "layout_grid": "Grid",
+          "layout_carousel": "Carousel"
+        },
+        "articles_list": {
+          "name": "Articles list",
+          "heading": "Heading",
+          "category_id": "Category ID",
+          "tag": "Tag (slug)",
+          "limit": "Limit",
+          "columns": "Columns"
+        },
+        "categories_showcase": {
+          "name": "Categories",
+          "heading": "Heading",
+          "limit": "Limit"
+        },
+        "rich_text": {
+          "name": "Rich text",
+          "html": "HTML content",
+          "html_hint": "Sanitized on save (safe tags only).",
+          "width": "Width",
+          "width_narrow": "Narrow",
+          "width_normal": "Normal",
+          "width_wide": "Wide"
+        },
+        "cta_banner": {
+          "name": "CTA banner",
+          "heading": "Heading",
+          "sub": "Subtext",
+          "button_label": "Button label",
+          "button_href": "Button link",
+          "button_hint": "The button only shows when both label and link are set.",
+          "align": "Align",
+          "align_left": "Left",
+          "align_center": "Center"
+        }
+      },
+      "toast": {
+        "created": "Page created",
+        "saved": "Page saved",
+        "deleted": "Page deleted",
+        "published": "Page published",
+        "unpublished": "Page unpublished"
+      }
+    },
+    "settings": {
+      "title": "CMS settings",
+      "subtitle": "Manage CMS feature flags.",
+      "saved": "Settings saved",
+      "article_categorize": {
+        "label": "Require a category",
+        "help": "Require a category when creating an article; block clearing it on edit."
+      },
+      "article_require_review": {
+        "label": "Require review before publish",
+        "help": "ON: an editor's article must be approved by an admin before publishing. Admin-authored articles skip review."
+      },
+      "article_allow_slug_edit": {
+        "label": "Allow manual slug editing",
+        "help": "ON: type the slug, duplicates are rejected. OFF: the system derives the slug and auto-suffixes on collision."
+      },
+      "publish_allow_now": {
+        "label": "Allow immediate publish",
+        "help": "ON: immediate publish only (scheduling hidden). OFF: also offer “Scheduled” (pick a time) — immediate publish still allowed."
+      },
+      "newsletter_notify": {
+        "label": "Notify on publish",
+        "help": "Email newsletter subscribers when an article is published."
+      },
+      "homepage": {
+        "label": "Homepage",
+        "help": "Pick which published page is served as the public homepage (\"/\"). Leave empty to use the built-in home. The page must be published to take effect.",
+        "placeholder": "Built-in home (none selected)"
+      }
+    },
+    "tags": {
+      "title": "Tags",
+      "subtitle": "Manage the tags used to label articles.",
+      "regenerate_slug": "Regenerate slug from name",
+      "search_label": "Search",
+      "search_ph": "Search by name or slug",
+      "col": {
+        "name": "Name",
+        "slug": "Slug",
+        "usage": "Usage",
+        "actions": "Actions"
+      },
+      "placeholder": {
+        "slug": "auto from name"
+      },
+      "btn": {
+        "merge": "Merge"
+      },
+      "toast": {
+        "create_success": "Tag added",
+        "update_success": "Tag updated",
+        "delete_success": "Tag deleted",
+        "merge_success": "Tags merged"
+      },
+      "dialog": {
+        "new_title": "New tag",
+        "edit_title": "Edit tag",
+        "merge": {
+          "title": "Merge tag",
+          "desc": "Articles tagged “{{name}}” will move to the target tag, and “{{name}}” will be deleted. This cannot be undone.",
+          "target": "Target tag",
+          "target_ph": "Select a target tag"
+        },
+        "delete": {
+          "title": "Delete tag",
+          "description": "This tag is attached to {{count}} article(s); deleting it removes the tag from them. This cannot be undone."
+        }
+      }
+    },
+    "landings": {
+      "field": {
+        "name": "Name",
+        "key": "Key"
+      },
+      "toast": {
+        "saved": "Saved"
+      },
+      "builder": {
+        "meta": "Details",
+        "sections": "Sections",
+        "add_section": "Add section",
+        "no_sections": "No sections yet.",
+        "save": "Save",
+        "visible": "Visible",
+        "full_width": "Full width",
+        "hidden": "Hidden",
+        "move_up": "Move up",
+        "reorder": "Drag to reorder",
+        "move_down": "Move down",
+        "config_invalid": "Invalid JSON config",
+        "delete_section_title": "Delete section?"
+      },
+      "preview": {
+        "dynamic_hint": "Content loads when published",
+        "html_embed": "HTML embed",
+        "email_placeholder": "Your email",
+        "subscribe": "Subscribe",
+        "empty": "Nothing to preview yet"
+      },
+      "section": {
+        "hero": "Hero",
+        "slider": "Slider",
+        "featured_articles": "Featured articles",
+        "categories_showcase": "Categories",
+        "rich_text": "Rich text",
+        "cta_banner": "CTA banner",
+        "testimonials": "Testimonials",
+        "logos": "Logos",
+        "stats": "Stats",
+        "media_text": "Media + text",
+        "newsletter": "Newsletter",
+        "faq": "FAQ",
+        "gallery": "Gallery",
+        "html_embed": "HTML embed"
+      },
+      "form": {
+        "upload": "Upload image",
+        "remove": "Remove",
+        "add_item": "Add item",
+        "eyebrow": "Eyebrow",
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "image": "Image",
+        "align": "Align",
+        "background": "Background",
+        "buttons": "Buttons",
+        "add_button": "Add button",
+        "add_slide": "Add slide",
+        "add_testimonial": "Add testimonial",
+        "add_logo": "Add logo",
+        "add_stat": "Add stat",
+        "add_faq": "Add question",
+        "add_gallery": "Add image",
+        "button_label": "Button label",
+        "button_href": "Link",
+        "button_style": "Button style",
+        "align_left": "Left",
+        "align_center": "Center",
+        "bg_none": "None",
+        "bg_muted": "Muted",
+        "bg_primary": "Primary",
+        "style_primary": "Primary",
+        "style_outline": "Outline",
+        "style_ghost": "Ghost",
+        "width": "Width",
+        "width_narrow": "Narrow",
+        "width_normal": "Normal",
+        "width_wide": "Wide",
+        "body": "Body",
+        "title": "Title",
+        "columns": "Columns",
+        "limit": "Limit",
+        "category_id": "Category",
+        "tag": "Tag",
+        "tag_ph": "Select tag",
+        "sub": "Subtext",
+        "quote": "Quote",
+        "author": "Author",
+        "role": "Role",
+        "avatar": "Avatar",
+        "alt": "Alt text",
+        "href": "Link",
+        "value": "Value",
+        "label": "Label",
+        "media_side": "Image side",
+        "side_left": "Left",
+        "side_right": "Right",
+        "placeholder": "Placeholder",
+        "question": "Question",
+        "answer": "Answer (HTML)",
+        "caption": "Caption",
+        "html": "HTML code",
+        "html_hint": "Only safe HTML + YouTube/Vimeo iframes survive publish; JS/CSS is stripped.",
+        "slides": "Slides"
+      }
+    },
+    "menus": {
+      "title": "Menus",
+      "subtitle": "Build the navigation menus shown on the public site.",
+      "create": "Create menu",
+      "structure": "Menu structure",
+      "save": "Save menu",
+      "reset": "Reset",
+      "empty_title": "No menus yet",
+      "empty_desc": "Create your first navigation menu.",
+      "placeholder_title": "Select a menu",
+      "placeholder_desc": "Pick a menu on the left to start editing its items.",
+      "field": {
+        "name": "Name",
+        "location": "Location",
+        "location_ph": "Select a location",
+        "location_opt": {
+          "header": "Header",
+          "footer": "Footer",
+          "sidebar": "Sidebar"
+        }
+      },
+      "link_type": {
+        "internal": "Internal link",
+        "external": "External link",
+        "article": "Article",
+        "page": "Page",
+        "category": "Category"
+      },
+      "item": {
+        "new_title": "Add link",
+        "edit_title": "Edit link",
+        "label": "Label",
+        "link_type": "Link type",
+        "target": "Target",
+        "target_ph": "Search…",
+        "target_selected": "(selected item)",
+        "url": "URL",
+        "url_internal_ph": "/about-us",
+        "url_external_ph": "https://example.com",
+        "open_new_tab": "Open in new tab",
+        "reorder": "Drag to reorder"
+      },
+      "toast": {
+        "create_success": "Menu created",
+        "update_success": "Menu updated",
+        "delete_success": "Menu deleted",
+        "items_saved": "Menu saved"
+      },
+      "dialog": {
+        "new_title": "New menu",
+        "edit_title": "Edit menu",
+        "delete": {
+          "title": "Delete menu",
+          "description": "Deleting a menu removes all of its items. This cannot be undone."
+        },
+        "delete_item": {
+          "title": "Delete item",
+          "description": "Remove this item and all of its sub-items from the menu? You still need to save the menu to persist the change."
+        },
+        "discard": {
+          "title": "Discard unsaved changes?",
+          "description": "You have unsaved changes to this menu. Switching menus will discard them.",
+          "confirm": "Discard"
+        }
+      }
+    },
+    "categories": {
+      "title": "Categories",
+      "subtitle": "Organize articles into a category tree.",
+      "reorder": "Reorder",
+      "parent_ph": "Root (no parent)",
+      "regenerate_slug": "Regenerate slug from name",
+      "placeholder": {
+        "slug": "auto from name"
+      },
+      "col": {
+        "name": "Name",
+        "slug": "Slug",
+        "parent": "Parent",
+        "sort_order": "Order",
+        "article_count": "Articles",
+        "description": "Description",
+        "actions": "Actions"
+      },
+      "seo": {
+        "heading": "SEO",
+        "title": "SEO title",
+        "description": "SEO description",
+        "keywords": "SEO keywords"
+      },
+      "toast": {
+        "create_success": "Category added",
+        "update_success": "Category updated",
+        "delete_success": "Category deleted"
+      },
+      "dialog": {
+        "new_title": "New category",
+        "edit_title": "Edit category",
+        "delete": {
+          "title": "Delete category",
+          "description": "Deleting a category that has articles or sub-categories is blocked. Move or remove them first. This cannot be undone."
+        }
+      },
+      "search_label": "Search",
+      "search_ph": "Search by name or slug",
+      "editor": {
+        "settings": "Settings",
+        "basic": "Basic information"
+      }
+    },
+    "articles": {
+      "title": "Articles",
+      "subtitle": "Write and manage your articles.",
+      "image_needs_save": "Save the draft first to insert images",
+      "btn": {
+        "create": "New article"
+      },
+      "col": {
+        "title": "Title",
+        "status": "Status",
+        "category": "Category",
+        "author": "Author",
+        "published": "Published",
+        "updated": "Updated",
+        "actions": "Actions"
+      },
+      "filter": {
+        "q": "Search",
+        "q_ph": "Search by title",
+        "tag": "Tag",
+        "any": "Any"
+      },
+      "toast": {
+        "delete_success": "Article deleted",
+        "create_success": "Article created",
+        "update_success": "Article saved"
+      },
+      "dialog": {
+        "delete": {
+          "title": "Delete article",
+          "description": "Delete “{{title}}”? This cannot be undone."
+        }
+      },
+      "editor": {
+        "new_title": "New article",
+        "edit_title": "Edit article",
+        "publish": "Publish",
+        "meta": "Details",
+        "seo": "SEO & Open Graph",
+        "basic": "Basic information"
+      },
+      "field": {
+        "title": "Title",
+        "body": "Content",
+        "status": "Status",
+        "publish_at": "Publish at",
+        "note": "Revision note",
+        "slug": "Slug",
+        "slug_ph": "auto from title",
+        "regenerate_slug": "Regenerate slug from title",
+        "category": "Category",
+        "category_ph": "Select a category",
+        "excerpt": "Excerpt",
+        "featured": "Featured image"
+      },
+      "seo": {
+        "title": "SEO title",
+        "description": "SEO description",
+        "keywords": "SEO keywords",
+        "canonical": "Canonical URL",
+        "noindex": "No-index",
+        "nofollow": "No-follow",
+        "og_title": "OG title",
+        "og_description": "OG description",
+        "og_image": "OG image"
+      }
+    }
+  },
+  "errors": {
+    "unknown": "Something went wrong. Please try again.",
+    "smtp_test_failed": "Test email failed.",
+    "unknown_setting_key": "Invalid setting key.",
+    "unauthorized": "Your session has expired. Please sign in again.",
+    "conflict": "This value conflicts with an existing record.",
+    "slug_already_exists": "This slug is already in use.",
+    "access_denied": "You don't have permission to perform this action.",
+    "privilege_escalation_denied": "You can't grant privileges beyond your own.",
+    "cannot_modify_self": "You can't perform this action on your own account.",
+    "last_super_admin": "Action blocked: this is the last super admin.",
+    "not_found": "Not found.",
+    "role_in_use": "This role is in use and can't be deleted.",
+    "system_role_locked": "System roles can't be modified.",
+    "invalid_credentials": "Incorrect email or password.",
+    "account_locked": "Account temporarily locked. Please try again later.",
+    "account_disabled": "This account has been disabled.",
+    "invalid_2fa_code": "Invalid verification code.",
+    "challenge_expired": "Two-factor session expired. Please sign in again.",
+    "invalid_or_expired_token": "This link has expired or is invalid. Please request a new one.",
+    "password_unchanged": "The new password must be different from the current one.",
+    "unsupported_media_type": "Unsupported file type (PNG, JPG, WebP only).",
+    "payload_too_large": "File is too large.",
+    "two_factor_already_enabled": "2FA is already enabled.",
+    "two_factor_not_pending": "No 2FA setup in progress. Please start again.",
+    "two_factor_not_enabled": "2FA is not enabled.",
+    "bad_request": "Invalid request.",
+    "rate_limited": "Too many attempts. Please try again later.",
+    "validation_error": "Invalid input.",
+    "internal_server_error": "Server error. Please try again later.",
+    "validation": {
+      "required": "This field is required.",
+      "invalid_email": "Invalid email address.",
+      "invalid_url": "Invalid URL.",
+      "invalid_type": "Invalid value.",
+      "invalid_value": "Invalid value.",
+      "invalid_color": "Invalid color (#RRGGBB format).",
+      "not_found": "Not found.",
+      "too_short": "Password too short (minimum 12 characters).",
+      "too_long": "Value is too long (maximum 120 characters).",
+      "out_of_range": "Value is out of the allowed range.",
+      "too_common": "Password is too common, please choose another.",
+      "password_mismatch": "Passwords do not match.",
+      "invalid_code": "Code must be exactly 6 digits.",
+      "invalid_slug": "Lowercase letters, digits and underscores only; must start with a letter."
+    },
+    "category_in_use": "This category is in use (it has articles or sub-categories) and can't be deleted.",
+    "category_cycle": "A category can't be moved into itself or one of its sub-categories.",
+    "invalid_status_transition": "This status change isn't allowed."
+  },
+  "content_status": {
+    "draft": "Draft",
+    "pending_review": "Pending review",
+    "needs_revision": "Needs revision",
+    "scheduled": "Scheduled",
+    "published": "Published",
+    "archived": "Archived"
+  },
+  "editor": {
+    "aria_label": "Article body",
+    "bold": "Bold",
+    "italic": "Italic",
+    "strike": "Strikethrough",
+    "h2": "Heading 2",
+    "h3": "Heading 3",
+    "bullet_list": "Bullet list",
+    "ordered_list": "Numbered list",
+    "blockquote": "Quote",
+    "image": "Insert image"
+  }
+}

@@ -1,0 +1,15 @@
+# air hot-reload config (https://github.com/air-verse/air). Builds the API
+# entrypoint (cmd/api) so `air` in backend/ rebuilds + reruns on save.
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/api.exe ./cmd/api"
+  entrypoint = ["./tmp/api.exe"]
+  include_ext = ["go"]
+  exclude_dir = ["tmp", "migrations", "storage"]
+  delay = 800
+  stop_on_error = true
+
+[misc]
+  clean_on_exit = true

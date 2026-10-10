@@ -1,0 +1,220 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Save, X } from "lucide-react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+
+import { Select } from "@/components/common/Select/Select";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { TextField } from "@/components/ui/text-field";
+
+import {
+  isEntityLink,
+  makeMenuItemSchema,
+  menuItemDefaults,
+  type MenuItemFormValues,
+} from "../schemas/menu";
+import { MENU_LINK_TYPES, type MenuLinkType } from "../services/menus.service";
+import type { MenuItemDraft } from "../utils/menuTree";
+import { TargetPicker } from "./TargetPicker";
+
+// Menu-item editor DIALOG (docs/styles/console/modal.md §3). Edits are applied
+// to the local draft tree — there is no per-item endpoint. `node` present =
+// edit, null = add. The caller controls `open` (draft.editing) and closes on
+// cancel/apply.
+export function ItemFormDialog({
+  open,
+  node,
+  onApply,
+  onCancel,
+}: {
+  open: boolean;
+  node: MenuItemDraft | null;
+  onApply: (values: MenuItemFormValues) => void;
+  onCancel: () => void;
+}) {
+  const { t } = useTranslation();
+  const form = useForm<MenuItemFormValues>({
+    resolver: zodResolver(makeMenuItemSchema(t)),
+    defaultValues: menuItemDefaults,
+    mode: "onTouched",
+  });
+
+  // Re-hydrate when the dialog opens or the selected node changes.
+  useEffect(() => {
+    if (!open) return;
+    form.reset(
+      node
+        ? {
+            label: node.label,
+            link_type: node.link_type,
+            url: node.url ?? "",
+            target_id: node.target_id,
+            open_new_tab: node.open_new_tab,
+          }
+        : menuItemDefaults,
+    );
+  }, [open, node, form]);
+
+  const linkType = form.watch("link_type");
+
+  function changeLinkType(next: MenuLinkType) {
+    form.setValue("link_type", next, { shouldDirty: true });
+    // Wipe the field that no longer applies (dependent-select wipe).
+    if (isEntityLink(next)) form.setValue("url", "");
+    else form.setValue("target_id", null);
+    form.clearErrors(["url", "target_id"]);
+  }
+
+  const onSubmit = form.handleSubmit((values) => onApply(values));
+
+  const linkOptions = MENU_LINK_TYPES.map((type) => ({
+    value: type,
+    label: t(`cms.menus.link_type.${type}`),
+  }));
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent closeLabel={t("common.close")}>
+        <DialogHeader>
+          <DialogTitle>
+            {node
+              ? t("cms.menus.item.edit_title")
+              : t("cms.menus.item.new_title")}
+          </DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={onSubmit} noValidate className="space-y-4">
+            <FormField
+              control={form.control}
+              name="label"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>{t("cms.menus.item.label")}</FormLabel>
+                  <FormControl>
+                    <TextField maxLength={200} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="link_type"
+              render={({ field, fieldState }) => (
+                <FormItem>
+                  <FormLabel required>
+                    {t("cms.menus.item.link_type")}
+                  </FormLabel>
+                  <Select
+                    inputId="menu-item-link-type"
+                    options={linkOptions}
+                    value={
+                      linkOptions.find((o) => o.value === field.value) ?? null
+                    }
+                    onChange={(o) =>
+                      changeLinkType((o?.value ?? "internal") as MenuLinkType)
+                    }
+                    isClearable={false}
+                    isSearchable={false}
+                    invalid={!!fieldState.error}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {isEntityLink(linkType) ? (
+              <FormField
+                control={form.control}
+                name="target_id"
+                render={({ field, fieldState }) => (
+                  <FormItem>
+                    <FormLabel required>{t("cms.menus.item.target")}</FormLabel>
+                    <TargetPicker
+                      inputId="menu-item-target"
+                      linkType={linkType}
+                      value={field.value}
+                      onChange={field.onChange}
+                      invalid={!!fieldState.error}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <FormField
+                control={form.control}
+                name="url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>{t("cms.menus.item.url")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="url"
+                        maxLength={2000}
+                        placeholder={
+                          linkType === "internal"
+                            ? t("cms.menus.item.url_internal_ph")
+                            : t("cms.menus.item.url_external_ph")
+                        }
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            <FormField
+              control={form.control}
+              name="open_new_tab"
+              render={({ field }) => (
+                <FormItem>
+                  {/* Checkbox-first row (input.md §8): box + text, w-fit hit area. */}
+                  <label className="flex w-fit cursor-pointer items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                    />
+                    <span>{t("cms.menus.item.open_new_tab")}</span>
+                  </label>
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onCancel}>
+                <X className="size-4" />
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit">
+                <Save className="size-4" />
+                {t("common.save")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}

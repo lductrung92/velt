@@ -1,0 +1,19 @@
+node_modules
+dist
+coverage
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# playwright (e2e) artifacts
+test-results
+playwright-report
+blob-report
+.playwright
+
+# editor / OS
+.DS_Store

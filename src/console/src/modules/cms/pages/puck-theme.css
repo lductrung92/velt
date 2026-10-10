@@ -1,0 +1,181 @@
+/* Re-theme the Puck editor to the velt console theme (shadcn tokens): brand
+ * teal accent instead of Puck's default azure, the app font + base size, the app
+ * corner radius, and form controls that read like the console's own inputs.
+ *
+ * The --puck-* variables live on :root (not .kd-puck) on purpose: Puck renders
+ * some chrome (drag/selection overlays) in a body-level PORTAL outside the editor
+ * container, so a scoped var would leave those blue. --puck-* vars are namespaced
+ * and read only by Puck, so putting them on :root is safe (nothing else uses them).
+ * Layout tweaks that DO target Puck's DOM stay scoped to .kd-puck. */
+:root {
+  /* Type — app font + 14px base (text-sm), like the rest of the console. */
+  --puck-font-family: "Inter", system-ui, sans-serif;
+  --puck-font-size-base: 14px;
+
+  /* Accent = velt teal. Puck uses its "azure" 12-step scale for every accent
+   * (selection outline, focus ring, active states); remap the whole ramp to a
+   * teal ramp at matching lightness so no default blue remains. */
+  --puck-color-azure-01: hsl(187 70% 97%);
+  --puck-color-azure-02: hsl(187 70% 94%);
+  --puck-color-azure-03: hsl(187 70% 90%);
+  --puck-color-azure-04: hsl(187 68% 84%);
+  --puck-color-azure-05: hsl(187 66% 76%);
+  --puck-color-azure-06: hsl(187 64% 66%);
+  --puck-color-azure-07: hsl(187 66% 55%);
+  --puck-color-azure-08: hsl(187 70% 47%);
+  --puck-color-azure-09: hsl(var(--primary));
+  --puck-color-azure-10: hsl(187 74% 36%);
+  --puck-color-azure-11: hsl(187 78% 30%);
+  --puck-color-azure-12: hsl(187 80% 20%);
+
+  /* Primary button (Publish) = solid teal. */
+  --puck-button-primary-color-bg: hsl(var(--primary));
+  --puck-button-primary-color-bg-hover: hsl(187 74% 36%);
+  --puck-button-primary-color-bg-active: hsl(187 78% 30%);
+  --puck-button-primary-color-border: hsl(var(--primary));
+  --puck-button-primary-color-text: hsl(var(--primary-foreground));
+
+  /* Corners + hairlines match the app. */
+  --puck-button-radius: var(--radius);
+  --puck-actionbar-radius: var(--radius);
+  --puck-color-border: hsl(var(--border));
+  --puck-color-border-hover: hsl(215.4 16.3% 46.9%);
+
+  /* Left palette (Drawer) blocks: Puck's own vars, so this survives class-hash
+   * changes on upgrade. Default radius is --puck-radius-m (4px) → use the app's
+   * 8px; default hover resolves to azure-12 (near-black teal, far too dark) →
+   * soften to the app's muted surface like a console list-row hover. */
+  --puck-drawer-item-radius: var(--radius);
+  --puck-drawer-item-color-bg-hover: hsl(var(--muted));
+
+  --puck-pluginbar-color-text-selected: hsl(var(--primary));
+  --puck-actionbar-color-action-hover: hsl(var(--primary));
+  --puck-slot-component-color-border-selected: hsl(var(--primary));
+  --puck-drawer-item-color-text-hover: hsl(var(--primary));
+
+  --puck-outline-border-width: 1px;
+}
+
+/* ── editor height: Puck hardcodes its layout to 100dvh (the full viewport),
+ * which overflows past our fixed-height container (100vh − chrome) and clips the
+ * bottom. Override to height:100% so Puck fills the container exactly; its inner
+ * grid + per-pane overflow then scroll within (canvas / palette / field panel),
+ * nothing spills below the fold. ── */
+.kd-puck > .Puck,
+.kd-puck [class*="PuckLayout_"] {
+  height: 100%;
+}
+
+/* ── canvas spacing: breathing room + gap between stacked block cards. The card
+ * itself carries NO margin so Puck's selection outline hugs it exactly. ── */
+.kd-puck [data-puck-dropzone] {
+  padding: 16px;
+}
+.kd-puck [data-puck-dropzone] > * + * {
+  margin-top: 12px;
+}
+
+/* Round the selection/hover box. Puck draws it as an `outline` on the overlay
+ * (and overlay wrapper) — a separate absolutely-positioned layer ON TOP of the
+ * block, so rounding the block content isn't enough. An outline follows
+ * border-radius (Chrome 88+), so giving the overlay a radius rounds the visible
+ * teal box to match the app's 0.5rem corners. */
+.kd-puck [class*="_PuckCanvas-root"],
+.kd-puck [class*="DropZone--hoveringOverArea"],
+.kd-puck [class*="DraggableComponent-overlay"] {
+  border-radius: var(--radius);
+}
+
+/* Left panel tabs (Blocks/Outline): the ACTIVE tab should read like the app's
+ * active nav item — the app's primary teal — not Puck's pale azure-04 default.
+ * (Puck exposes no --puck-* var for just the active-nav color, so target the
+ * hashed NavItem classes by substring; revisit on a Puck upgrade.) */
+.kd-puck [class*="NavItem--active"] [class*="NavItem-link"] {
+  color: hsl(var(--primary));
+}
+/* ...and its active-indicator border (Puck's default is the pale azure-04). */
+.kd-puck [class*="NavItem--active"] {
+  border-color: hsl(var(--primary));
+}
+
+/* Palette (Drawer) block: on hover the label turns the app's primary teal
+ * (text + icon via currentColor), on top of the soft muted hover background. */
+.kd-puck [class*="Drawer-draggable"]:hover {
+  color: hsl(var(--primary));
+}
+
+/* Action bar: the Delete (trash) action turns destructive-red on hover, like
+ * every other delete affordance in the app. The bar can render in a body-level
+ * portal, so this rule is intentionally unscoped; aria-label is Puck's own
+ * (English, not run through our i18n). */
+[class*="ActionBarAction"][title="Delete"]:hover {
+  color: hsl(var(--destructive));
+}
+
+.kd-puck [class*="Breadcrumbs"] {
+  font-family: var(--puck-font-family);
+}
+
+.kd-puck [class*="Breadcrumbs-breadcrumbLabel"] {
+  color: hsl(var(--primary));
+}
+
+.kd-puck [class*="PuckHeader-inner"] {
+  padding: 0.75rem 1.25rem;
+}
+
+.kd-puck [class*="IconButton"] svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: -1.5rem;
+}
+
+.kd-puck [class*="IconButton"]:hover {
+  background: unset;
+  color: hsl(var(--primary));
+}
+
+.kd-puck [class*="MenuBar"] svg {
+  margin-top: 0;
+}
+
+.kd-puck [class*="Layer"]:not([class*="Layer--isSelected"]) > [class*="Layer-inner"] {
+  border: 1px solid var(--puck-color-border);
+}
+
+.kd-puck [class*="Layer--isSelected"] {
+  border-color: var(--puck-color-border);
+}
+
+.kd-puck [class*="Layer--isSelected"] [class*="Layer-inner"] {
+  background-color: var(--puck-drawer-item-color-bg-hover, var(--puck-color-interactive-soft-hover));
+  color: var(--puck-drawer-item-color-text-hover, var(--puck-color-interactive));
+}
+
+.kd-puck [class*="Layer-icon"] {
+  margin-top: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .kd-puck [class*="Layer"]:not([class*="Layer--isSelected"]) >  [class*="Layer-inner"]:hover {
+    background-color: var(--puck-drawer-item-color-bg-hover, var(--puck-color-interactive-soft-hover));
+    color: var(--puck-drawer-item-color-text-hover, var(--puck-color-interactive));
+    border-color: var(--puck-color-border);
+  }
+}
+
+.kd-puck [class*="PuckFields"] [class*="PuckFields-field"]:last-child,
+.kd-puck [class*="BlocksPlugin"] {
+  padding-bottom: 4rem;
+}
+
+.kd-puck [class*="DrawerItem-draggable"] {
+  padding: 0.5rem 0.75rem;
+}
+
+/* Blocks drawer drag icon: Puck hardcodes the svg to width=12 — bump to 16px so
+ * it matches the Outline grip (lucide size-4). CSS overrides the width attr. */
+.kd-puck [class*="DragIcon"] svg {
+  width: 16px;
+  height: 16px;
+}

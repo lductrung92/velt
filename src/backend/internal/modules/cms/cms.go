@@ -1,0 +1,65 @@
+// Package cms is the CMS bounded context. It is a parent directory of
+// self-contained feature sub-packages (articles, taxonomy, pages, menus, landing,
+// comments, newsletter, settings), each with its own Handler/Service/Repository;
+// the cross-feature spine lives in cms/shared. This root holds only the single
+// wiring entry point (Register) and the settings-registry definitions.
+package cms
+
+import (
+	"log/slog"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/velt/backend/internal/modules/cms/articles"
+	"github.com/velt/backend/internal/modules/cms/comments"
+	"github.com/velt/backend/internal/modules/cms/landing"
+	"github.com/velt/backend/internal/modules/cms/menus"
+	"github.com/velt/backend/internal/modules/cms/newsletter"
+	"github.com/velt/backend/internal/modules/cms/pages"
+	cmssettings "github.com/velt/backend/internal/modules/cms/settings"
+	"github.com/velt/backend/internal/modules/cms/shared"
+	"github.com/velt/backend/internal/modules/cms/taxonomy"
+	"github.com/velt/backend/internal/modules/cms/widgets"
+	settingssvc "github.com/velt/backend/internal/modules/settings"
+	"github.com/velt/backend/internal/platform/ratelimit"
+	"github.com/velt/backend/internal/platform/revalidate"
+	"github.com/velt/backend/internal/platform/storage"
+)
+
+// Register mounts the full CMS admin surface under /api/cms — all gated by authMW;
+// per-endpoint permissions are enforced in each feature's service layer. It is the
+// single wiring entry point for the bounded context: each feature sub-package
+// registers its own routes on the shared group.
+func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, store storage.Storage, log *slog.Logger, authMW func(http.Handler) http.Handler, ports widgets.Ports, rev revalidate.Revalidator, limiter ratelimit.Limiter, trustProxy bool) {
+	base := shared.NewBase(settings, log)
+	base.SetRevalidator(rev)
+
+	// Public (no-auth) read surface — published content with widgets resolved.
+	resolver := widgets.NewResolver(ports)
+	// A page may attach a landing; its published sections resolve in-process.
+	landingPublic := landing.NewPublicService(landing.NewRepository(pool), resolver, store)
+	r.Route("/api/public/cms", func(r chi.Router) {
+		pages.RegisterPublic(r, pool, resolver, landingPublic)
+		articles.RegisterPublic(r, pool, store)
+		newsletter.RegisterPublic(r, base, pool, limiter, trustProxy)
+	})
+
+	r.Route("/api/cms", func(r chi.Router) {
+		r.Use(authMW)
+		widgets.RegisterPreview(r, base, resolver)
+		taxonomy.Register(r, base, pool)
+		pages.Register(r, base, pool, landing.NewPagesPort(landing.NewRepository(pool), store))
+		articles.Register(r, base, pool, store)
+		menus.Register(r, base, pool)
+		landing.Register(r, base, pool, store)
+		comments.Register(r, base, pool)
+		newsletter.Register(r, base, pool)
+		cmssettings.Register(r, base, settings)
+	})
+}
+
+// SettingDefs returns the CMS feature-flag definitions for the settings registry
+// (called from main wiring). Delegates to cms/shared.
+func SettingDefs() []settingssvc.SettingDef { return shared.SettingDefs() }
