@@ -13,6 +13,7 @@ import {
   Sessions,
   UserManagement,
 } from "@/modules/admin";
+import { AiAssistant } from "@/modules/ai";
 import {
   ForgotPassword,
   Login,
@@ -118,6 +119,14 @@ export const router = createBrowserRouter([
         element: (
           <RequirePermission permission="sessions.read">
             <Sessions />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/admin/ai",
+        element: (
+          <RequirePermission permission="settings.manage">
+            <AiAssistant />
           </RequirePermission>
         ),
       },

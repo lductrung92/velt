@@ -19,9 +19,13 @@ import (
 
 // Register builds every products feature and mounts its routes. Per-endpoint
 // permission is enforced in the service layer, not here.
+//
+// It returns the PUBLIC catalog service so in-process readers — the AI
+// assistant — go through the same published-only surface the site does, rather
+// than getting a second path to the data with its own rules.
 func Register(r chi.Router, pool *pgxpool.Pool, store *storage.Manager, settings catalog.SettingsPort,
 	logger *slog.Logger, authMW func(http.Handler) http.Handler, rev revalidate.Revalidator,
-) {
+) *catalog.PublicService {
 	base := shared.NewBase(logger)
 	base.SetRevalidator(rev)
 
@@ -31,5 +35,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, store *storage.Manager, settings
 
 	// The site reads the catalog through its own no-auth surface, which can only
 	// ever see published snapshots.
-	catalog.RegisterPublic(r, catalog.NewPublicService(base, catalog.NewPublicRepository(pool), store))
+	pub := catalog.NewPublicService(base, catalog.NewPublicRepository(pool), store)
+	catalog.RegisterPublic(r, pub)
+	return pub
 }

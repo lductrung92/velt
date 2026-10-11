@@ -149,7 +149,8 @@
     "members": "Members",
     "product_categories": "Categories",
     "catalog": "Catalog",
-    "products": "Products"
+    "products": "Products",
+    "ai": "AI assistant"
   },
   "auth": {
     "login": {
@@ -1070,6 +1071,86 @@
       "reorder": "Drag to reorder",
       "role_ph": "Role on this product",
       "role_for": "Role for {{name}}"
+    }
+  },
+  "ai": {
+    "title": "AI assistant",
+    "subtitle": "Configure the website assistant, watch what it costs, and grant agents access.",
+    "saved": "AI assistant settings saved.",
+    "status": {
+      "live": "Running",
+      "degraded": "Scripted replies",
+      "staff_online_one": "{{count}} on duty",
+      "staff_online_other": "{{count}} on duty",
+      "reason": {
+        "disabled": "switched off",
+        "not_configured": "not configured",
+        "budget_exhausted": "daily token cap reached"
+      }
+    },
+    "provider": {
+      "anthropic": "Anthropic (Claude)",
+      "openai": "OpenAI / OpenAI-compatible"
+    },
+    "section": {
+      "connection": "Connection",
+      "behaviour": "Behaviour",
+      "usage": "Usage",
+      "mcp": "MCP tokens"
+    },
+    "field": {
+      "enabled": "Enable the assistant",
+      "enabled_hint": "Off → the site falls back to the scripted bot without showing visitors an error.",
+      "provider": "Provider",
+      "provider_hint": "Pick OpenAI-compatible for Ollama, LM Studio, vLLM, Groq or OpenAI itself.",
+      "base_url": "Endpoint base URL",
+      "base_url_hint": "Empty → the provider's default. Point it at your own host to run a local model.",
+      "api_key": "API key",
+      "api_key_set": "Set — type a new value to replace it",
+      "api_key_unset": "Not set",
+      "api_key_hint": "Stored encrypted and never readable again. Leave blank to keep the current key. Local endpoints usually need none.",
+      "model": "Model",
+      "persona": "Extra instructions",
+      "persona_hint": "This is ADDED to the standing brief. The safety rules (no pricing, no legal advice) always apply and cannot be edited here.",
+      "daily_cap": "Daily token cap",
+      "daily_cap_hint": "Past the cap the assistant falls back to the scripted bot. 0 disables the cap.",
+      "max_turns": "Maximum turns per conversation",
+      "max_turns_hint": "Stops a conversation running forever."
+    },
+    "models": {
+      "fetch": "Fetch list",
+      "empty": "The endpoint returned no models."
+    },
+    "test": {
+      "run": "Test connection",
+      "costs": "Costs a few tokens per click.",
+      "passed": "Connected, and the model calls tools.",
+      "failed": "Could not reach the endpoint.",
+      "no_tools": "Reached the endpoint, but the model did NOT call the tool. The assistant would answer from imagination instead of the catalog — choose another model.",
+      "latency": "Responded in {{ms}}ms."
+    },
+    "usage": {
+      "today": "Today",
+      "history": "Last 14 days",
+      "no_cap": "No token cap set.",
+      "near_cap": "Close to the cap. Hitting it drops the assistant to scripted replies.",
+      "empty": "No usage recorded yet.",
+      "conversations_one": "{{count}} conversation",
+      "conversations_other": "{{count}} conversations"
+    },
+    "mcp": {
+      "intro": "Tokens that let Claude Desktop or an internal agent query the catalog and the lead pipeline. A token belongs to your account and runs with your permissions.",
+      "label": "Label",
+      "label_ph": "e.g. Claude Desktop on my laptop",
+      "issue": "Issue token",
+      "shown_once": "This string is shown exactly once. Copy it now — it cannot be recovered.",
+      "empty": "No tokens issued yet.",
+      "last_used": "last used {{at}}",
+      "never_used": "never used",
+      "revoke": "Revoke",
+      "revoked": "Revoked",
+      "revoked_toast": "Token revoked.",
+      "revoke_description": "Any agent using this token loses access immediately. This cannot be undone."
     }
   }
 }

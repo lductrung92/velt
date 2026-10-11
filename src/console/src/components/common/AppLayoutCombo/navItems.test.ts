@@ -23,6 +23,7 @@ describe("visibleNavSections", () => {
       "/admin/users",
       "/admin/roles",
       "/admin/sessions",
+      "/admin/ai",
     ]);
   });
 
@@ -69,6 +70,20 @@ describe("visibleNavSections", () => {
     expect(
       sections.find((s) => s.key === "system")?.items.map((i) => i.key),
     ).toEqual(["members"]);
+  });
+
+  it("gates the AI assistant behind settings.manage, not a bespoke permission", () => {
+    // An API key is a billing credential — the same class as the SMTP
+    // password, which settings.manage already guards.
+    const admin = sec(["settings.manage"])
+      .find((s) => s.key === "system")
+      ?.items.find((i) => i.key === "admin");
+    expect(admin?.children?.map((c) => c.path)).toEqual(["/admin/ai"]);
+
+    const withoutIt = sec(["users.read"])
+      .find((s) => s.key === "system")
+      ?.items.find((i) => i.key === "admin");
+    expect(withoutIt?.children?.map((c) => c.path)).not.toContain("/admin/ai");
   });
 });
 

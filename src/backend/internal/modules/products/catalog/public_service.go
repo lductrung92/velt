@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/modules/products/shared"
 	"github.com/velt/backend/internal/platform/storage"
@@ -209,4 +211,15 @@ func emptyIfNil(in []string) []string {
 		return []string{}
 	}
 	return in
+}
+
+// ResolvePublishedSlugs turns product slugs into ids, skipping anything that is
+// not published. Unknown slugs are dropped rather than refused: the caller is
+// an assistant repeating what a visitor said, not a client that can be fixed.
+func (s *PublicService) ResolvePublishedSlugs(ctx context.Context, slugs []string) ([]uuid.UUID, error) {
+	ids, err := s.repo.IDsBySlugs(ctx, slugs)
+	if err != nil {
+		return nil, s.MapRepoErr(ctx, "resolve slugs", err)
+	}
+	return ids, nil
 }

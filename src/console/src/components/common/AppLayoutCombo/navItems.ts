@@ -1,12 +1,12 @@
 import {
+  Bot,
   FileStack,
   FileText,
   FolderTree,
-  ListTree,
   LayoutDashboard,
+  ListTree,
   MonitorSmartphone,
   Newspaper,
-  Users2,
   Package,
   PackageSearch,
   Shapes,
@@ -14,6 +14,7 @@ import {
   ShieldHalf,
   Tags,
   Users,
+  Users2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -157,6 +158,14 @@ export const NAV_SECTIONS: NavSection[] = [
             labelKey: "nav.sessions",
             icon: MonitorSmartphone,
             permission: "sessions.read",
+          },
+          {
+            path: "/admin/ai",
+            labelKey: "nav.ai",
+            icon: Bot,
+            // settings.manage, not a bespoke ai permission: an API key is a
+            // billing credential, the same class as the SMTP password.
+            permission: "settings.manage",
           },
         ],
       },

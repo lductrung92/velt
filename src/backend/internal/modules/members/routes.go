@@ -17,10 +17,13 @@ import (
 // `/api/members/order` is declared before `/api/members/{id}` because chi matches
 // a literal segment ahead of a wildcard only within the same routing tree — the
 // explicit ordering keeps the intent obvious to the next reader.
+// It returns the service so in-process callers (the AI assistant reading the
+// roster) can reach it without going back out over HTTP.
 func Register(r chi.Router, pool *pgxpool.Pool, store *storage.Manager, settings SettingsPort,
 	logger *slog.Logger, authMW func(http.Handler) http.Handler,
-) {
-	h := NewHandler(NewService(NewRepository(pool), store, store, settings, Options{Logger: logger}))
+) *Service {
+	svc := NewService(NewRepository(pool), store, store, settings, Options{Logger: logger})
+	h := NewHandler(svc)
 
 	r.Group(func(r chi.Router) {
 		r.Use(authMW)
@@ -36,4 +39,5 @@ func Register(r chi.Router, pool *pgxpool.Pool, store *storage.Manager, settings
 
 	r.Get("/api/public/members", h.ListPublic)
 	r.Get("/api/public/members/{slug}", h.GetPublic)
+	return svc
 }

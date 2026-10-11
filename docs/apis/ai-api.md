@@ -100,8 +100,28 @@ khó chịu hơn nhiều so với một thông báo xung đột.
 
 ### `POST /api/mcp`
 
-Endpoint MCP, JSON-RPC. Xác thực bằng token cấp tay, ánh xạ về một user thật —
-tool chạy dưới **quyền của user đó**, không phải quyền của token.
+Endpoint MCP, JSON-RPC 2.0 (`initialize`, `tools/list`, `tools/call`, `ping`).
+Nằm **ngoài** middleware xác thực của console: client MCP trình token dài hạn
+của nó chứ không phải một phiên đăng nhập.
+
+Token ánh xạ về một **user thật**; tool chạy dưới quyền của user đó, không phải
+quyền gắn vào token. Thu hồi quyền trong console là chặn luôn agent — không có
+chỗ thứ hai phải nhớ. Tài khoản bị khoá thì token cũng hết hiệu lực.
+
+Lỗi của tool trả về dạng `result.isError`, không phải lỗi JSON-RPC: model cần
+đọc được nó hỏng ở đâu để thử cách khác.
+
+#### Quản lý token (console, cần `ai.mcp.use`)
+
+| Method | Path | Việc |
+|---|---|---|
+| `POST` | `/api/mcp/tokens` | Cấp token mới. Plaintext **chỉ trả về đúng lần này** (`shown_once: true`); về sau chỉ còn `hint` |
+| `GET` | `/api/mcp/tokens` | Danh sách token của chính mình, không kèm bí mật |
+| `DELETE` | `/api/mcp/tokens/{id}` | Thu hồi. Chỉ chủ sở hữu thu hồi được token của mình |
+
+Chỉ lưu SHA-256 của token. Băm thường là đúng ở đây và sẽ sai với mật khẩu: bí
+mật này là 32 byte ngẫu nhiên từ CSPRNG, không có từ điển để dò nên KDF chậm
+không mua được gì.
 
 Tool giai đoạn đầu:
 
@@ -116,6 +136,11 @@ Tool giai đoạn đầu:
 **Không có tool ghi ở giai đoạn đầu.** Thêm khi có nhu cầu thật, từng cái một,
 mỗi cái cân nhắc riêng — một client MCP là một agent, và agent sai thì ghi sai
 hàng loạt.
+
+`create_lead` tồn tại trong registry nhưng **không bao giờ hiện ra ở rìa MCP**,
+kể cả với super admin. Nó an toàn cho trợ lý trên site vì trợ lý mang theo ngữ
+cảnh phiên (hội thoại nào, ai giới thiệu) — agent không có ngữ cảnh đó, nên với
+nó tool này vừa bị ẩn ở `tools/list` vừa bị từ chối ở `tools/call`.
 
 ---
 

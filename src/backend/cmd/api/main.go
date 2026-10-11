@@ -22,11 +22,14 @@ import (
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/account"
 	"github.com/velt/backend/internal/modules/admin"
+	"github.com/velt/backend/internal/modules/ai"
+	aitools "github.com/velt/backend/internal/modules/ai/tools"
 	"github.com/velt/backend/internal/modules/auth"
 	"github.com/velt/backend/internal/modules/cms"
 	cmsarticles "github.com/velt/backend/internal/modules/cms/articles"
 	cmstaxonomy "github.com/velt/backend/internal/modules/cms/taxonomy"
 	"github.com/velt/backend/internal/modules/cms/widgets"
+	"github.com/velt/backend/internal/modules/crm"
 	"github.com/velt/backend/internal/modules/files"
 	"github.com/velt/backend/internal/modules/members"
 	"github.com/velt/backend/internal/modules/products"
@@ -117,6 +120,7 @@ func run() error {
 	// settings module (built first — the mailer reads SMTP config from it). The
 	// registry is the foundation defs plus each business module's flags (cms.*).
 	settingsDefs := append(settings.FoundationDefs(), cms.SettingDefs()...)
+	settingsDefs = append(settingsDefs, ai.SettingDefs()...)
 	settingsRegistry := settings.NewRegistry(settingsDefs...)
 	settingsSvc := settings.NewService(settings.NewRepository(pool), settingsCache, aead,
 		settingsRegistry, limiter, mail.NewSMTPTester(), settings.Options{Logger: logger})
@@ -196,10 +200,38 @@ func run() error {
 	admin.Register(r, pool, authSvc, limiter, store, logger, authMW)
 	// members bounded context: the public team roster the site shows and
 	// products attach to. Separate from users (login identity) by design.
-	members.Register(r, pool, store, settingsSvc, logger, authMW)
+	membersSvc := members.Register(r, pool, store, settingsSvc, logger, authMW)
+	// crm bounded context: leads only for now. The returned service is what the
+	// AI assistant will use to record a lead in-process, so it never needs an
+	// unauthenticated HTTP write.
+	crmLeads := crm.Register(r, pool, logger, authMW)
 	// products bounded context: the catalog VELT sells, plus its own taxonomy.
-	products.Register(r, pool, store, settingsSvc, logger, authMW,
+	publicCatalog := products.Register(r, pool, store, settingsSvc, logger, authMW,
 		revalidate.NewHTTP(cfg.CustomerWebBaseURL, cfg.RevalidateSecret, logger))
+	// ai bounded context: the site assistant. It reads the catalog through the
+	// SAME public service the site uses (published snapshots only) and the
+	// public member roster — no second path to the data with its own rules.
+	ai.Register(r, pool, settingsSvc, logger, authMW, ai.Deps{
+		Catalog: publicCatalog,
+		Leads:   crmLeads,
+		Roster: func(ctx context.Context) ([]aitools.Person, error) {
+			res, err := membersSvc.ListPublic(ctx, members.ListParams{PageSize: 100})
+			if err != nil {
+				return nil, err
+			}
+			out := make([]aitools.Person, 0, len(res.Items))
+			for _, m := range res.Items {
+				role := ""
+				if m.Role != nil {
+					role = *m.Role
+				}
+				out = append(out, aitools.Person{
+					Slug: m.Slug, FullName: m.FullName, Role: role, Skills: m.Skills,
+				})
+			}
+			return out, nil
+		},
+	}, cfg.CookieSecure)
 	// cms bounded context (taxonomy + feature-flag settings + articles/pages/menus/
 	// landing/comments/newsletter); settingsSvc is the scoped reader/writer for the
 	// cms.* registry keys (CMS gates cms.settings.* itself).

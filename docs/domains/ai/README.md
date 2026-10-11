@@ -10,6 +10,24 @@ migration hoặc code.
 
 ---
 
+## 0. Sơ đồ
+
+**Luồng tổng thể** — một lượt hỏi đáp đi qua đâu, ai được nói, dữ liệu nào được
+phép chạm vào:
+
+![Luồng trợ lý AI](../../diagrams/ai-workflow.svg)
+
+**MCP chi tiết** — hai rìa dùng chung một tầng tool, một phiên MCP từng bước, và
+bảng đối chiếu hai rìa:
+
+![MCP trong Zukatek](../../diagrams/ai-mcp.svg)
+
+**Vòng đời hội thoại** — trạng thái quyết định quyền nói:
+
+![Vòng đời hội thoại](../../diagrams/ai-conversation-state.svg)
+
+---
+
 ## 1. MCP nằm ở đâu — đọc mục này trước
 
 MCP (Model Context Protocol) là giao thức để **một LLM client khám phá và gọi tool
@@ -187,6 +205,17 @@ Một endpoint LLM công khai là chỗ đốt tiền và là bia cho bot cào.
 Khoá API đặt trong `system_settings` dạng **secret đã mã hoá** (`GetSecret`, cùng
 đường với `mail.smtp_password`), **không** để trong file có thể commit.
 
+**Nhà cung cấp**: hai adapter, không phải N. `anthropic` nói API riêng của
+Anthropic; `openai` nói chuẩn OpenAI Chat Completions — cũng chính là chuẩn mà
+Ollama, LM Studio, vLLM, Groq, Together và DeepSeek dùng. **Chạy model local
+không phải adapter thứ ba**, nó là adapter `openai` trỏ vào `localhost`.
+
+> **Cảnh báo khi dùng model nhỏ**: cả thiết kế này đứng trên việc model chịu gọi
+> tool. Model 7–8B thường bỏ qua tool và tự trả lời — lúc đó nó **bịa ra sản
+> phẩm Zukatek không tồn tại**. Đó là phá bảo đảm bám dữ liệu, không phải giảm
+> chất lượng. Nút "Kiểm tra kết nối" trong màn Trợ lý AI thử đúng việc này và
+> báo đỏ nếu model không gọi được tool.
+
 **Model**: `claude-sonnet-5-5` cho hội thoại (chất lượng tiếng Việt và khả năng
 tư vấn), `claude-haiku-5-5` cho phân loại rẻ tiền (nhận biết ý định liên hệ,
 định tuyến). Không fine-tune, không agent framework.
@@ -253,6 +282,23 @@ sự thật về việc có người hay không.
 | 3 | Sinh lead và gán theo `?ref=` | hội thoại có ý định liên hệ thì lead về đúng người |
 | 4 | Console hộp thư + chuyển người thật | nhận hội thoại, AI im, hai bên nói được |
 | 5 | MCP server nội bộ | Claude Desktop tra được catalog và lead |
+
+**Đã làm xong bước 0–5** (2026-10-11). Những gì lệch so với bản thiết kế ban đầu:
+
+- Token MCP có bảng riêng (`mcp_tokens`), băm SHA-256, thu hồi được, gắn với
+  một **người** chứ không phải một bộ quyền.
+- Dòng hệ thống ("một thành viên đã tham gia") **hiện cho khách** chứ không ẩn:
+  chúng vốn dành cho khách, ẩn đi là đọc xong tải lại trang thì mất.
+- Trực tuyến/vắng mặt theo nhịp tim 90 giây, dọn khi ghi. Laptop gập lại không
+  bao giờ gửi lời chào tạm biệt, nên trạng thái trực phải tự hết hạn.
+- Trả lời với tư cách người thật **không đòi phải là người đã nhận máy**: trong
+  nhóm nhỏ, đồng nghiệp đỡ hộ lúc ăn trưa là chuyện thường. Tác giả vẫn được ghi.
+- Thêm **adapter OpenAI-compatible** và màn hình **Quản trị → Trợ lý AI**
+  (`/admin/ai`, gate bằng `settings.manage`). Màn này cố ý KHÔNG đưa
+  `ai.max_message_len` và các tham số sampling lên: chúng là hàng rào kỹ thuật,
+  không ai tinh chỉnh có ý nghĩa, mà chỉnh sai thì hỏng.
+- `ai.system_persona` **cộng thêm** vào brief gốc, không thay thế — ràng buộc an
+  toàn (không nói giá, không tư vấn pháp lý) không sửa được từ giao diện.
 
 Bước 0 không bắt buộc cho bot (bot đọc snapshot in-process), nhưng site thì cần,
 và cả hai ăn chung một nguồn — làm trước thì gọn hơn.

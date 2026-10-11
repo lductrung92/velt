@@ -1,0 +1,227 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 1480" width="1340" height="1480" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif">
+<style>
+  :root{
+    --bg:#ffffff; --fg:#1f2328; --muted:#636c76; --box:#f6f8fa; --line:#d0d7de;
+    --blue:#0969da; --blue-bg:#ddf4ff; --green:#1a7f37; --green-bg:#dafbe1;
+    --amber:#9a6700; --amber-bg:#fff8c5; --red:#cf222e; --red-bg:#ffebe9;
+    --purple:#8250df; --purple-bg:#fbefff; --band:#f6f8fa;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --box:#161b22; --line:#30363d;
+      --blue:#4493f8; --blue-bg:#121d2f; --green:#3fb950; --green-bg:#0f2417;
+      --amber:#d29922; --amber-bg:#272115; --red:#ff7b72; --red-bg:#25171c;
+      --purple:#ab7df8; --purple-bg:#1d1b2e; --band:#11161d;
+    }
+  }
+  .bg{fill:var(--bg)} .band{fill:var(--band)}
+  .box{fill:var(--box);stroke:var(--line);stroke-width:1.5;rx:8}
+  .t{fill:var(--fg);font-size:13.5px}
+  .tb{fill:var(--fg);font-size:14px;font-weight:650}
+  .tm{fill:var(--muted);font-size:12px}
+  .lane{fill:var(--muted);font-size:12.5px;font-weight:650;letter-spacing:.4px}
+  .title{fill:var(--fg);font-size:21px;font-weight:700}
+  .sub{fill:var(--muted);font-size:13px}
+  .bandlbl{fill:var(--muted);font-size:12.5px;font-weight:700;letter-spacing:1.2px}
+  .arr{stroke:var(--line);stroke-width:1.8;fill:none;marker-end:url(#a)}
+  .arrb{stroke:var(--blue);stroke-width:2;fill:none;marker-end:url(#ab)}
+  .arrg{stroke:var(--green);stroke-width:2;fill:none;marker-end:url(#ag)}
+  .arrr{stroke:var(--red);stroke-width:2;fill:none;marker-end:url(#ar)}
+  .n{font-size:12px;font-weight:700;fill:var(--bg)}
+  .code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;fill:var(--fg)}
+  .codem{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;fill:var(--muted)}
+  .hdr{fill:var(--fg);font-size:12.5px;font-weight:700}
+</style>
+<defs>
+  <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--line)"/></marker>
+  <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--blue)"/></marker>
+  <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--green)"/></marker>
+  <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--red)"/></marker>
+</defs>
+
+<rect class="bg" x="0" y="0" width="1340" height="1480"/>
+
+<text class="title" x="30" y="38">MCP trong Zukatek — đặt ở rìa ngoài, không đặt giữa site và backend</text>
+<text class="sub" x="30" y="60">Một registry tool, hai rìa, hai identity. Xem docs/domains/ai/README.md §1</text>
+
+<!-- ============ PART 1: the two edges ============ -->
+<rect class="band" x="30" y="80" width="1280" height="430" rx="10"/>
+<text class="bandlbl" x="44" y="102">1 · HAI RÌA DÙNG CHUNG MỘT TẦNG TOOL</text>
+
+<!-- left edge: site chatbot -->
+<rect class="box" x="56" y="118" width="300" height="82" stroke="var(--blue)" fill="var(--blue-bg)"/>
+<text class="tb" x="72" y="144">Khách trên site</text>
+<text class="tm" x="72" y="166">Trình duyệt, không đăng nhập.</text>
+<text class="codem" x="72" y="186">cookie visitor_key</text>
+
+<rect class="box" x="56" y="232" width="300" height="104"/>
+<text class="tb" x="72" y="258">ai/conversation</text>
+<text class="tm" x="72" y="280">Chạy dưới identity ẩn danh.</text>
+<text class="tm" x="72" y="298">Gọi tầng tool bằng LỜI GỌI HÀM</text>
+<text class="tm" x="72" y="316">trong cùng tiến trình Go.</text>
+
+<rect class="box" x="56" y="366" width="300" height="118" stroke="var(--red)" fill="var(--red-bg)"/>
+<text class="tb" x="72" y="392" fill="var(--red)">KHÔNG đi qua MCP</text>
+<text class="tm" x="72" y="414">Cùng một tiến trình. Thêm MCP ở đây</text>
+<text class="tm" x="72" y="432">là thêm một chặng JSON-RPC, thêm</text>
+<text class="tm" x="72" y="450">vòng đời phiên, thêm chỗ hỏng — để</text>
+<text class="tm" x="72" y="468">lấy dữ liệu cách đó một lời gọi hàm.</text>
+
+<!-- center: tool registry -->
+<rect class="box" x="420" y="150" width="340" height="300" stroke="var(--green)" fill="var(--green-bg)"/>
+<text class="tb" x="440" y="178" fill="var(--green)">TOOL REGISTRY</text>
+<text class="tm" x="440" y="198">một bản cài đặt duy nhất</text>
+<line x1="440" y1="210" x2="744" y2="210" stroke="var(--green)" stroke-width="1"/>
+<text class="hdr" x="440" y="232">Mỗi tool tự khai quyền nó đòi</text>
+<text class="code" x="440" y="258">search_products</text><text class="codem" x="610" y="258">products.view</text>
+<text class="code" x="440" y="280">get_product</text><text class="codem" x="610" y="280">products.view</text>
+<text class="code" x="440" y="302">list_members</text><text class="codem" x="610" y="302">members.view</text>
+<text class="code" x="440" y="324">create_lead</text><text class="codem" x="610" y="324">— (ẩn danh)</text>
+<line x1="440" y1="338" x2="744" y2="338" stroke="var(--green)" stroke-width="1" stroke-dasharray="3 3"/>
+<text class="code" x="440" y="360">list_leads</text><text class="codem" x="610" y="360">crm.leads.view</text>
+<text class="code" x="440" y="382">get_conversation</text><text class="codem" x="610" y="382">ai.chat.handle</text>
+<text class="tm" x="440" y="410">Mỗi rìa quyết định chạy dưới danh</text>
+<text class="tm" x="440" y="428">nghĩa AI và được gọi tool NÀO.</text>
+
+<!-- right edge: MCP -->
+<rect class="box" x="824" y="118" width="300" height="82" stroke="var(--purple)" fill="var(--purple-bg)"/>
+<text class="tb" x="840" y="144">Claude Desktop / Claude Code</text>
+<text class="tm" x="840" y="166">Client KHÔNG do mình viết →</text>
+<text class="tm" x="840" y="186">cần một giao thức chuẩn.</text>
+
+<rect class="box" x="824" y="232" width="300" height="104"/>
+<text class="tb" x="840" y="258">ai/mcp — MCP server</text>
+<text class="tm" x="840" y="280">Chạy dưới identity NGƯỜI THẬT.</text>
+<text class="codem" x="840" y="300">POST /api/mcp (JSON-RPC)</text>
+<text class="tm" x="840" y="320">Giai đoạn đầu: chỉ nội bộ team.</text>
+
+<rect class="box" x="824" y="366" width="300" height="118" stroke="var(--amber)" fill="var(--amber-bg)"/>
+<text class="tb" x="840" y="392">Vì sao chỗ này MCP xứng đáng</text>
+<text class="tm" x="840" y="414">Team hỏi “tuần này có lead nào”,</text>
+<text class="tm" x="840" y="432">agent nội bộ sau này, đối tác về sau.</text>
+<text class="tm" x="840" y="450">Không viết được client cho từng cái</text>
+<text class="tm" x="840" y="468">→ giao thức chuẩn giải đúng bài này.</text>
+
+<path class="arrb" d="M206 200 V 226"/>
+<path class="arrb" d="M356 284 H 414"/>
+<path class="arr" d="M974 200 V 226"/>
+<path class="arrg" d="M824 284 H 766"/>
+<path class="arrg" d="M766 300 H 824" marker-end="url(#ag)"/>
+<text class="tm" x="208" y="222"> </text>
+
+<!-- ============ PART 2: the MCP call sequence ============ -->
+<rect class="band" x="30" y="528" width="1280" height="560" rx="10"/>
+<text class="bandlbl" x="44" y="550">2 · MỘT PHIÊN MCP, TỪNG BƯỚC</text>
+
+<line x1="200" y1="570" x2="200" y2="1070" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 5"/>
+<line x1="620" y1="570" x2="620" y2="1070" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 5"/>
+<line x1="1000" y1="570" x2="1000" y2="1070" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 5"/>
+<text class="lane" x="56" y="588">CLIENT MCP</text>
+<text class="lane" x="236" y="588">ai/mcp</text>
+<text class="lane" x="660" y="588">tool registry</text>
+<text class="lane" x="1030" y="588">service của module</text>
+
+<rect class="box" x="56" y="602" width="132" height="60"/>
+<circle cx="72" cy="618" r="11" fill="var(--blue)"/><text class="n" x="68" y="622">1</text>
+<text class="t" x="90" y="623">initialize</text>
+<text class="codem" x="68" y="648">+ Bearer token</text>
+
+<rect class="box" x="236" y="602" width="370" height="104" stroke="var(--red)" fill="var(--red-bg)"/>
+<circle cx="252" cy="618" r="11" fill="var(--red)"/><text class="n" x="248" y="622">2</text>
+<text class="tb" x="270" y="623" fill="var(--red)">Token → NGƯỜI, không phải quyền</text>
+<text class="tm" x="252" y="646">Token cấp tay ánh xạ về một user thật.</text>
+<text class="tm" x="252" y="664">Tool chạy dưới quyền CỦA USER ĐÓ,</text>
+<text class="tm" x="252" y="682">không phải quyền gắn vào token.</text>
+<text class="tm" x="252" y="700">Thu hồi quyền user là chặn luôn token.</text>
+
+<rect class="box" x="56" y="724" width="132" height="60"/>
+<circle cx="72" cy="740" r="11" fill="var(--blue)"/><text class="n" x="68" y="744">3</text>
+<text class="t" x="90" y="745">tools/list</text>
+
+<rect class="box" x="236" y="724" width="370" height="86" stroke="var(--amber)" fill="var(--amber-bg)"/>
+<circle cx="252" cy="740" r="11" fill="var(--amber)"/><text class="n" x="248" y="744">4</text>
+<text class="tb" x="270" y="745">Lọc theo quyền NGAY Ở DANH SÁCH</text>
+<text class="tm" x="252" y="768">Thiếu crm.leads.view thì list_leads không</text>
+<text class="tm" x="252" y="786">hiện ra. Model không thấy thì không gọi,</text>
+<text class="tm" x="252" y="804">đỡ hẳn một vòng thử-rồi-bị-từ-chối.</text>
+
+<rect class="box" x="56" y="836" width="132" height="76"/>
+<circle cx="72" cy="852" r="11" fill="var(--blue)"/><text class="n" x="68" y="856">5</text>
+<text class="t" x="90" y="857">tools/call</text>
+<text class="codem" x="68" y="882">list_leads</text>
+<text class="codem" x="68" y="900">{status:"new"}</text>
+
+<rect class="box" x="236" y="836" width="370" height="76"/>
+<circle cx="252" cy="852" r="11" fill="var(--blue)"/><text class="n" x="248" y="856">6</text>
+<text class="t" x="270" y="857">Dựng lại Identity rồi chuyển tiếp</text>
+<text class="tm" x="252" y="880">Không có đường tắt riêng cho MCP —</text>
+<text class="tm" x="252" y="898">nó đi đúng cửa mà console đang đi.</text>
+
+<rect class="box" x="660" y="836" width="310" height="76" stroke="var(--green)" fill="var(--green-bg)"/>
+<circle cx="676" cy="852" r="11" fill="var(--green)"/><text class="n" x="672" y="856">7</text>
+<text class="t" x="694" y="857">Tra quyền tool đòi</text>
+<text class="tm" x="676" y="880">rồi gọi thẳng service, đúng hàm mà</text>
+<text class="tm" x="676" y="898">handler HTTP của console vẫn gọi.</text>
+
+<rect class="box" x="1030" y="836" width="260" height="98"/>
+<circle cx="1046" cy="852" r="11" fill="var(--blue)"/><text class="n" x="1042" y="856">8</text>
+<text class="t" x="1064" y="857">leads.Service.List()</text>
+<text class="tm" x="1046" y="880">Require(ctx, id, perm) chạy LẠI</text>
+<text class="tm" x="1046" y="898">ở đây. Hai lớp kiểm, vì tầng</text>
+<text class="tm" x="1046" y="916">service không tin rìa nào cả.</text>
+
+<rect class="box" x="236" y="946" width="370" height="104" stroke="var(--red)" fill="var(--red-bg)"/>
+<circle cx="252" cy="962" r="11" fill="var(--red)"/><text class="n" x="248" y="966">9</text>
+<text class="tb" x="270" y="967" fill="var(--red)">Giai đoạn đầu: KHÔNG có tool ghi</text>
+<text class="tm" x="252" y="990">Một client MCP là một agent. Agent sai</text>
+<text class="tm" x="252" y="1008">thì sai HÀNG LOẠT, không sai một lần.</text>
+<text class="tm" x="252" y="1026">Thêm tool ghi từng cái một, mỗi cái</text>
+<text class="tm" x="252" y="1044">cân nhắc riêng, khi có nhu cầu thật.</text>
+
+<path class="arrb" d="M188 632 H 230"/>
+<path class="arrb" d="M188 754 H 230"/>
+<path class="arrb" d="M188 874 H 230"/>
+<path class="arrb" d="M606 874 H 654"/>
+<path class="arrg" d="M970 874 H 1024"/>
+<path class="arr" d="M1024 906 H 976" marker-end="url(#a)"/>
+<path class="arr" d="M654 896 C 620 896 620 920 420 920 L 420 940" stroke-dasharray="4 4"/>
+
+<!-- ============ PART 3: contrast table ============ -->
+<rect class="band" x="30" y="1106" width="1280" height="320" rx="10"/>
+<text class="bandlbl" x="44" y="1128">3 · HAI RÌA KHÁC NHAU Ở ĐÂU</text>
+
+<rect class="box" x="56" y="1144" width="1228" height="262"/>
+<line x1="430" y1="1144" x2="430" y2="1406" stroke="var(--line)"/>
+<line x1="860" y1="1144" x2="860" y2="1406" stroke="var(--line)"/>
+<line x1="56" y1="1186" x2="1284" y2="1186" stroke="var(--line)"/>
+
+<text class="hdr" x="76" y="1172"> </text>
+<text class="hdr" x="450" y="1172" fill="var(--blue)">Chatbot trên site</text>
+<text class="hdr" x="880" y="1172" fill="var(--purple)">MCP server</text>
+
+<text class="t" x="76" y="1214">Ai gọi</text>
+<text class="t" x="450" y="1214">khách ẩn danh</text>
+<text class="t" x="880" y="1214">thành viên team, đã đăng nhập</text>
+
+<text class="t" x="76" y="1248">Xác thực</text>
+<text class="t" x="450" y="1248">không — cookie visitor_key</text>
+<text class="t" x="880" y="1248">token cấp tay → user thật</text>
+
+<text class="t" x="76" y="1282">Vận chuyển</text>
+<text class="t" x="450" y="1282">lời gọi hàm, in-process</text>
+<text class="t" x="880" y="1282">JSON-RPC qua HTTP</text>
+
+<text class="t" x="76" y="1316">Tool đọc</text>
+<text class="t" x="450" y="1316">catalog, thành viên</text>
+<text class="t" x="880" y="1316">thêm lead, hội thoại</text>
+
+<text class="t" x="76" y="1350">Tool ghi</text>
+<text class="t" x="450" y="1350" fill="var(--red)">duy nhất create_lead</text>
+<text class="t" x="880" y="1350" fill="var(--red)">chưa có cái nào</text>
+
+<text class="t" x="76" y="1384">Thấy bản nháp</text>
+<text class="t" x="450" y="1384" fill="var(--red)">không bao giờ</text>
+<text class="t" x="880" y="1384">có, nếu quyền cho phép</text>
+
+<text class="tm" x="44" y="1462">Màu: xanh dương = đường của khách và client · xanh lá = tầng tool · đỏ = ràng buộc an toàn · vàng = quyết định đáng chú ý</text>
+</svg>

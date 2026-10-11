@@ -1,0 +1,237 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 1448" width="1340" height="1448" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif">
+<style>
+  :root{
+    --bg:#ffffff; --fg:#1f2328; --muted:#636c76; --box:#f6f8fa; --line:#d0d7de;
+    --blue:#0969da; --blue-bg:#ddf4ff; --green:#1a7f37; --green-bg:#dafbe1;
+    --amber:#9a6700; --amber-bg:#fff8c5; --red:#cf222e; --red-bg:#ffebe9;
+    --purple:#8250df; --purple-bg:#fbefff; --band:#f6f8fa;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --box:#161b22; --line:#30363d;
+      --blue:#4493f8; --blue-bg:#121d2f; --green:#3fb950; --green-bg:#0f2417;
+      --amber:#d29922; --amber-bg:#272115; --red:#ff7b72; --red-bg:#25171c;
+      --purple:#ab7df8; --purple-bg:#1d1b2e; --band:#11161d;
+    }
+  }
+  .bg{fill:var(--bg)}
+  .band{fill:var(--band)}
+  .box{fill:var(--box);stroke:var(--line);stroke-width:1.5;rx:8}
+  .t{fill:var(--fg);font-size:13.5px}
+  .tb{fill:var(--fg);font-size:14px;font-weight:650}
+  .tm{fill:var(--muted);font-size:12px}
+  .lane{fill:var(--muted);font-size:12.5px;font-weight:650;letter-spacing:.4px}
+  .title{fill:var(--fg);font-size:21px;font-weight:700}
+  .sub{fill:var(--muted);font-size:13px}
+  .bandlbl{fill:var(--muted);font-size:12.5px;font-weight:700;letter-spacing:1.2px}
+  .arr{stroke:var(--line);stroke-width:1.8;fill:none;marker-end:url(#a)}
+  .arrb{stroke:var(--blue);stroke-width:2;fill:none;marker-end:url(#ab)}
+  .arrg{stroke:var(--green);stroke-width:2;fill:none;marker-end:url(#ag)}
+  .arrr{stroke:var(--red);stroke-width:2;fill:none;marker-end:url(#ar);stroke-dasharray:6 4}
+  .arrp{stroke:var(--purple);stroke-width:2;fill:none;marker-end:url(#ap)}
+  .n{font-size:12px;font-weight:700;fill:var(--bg)}
+  .code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;fill:var(--fg)}
+  .codem{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;fill:var(--muted)}
+</style>
+<defs>
+  <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--line)"/></marker>
+  <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--blue)"/></marker>
+  <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--green)"/></marker>
+  <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--red)"/></marker>
+  <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--purple)"/></marker>
+</defs>
+
+<rect class="bg" x="0" y="0" width="1340" height="1448"/>
+
+<text class="title" x="30" y="38">Zukatek — luồng trợ lý AI tư vấn</text>
+<text class="sub" x="30" y="60">Một lượt hỏi đáp đi qua đâu, ai được nói, và dữ liệu nào được phép chạm vào. Xem docs/domains/ai/README.md</text>
+
+<!-- lane headers -->
+<line x1="30" y1="76" x2="1310" y2="76" stroke="var(--line)" stroke-width="1"/>
+<text class="lane" x="40" y="96">KHÁCH (TRÌNH DUYỆT)</text>
+<text class="lane" x="340" y="96">ai/conversation (Go)</text>
+<text class="lane" x="680" y="96">provider → LLM</text>
+<text class="lane" x="1000" y="96">tools + dữ liệu</text>
+<line x1="320" y1="104" x2="320" y2="1410" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 5"/>
+<line x1="660" y1="104" x2="660" y2="1410" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 5"/>
+<line x1="980" y1="104" x2="980" y2="1410" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 5"/>
+
+<!-- ================= BAND A ================= -->
+<rect class="band" x="30" y="112" width="1280" height="222" rx="10"/>
+<text class="bandlbl" x="44" y="134">A · MỞ HỘI THOẠI</text>
+
+<rect class="box" x="44" y="146" width="256" height="64"/>
+<circle cx="60" cy="162" r="11" fill="var(--blue)"/><text class="n" x="56" y="166">1</text>
+<text class="t" x="78" y="167">Vào site qua link giới thiệu</text>
+<text class="codem" x="60" y="190">/products?ref=an-nguyen</text>
+
+<rect class="box" x="340" y="146" width="300" height="86"/>
+<circle cx="356" cy="162" r="11" fill="var(--blue)"/><text class="n" x="352" y="166">2</text>
+<text class="t" x="374" y="167">POST /api/public/chat/conversations</text>
+<text class="tm" x="356" y="190">Đặt cookie visitor_key (ẩn danh,</text>
+<text class="tm" x="356" y="208">không phải tài khoản) và lưu</text>
+<text class="codem" x="356" y="226">referrer_member_id ← ?ref=</text>
+
+<rect class="box" x="44" y="238" width="256" height="82"/>
+<circle cx="60" cy="254" r="11" fill="var(--blue)"/><text class="n" x="56" y="258">3</text>
+<text class="t" x="78" y="259">Mở SSE và giữ mở</text>
+<text class="codem" x="60" y="282">GET …/{id}/stream</text>
+<text class="tm" x="60" y="302">Đường DUY NHẤT chữ chảy về khách</text>
+
+<path class="arrb" d="M300 178 H334"/>
+<path class="arrb" d="M340 215 C 300 215 300 240 180 240 L 180 234" />
+
+<!-- ================= BAND B ================= -->
+<rect class="band" x="30" y="346" width="1280" height="568" rx="10"/>
+<text class="bandlbl" x="44" y="368">B · MỘT LƯỢT HỎI ĐÁP</text>
+
+<rect class="box" x="44" y="380" width="256" height="82"/>
+<circle cx="60" cy="396" r="11" fill="var(--blue)"/><text class="n" x="56" y="400">4</text>
+<text class="t" x="78" y="401">Gửi câu hỏi</text>
+<text class="tm" x="60" y="424">“Quán tôi 3 chi nhánh,</text>
+<text class="tm" x="60" y="442">quản kho đang rối”</text>
+
+<rect class="box" x="340" y="380" width="300" height="130" stroke="var(--amber)" fill="var(--amber-bg)"/>
+<circle cx="356" cy="396" r="11" fill="var(--amber)"/><text class="n" x="352" y="400">5</text>
+<text class="tb" x="374" y="401">Ba hàng rào, trước khi tốn tiền</text>
+<text class="t" x="356" y="424">• trạng thái có phải <tspan class="code">bot</tspan>?</text>
+<text class="t" x="356" y="446">• quá trần lượt của hội thoại?</text>
+<text class="t" x="356" y="468">• quá trần ngân sách ngày?</text>
+<text class="tm" x="356" y="492">Trả 202 ngay; câu trả lời đi đường SSE</text>
+
+<rect class="box" x="44" y="500" width="256" height="98" stroke="var(--red)" fill="var(--red-bg)"/>
+<text class="tb" x="60" y="524" fill="var(--red)">Chạm trần → SUY BIẾN</text>
+<text class="t" x="60" y="546">Rơi về bot từ khoá cũ, cờ</text>
+<text class="code" x="60" y="566">"degraded": true</text>
+<text class="tm" x="60" y="588">Vẫn 200 — khách không cần biết hoá đơn.</text>
+
+<rect class="box" x="340" y="624" width="300" height="104"/>
+<circle cx="356" cy="640" r="11" fill="var(--blue)"/><text class="n" x="352" y="644">6</text>
+<text class="t" x="374" y="645">Lắp context</text>
+<text class="tm" x="356" y="668">system prompt + lịch sử hội thoại</text>
+<text class="tm" x="356" y="686">+ TOÀN BỘ catalog đã xuất bản</text>
+<text class="tm" x="356" y="704">(~5k token → không cần RAG)</text>
+
+<rect class="box" x="680" y="624" width="280" height="104" stroke="var(--purple)" fill="var(--purple-bg)"/>
+<circle cx="696" cy="640" r="11" fill="var(--purple)"/><text class="n" x="692" y="644">7</text>
+<text class="t" x="714" y="645">claude-sonnet-5-5</text>
+<text class="tm" x="696" y="668">Tư vấn nghiệp vụ chung, rồi</text>
+<text class="tm" x="696" y="686">dẫn về sản phẩm phù hợp.</text>
+<text class="tm" x="696" y="704">Có thể yêu cầu gọi tool.</text>
+
+<rect class="box" x="1000" y="600" width="290" height="152" stroke="var(--green)" fill="var(--green-bg)"/>
+<circle cx="1016" cy="620" r="11" fill="var(--green)"/><text class="n" x="1012" y="624">8</text>
+<text class="tb" x="1034" y="625">Tool CHỈ ĐỌC</text>
+<text class="code" x="1016" y="650">search_products()</text>
+<text class="code" x="1016" y="670">get_product(slug)</text>
+<text class="code" x="1016" y="690">list_members()</text>
+<line x1="1016" y1="702" x2="1274" y2="702" stroke="var(--green)" stroke-width="1" stroke-dasharray="3 3"/>
+<text class="tm" x="1016" y="722">Nguồn: products.published_snapshot</text>
+<text class="tm" x="1016" y="740">→ không bao giờ thấy bản nháp</text>
+
+<rect class="box" x="1000" y="770" width="290" height="88" stroke="var(--red)" fill="var(--red-bg)"/>
+<text class="tb" x="1016" y="794" fill="var(--red)">KHÔNG có dữ liệu giá</text>
+<text class="tm" x="1016" y="816">Chặn bằng VẮNG DỮ LIỆU, không</text>
+<text class="tm" x="1016" y="834">bằng lời dặn trong prompt. Model</text>
+<text class="tm" x="1016" y="852">không bịa được thứ nó không có.</text>
+
+<rect class="box" x="680" y="776" width="280" height="86"/>
+<circle cx="696" cy="792" r="11" fill="var(--purple)"/><text class="n" x="692" y="796">9</text>
+<text class="t" x="714" y="797">Sinh chữ theo luồng</text>
+<text class="tm" x="696" y="820">Vòng lặp tool-use lặp lại cho tới</text>
+<text class="tm" x="696" y="838">khi model không xin tool nữa.</text>
+
+<rect class="box" x="340" y="776" width="300" height="110" stroke="var(--red)" fill="var(--red-bg)"/>
+<circle cx="356" cy="792" r="11" fill="var(--red)"/><text class="n" x="350" y="796">10</text>
+<text class="tb" x="374" y="797" fill="var(--red)">Kiểm trạng thái TỪNG đoạn</text>
+<text class="t" x="356" y="820">Trước khi phát mỗi <tspan class="code">delta</tspan>:</text>
+<text class="t" x="356" y="842">nếu <tspan class="code">state != bot</tspan> → DỪNG NGAY.</text>
+<text class="tm" x="356" y="866">Chỉ kiểm lúc bắt đầu là bot sẽ chen</text>
+<text class="tm" x="356" y="878">lời khi người thật đã nhận máy.</text>
+
+<rect class="box" x="44" y="776" width="256" height="110"/>
+<circle cx="60" cy="792" r="11" fill="var(--blue)"/><text class="n" x="54" y="796">11</text>
+<text class="t" x="78" y="797">Chữ hiện dần trên màn hình</text>
+<text class="codem" x="60" y="822">event: delta</text>
+<text class="codem" x="60" y="842">event: message</text>
+<text class="codem" x="60" y="862">event: state</text>
+<text class="tm" x="60" y="880">Client PHẢI xử lý event state.</text>
+
+<path class="arrb" d="M300 420 H334"/>
+<path class="arrr" d="M334 470 H 306"/>
+<path class="arrb" d="M490 510 V 620"/>
+<text class="tm" x="500" y="560">qua được cả ba</text>
+<path class="arrp" d="M640 676 H 674"/>
+<path class="arrg" d="M960 666 H 994"/>
+<path class="arrg" d="M994 690 H 960" marker-end="url(#ag)"/>
+<path class="arrp" d="M820 728 V 772"/>
+<path class="arrb" d="M674 818 H 644"/>
+<path class="arrb" d="M334 830 H 304"/>
+
+<!-- ================= BAND C ================= -->
+<rect class="band" x="30" y="926" width="1280" height="200" rx="10"/>
+<text class="bandlbl" x="44" y="948">C · SINH LEAD — chỗ nối sang CRM</text>
+
+<rect class="box" x="680" y="960" width="280" height="86" stroke="var(--purple)" fill="var(--purple-bg)"/>
+<circle cx="696" cy="976" r="11" fill="var(--purple)"/><text class="n" x="690" y="980">12</text>
+<text class="t" x="718" y="981">Thấy ý định liên hệ</text>
+<text class="tm" x="696" y="1004">Model hỏi xin tên và một kênh</text>
+<text class="tm" x="696" y="1022">liên hệ, rồi gọi tool ghi.</text>
+
+<rect class="box" x="1000" y="960" width="290" height="140" stroke="var(--green)" fill="var(--green-bg)"/>
+<circle cx="1016" cy="976" r="11" fill="var(--green)"/><text class="n" x="1010" y="980">13</text>
+<text class="tb" x="1038" y="981">Tool GHI — duy nhất một cái</text>
+<text class="code" x="1016" y="1006">create_lead(...)</text>
+<text class="tm" x="1016" y="1028">→ crm.CaptureFromChat() trong</text>
+<text class="tm" x="1016" y="1046">cùng tiến trình, không qua HTTP.</text>
+<text class="tm" x="1016" y="1068">Ép source=chat, status=new.</text>
+<text class="tm" x="1016" y="1088">Gán cho thành viên ở ?ref=.</text>
+
+<rect class="box" x="340" y="960" width="300" height="86" stroke="var(--red)" fill="var(--red-bg)"/>
+<text class="tb" x="356" y="984" fill="var(--red)">Vì sao chỉ một tool ghi</text>
+<text class="tm" x="356" y="1006">Khách là nguồn không tin được. Chặn</text>
+<text class="tm" x="356" y="1024">prompt injection bằng GIỚI HẠN NĂNG</text>
+<text class="tm" x="356" y="1042">LỰC: có bị dụ cũng không làm gì khác.</text>
+
+<path class="arrg" d="M960 1003 H 994"/>
+
+<!-- ================= BAND D ================= -->
+<rect class="band" x="30" y="1138" width="1280" height="270" rx="10"/>
+<text class="bandlbl" x="44" y="1160">D · CHUYỂN NGƯỜI THẬT</text>
+
+<rect class="box" x="44" y="1172" width="256" height="76"/>
+<circle cx="60" cy="1188" r="11" fill="var(--blue)"/><text class="n" x="54" y="1192">14</text>
+<text class="t" x="78" y="1193">Xin gặp người</text>
+<text class="codem" x="60" y="1216">POST …/{id}/handoff</text>
+<text class="tm" x="60" y="1236">→ state = waiting</text>
+
+<rect class="box" x="340" y="1172" width="300" height="96" stroke="var(--amber)" fill="var(--amber-bg)"/>
+<text class="tb" x="356" y="1196">Không ai trực?</text>
+<text class="tm" x="356" y="1218">Nói thẳng là hiện không có người,</text>
+<text class="tm" x="356" y="1236">thu liên hệ và tạo lead.</text>
+<text class="tm" x="356" y="1254">Không để khách chờ vô vọng.</text>
+
+<rect class="box" x="680" y="1172" width="280" height="118"/>
+<circle cx="696" cy="1188" r="11" fill="var(--blue)"/><text class="n" x="690" y="1192">15</text>
+<text class="t" x="718" y="1193">Console: hộp thư</text>
+<text class="tm" x="696" y="1216">Một thành viên bấm NHẬN.</text>
+<text class="tm" x="696" y="1234">Hai người bấm cùng lúc → một</text>
+<text class="tm" x="696" y="1252">người thắng, người kia nhận 409.</text>
+<text class="tm" x="696" y="1274">→ state = human</text>
+
+<rect class="box" x="1000" y="1172" width="290" height="118" stroke="var(--red)" fill="var(--red-bg)"/>
+<circle cx="1016" cy="1188" r="11" fill="var(--red)"/><text class="n" x="1010" y="1192">16</text>
+<text class="tb" x="1038" y="1193" fill="var(--red)">AI IM BẶT</text>
+<text class="tm" x="1016" y="1216">Người thật trả lời qua CHÍNH</text>
+<text class="tm" x="1016" y="1234">đường SSE khách đang cắm.</text>
+<text class="tm" x="1016" y="1252">Hub nằm trong RAM một tiến trình</text>
+<text class="tm" x="1016" y="1270">— nhiều instance cần Redis pub/sub.</text>
+
+<path class="arrb" d="M300 1210 H334"/>
+<path class="arrb" d="M640 1220 H674"/>
+<path class="arrb" d="M960 1230 H994"/>
+<path class="arrb" d="M1145 1290 C 1145 1338 160 1338 160 1258" stroke-dasharray="5 4"/>
+<text class="tm" x="560" y="1334">tin nhắn của người thật về khách qua cùng một stream</text>
+
+<text class="tm" x="44" y="1430">Màu: xanh dương = đường đi của khách · tím = model · xanh lá = tool và dữ liệu · đỏ = ràng buộc an toàn · vàng = hàng rào chi phí</text>
+</svg>

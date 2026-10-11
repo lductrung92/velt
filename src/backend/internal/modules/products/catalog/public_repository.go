@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -166,6 +167,34 @@ func (r *PublicRepository) ListPublicCategories(ctx context.Context) ([]PublicCa
 			return nil, shared.Wrap("scan public category", err)
 		}
 		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// IDsBySlugs resolves published product slugs to ids.
+//
+// In-process only: the public HTTP responses deliberately carry slugs and no
+// ids, and that stays true. This exists so another context (the assistant
+// recording which products a lead asked about) can store a real reference
+// instead of a string that will rot.
+func (r *PublicRepository) IDsBySlugs(ctx context.Context, slugs []string) ([]uuid.UUID, error) {
+	if len(slugs) == 0 {
+		return nil, nil
+	}
+	rows, err := r.pool.Query(ctx,
+		`SELECT id FROM products WHERE slug = ANY($1) AND `+publishedOnly, slugs)
+	if err != nil {
+		return nil, shared.Wrap("ids by slugs", err)
+	}
+	defer rows.Close()
+
+	out := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, shared.Wrap("scan product id", err)
+		}
+		out = append(out, id)
 	}
 	return out, rows.Err()
 }

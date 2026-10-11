@@ -149,7 +149,8 @@
     "members": "Thành viên",
     "product_categories": "Danh mục",
     "catalog": "Catalog",
-    "products": "Sản phẩm"
+    "products": "Sản phẩm",
+    "ai": "Trợ lý AI"
   },
   "auth": {
     "login": {
@@ -1070,6 +1071,86 @@
       "reorder": "Kéo để đổi thứ tự",
       "role_ph": "Vai trò trong sản phẩm này",
       "role_for": "Vai trò của {{name}}"
+    }
+  },
+  "ai": {
+    "title": "Trợ lý AI",
+    "subtitle": "Cấu hình trợ lý tư vấn trên website, theo dõi mức sử dụng và cấp quyền cho agent.",
+    "saved": "Đã lưu cấu hình trợ lý AI.",
+    "status": {
+      "live": "Đang chạy",
+      "degraded": "Đang trả lời rút gọn",
+      "staff_online_one": "{{count}} người đang trực",
+      "staff_online_other": "{{count}} người đang trực",
+      "reason": {
+        "disabled": "đang tắt",
+        "not_configured": "chưa cấu hình đủ để gọi",
+        "budget_exhausted": "đã chạm trần token hôm nay"
+      }
+    },
+    "provider": {
+      "anthropic": "Anthropic (Claude)",
+      "openai": "OpenAI / tương thích OpenAI"
+    },
+    "section": {
+      "connection": "Kết nối",
+      "behaviour": "Cách trả lời",
+      "usage": "Mức sử dụng",
+      "mcp": "Token MCP"
+    },
+    "field": {
+      "enabled": "Bật trợ lý",
+      "enabled_hint": "Tắt thì website rơi về bot trả lời mẫu, không báo lỗi cho khách.",
+      "provider": "Nhà cung cấp",
+      "provider_hint": "Chọn “tương thích OpenAI” cho Ollama, LM Studio, vLLM, Groq hoặc chính OpenAI.",
+      "base_url": "Địa chỉ endpoint",
+      "base_url_hint": "Để trống thì dùng mặc định của nhà cung cấp. Chạy model local thì điền địa chỉ máy chủ.",
+      "api_key": "Khoá API",
+      "api_key_set": "Đã đặt — nhập giá trị mới để thay",
+      "api_key_unset": "Chưa đặt",
+      "api_key_hint": "Lưu dưới dạng mã hoá, không bao giờ đọc lại được. Bỏ trống để giữ khoá hiện tại. Endpoint chạy local thường không cần khoá.",
+      "model": "Model",
+      "persona": "Ghi chú riêng cho trợ lý",
+      "persona_hint": "Phần này được THÊM vào chỉ dẫn gốc. Các ràng buộc an toàn (không nói giá, không tư vấn pháp lý) luôn giữ nguyên và không sửa được ở đây.",
+      "daily_cap": "Trần token mỗi ngày",
+      "daily_cap_hint": "Chạm trần thì trợ lý tự rơi về bot trả lời mẫu. Đặt 0 để bỏ trần.",
+      "max_turns": "Số lượt tối đa mỗi hội thoại",
+      "max_turns_hint": "Chặn hội thoại chạy vô tận."
+    },
+    "models": {
+      "fetch": "Lấy danh sách",
+      "empty": "Endpoint không trả về model nào."
+    },
+    "test": {
+      "run": "Kiểm tra kết nối",
+      "costs": "Tốn vài token mỗi lần bấm.",
+      "passed": "Kết nối tốt và model gọi được tool.",
+      "failed": "Không gọi được endpoint.",
+      "no_tools": "Gọi được endpoint nhưng model KHÔNG gọi tool. Trợ lý sẽ tự bịa thay vì tra catalog — hãy đổi model khác.",
+      "latency": "Phản hồi trong {{ms}}ms."
+    },
+    "usage": {
+      "today": "Hôm nay",
+      "history": "14 ngày gần đây",
+      "no_cap": "Chưa đặt trần token.",
+      "near_cap": "Sắp chạm trần. Chạm trần là trợ lý rơi về bot trả lời mẫu.",
+      "empty": "Chưa có dữ liệu sử dụng.",
+      "conversations_one": "{{count}} hội thoại",
+      "conversations_other": "{{count}} hội thoại"
+    },
+    "mcp": {
+      "intro": "Token để Claude Desktop hoặc agent nội bộ tra catalog và danh sách lead. Token gắn với chính tài khoản của bạn và chạy đúng quyền của bạn.",
+      "label": "Tên gợi nhớ",
+      "label_ph": "Ví dụ: Claude Desktop máy làm việc",
+      "issue": "Cấp token",
+      "shown_once": "Chuỗi này chỉ hiện đúng một lần. Sao chép ngay — đóng lại là không lấy lại được.",
+      "empty": "Chưa cấp token nào.",
+      "last_used": "dùng lần cuối {{at}}",
+      "never_used": "chưa dùng lần nào",
+      "revoke": "Thu hồi",
+      "revoked": "Đã thu hồi",
+      "revoked_toast": "Đã thu hồi token.",
+      "revoke_description": "Agent đang dùng token này sẽ mất quyền truy cập ngay lập tức. Không khôi phục được."
     }
   }
 }
