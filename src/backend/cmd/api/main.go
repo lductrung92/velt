@@ -198,7 +198,8 @@ func run() error {
 	// products attach to. Separate from users (login identity) by design.
 	members.Register(r, pool, store, settingsSvc, logger, authMW)
 	// products bounded context: the catalog VELT sells, plus its own taxonomy.
-	products.Register(r, pool, store, settingsSvc, logger, authMW)
+	products.Register(r, pool, store, settingsSvc, logger, authMW,
+		revalidate.NewHTTP(cfg.CustomerWebBaseURL, cfg.RevalidateSecret, logger))
 	// cms bounded context (taxonomy + feature-flag settings + articles/pages/menus/
 	// landing/comments/newsletter); settingsSvc is the scoped reader/writer for the
 	// cms.* registry keys (CMS gates cms.settings.* itself).

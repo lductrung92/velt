@@ -1,0 +1,212 @@
+package catalog
+
+import (
+	"context"
+	"encoding/json"
+	"strings"
+
+	"github.com/velt/backend/internal/apperr"
+	"github.com/velt/backend/internal/modules/products/shared"
+	"github.com/velt/backend/internal/platform/storage"
+)
+
+const (
+	publicDefaultPageSize = 20
+	publicMaxPageSize     = 60
+)
+
+// PublicService serves the published catalog to the site. It has no permission
+// gate — there is no caller identity — so its only safety rule is that it can
+// only ever read published snapshots.
+type PublicService struct {
+	*shared.Base
+	repo *PublicRepository
+	// The snapshot freezes seo.og_path (a storage key), not a URL — the admin
+	// response never built one — so the public layer resolves it here.
+	urls storage.URLer
+}
+
+// NewPublicService builds the public catalog service.
+func NewPublicService(base *shared.Base, repo *PublicRepository, urls storage.URLer) *PublicService {
+	return &PublicService{Base: base, repo: repo, urls: urls}
+}
+
+func (s *PublicService) mediaURL(ctx context.Context, path *string) *string {
+	if path == nil || *path == "" || s.urls == nil {
+		return nil
+	}
+	u := s.urls.URL(ctx, *path)
+	return &u
+}
+
+// normalize clamps paging and rejects unknown sort keys rather than passing
+// them to SQL.
+func (p PublicListParams) normalize() PublicListParams {
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.PageSize < 1 {
+		p.PageSize = publicDefaultPageSize
+	}
+	if p.PageSize > publicMaxPageSize {
+		p.PageSize = publicMaxPageSize
+	}
+	switch p.Sort {
+	case "name", "newest", "featured":
+	default:
+		p.Sort = "featured"
+	}
+	p.Query = strings.TrimSpace(p.Query)
+	return p
+}
+
+// List returns one page of the published catalog.
+func (s *PublicService) List(ctx context.Context, p PublicListParams) (PublicListResponse, error) {
+	p = p.normalize()
+	snaps, total, err := s.repo.ListPublished(ctx, p)
+	if err != nil {
+		return PublicListResponse{}, s.MapRepoErr(ctx, "public list products", err)
+	}
+
+	items := make([]PublicListItem, 0, len(snaps))
+	for _, raw := range snaps {
+		full, err := decodeSnapshot(raw)
+		if err != nil {
+			// One corrupt snapshot must not take the whole catalog down; skip
+			// it and leave a trail. Total stays as counted, which is honest:
+			// the row does exist, we just cannot render it.
+			s.Sec(ctx).Error("products: public list snapshot decode", "err", err)
+			continue
+		}
+		items = append(items, toPublicListItem(full))
+	}
+	return PublicListResponse{Items: items, Total: total, Page: p.Page, PageSize: p.PageSize}, nil
+}
+
+// GetBySlug returns one published product page.
+//
+// A draft and a product that does not exist both answer 404: telling them apart
+// would confirm that an unpublished slug is taken.
+func (s *PublicService) GetBySlug(ctx context.Context, slug string) (PublicDetail, error) {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return PublicDetail{}, apperr.NotFound("not_found")
+	}
+	raw, err := s.repo.GetPublishedBySlug(ctx, slug)
+	if err != nil {
+		return PublicDetail{}, s.MapRepoErr(ctx, "public get product", err)
+	}
+	full, err := decodeSnapshot(raw)
+	if err != nil {
+		s.Sec(ctx).Error("products: public detail snapshot decode", "slug", slug, "err", err)
+		return PublicDetail{}, apperr.Internal()
+	}
+	return s.toPublicDetail(ctx, full), nil
+}
+
+// Categories returns the filter vocabulary: categories that currently hold at
+// least one published product.
+func (s *PublicService) Categories(ctx context.Context) (map[string]any, error) {
+	rows, err := s.repo.ListPublicCategories(ctx)
+	if err != nil {
+		return nil, s.MapRepoErr(ctx, "public list categories", err)
+	}
+	items := make([]map[string]any, 0, len(rows))
+	for _, c := range rows {
+		items = append(items, map[string]any{
+			"slug": c.Slug, "name": c.Name, "product_count": c.ProductCount,
+		})
+	}
+	return map[string]any{"items": items}, nil
+}
+
+// decodeSnapshot reads a frozen admin Response back out of the snapshot column.
+func decodeSnapshot(raw json.RawMessage) (Response, error) {
+	var full Response
+	if err := json.Unmarshal(raw, &full); err != nil {
+		return Response{}, err
+	}
+	return full, nil
+}
+
+func toPublicCategories(in []CategoryRef) []PublicCategoryRef {
+	out := make([]PublicCategoryRef, 0, len(in))
+	for _, c := range in {
+		out = append(out, PublicCategoryRef{Slug: c.Slug, Name: c.Name})
+	}
+	return out
+}
+
+func toPublicListItem(f Response) PublicListItem {
+	return PublicListItem{
+		Slug:       f.Slug,
+		Name:       f.Name,
+		Summary:    f.Summary,
+		CoverURL:   f.CoverURL,
+		Lifecycle:  f.Lifecycle,
+		IsFeatured: f.IsFeatured,
+		Audience:   emptyIfNil(f.Audience),
+		Platforms:  emptyIfNil(f.Platforms),
+		Categories: toPublicCategories(f.Categories),
+	}
+}
+
+func (s *PublicService) toPublicDetail(ctx context.Context, f Response) PublicDetail {
+	members := make([]PublicMemberRef, 0, len(f.Members))
+	for _, m := range f.Members {
+		members = append(members, PublicMemberRef{
+			Slug: m.Slug, FullName: m.FullName, Role: m.Role, AvatarURL: m.AvatarURL,
+		})
+	}
+	gallery := make([]PublicMediaItem, 0, len(f.Gallery))
+	for _, g := range f.Gallery {
+		gallery = append(gallery, PublicMediaItem{
+			Kind: g.Kind, URL: g.URL, VideoURL: g.VideoURL, Caption: g.Caption,
+		})
+	}
+	return PublicDetail{
+		Slug:       f.Slug,
+		Name:       f.Name,
+		Summary:    f.Summary,
+		BodyHTML:   f.BodyHTML,
+		CoverURL:   f.CoverURL,
+		Lifecycle:  f.Lifecycle,
+		Version:    f.Version,
+		ReleasedAt: f.ReleasedAt,
+		Audience:   emptyIfNil(f.Audience),
+		Platforms:  emptyIfNil(f.Platforms),
+		TechStack:  emptyIfNil(f.TechStack),
+		Highlights: emptyIfNil(f.Highlights),
+		IsFeatured: f.IsFeatured,
+		ProductURL: f.ProductURL,
+		Demo: PublicDemo{
+			URL:          f.DemoURL,
+			Access:       f.DemoAccess,
+			Instructions: emptyIfNil(f.DemoInstructions),
+		},
+		SEO: PublicSEO{
+			Title:         f.SEO.Title,
+			Description:   f.SEO.Description,
+			Keywords:      f.SEO.Keywords,
+			CanonicalURL:  f.SEO.Canonical,
+			Noindex:       f.SEO.NoIndex,
+			Nofollow:      f.SEO.NoFollow,
+			OGTitle:       f.SEO.OGTitle,
+			OGDescription: f.SEO.OGDesc,
+			OGImageURL:    s.mediaURL(ctx, f.SEO.OGPath),
+		},
+		Categories:  toPublicCategories(f.Categories),
+		Members:     members,
+		Gallery:     gallery,
+		PublishedAt: f.PublishedAt,
+	}
+}
+
+// emptyIfNil turns a nil slice into an empty one so the JSON is [] rather than
+// null — the site never has to special-case a missing list.
+func emptyIfNil(in []string) []string {
+	if in == nil {
+		return []string{}
+	}
+	return in
+}

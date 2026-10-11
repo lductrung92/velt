@@ -14,6 +14,7 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/revalidate"
 )
 
 // Sentinel errors returned by feature repositories and mapped to AppErrors by
@@ -52,6 +53,7 @@ func IsForeignKeyViolation(err error) bool {
 // *Base and add their own repository.
 type Base struct {
 	log *slog.Logger
+	rev revalidate.Revalidator
 }
 
 // NewBase wires the products service spine.
@@ -59,7 +61,20 @@ func NewBase(logger *slog.Logger) *Base {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Base{log: logger}
+	return &Base{log: logger, rev: revalidate.Nop{}}
+}
+
+// SetRevalidator wires the web ISR revalidator (called once at startup). When
+// unset, publishes rely on the plain ISR window (Nop).
+func (b *Base) SetRevalidator(r revalidate.Revalidator) {
+	if r != nil {
+		b.rev = r
+	}
+}
+
+// Revalidate drops the web's cached entries for the given tags (best-effort).
+func (b *Base) Revalidate(ctx context.Context, tags ...string) {
+	b.rev.Revalidate(ctx, tags...)
 }
 
 // Require enforces the per-endpoint permission gate using the caller's resolved

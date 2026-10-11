@@ -3,6 +3,7 @@ import {
   FileText,
   FolderTree,
   ListTree,
+  LayoutDashboard,
   MonitorSmartphone,
   Newspaper,
   Users2,
@@ -58,6 +59,13 @@ export const NAV_SECTIONS: NavSection[] = [
     key: "overview",
     labelKey: "nav.section.overview",
     items: [
+      {
+        key: "dashboard",
+        labelKey: "dashboard.title",
+        icon: LayoutDashboard,
+        path: "/dashboard",
+        end: true,
+      },
       {
         key: "cms",
         labelKey: "nav.cms",

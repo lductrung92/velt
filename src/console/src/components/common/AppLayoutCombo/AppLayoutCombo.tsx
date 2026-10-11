@@ -328,8 +328,12 @@ export function AppLayoutCombo() {
           </div>
         </header>
 
+        {/* The cap lives here, not per page, so every screen lines up on a wide
+            monitor. Padding stays on <main> so it hugs the viewport edge. */}
         <main className="flex-1 px-4 pt-6 pb-60 sm:px-6">
-          <Outlet />
+          <div className="mx-auto w-full max-w-[1440px]">
+            <Outlet />
+          </div>
         </main>
       </div>
 

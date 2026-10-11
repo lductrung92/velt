@@ -339,6 +339,13 @@ func (s *Service) transition(ctx context.Context, id *httpx.Identity, productID 
 	if err != nil {
 		return Response{}, s.MapRepoErr(ctx, "transition product", err)
 	}
+	// Both slugs: publishing under a new slug has to clear the old URL too, or
+	// the site keeps serving a page that no longer exists.
+	tags := []string{"products:list", "product:" + p.Slug}
+	if cur.Slug != p.Slug {
+		tags = append(tags, "product:"+cur.Slug)
+	}
+	s.Revalidate(ctx, tags...)
 	return s.detail(ctx, *p)
 }
 

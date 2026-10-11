@@ -13,6 +13,7 @@ import { parseApiError } from "@/utils/apiError";
 
 import { CreateMenuDialog } from "../components/CreateMenuDialog";
 import { MenuBuilderPane } from "../components/MenuBuilderPane";
+import { MenuEmptyState } from "../components/MenuEmptyState";
 import { MenuSlotPane } from "../components/MenuSlotPane";
 import {
   useDeleteMenu,
@@ -107,51 +108,55 @@ export default function MenuBuilder() {
         breadcrumbs={[{ labelKey: "nav.cms_menus" }]}
       />
 
-      <div className="grid gap-5 md:grid-cols-[280px_1fr]">
-        <MenuSlotPane
-          slots={menus.data ?? []}
-          isLoading={menus.isLoading && !menus.data}
-          isError={menus.isError}
-          errorMessage={parseApiError(menus.error, t).message}
-          selectedId={selectedId}
-          canManage={canManage}
-          onSelect={selectSlot}
-          onCreate={openCreate}
-          onEditSlot={openEditSlot}
-          onDeleteSlot={setDeleteSlot}
-        />
+      {menus.isSuccess && menus.data.length === 0 ? (
+        <MenuEmptyState onCreate={canManage ? openCreate : undefined} />
+      ) : (
+        <div className="grid gap-5 md:grid-cols-[280px_1fr]">
+          <MenuSlotPane
+            slots={menus.data ?? []}
+            isLoading={menus.isLoading && !menus.data}
+            isError={menus.isError}
+            errorMessage={parseApiError(menus.error, t).message}
+            selectedId={selectedId}
+            canManage={canManage}
+            onSelect={selectSlot}
+            onCreate={openCreate}
+            onEditSlot={openEditSlot}
+            onDeleteSlot={setDeleteSlot}
+          />
 
-        <div className="space-y-4">
-          {!selectedId ? (
-            <EmptyState
-              title={t("cms.menus.placeholder_title")}
-              description={t("cms.menus.placeholder_desc")}
-            />
-          ) : detail.isLoading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 4 }, (_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
-          ) : detail.isError ? (
-            <Alert
-              variant="danger"
-              message={
-                isNotFound
-                  ? t("errors.not_found")
-                  : parseApiError(detail.error, t).message
-              }
-            />
-          ) : (
-            <MenuBuilderPane
-              draft={draft}
-              saving={save.isPending}
-              onSave={() => void handleSave()}
-              onDeleteItem={setDeleteItemKey}
-            />
-          )}
+          <div className="space-y-4">
+            {!selectedId ? (
+              <EmptyState
+                title={t("cms.menus.placeholder_title")}
+                description={t("cms.menus.placeholder_desc")}
+              />
+            ) : detail.isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 4 }, (_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : detail.isError ? (
+              <Alert
+                variant="danger"
+                message={
+                  isNotFound
+                    ? t("errors.not_found")
+                    : parseApiError(detail.error, t).message
+                }
+              />
+            ) : (
+              <MenuBuilderPane
+                draft={draft}
+                saving={save.isPending}
+                onSave={() => void handleSave()}
+                onDeleteItem={setDeleteItemKey}
+              />
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <CreateMenuDialog
         open={dialogOpen}

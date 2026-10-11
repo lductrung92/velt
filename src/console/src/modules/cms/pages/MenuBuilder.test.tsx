@@ -87,6 +87,31 @@ beforeEach(() => useAuthStore.getState().clear());
 afterEach(() => useAuthStore.getState().clear());
 
 describe("MenuBuilder", () => {
+  it("empty list shows one onboarding state and opens the create dialog", async () => {
+    signIn(MANAGE);
+    server.use(http.get(`${API}/cms/menus`, () => HttpResponse.json([])));
+    const user = userEvent.setup();
+    renderPage();
+    const create = await screen.findByRole("button", {
+      name: t("cms.menus.onboarding.create"),
+    });
+    expect(
+      screen.queryByText(t("cms.menus.placeholder_title")),
+    ).not.toBeInTheDocument();
+    await user.click(create);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("empty list does not offer creation without manage permission", async () => {
+    signIn([]);
+    server.use(http.get(`${API}/cms/menus`, () => HttpResponse.json([])));
+    renderPage();
+    await screen.findByRole("heading", { name: t("cms.menus.empty_title") });
+    expect(
+      screen.queryByRole("button", { name: t("cms.menus.onboarding.create") }),
+    ).not.toBeInTheDocument();
+  });
+
   it("loads slots and shows a selected menu's items", async () => {
     signIn(MANAGE);
     server.use(

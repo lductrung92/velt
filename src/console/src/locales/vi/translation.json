@@ -1,4 +1,32 @@
 {
+  "dashboard": {
+    "title": "Tổng quan",
+    "greeting": "Chào {{name}}, quản lý sản phẩm và nội dung của Zukatek từ đây.",
+    "view_all": "Xem tất cả",
+    "manage": "Xem và quản lý",
+    "load_error": "Chưa tải được dữ liệu",
+    "no_access": "Tài khoản của bạn chưa được cấp quyền xem dữ liệu tổng quan.",
+    "updated": "Cập nhật {{date}}",
+    "empty_title": "Chưa có dữ liệu",
+    "empty_description": "Các mục vừa cập nhật sẽ xuất hiện tại đây để bạn tiếp tục công việc.",
+    "create_first": "Tạo mục đầu tiên",
+    "quick_title": "Tạo nhanh",
+    "quick_description": "Bắt đầu công việc mới chỉ với một thao tác.",
+    "recent_products": "Sản phẩm vừa cập nhật",
+    "recent_articles": "Bài viết vừa cập nhật",
+    "stats": {
+      "products": "Sản phẩm",
+      "articles": "Bài viết",
+      "pages": "Trang nội dung",
+      "members": "Thành viên"
+    },
+    "actions": {
+      "product": "Thêm sản phẩm",
+      "article": "Viết bài mới",
+      "page": "Tạo trang",
+      "member": "Thêm thành viên"
+    }
+  },
   "common": {
     "show_password": "Hiện mật khẩu",
     "hide_password": "Ẩn mật khẩu",
@@ -621,6 +649,13 @@
       "reset": "Đặt lại",
       "empty_title": "Chưa có menu nào",
       "empty_desc": "Tạo menu điều hướng đầu tiên.",
+      "onboarding": {
+        "description": "Tạo menu để khách truy cập dễ dàng tìm đến nội dung trên website. Bạn có thể thêm liên kết và sắp xếp chúng theo cấu trúc phù hợp.",
+        "create": "Tạo menu đầu tiên",
+        "location": "Đặt tên và chọn vị trí",
+        "links": "Thêm các liên kết",
+        "arrange": "Sắp xếp và lưu menu"
+      },
       "placeholder_title": "Chọn một menu",
       "placeholder_desc": "Chọn một menu ở bên trái để bắt đầu chỉnh sửa các mục.",
       "field": {

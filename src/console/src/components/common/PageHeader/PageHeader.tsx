@@ -23,9 +23,8 @@ interface PageHeaderProps {
 // Auto-prepend the scope root so pages only declare their own crumb:
 //   /admin            → no root (the page IS the admin root)
 //   /admin/*          → "Quản trị" → /admin
-//   everything else   → no root. There is no dashboard screen to point at, and
-//                       "/" only forwards to the CMS landing, so a root crumb
-//                       here would link to a redirect under a stale label.
+//   everything else   → no root; module breadcrumbs are explicitly declared
+//                       by their pages. "/" forwards to the dashboard.
 function pickRoot(pathname: string): BreadcrumbItem | null {
   if (pathname.startsWith("/admin/"))
     return { labelKey: "nav.admin", to: "/admin" };

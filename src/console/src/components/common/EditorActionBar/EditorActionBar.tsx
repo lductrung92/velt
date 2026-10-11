@@ -14,16 +14,26 @@ interface Props {
 // line it sticks flush under the topbar.
 const STICKY_TOP_PX = 56;
 
-// Full-width sticky action bar for the long editor pages (CMS article + category
-// editors). Lives at the top of the form; on scroll it docks under the topbar.
+// Horizontal inset of the resting card (px-3). The stuck bar re-adds it on top of
+// the bleed so the buttons do not shift when the bar docks.
+const RESTING_INSET_PX = 12;
+
+// Full-width sticky action bar for the long editor pages.
 //
 // Two looks, toggled by an IntersectionObserver that detects the dock:
 //   - resting: a bordered, rounded card with a gap below it;
-//   - stuck: full-bleed across the whole content area (negative margins cancel
-//     <main>'s px-4 / sm:px-6), flush left/right, only a bottom border.
+//   - stuck: the background spans the whole content area while the buttons stay
+//     on the same vertical lines they occupy at rest.
+//
+// The bleed is measured rather than written in CSS: <main> centres its children
+// inside a max-width column, so the distance from the content column to the
+// window edge depends on the viewport and on whether the sidebar is collapsed.
+// Negative margins widen the bar by that distance and equal padding puts the
+// contents back where they were.
 export function EditorActionBar({ left, children, className }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [stuck, setStuck] = useState(false);
+  const [bleed, setBleed] = useState({ left: 0, right: 0 });
 
   useEffect(() => {
     const el = ref.current;
@@ -36,19 +46,61 @@ export function EditorActionBar({ left, children, className }: Props) {
     return () => obs.disconnect();
   }, []);
 
+  useEffect(() => {
+    const el = ref.current;
+    const host = el?.parentElement;
+    const main = el?.closest("main");
+    if (!host || !main || typeof ResizeObserver === "undefined") return;
+    // Measured off the parent, not the bar: the bar carries the negative margins
+    // this computes, so reading it back would feed on its own output.
+    const measure = () => {
+      const h = host.getBoundingClientRect();
+      const m = main.getBoundingClientRect();
+      // Kept fractional: rounding here shifts the buttons by a pixel when the
+      // bar docks, which is exactly what the padding is meant to prevent.
+      setBleed({
+        left: Math.max(0, h.left - m.left),
+        right: Math.max(0, m.right - h.right),
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(main);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <div
       ref={ref}
-      className={cn(
-        "sticky top-14 z-10 mb-4 flex flex-wrap items-center justify-between gap-2 backdrop-blur",
+      className="sticky top-14 z-10 mb-4"
+      style={
         stuck
-          ? "-mx-4 rounded-none border-b bg-background px-4 py-3 sm:-mx-6 sm:px-6"
-          : "rounded-md border bg-background/95 px-3 py-3",
-        className,
-      )}
+          ? { marginLeft: -bleed.left, marginRight: -bleed.right }
+          : undefined
+      }
     >
-      <div className="flex min-w-0 items-center gap-2">{left}</div>
-      <div className="flex flex-wrap items-center gap-2">{children}</div>
+      <div
+        className={cn(
+          "flex flex-wrap items-center justify-between gap-2 py-3 backdrop-blur",
+          stuck
+            ? // Same 1px box as at rest, only the bottom edge painted — drop the
+              // side borders outright and the buttons shift a pixel each way.
+              "border border-transparent border-b-border bg-background"
+            : "rounded-md border bg-background/95 px-3",
+          className,
+        )}
+        style={
+          stuck
+            ? {
+                paddingLeft: bleed.left + RESTING_INSET_PX,
+                paddingRight: bleed.right + RESTING_INSET_PX,
+              }
+            : undefined
+        }
+      >
+        <div className="flex min-w-0 items-center gap-2">{left}</div>
+        <div className="flex flex-wrap items-center gap-2">{children}</div>
+      </div>
     </div>
   );
 }

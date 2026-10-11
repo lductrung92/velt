@@ -32,6 +32,7 @@ import {
   PageList,
 } from "@/modules/cms";
 import { MemberEditor, MemberList } from "@/modules/members";
+import Dashboard from "@/modules/dashboard/Dashboard";
 import {
   ProductCategoryEditor,
   ProductCategoryList,
@@ -64,11 +65,11 @@ export const router = createBrowserRouter([
       </PublicOnlyRoute>
     ),
   },
-  // No dashboard in this console: "/" just forwards to the CMS landing. Kept
+  // Root forwards to the dashboard. Kept
   // outside the protected shell on purpose — see the note on ProtectedRoute
   // below; a redirect rendered inside it ping-pongs with PublicOnlyRoute while
   // auth is still bootstrapping.
-  { path: "/", element: <Navigate to="/cms/articles" replace /> },
+  { path: "/", element: <Navigate to="/dashboard" replace /> },
   // Authenticated app shell — all protected routes render inside AppLayout.
   {
     element: (
@@ -77,6 +78,7 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
+      { path: "/dashboard", element: <Dashboard /> },
       {
         path: "/account",
         element: <AccountLayout />,

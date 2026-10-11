@@ -1,4 +1,32 @@
 {
+  "dashboard": {
+    "title": "Overview",
+    "greeting": "Hi {{name}}, manage Zukatek products and content from here.",
+    "view_all": "View all",
+    "manage": "View and manage",
+    "load_error": "Could not load data",
+    "no_access": "Your account does not have access to overview data yet.",
+    "updated": "Updated {{date}}",
+    "empty_title": "No data yet",
+    "empty_description": "Recently updated items will appear here so you can pick up where you left off.",
+    "create_first": "Create the first item",
+    "quick_title": "Quick create",
+    "quick_description": "Start something new with a single action.",
+    "recent_products": "Recently updated products",
+    "recent_articles": "Recently updated articles",
+    "stats": {
+      "products": "Products",
+      "articles": "Articles",
+      "pages": "Content pages",
+      "members": "Members"
+    },
+    "actions": {
+      "product": "Add product",
+      "article": "Write an article",
+      "page": "Create a page",
+      "member": "Add member"
+    }
+  },
   "common": {
     "show_password": "Show password",
     "hide_password": "Hide password",
@@ -621,6 +649,13 @@
       "reset": "Reset",
       "empty_title": "No menus yet",
       "empty_desc": "Create your first navigation menu.",
+      "onboarding": {
+        "description": "Help visitors find their way around your website. Create a menu, add links and organize them into a clear navigation structure.",
+        "create": "Create your first menu",
+        "location": "Name it and choose a location",
+        "links": "Add your links",
+        "arrange": "Arrange and save the menu"
+      },
       "placeholder_title": "Select a menu",
       "placeholder_desc": "Pick a menu on the left to start editing its items.",
       "field": {

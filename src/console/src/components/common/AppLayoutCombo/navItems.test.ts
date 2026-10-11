@@ -11,7 +11,11 @@ describe("visibleNavSections", () => {
     expect(sections.map((s) => s.key)).toEqual(["overview", "system"]);
 
     const overview = sections.find((s) => s.key === "overview");
-    expect(overview?.items.map((i) => i.key)).toEqual(["cms", "catalog"]);
+    expect(overview?.items.map((i) => i.key)).toEqual([
+      "dashboard",
+      "cms",
+      "catalog",
+    ]);
 
     const system = sections.find((s) => s.key === "system");
     const admin = system?.items.find((i) => i.key === "admin");
@@ -28,10 +32,11 @@ describe("visibleNavSections", () => {
     expect(cms?.children?.map((c) => c.path)).toEqual(["/cms/menus"]);
   });
 
-  it("drops every section when nothing in them is visible", () => {
-    // Every nav entry is permission-gated, so no permissions → empty sidebar.
-    expect(sec([]).map((s) => s.key)).toEqual([]);
-    expect(sec(["profile.read"]).map((s) => s.key)).toEqual([]);
+  it("keeps the dashboard available without module permissions", () => {
+    expect(sec([])[0].items.map((item) => item.key)).toEqual(["dashboard"]);
+    expect(sec(["profile.read"])[0].items.map((item) => item.key)).toEqual([
+      "dashboard",
+    ]);
   });
 
   it("drops the admin branch's hidden children but keeps visible ones", () => {
@@ -42,14 +47,14 @@ describe("visibleNavSections", () => {
     expect(admin?.children?.map((c) => c.path)).toEqual(["/admin/users"]);
   });
 
-  it("drops the overview section when neither branch has a visible child", () => {
+  it("keeps the dashboard when neither overview branch has a visible child", () => {
     const sections = sec(["users.read"]);
-    expect(sections.map((s) => s.key)).toEqual(["system"]);
+    expect(sections.map((s) => s.key)).toEqual(["overview", "system"]);
   });
 
   it("shows the catalog branch under overview with products.view", () => {
     const overview = sec(["products.view"]).find((s) => s.key === "overview");
-    expect(overview?.items.map((i) => i.key)).toEqual(["catalog"]);
+    expect(overview?.items.map((i) => i.key)).toEqual(["dashboard", "catalog"]);
     const catalog = overview?.items.find((i) => i.key === "catalog");
     expect(catalog?.children?.map((c) => c.path)).toEqual([
       "/products",
@@ -60,7 +65,7 @@ describe("visibleNavSections", () => {
   it("puts members under the system section, not catalog", () => {
     // Team profiles are configuration, not catalog content.
     const sections = sec(["members.view"]);
-    expect(sections.map((s) => s.key)).toEqual(["system"]);
+    expect(sections.map((s) => s.key)).toEqual(["overview", "system"]);
     expect(
       sections.find((s) => s.key === "system")?.items.map((i) => i.key),
     ).toEqual(["members"]);
