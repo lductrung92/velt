@@ -28,6 +28,8 @@ import (
 	cmstaxonomy "github.com/velt/backend/internal/modules/cms/taxonomy"
 	"github.com/velt/backend/internal/modules/cms/widgets"
 	"github.com/velt/backend/internal/modules/files"
+	"github.com/velt/backend/internal/modules/members"
+	"github.com/velt/backend/internal/modules/products"
 	"github.com/velt/backend/internal/modules/settings"
 	"github.com/velt/backend/internal/platform/crypto"
 	"github.com/velt/backend/internal/platform/db"
@@ -170,7 +172,7 @@ func run() error {
 	// because article media is authored to be public content; if owner-scoped draft
 	// media is ever required, serve cms/articles/ behind an authorized route /
 	// signed URL that re-checks article ABAC + published state.
-	filesHandler := files.NewHandler(store, []string{"users/", "cms/"})
+	filesHandler := files.NewHandler(store, []string{"users/", "cms/", "members/", "products/"})
 
 	r := chi.NewRouter()
 	r.Use(
@@ -192,6 +194,11 @@ func run() error {
 	// admin bounded context (users + roles + sessions; authSvc satisfies the
 	// password-reset port for set-password / trigger-reset).
 	admin.Register(r, pool, authSvc, limiter, store, logger, authMW)
+	// members bounded context: the public team roster the site shows and
+	// products attach to. Separate from users (login identity) by design.
+	members.Register(r, pool, store, settingsSvc, logger, authMW)
+	// products bounded context: the catalog VELT sells, plus its own taxonomy.
+	products.Register(r, pool, store, settingsSvc, logger, authMW)
 	// cms bounded context (taxonomy + feature-flag settings + articles/pages/menus/
 	// landing/comments/newsletter); settingsSvc is the scoped reader/writer for the
 	// cms.* registry keys (CMS gates cms.settings.* itself).

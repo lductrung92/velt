@@ -1,0 +1,55 @@
+package shared
+
+import (
+	"context"
+	"strings"
+
+	"github.com/velt/backend/internal/platform/storage"
+)
+
+// treeDeleter is the optional recursive-delete capability the production storage
+// Manager implements (via the Browser interface). A minimal test stub may not,
+// so callers degrade to a no-op rather than fail.
+type treeDeleter interface {
+	DeleteTree(ctx context.Context, prefix string) error
+}
+
+// PurgeMediaTree best-effort deletes every object under prefix — used when a
+// product is removed, so its whole media folder is reclaimed instead of leaking.
+// No-op when the store lacks recursive delete. Returns any delete error to log.
+func PurgeMediaTree(ctx context.Context, files storage.Storage, prefix string) error {
+	td, ok := files.(treeDeleter)
+	if !ok {
+		return nil
+	}
+	return td.DeleteTree(ctx, prefix)
+}
+
+// OwnsMedia reports whether path is empty or lives under the entity's own media
+// prefix (e.g. "products/<id>/"). Client-supplied *_path values are checked with
+// this before they are persisted or deleted, so one entity can never point at —
+// or delete — another entity's storage object.
+func OwnsMedia(prefix, path string) bool {
+	return path == "" || strings.HasPrefix(path, prefix)
+}
+
+// DeleteOldMedia best-effort removes oldPath when an image was replaced or
+// cleared. prefix scopes the delete to the entity's own folder, so a spoofed
+// *_path cannot nuke another entity's files.
+//
+// Only safe where the old file is not referenced elsewhere — in particular NOT
+// while a published snapshot still points at it.
+func DeleteOldMedia(ctx context.Context, files storage.Storage, prefix string, oldPath, newPath *string) {
+	o, n := deref(oldPath), deref(newPath)
+	if o == "" || o == n || !strings.HasPrefix(o, prefix) {
+		return
+	}
+	_ = files.Delete(ctx, o)
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}

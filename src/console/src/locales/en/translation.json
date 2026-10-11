@@ -46,7 +46,11 @@
     },
     "back": "Back",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "string_list": {
+      "placeholder": "Type and press Enter"
+    },
+    "all": "All"
   },
   "image": {
     "upload": {
@@ -113,12 +117,16 @@
     "cms_categories": "Categories",
     "cms_articles": "Articles",
     "cms_pages": "Pages",
-    "cms_menus": "Menus"
+    "cms_menus": "Menus",
+    "members": "Members",
+    "product_categories": "Categories",
+    "catalog": "Catalog",
+    "products": "Products"
   },
   "auth": {
     "login": {
       "title": "Sign in",
-      "subtitle": "Sign in to Velt Console",
+      "subtitle": "Sign in to Zukatek Console",
       "email_label": "Email",
       "email_ph": "you@example.com",
       "password_label": "Password",
@@ -703,7 +711,6 @@
     "articles": {
       "title": "Articles",
       "subtitle": "Write and manage your articles.",
-      "image_needs_save": "Save the draft first to insert images",
       "btn": {
         "create": "New article"
       },
@@ -837,5 +844,183 @@
     "ordered_list": "Numbered list",
     "blockquote": "Quote",
     "image": "Insert image"
+  },
+  "members": {
+    "title": "Members",
+    "subtitle": "Team profiles shown on the website and attached to products.",
+    "create": "Add member",
+    "create_title": "Add member",
+    "edit_title": "Edit member",
+    "editor_subtitle": "Information published on the website.",
+    "saved": "Member saved",
+    "deleted": "Deleted {{name}}",
+    "reorder": "Drag to reorder",
+    "hidden": "Hidden",
+    "no_role": "No role set",
+    "photo": "Photo",
+    "active": "Show on website",
+    "active_help": "Turn off to hide from the website while keeping links to past products.",
+    "add_link": "Add link",
+    "empty": {
+      "title": "No members yet",
+      "description": "Add a member to show your team on the website."
+    },
+    "delete": {
+      "title": "Delete member?",
+      "description": "{{name}} will be removed from every product. To hide them from the website instead, turn off “Show on website”."
+    },
+    "section": {
+      "basics": "Basics",
+      "contact": "Contact"
+    },
+    "field": {
+      "full_name": "Full name",
+      "slug": "Slug",
+      "slug_ph": "auto-generated-from-name",
+      "slug_help": "Used in referral links /?ref=slug. Changing it breaks links already shared.",
+      "role": "Role",
+      "bio": "Bio",
+      "skills": "Skills",
+      "skills_ph": "Type and press Enter",
+      "email": "Email",
+      "email_help": "Public contact address, separate from the login email.",
+      "zalo": "Zalo",
+      "links": "Links",
+      "link_label": "Label"
+    }
+  },
+  "products": {
+    "title": "Products",
+    "subtitle": "The software ZUKATEK builds.",
+    "create_title": "Add product",
+    "edit_title": "Edit product",
+    "saved": "Product saved",
+    "deleted": "Deleted {{name}}",
+    "search_label": "Search",
+    "search_ph": "Name, slug or summary",
+    "col": {
+      "name": "Name",
+      "slug": "Slug",
+      "status": "Status",
+      "lifecycle": "Lifecycle",
+      "version": "Version",
+      "released_at": "Released",
+      "updated_at": "Updated",
+      "sort_order": "Order",
+      "actions": "Actions"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published",
+      "archived": "Archived"
+    },
+    "lifecycle": {
+      "idea": "Idea",
+      "building": "In development",
+      "launched": "Launched"
+    },
+    "audience": {
+      "individual": "Individuals",
+      "team": "Teams",
+      "business": "Business"
+    },
+    "platform": {
+      "web": "Web",
+      "ios": "iOS",
+      "android": "Android",
+      "desktop": "Desktop"
+    },
+    "editor": {
+      "basic": "Basics",
+      "content": "Content",
+      "demo": "Try it",
+      "seo": "SEO",
+      "gallery": "Gallery",
+      "people": "Categories & team"
+    },
+    "field": {
+      "slug_ph": "auto-generated-from-name",
+      "summary": "Summary",
+      "cover": "Cover image",
+      "lifecycle_help": "Independent of publication: a product still in development can be public.",
+      "audience": "Audience",
+      "platforms": "Platforms",
+      "tech_stack": "Tech stack",
+      "highlights": "Highlights",
+      "featured": "Featured",
+      "featured_help": "Pin to the top of the public list.",
+      "body": "Description",
+      "product_url": "Product link",
+      "demo_url": "Demo link",
+      "demo_access": "How to access",
+      "demo_instructions": "Steps to try",
+      "categories": "Categories",
+      "members": "Built by"
+    },
+    "transition": {
+      "menu": "Publishing",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "archive": "Archive",
+      "publish_done": "Product published",
+      "unpublish_done": "Product unpublished",
+      "archive_done": "Product archived"
+    },
+    "delete": {
+      "title": "Delete product?",
+      "description": "Delete {{name}} and all its images. To take it off the site instead, use Archive."
+    },
+    "categories": {
+      "title": "Categories",
+      "subtitle": "How products are grouped; a product can sit in several categories.",
+      "create_title": "Add category",
+      "edit_title": "Edit category",
+      "saved": "Category saved",
+      "deleted": "Deleted {{name}}",
+      "reorder": "Drag to reorder",
+      "search_label": "Search",
+      "search_ph": "Name or slug",
+      "col": {
+        "name": "Name",
+        "slug": "Slug",
+        "description": "Description",
+        "sort_order": "Order",
+        "actions": "Actions",
+        "product_count": "PRODUCTS"
+      },
+      "editor": {
+        "basic": "Basics"
+      },
+      "seo": {
+        "heading": "SEO",
+        "title": "SEO title",
+        "description": "SEO description",
+        "keywords": "SEO keywords"
+      },
+      "field": {
+        "slug_ph": "auto-generated-from-name"
+      },
+      "delete": {
+        "title": "Delete category?",
+        "description": "Delete {{name}}. {{count}} product(s) will be unlinked from it, not deleted."
+      }
+    },
+    "gallery": {
+      "add_image": "Upload image",
+      "add_video": "Add video",
+      "caption": "Caption",
+      "caption_ph": "Short description",
+      "reorder": "Drag to reorder",
+      "video_url": "Video link",
+      "video_hosts": "YouTube and Vimeo only (https)."
+    },
+    "members": {
+      "add": "Add member",
+      "search_ph": "Search by name",
+      "none_left": "No members left to add",
+      "reorder": "Drag to reorder",
+      "role_ph": "Role on this product",
+      "role_for": "Role for {{name}}"
+    }
   }
 }

@@ -6,9 +6,12 @@ const sec = (perms: string[], roles: string[] = []) =>
   visibleNavSections(new Set(perms), new Set(roles));
 
 describe("visibleNavSections", () => {
-  it("super_admin sees both sections with the full admin branch", () => {
+  it("super_admin sees every section with the full admin branch", () => {
     const sections = sec(["*"]);
     expect(sections.map((s) => s.key)).toEqual(["overview", "system"]);
+
+    const overview = sections.find((s) => s.key === "overview");
+    expect(overview?.items.map((i) => i.key)).toEqual(["cms", "catalog"]);
 
     const system = sections.find((s) => s.key === "system");
     const admin = system?.items.find((i) => i.key === "admin");
@@ -39,9 +42,28 @@ describe("visibleNavSections", () => {
     expect(admin?.children?.map((c) => c.path)).toEqual(["/admin/users"]);
   });
 
-  it("drops the overview section when no cms child is visible", () => {
+  it("drops the overview section when neither branch has a visible child", () => {
     const sections = sec(["users.read"]);
     expect(sections.map((s) => s.key)).toEqual(["system"]);
+  });
+
+  it("shows the catalog branch under overview with products.view", () => {
+    const overview = sec(["products.view"]).find((s) => s.key === "overview");
+    expect(overview?.items.map((i) => i.key)).toEqual(["catalog"]);
+    const catalog = overview?.items.find((i) => i.key === "catalog");
+    expect(catalog?.children?.map((c) => c.path)).toEqual([
+      "/products",
+      "/product-categories",
+    ]);
+  });
+
+  it("puts members under the system section, not catalog", () => {
+    // Team profiles are configuration, not catalog content.
+    const sections = sec(["members.view"]);
+    expect(sections.map((s) => s.key)).toEqual(["system"]);
+    expect(
+      sections.find((s) => s.key === "system")?.items.map((i) => i.key),
+    ).toEqual(["members"]);
   });
 });
 
@@ -53,6 +75,13 @@ describe("activeBranchKey", () => {
 
   it("maps a cms child path to the cms branch", () => {
     expect(activeBranchKey("/cms/articles")).toBe("cms");
+  });
+
+  it("maps a catalog child path to the catalog branch", () => {
+    expect(activeBranchKey("/products")).toBe("catalog");
+    expect(activeBranchKey("/products/p1")).toBe("catalog");
+    expect(activeBranchKey("/product-categories")).toBe("catalog");
+    expect(activeBranchKey("/product-categories/c1")).toBe("catalog");
   });
 
   it("returns null for leaf / unknown routes", () => {

@@ -46,7 +46,11 @@
     },
     "back": "Quay lại",
     "yes": "Có",
-    "no": "Không"
+    "no": "Không",
+    "string_list": {
+      "placeholder": "Nhập rồi nhấn Enter"
+    },
+    "all": "Tất cả"
   },
   "image": {
     "upload": {
@@ -113,12 +117,16 @@
     "cms_categories": "Chuyên mục",
     "cms_articles": "Bài viết",
     "cms_pages": "Trang",
-    "cms_menus": "Menu"
+    "cms_menus": "Menu",
+    "members": "Thành viên",
+    "product_categories": "Danh mục",
+    "catalog": "Catalog",
+    "products": "Sản phẩm"
   },
   "auth": {
     "login": {
       "title": "Đăng nhập",
-      "subtitle": "Đăng nhập vào Velt Console",
+      "subtitle": "Đăng nhập vào Zukatek Console",
       "email_label": "Email",
       "email_ph": "ban@vidu.com",
       "password_label": "Mật khẩu",
@@ -703,7 +711,6 @@
     "articles": {
       "title": "Bài viết",
       "subtitle": "Soạn và quản lý bài viết.",
-      "image_needs_save": "Lưu nháp trước để chèn ảnh",
       "btn": {
         "create": "Tạo bài"
       },
@@ -837,5 +844,183 @@
     "ordered_list": "Danh sách số",
     "blockquote": "Trích dẫn",
     "image": "Chèn ảnh"
+  },
+  "members": {
+    "title": "Thành viên",
+    "subtitle": "Hồ sơ đội ngũ hiển thị trên website và gắn vào sản phẩm.",
+    "create": "Thêm thành viên",
+    "create_title": "Thêm thành viên",
+    "edit_title": "Sửa thành viên",
+    "editor_subtitle": "Thông tin hiển thị công khai trên website.",
+    "saved": "Đã lưu thành viên",
+    "deleted": "Đã xoá {{name}}",
+    "reorder": "Kéo để đổi thứ tự",
+    "hidden": "Đã ẩn",
+    "no_role": "Chưa có vai trò",
+    "photo": "Ảnh đại diện",
+    "active": "Hiển thị trên website",
+    "active_help": "Tắt để ẩn khỏi website mà vẫn giữ liên kết với sản phẩm đã làm.",
+    "add_link": "Thêm liên kết",
+    "empty": {
+      "title": "Chưa có thành viên nào",
+      "description": "Thêm thành viên để hiển thị đội ngũ trên website."
+    },
+    "delete": {
+      "title": "Xoá thành viên?",
+      "description": "{{name}} sẽ bị gỡ khỏi mọi sản phẩm. Nếu chỉ muốn ẩn khỏi website, hãy tắt “Hiển thị trên website”."
+    },
+    "section": {
+      "basics": "Thông tin cơ bản",
+      "contact": "Liên hệ"
+    },
+    "field": {
+      "full_name": "Họ và tên",
+      "slug": "Slug",
+      "slug_ph": "tu-dong-tao-tu-ho-ten",
+      "slug_help": "Dùng trong link giới thiệu /?ref=slug. Đổi slug sẽ làm hỏng các link đã phát ra.",
+      "role": "Vai trò",
+      "bio": "Giới thiệu",
+      "skills": "Kỹ năng",
+      "skills_ph": "Nhập rồi nhấn Enter",
+      "email": "Email",
+      "email_help": "Email công khai để khách liên hệ, khác email đăng nhập.",
+      "zalo": "Zalo",
+      "links": "Liên kết",
+      "link_label": "Nhãn"
+    }
+  },
+  "products": {
+    "title": "Sản phẩm",
+    "subtitle": "Sản phẩm công nghệ do đội ngũ ZUKATEK phát triển.",
+    "create_title": "Thêm sản phẩm",
+    "edit_title": "Sửa sản phẩm",
+    "saved": "Đã lưu sản phẩm",
+    "deleted": "Đã xoá {{name}}",
+    "search_label": "Tìm kiếm",
+    "search_ph": "Tên, slug hoặc mô tả ngắn",
+    "col": {
+      "name": "Tên sản phẩm",
+      "slug": "Slug",
+      "status": "Trạng thái",
+      "lifecycle": "Vòng đời",
+      "version": "Phiên bản",
+      "released_at": "Ngày ra mắt",
+      "updated_at": "Cập nhật",
+      "sort_order": "Thứ tự",
+      "actions": "Thao tác"
+    },
+    "status": {
+      "draft": "Nháp",
+      "published": "Đã xuất bản",
+      "archived": "Lưu trữ"
+    },
+    "lifecycle": {
+      "idea": "Ý tưởng",
+      "building": "Đang phát triển",
+      "launched": "Đã ra mắt"
+    },
+    "audience": {
+      "individual": "Cá nhân",
+      "team": "Nhóm",
+      "business": "Doanh nghiệp"
+    },
+    "platform": {
+      "web": "Web",
+      "ios": "iOS",
+      "android": "Android",
+      "desktop": "Desktop"
+    },
+    "editor": {
+      "basic": "Thông tin cơ bản",
+      "content": "Nội dung",
+      "demo": "Dùng thử",
+      "seo": "SEO",
+      "gallery": "Thư viện",
+      "people": "Danh mục & đội ngũ"
+    },
+    "field": {
+      "slug_ph": "tu-dong-tao-tu-ten",
+      "summary": "Mô tả ngắn",
+      "cover": "Ảnh bìa",
+      "lifecycle_help": "Độc lập với trạng thái xuất bản: có thể công bố một sản phẩm còn đang phát triển.",
+      "audience": "Đối tượng",
+      "platforms": "Nền tảng",
+      "tech_stack": "Công nghệ",
+      "highlights": "Điểm nổi bật",
+      "featured": "Nổi bật",
+      "featured_help": "Đưa lên đầu danh sách trên website.",
+      "body": "Mô tả chi tiết",
+      "product_url": "Link sản phẩm",
+      "demo_url": "Link dùng thử",
+      "demo_access": "Cách truy cập",
+      "demo_instructions": "Các bước dùng thử",
+      "categories": "Danh mục",
+      "members": "Thành viên phát triển"
+    },
+    "transition": {
+      "menu": "Xuất bản",
+      "publish": "Xuất bản",
+      "unpublish": "Gỡ xuất bản",
+      "archive": "Lưu trữ",
+      "publish_done": "Đã xuất bản sản phẩm",
+      "unpublish_done": "Đã gỡ xuất bản",
+      "archive_done": "Đã chuyển vào lưu trữ"
+    },
+    "delete": {
+      "title": "Xoá sản phẩm?",
+      "description": "Xoá {{name}} cùng toàn bộ ảnh của nó. Nếu chỉ muốn gỡ khỏi website, hãy dùng Lưu trữ."
+    },
+    "categories": {
+      "title": "Danh mục",
+      "subtitle": "Phân loại sản phẩm; một sản phẩm có thể thuộc nhiều danh mục.",
+      "create_title": "Thêm danh mục",
+      "edit_title": "Sửa danh mục",
+      "saved": "Đã lưu danh mục",
+      "deleted": "Đã xoá {{name}}",
+      "reorder": "Kéo để đổi thứ tự",
+      "search_label": "Tìm kiếm",
+      "search_ph": "Tên hoặc slug",
+      "col": {
+        "name": "Tên danh mục",
+        "slug": "Slug",
+        "description": "Mô tả",
+        "sort_order": "Thứ tự",
+        "actions": "Thao tác",
+        "product_count": "SẢN PHẨM"
+      },
+      "editor": {
+        "basic": "Thông tin cơ bản"
+      },
+      "seo": {
+        "heading": "SEO",
+        "title": "Tiêu đề SEO",
+        "description": "Mô tả SEO",
+        "keywords": "Từ khoá SEO"
+      },
+      "field": {
+        "slug_ph": "tu-dong-tao-tu-ten"
+      },
+      "delete": {
+        "title": "Xoá danh mục?",
+        "description": "Xoá {{name}}. {{count}} sản phẩm sẽ bị gỡ khỏi danh mục này, không bị xoá."
+      }
+    },
+    "gallery": {
+      "add_image": "Tải ảnh lên",
+      "add_video": "Thêm video",
+      "caption": "Chú thích",
+      "caption_ph": "Mô tả ngắn cho ảnh",
+      "reorder": "Kéo để đổi thứ tự",
+      "video_url": "Link video",
+      "video_hosts": "Chỉ hỗ trợ YouTube và Vimeo (https)."
+    },
+    "members": {
+      "add": "Thêm thành viên",
+      "search_ph": "Tìm theo tên",
+      "none_left": "Không còn thành viên nào để thêm",
+      "reorder": "Kéo để đổi thứ tự",
+      "role_ph": "Vai trò trong sản phẩm này",
+      "role_for": "Vai trò của {{name}}"
+    }
   }
 }

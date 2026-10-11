@@ -5,6 +5,10 @@ import {
   ListTree,
   MonitorSmartphone,
   Newspaper,
+  Users2,
+  Package,
+  PackageSearch,
+  Shapes,
   ShieldCheck,
   ShieldHalf,
   Tags,
@@ -91,12 +95,38 @@ export const NAV_SECTIONS: NavSection[] = [
           },
         ],
       },
+      {
+        key: "catalog",
+        labelKey: "nav.catalog",
+        icon: Package,
+        children: [
+          {
+            path: "/products",
+            labelKey: "nav.products",
+            icon: PackageSearch,
+            permission: "products.view",
+          },
+          {
+            path: "/product-categories",
+            labelKey: "nav.product_categories",
+            icon: Shapes,
+            permission: "products.view",
+          },
+        ],
+      },
     ],
   },
   {
     key: "system",
     labelKey: "nav.section.system",
     items: [
+      {
+        key: "members",
+        labelKey: "nav.members",
+        icon: Users2,
+        path: "/members",
+        permission: "members.view",
+      },
       {
         key: "admin",
         labelKey: "nav.admin",

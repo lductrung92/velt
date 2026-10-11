@@ -98,12 +98,19 @@ export default function ArticleEditor() {
   const uploadMedia = useUploadArticleMedia();
 
   // Body editor: enable inline images (block <img>) + a toolbar upload button.
-  // The button uploads on insert, so it needs the article id → disabled until the
-  // draft is saved (see ArticleImageButton).
+  // Before the article exists an inserted image is a local object URL; it is
+  // uploaded and swapped for the stored URL as part of the first save.
+  const [pendingInline, setPendingInline] = useState<
+    { url: string; file: File }[]
+  >([]);
   const bodyExtensions = useMemo(() => [ImageNode], []);
   const renderBodyToolbar = useCallback(
     (editor: Editor | null) => (
-      <ArticleImageButton editor={editor} articleId={article?.id} />
+      <ArticleImageButton
+        editor={editor}
+        articleId={article?.id}
+        onDeferred={(p) => setPendingInline((cur) => [...cur, p])}
+      />
     ),
     [article?.id],
   );
@@ -238,6 +245,50 @@ export default function ArticleEditor() {
     return res.path;
   }
 
+  // Uploads every image that was inserted before the article existed and returns
+  // the body with each local object URL swapped for its stored URL. The caller
+  // must send that body in the same save: gcInlineMedia reconciles the whole
+  // media folder against the body it receives, so an upload the body does not
+  // reference yet would be deleted again straight away.
+  async function resolveInlineImages(
+    articleId: string,
+    html: string,
+    json: Record<string, unknown> | null,
+  ) {
+    if (pendingInline.length === 0) return { html, json };
+    const swaps: [string, string][] = [];
+    for (const p of pendingInline) {
+      const res = await uploadMedia.mutateAsync({
+        id: articleId,
+        file: p.file,
+        purpose: "inline",
+      });
+      swaps.push([p.url, res.url]);
+    }
+    let nextHtml = html;
+    for (const [from, to] of swaps) nextHtml = nextHtml.split(from).join(to);
+
+    const rewrite = (node: unknown): unknown => {
+      if (Array.isArray(node)) return node.map(rewrite);
+      if (!node || typeof node !== "object") return node;
+      const out: Record<string, unknown> = { ...(node as object) };
+      const attrs = out.attrs as { src?: unknown } | undefined;
+      if (attrs && typeof attrs.src === "string") {
+        const hit = swaps.find(([from]) => from === attrs.src);
+        if (hit) out.attrs = { ...attrs, src: hit[1] };
+      }
+      if (out.content) out.content = rewrite(out.content);
+      return out;
+    };
+    const nextJson = json
+      ? (rewrite(json) as Record<string, unknown>)
+      : json;
+
+    for (const p of pendingInline) URL.revokeObjectURL(p.url);
+    setPendingInline([]);
+    return { html: nextHtml, json: nextJson };
+  }
+
   const onSubmit = form.handleSubmit(async (values) => {
     // Category-required is flag-driven (loads async) → enforce here, inline on
     // the field, instead of in the mount-fixed resolver.
@@ -302,10 +353,24 @@ export default function ArticleEditor() {
           "featured",
         );
         const og_path = await resolveImage(created.id, og, "og");
-        if (featured_path || og_path) {
+        const inline = await resolveInlineImages(
+          created.id,
+          values.body_html,
+          bodyJson,
+        );
+        const rewritten = inline.html !== values.body_html;
+        if (featured_path || og_path || rewritten) {
           await update.mutateAsync({
             id: created.id,
-            body: { updated_at: created.updated_at, featured_path, og_path },
+            body: {
+              updated_at: created.updated_at,
+              featured_path,
+              og_path,
+              ...(rewritten && {
+                body_html: inline.html,
+                body_json: inline.json ?? undefined,
+              }),
+            },
           });
         }
         toast.success(t("cms.articles.toast.create_success"));

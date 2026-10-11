@@ -20,7 +20,12 @@ export function BrandingThemeApplier() {
   const { data: cfg } = useAppConfig();
   const { i18n } = useTranslation();
 
-  const primaryColor = cfg?.primaryColor;
+  // Treat the former theme default as the new Zukatek blue; explicit custom
+  // branding remains configurable through public settings.
+  const primaryColor =
+    cfg?.primaryColor?.trim().toLowerCase() === "#1da2b5"
+      ? "#0061fd"
+      : cfg?.primaryColor;
   // Layout effect (pre-paint) so the brand colour is already on `<html>` for the
   // first painted frame — no flash of the default `--primary`.
   useLayoutEffect(() => {

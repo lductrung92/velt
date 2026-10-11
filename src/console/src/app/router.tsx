@@ -31,6 +31,13 @@ import {
   PageEditor,
   PageList,
 } from "@/modules/cms";
+import { MemberEditor, MemberList } from "@/modules/members";
+import {
+  ProductCategoryEditor,
+  ProductCategoryList,
+  ProductEditor,
+  ProductList,
+} from "@/modules/products";
 
 export const router = createBrowserRouter([
   {
@@ -197,6 +204,78 @@ export const router = createBrowserRouter([
         element: (
           <RequirePermission permission="cms.article.view">
             <CmsTags />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/products",
+        element: (
+          <RequirePermission permission="products.view">
+            <ProductList />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/products/new",
+        element: (
+          <RequirePermission permission="products.create">
+            <ProductEditor />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/products/:id",
+        element: (
+          <RequirePermission permission="products.view">
+            <ProductEditor />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/product-categories",
+        element: (
+          <RequirePermission permission="products.view">
+            <ProductCategoryList />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/product-categories/new",
+        element: (
+          <RequirePermission permission="products.category.manage">
+            <ProductCategoryEditor />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/product-categories/:id",
+        element: (
+          <RequirePermission permission="products.view">
+            <ProductCategoryEditor />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/members",
+        element: (
+          <RequirePermission permission="members.view">
+            <MemberList />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/members/new",
+        element: (
+          <RequirePermission permission="members.manage">
+            <MemberEditor />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/members/:id",
+        element: (
+          <RequirePermission permission="members.view">
+            <MemberEditor />
           </RequirePermission>
         ),
       },

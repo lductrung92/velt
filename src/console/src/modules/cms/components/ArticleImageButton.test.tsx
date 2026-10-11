@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Editor } from "@tiptap/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ArticleImageButton } from "./ArticleImageButton";
 
@@ -23,9 +23,30 @@ function fakeEditor() {
 }
 
 describe("ArticleImageButton", () => {
-  it("is disabled until the article has an id (unsaved draft)", () => {
+  beforeEach(() => mutateAsync.mockReset());
+
+  it("is disabled on an unsaved draft when the caller cannot defer", () => {
     render(<ArticleImageButton editor={{} as Editor} />);
     expect(screen.getByRole("button", { name: "editor.image" })).toBeDisabled();
+  });
+
+  it("defers the upload on an unsaved draft and inserts a local preview", async () => {
+    // No article id yet, so there is no folder to upload into: the file is
+    // handed back to the editor and inserted under an object URL.
+    const createObjectURL = vi.fn(() => "blob:local-1");
+    vi.stubGlobal("URL", { ...URL, createObjectURL });
+    const onDeferred = vi.fn();
+    const f = fakeEditor();
+    render(<ArticleImageButton editor={f.editor} onDeferred={onDeferred} />);
+
+    const file = new File(["x"], "pic.png", { type: "image/png" });
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    await userEvent.upload(input, file);
+
+    expect(mutateAsync).not.toHaveBeenCalled();
+    expect(onDeferred).toHaveBeenCalledWith({ url: "blob:local-1", file });
+    expect(f.setImage).toHaveBeenCalledWith({ src: "blob:local-1", alt: "pic.png" });
+    vi.unstubAllGlobals();
   });
 
   it("uploads the picked file as inline and inserts an <img> with the CDN url", async () => {

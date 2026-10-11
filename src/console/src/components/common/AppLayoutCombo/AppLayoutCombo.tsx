@@ -27,7 +27,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { activeBranchKey, visibleNavSections } from "./navItems";
 import { SidebarNav } from "./SidebarNav";
 
-const APP_NAME = "Velt"; // brand (proper noun) — used as the logo link's a11y label
+const APP_NAME = "Zukatek"; // brand (proper noun) — used as the logo link's a11y label
 const DESKTOP_QUERY = "(min-width: 768px)";
 const ASIDE_STORAGE_KEY = "velt.asideOpen";
 
@@ -206,7 +206,10 @@ export function AppLayoutCombo() {
           <Link
             to="/"
             aria-label={APP_NAME}
-            className="flex items-center justify-center overflow-hidden"
+            className={cn(
+              "flex items-center justify-center overflow-hidden dark:rounded-md dark:bg-white",
+              !isRail && "dark:px-2 dark:py-1",
+            )}
           >
             {isRail ? (
               // Rail → square app-icon that fits the w-16 rail.

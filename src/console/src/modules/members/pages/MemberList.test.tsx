@@ -1,0 +1,204 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
+import { I18nextProvider } from "react-i18next";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import i18n from "@/app/i18n";
+import { useAuthStore } from "@/store/auth.store";
+import { server } from "@/test/server";
+
+import MemberList from "./MemberList";
+
+const API = "http://localhost/api";
+
+function member(over: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: "m1",
+    slug: "an-nguyen",
+    full_name: "An Nguyễn",
+    role: "Backend Engineer",
+    bio: null,
+    avatar_url: null,
+    email: null,
+    zalo: null,
+    links: [],
+    skills: ["Go"],
+    sort_order: 0,
+    is_active: true,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    ...over,
+  };
+}
+
+function page(items: unknown[]) {
+  return { items, total: items.length, page: 1, page_size: 100 };
+}
+
+function signIn(permissions: string[]) {
+  useAuthStore.getState().setSession(
+    {
+      id: "admin-1",
+      email: "admin@velt.local",
+      full_name: "Admin",
+      avatar_url: null,
+      status: "active",
+      created_at: "2026-01-01T00:00:00Z",
+      last_login_at: null,
+    },
+    "tok",
+  );
+  useAuthStore.getState().setAuthz(["admin"], permissions);
+}
+
+function renderPage() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/members"]}>
+          <MemberList />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </I18nextProvider>,
+  );
+}
+
+const MANAGER = ["members.view", "members.manage"];
+const VIEWER = ["members.view"];
+
+beforeEach(() => useAuthStore.getState().clear());
+afterEach(() => useAuthStore.getState().clear());
+
+describe("MemberList", () => {
+  it("lists members with name, role and skills", async () => {
+    signIn(VIEWER);
+    server.use(
+      http.get(`${API}/members`, () =>
+        HttpResponse.json(
+          page([
+            member(),
+            member({
+              id: "m2",
+              full_name: "Bình Trần",
+              slug: "binh-tran",
+              role: "Thiết kế",
+              skills: ["Figma"],
+            }),
+          ]),
+        ),
+      ),
+    );
+    renderPage();
+
+    expect(await screen.findByText("An Nguyễn")).toBeInTheDocument();
+    expect(screen.getByText("Backend Engineer")).toBeInTheDocument();
+    expect(screen.getByText("Go")).toBeInTheDocument();
+    expect(screen.getByText("Bình Trần")).toBeInTheDocument();
+  });
+
+  it("labels a hidden member instead of dropping it from the list", async () => {
+    // The console is where you go to un-hide someone, so they must stay visible
+    // here even though the public site no longer shows them.
+    signIn(VIEWER);
+    server.use(
+      http.get(`${API}/members`, () =>
+        HttpResponse.json(page([member({ is_active: false })])),
+      ),
+    );
+    renderPage();
+
+    expect(await screen.findByText("An Nguyễn")).toBeInTheDocument();
+    expect(screen.getByText(i18n.t("members.hidden"))).toBeInTheDocument();
+  });
+
+  it("hides create and delete from a viewer without members.manage", async () => {
+    signIn(VIEWER);
+    server.use(
+      http.get(`${API}/members`, () => HttpResponse.json(page([member()]))),
+    );
+    renderPage();
+
+    await screen.findByText("An Nguyễn");
+    expect(
+      screen.queryByRole("button", { name: i18n.t("members.create") }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: i18n.t("common.delete") }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows create and delete to a manager", async () => {
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/members`, () => HttpResponse.json(page([member()]))),
+    );
+    renderPage();
+
+    await screen.findByText("An Nguyễn");
+    expect(
+      screen.getByRole("button", { name: i18n.t("members.create") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: i18n.t("common.delete") }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the empty state when there is no one yet", async () => {
+    signIn(MANAGER);
+    server.use(http.get(`${API}/members`, () => HttpResponse.json(page([]))));
+    renderPage();
+
+    expect(
+      await screen.findByText(i18n.t("members.empty.title")),
+    ).toBeInTheDocument();
+  });
+
+  it("warns that deleting unlinks the member from every product", async () => {
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/members`, () => HttpResponse.json(page([member()]))),
+    );
+    renderPage();
+
+    await screen.findByText("An Nguyễn");
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.delete") }),
+    );
+
+    expect(
+      await screen.findByText(i18n.t("members.delete.title")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        i18n.t("members.delete.description", { name: "An Nguyễn" }),
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("surfaces a load failure instead of an empty roster", async () => {
+    signIn(VIEWER);
+    server.use(
+      // 403, not 500: axios-retry re-sends 5xx three times with exponential
+      // backoff, which outlives the assertion budget.
+      http.get(`${API}/members`, () =>
+        HttpResponse.json(
+          { error: { code: 403, message: "access_denied", details: null } },
+          { status: 403 },
+        ),
+      ),
+    );
+    renderPage();
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText(i18n.t("members.empty.title")),
+      ).not.toBeInTheDocument(),
+    );
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
+});

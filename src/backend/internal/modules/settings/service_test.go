@@ -17,7 +17,7 @@ func TestGetAll_DefaultsAndMasking(t *testing.T) {
 
 	// Non-secret default surfaces.
 	appName := findEntry(t, view, "general", "app.name")
-	require.Equal(t, "Velt", appName["value"])
+	require.Equal(t, "Zukatek", appName["value"])
 	require.Equal(t, true, appName["is_public"])
 
 	// enum carries allowed_values.
@@ -76,7 +76,7 @@ func TestUpdate_NullDeletes(t *testing.T) {
 		"app.name": raw(`null`),
 	})
 	require.NoError(t, err)
-	require.Equal(t, "Velt", findEntry(t, view, "general", "app.name")["value"], "null reverts to default")
+	require.Equal(t, "Zukatek", findEntry(t, view, "general", "app.name")["value"], "null reverts to default")
 	_, stored := env.repo.snap["app.name"]
 	require.False(t, stored)
 }
@@ -183,7 +183,7 @@ func TestGetPublic_OnlyPublicKeys(t *testing.T) {
 	env := newTestSvc(t)
 	out, err := env.svc.GetPublic(context.Background())
 	require.NoError(t, err)
-	require.Equal(t, "Velt", out["app.name"])
+	require.Equal(t, "Zukatek", out["app.name"])
 	require.Contains(t, out, "app.logo_url")
 	require.Contains(t, out, "app.default_locale")
 	require.NotContains(t, out, "mail.smtp_host")

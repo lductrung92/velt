@@ -1,5 +1,5 @@
-/* Re-theme the Puck editor to the velt console theme (shadcn tokens): brand
- * teal accent instead of Puck's default azure, the app font + base size, the app
+/* Re-theme the Puck editor to the Zukatek console theme (shadcn tokens): brand
+ * blue accent instead of Puck's default azure, the app font + base size, the app
  * corner radius, and form controls that read like the console's own inputs.
  *
  * The --puck-* variables live on :root (not .kd-puck) on purpose: Puck renders
@@ -12,26 +12,26 @@
   --puck-font-family: "Inter", system-ui, sans-serif;
   --puck-font-size-base: 14px;
 
-  /* Accent = velt teal. Puck uses its "azure" 12-step scale for every accent
+  /* Accent = Zukatek blue. Puck uses its "azure" 12-step scale for every accent
    * (selection outline, focus ring, active states); remap the whole ramp to a
-   * teal ramp at matching lightness so no default blue remains. */
-  --puck-color-azure-01: hsl(187 70% 97%);
-  --puck-color-azure-02: hsl(187 70% 94%);
-  --puck-color-azure-03: hsl(187 70% 90%);
-  --puck-color-azure-04: hsl(187 68% 84%);
-  --puck-color-azure-05: hsl(187 66% 76%);
-  --puck-color-azure-06: hsl(187 64% 66%);
-  --puck-color-azure-07: hsl(187 66% 55%);
-  --puck-color-azure-08: hsl(187 70% 47%);
+   * blue ramp at matching lightness so no default blue remains. */
+  --puck-color-azure-01: hsl(217 70% 97%);
+  --puck-color-azure-02: hsl(217 70% 94%);
+  --puck-color-azure-03: hsl(217 70% 90%);
+  --puck-color-azure-04: hsl(217 68% 84%);
+  --puck-color-azure-05: hsl(217 66% 76%);
+  --puck-color-azure-06: hsl(217 64% 66%);
+  --puck-color-azure-07: hsl(217 66% 55%);
+  --puck-color-azure-08: hsl(217 70% 47%);
   --puck-color-azure-09: hsl(var(--primary));
-  --puck-color-azure-10: hsl(187 74% 36%);
-  --puck-color-azure-11: hsl(187 78% 30%);
-  --puck-color-azure-12: hsl(187 80% 20%);
+  --puck-color-azure-10: hsl(217 74% 36%);
+  --puck-color-azure-11: hsl(217 78% 30%);
+  --puck-color-azure-12: hsl(217 80% 20%);
 
-  /* Primary button (Publish) = solid teal. */
+  /* Primary button (Publish) = solid blue. */
   --puck-button-primary-color-bg: hsl(var(--primary));
-  --puck-button-primary-color-bg-hover: hsl(187 74% 36%);
-  --puck-button-primary-color-bg-active: hsl(187 78% 30%);
+  --puck-button-primary-color-bg-hover: hsl(217 74% 36%);
+  --puck-button-primary-color-bg-active: hsl(217 78% 30%);
   --puck-button-primary-color-border: hsl(var(--primary));
   --puck-button-primary-color-text: hsl(var(--primary-foreground));
 
@@ -43,7 +43,7 @@
 
   /* Left palette (Drawer) blocks: Puck's own vars, so this survives class-hash
    * changes on upgrade. Default radius is --puck-radius-m (4px) → use the app's
-   * 8px; default hover resolves to azure-12 (near-black teal, far too dark) →
+   * 8px; default hover resolves to azure-12 (near-black blue, far too dark) →
    * soften to the app's muted surface like a console list-row hover. */
   --puck-drawer-item-radius: var(--radius);
   --puck-drawer-item-color-bg-hover: hsl(var(--muted));
@@ -79,7 +79,7 @@
  * (and overlay wrapper) — a separate absolutely-positioned layer ON TOP of the
  * block, so rounding the block content isn't enough. An outline follows
  * border-radius (Chrome 88+), so giving the overlay a radius rounds the visible
- * teal box to match the app's 0.5rem corners. */
+ * blue box to match the app's 0.5rem corners. */
 .kd-puck [class*="_PuckCanvas-root"],
 .kd-puck [class*="DropZone--hoveringOverArea"],
 .kd-puck [class*="DraggableComponent-overlay"] {
@@ -87,7 +87,7 @@
 }
 
 /* Left panel tabs (Blocks/Outline): the ACTIVE tab should read like the app's
- * active nav item — the app's primary teal — not Puck's pale azure-04 default.
+ * active nav item — the app's primary blue — not Puck's pale azure-04 default.
  * (Puck exposes no --puck-* var for just the active-nav color, so target the
  * hashed NavItem classes by substring; revisit on a Puck upgrade.) */
 .kd-puck [class*="NavItem--active"] [class*="NavItem-link"] {
@@ -98,7 +98,7 @@
   border-color: hsl(var(--primary));
 }
 
-/* Palette (Drawer) block: on hover the label turns the app's primary teal
+/* Palette (Drawer) block: on hover the label turns the app's primary blue
  * (text + icon via currentColor), on top of the soft muted hover background. */
 .kd-puck [class*="Drawer-draggable"]:hover {
   color: hsl(var(--primary));

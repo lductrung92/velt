@@ -69,7 +69,7 @@ func FoundationDefs() []SettingDef {
 
 func foundationDefs() []SettingDef {
 	return []SettingDef{
-		{Key: "app.name", Group: GroupGeneral, Type: TypeString, Default: "Velt", IsPublic: true, Description: "Application name"},
+		{Key: "app.name", Group: GroupGeneral, Type: TypeString, Default: "Zukatek", IsPublic: true, Description: "Application name"},
 		{Key: "app.logo_url", Group: GroupGeneral, Type: TypeString, Format: "url", Default: "", IsPublic: true, Description: "Logo URL"},
 		{Key: "app.primary_color", Group: GroupGeneral, Type: TypeString, Format: "color", Default: "", IsPublic: true, Description: "Brand primary color (#RRGGBB); empty = theme default"},
 		{Key: "app.default_locale", Group: GroupGeneral, Type: TypeEnum, AllowedValues: []string{"vi", "en"}, Default: "vi", IsPublic: true, Description: "Default locale"},

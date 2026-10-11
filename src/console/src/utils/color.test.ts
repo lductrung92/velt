@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { hexToHslTriplet } from "./color";
 
 describe("hexToHslTriplet", () => {
-  it("converts the brand teal to the shadcn HSL triplet", () => {
-    // #1da2b5 is the brand primary (index.css --primary, integer-rounded here;
-    // the CSS token uses the precise `187.5 72.4% 41.2%`).
-    expect(hexToHslTriplet("#1da2b5")).toBe("188 72% 41%");
+  it("converts the Zukatek blue to the shadcn HSL triplet", () => {
+    // #0061fd is the brand primary (index.css --primary, integer-rounded here;
+    // the CSS token uses the precise `217 100% 49.6%`).
+    expect(hexToHslTriplet("#0061fd")).toBe("217 100% 50%");
   });
 
   it("handles the achromatic + primary extremes", () => {

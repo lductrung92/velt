@@ -1,0 +1,99 @@
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, Pencil, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
+import { Button } from "@/components/ui/button";
+import { TableCell, TableRow } from "@/components/ui/table";
+
+import type { ProductCategory } from "../services/productCategories.service";
+
+// One row of the product taxonomy. Mirrors CategoryTreeRow minus the tree
+// indent — this vocabulary is flat, so there is no depth to express.
+export function ProductCategoryRow({
+  category,
+  canManage,
+  reorderable = true,
+  onEdit,
+  onDelete,
+}: {
+  category: ProductCategory;
+  canManage: boolean;
+  /** Show the drag handle. Off while the list is filtered/sorted (reordering by
+   *  sort_order is meaningless there). */
+  reorderable?: boolean;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category.id });
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={isDragging ? "opacity-50" : undefined}
+      data-testid="product-category-row"
+    >
+      <TableCell className="font-medium">
+        <div className="flex items-center gap-1">
+          {canManage && reorderable && (
+            <button
+              type="button"
+              aria-label={t("products.categories.reorder")}
+              title={t("products.categories.reorder")}
+              className="cursor-grab touch-none rounded-sm p-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="size-4" />
+            </button>
+          )}
+          <span>{category.name}</span>
+        </div>
+      </TableCell>
+      <TableCell className="font-mono text-xs text-muted-foreground">
+        {category.slug}
+      </TableCell>
+      <TableCell className="text-right text-muted-foreground">
+        {category.product_count}
+      </TableCell>
+      <TableCell className="text-right text-muted-foreground">
+        {category.sort_order}
+      </TableCell>
+      <TableCell className="text-right">
+        {canManage && (
+          <div className="flex justify-end gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label={t("common.edit")}
+              title={t("common.edit")}
+              onClick={() => onEdit(category.id)}
+            >
+              <Pencil className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label={t("common.delete")}
+              title={t("common.delete")}
+              onClick={() => onDelete(category.id)}
+            >
+              <Trash2 className="size-4 text-destructive" />
+            </Button>
+          </div>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}
