@@ -1,0 +1,213 @@
+.auth-shell {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-height: 100svh;
+  grid-template-columns: minmax(0, 1fr);
+  background:
+    radial-gradient(
+      ellipse at 50% 42%,
+      hsl(var(--background) / 0.95) 0%,
+      hsl(var(--background) / 0.65) 30%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse at 8% 8%,
+      hsl(var(--primary) / 0.12),
+      transparent 48%
+    ),
+    radial-gradient(
+      ellipse at 92% 92%,
+      hsl(var(--primary) / 0.08),
+      transparent 48%
+    ),
+    linear-gradient(hsl(var(--muted) / 0.8), hsl(var(--muted) / 0.8)),
+    hsl(var(--background));
+}
+
+.auth-panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-width: 0;
+  min-height: 100svh;
+  grid-template-rows: 1fr auto 1fr;
+  justify-items: center;
+  gap: 24px;
+  padding: 32px 24px;
+}
+
+.auth-motion {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.auth-form-group {
+  display: flex;
+  width: 100%;
+  max-width: 440px;
+  grid-row: 2;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.auth-form {
+  position: relative;
+  width: 100%;
+  padding: 40px;
+  border: 1px solid hsl(var(--border) / 0.85);
+  border-radius: 24px;
+  background: hsl(var(--card));
+  box-shadow:
+    0 24px 64px -24px hsl(217 45% 25% / 0.14),
+    0 4px 16px -8px hsl(217 45% 25% / 0.08);
+}
+
+.auth-form-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.auth-form-title {
+  min-width: 0;
+}
+
+.auth-form-logo {
+  width: 212px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.dark .auth-form-logo {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.auth-form-heading h1 {
+  color: hsl(var(--foreground));
+  font-size: 28px;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.auth-form-heading p {
+  margin-top: 10px;
+  color: hsl(var(--muted-foreground));
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.auth-form input {
+  height: 52px;
+  padding-left: 16px;
+  border-radius: 12px;
+  background: hsl(var(--muted) / 0.3);
+  border-color: hsl(var(--border));
+  box-shadow: none;
+}
+
+.auth-form input:hover:not(:disabled):not([aria-invalid="true"]) {
+  border-color: hsl(var(--muted-foreground) / 0.4);
+}
+
+.auth-form input:focus-visible {
+  background: hsl(var(--background));
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+}
+
+.auth-form input[aria-invalid="true"] {
+  border-color: hsl(var(--destructive));
+}
+
+.auth-form input[aria-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.1);
+}
+
+.auth-field {
+  position: relative;
+}
+
+.auth-field-icon {
+  position: absolute;
+  top: 17px;
+  left: 16px;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+}
+
+.auth-field:focus-within .auth-field-icon {
+  color: hsl(var(--primary));
+}
+
+.auth-form .auth-field-input {
+  padding-left: 44px;
+}
+
+.auth-form form > .space-y-2 + .space-y-2 {
+  margin-top: 22px;
+}
+
+.auth-form button[type="submit"],
+.auth-form button.w-full {
+  min-height: 52px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.auth-form .auth-submit {
+  margin-top: 28px;
+  box-shadow: 0 5px 12px -5px hsl(var(--primary) / 0.45);
+}
+
+.auth-submit-arrow {
+  transition: transform 150ms ease;
+}
+
+.auth-submit:hover .auth-submit-arrow {
+  transform: translateX(3px);
+}
+
+.auth-form input:autofill {
+  -webkit-text-fill-color: hsl(var(--foreground));
+}
+
+.auth-panel-footer {
+  grid-row: 3;
+  align-self: end;
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+}
+
+@media (max-width: 479px) {
+  .auth-form {
+    padding: 28px 24px;
+    border-radius: 20px;
+  }
+
+  .auth-form-heading h1 {
+    font-size: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-submit-arrow {
+    transition: none;
+  }
+}

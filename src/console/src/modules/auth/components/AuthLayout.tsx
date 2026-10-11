@@ -1,8 +1,21 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, useSyncExternalStore, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
-// Minimal centered card shell for the pre-auth pages (login/forgot/reset).
-// Brand logo (public/logo.png) + centered title/subtitle sit above the form;
-// the form itself keeps its normal left-aligned fields.
+import "./auth-layout.css";
+
+const AuthMotionBackground = lazy(() => import("./AuthMotionBackground"));
+const motionViewportQuery = "(min-width: 768px)";
+function subscribeViewport(callback: () => void) {
+  const query = window.matchMedia?.(motionViewportQuery);
+  query?.addEventListener("change", callback);
+  return () => query?.removeEventListener("change", callback);
+}
+function viewportSnapshot() {
+  return window.matchMedia?.(motionViewportQuery).matches ?? false;
+}
+const staticViewportSnapshot = () => false;
+
+// Shared visual shell; each auth page owns its form and authentication flow.
 export function AuthLayout({
   title,
   subtitle,
@@ -12,24 +25,43 @@ export function AuthLayout({
   subtitle?: string;
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
+  const showMotion = useSyncExternalStore(
+    subscribeViewport,
+    viewportSnapshot,
+    staticViewportSnapshot,
+  );
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-      <div className="w-full max-w-sm rounded-md border bg-card p-6 shadow-sm">
-        <div className="mb-5 flex flex-col items-center text-center">
+    <div className="auth-shell">
+      {showMotion && (
+        <Suspense fallback={null}>
+          <AuthMotionBackground />
+        </Suspense>
+      )}
+      <main className="auth-panel">
+        <div className="auth-form-group">
           <img
             src="/logo.png"
             alt="Zukatek"
             width={1222}
             height={249}
-            className="mb-3 h-auto w-60 max-w-full object-contain dark:rounded-md dark:bg-white dark:p-2"
+            className="auth-form-logo"
           />
-          <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-          {subtitle && (
-            <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
-          )}
+          <div className="auth-form">
+            <div className="auth-form-heading">
+              <div className="auth-form-title">
+                <h1>{title}</h1>
+                {subtitle && <p>{subtitle}</p>}
+              </div>
+            </div>
+            {children}
+          </div>
         </div>
-        {children}
-      </div>
+        <footer className="auth-panel-footer">
+          {t("auth.layout.copyright", { year: new Date().getFullYear() })}
+        </footer>
+      </main>
     </div>
   );
 }

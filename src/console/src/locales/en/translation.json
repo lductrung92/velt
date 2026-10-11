@@ -163,6 +163,20 @@
       "token_invalid_title": "Link expired or invalid",
       "token_invalid_body": "This reset link has expired or was already used. Please request a new one.",
       "request_new_link": "Request a new link"
+    },
+    "layout": {
+      "headline": "One workspace. Every product.",
+      "description": "Manage Zukatek products, content, and your team in one connected workspace.",
+      "workspace": "The Zukatek management workspace",
+      "brand": "ZUKATEK CONSOLE",
+      "console": "Console",
+      "copyright": "© {{year}} Zukatek",
+      "motion": {
+        "plan": "Planning",
+        "build": "Build & test",
+        "launch": "Product launch",
+        "idea": "Product ideas"
+      }
     }
   },
   "account": {

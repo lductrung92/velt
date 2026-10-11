@@ -163,6 +163,20 @@
       "token_invalid_title": "Link đã hết hạn hoặc không hợp lệ",
       "token_invalid_body": "Link đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng. Vui lòng yêu cầu link mới.",
       "request_new_link": "Yêu cầu link mới"
+    },
+    "layout": {
+      "headline": "Một không gian. Mọi sản phẩm.",
+      "description": "Quản lý sản phẩm, nội dung và đội ngũ Zukatek trong một không gian làm việc thống nhất.",
+      "workspace": "Không gian quản trị Zukatek",
+      "brand": "ZUKATEK CONSOLE",
+      "console": "Console",
+      "copyright": "© {{year}} Zukatek",
+      "motion": {
+        "plan": "Lập kế hoạch",
+        "build": "Lập trình và kiểm thử",
+        "launch": "Ra mắt sản phẩm",
+        "idea": "Lên ý tưởng sản phẩm"
+      }
     }
   },
   "account": {

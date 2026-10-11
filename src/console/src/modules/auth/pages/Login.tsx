@@ -1,8 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowRight, LockKeyhole, Mail } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Alert } from "@/components/common/Alert";
 import { PasswordField } from "@/components/common/PasswordField";
@@ -119,10 +120,7 @@ export default function Login() {
   }
 
   return (
-    <AuthLayout
-      title={t("auth.login.title")}
-      subtitle={t("auth.login.subtitle")}
-    >
+    <AuthLayout title={t("auth.login.title")}>
       {topError && (
         <Alert className="mb-4" variant="danger" message={topError} />
       )}
@@ -136,14 +134,18 @@ export default function Login() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel required>{t("auth.login.email_label")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      autoComplete="username"
-                      placeholder={t("auth.login.email_ph")}
-                      {...field}
-                    />
-                  </FormControl>
+                  <div className="auth-field">
+                    <Mail className="auth-field-icon" aria-hidden="true" />
+                    <FormControl>
+                      <Input
+                        className="auth-field-input"
+                        type="email"
+                        autoComplete="username"
+                        placeholder={t("auth.login.email_ph")}
+                        {...field}
+                      />
+                    </FormControl>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -156,28 +158,32 @@ export default function Login() {
                   <FormLabel required>
                     {t("auth.login.password_label")}
                   </FormLabel>
-                  <FormControl>
-                    <PasswordField
-                      autoComplete="current-password"
-                      placeholder={t("auth.login.password_ph")}
-                      {...field}
+                  <div className="auth-field">
+                    <LockKeyhole
+                      className="auth-field-icon"
+                      aria-hidden="true"
                     />
-                  </FormControl>
+                    <FormControl>
+                      <PasswordField
+                        className="auth-field-input"
+                        autoComplete="current-password"
+                        placeholder={t("auth.login.password_ph")}
+                        {...field}
+                      />
+                    </FormControl>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" loading={login.isPending}>
+            <Button
+              type="submit"
+              className="auth-submit w-full"
+              loading={login.isPending}
+            >
               {t("auth.login.submit")}
+              <ArrowRight className="auth-submit-arrow" aria-hidden="true" />
             </Button>
-            <div className="text-center">
-              <Link
-                to="/forgot-password"
-                className="text-sm text-primary underline-offset-4 hover:underline"
-              >
-                {t("auth.login.forgot")}
-              </Link>
-            </div>
           </form>
         </Form>
       ) : (

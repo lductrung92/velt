@@ -218,7 +218,7 @@ function NavBranch({
                   end={child.end}
                   onClick={onNavClick}
                   className={cn(
-                    "group flex items-center gap-3 rounded-lg py-1.5 pl-4 pr-3 text-sm font-medium transition-colors",
+                    "group flex h-9 items-center gap-3 rounded-lg pl-4 pr-3 text-sm font-medium transition-colors",
                     childActive
                       ? "text-primary"
                       : "text-muted-foreground hover:text-foreground",
@@ -263,7 +263,7 @@ function NavBranch({
                     onClick={onNavClick}
                     className={({ isActive }) =>
                       cn(
-                        "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
+                        "flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors",
                         isActive
                           ? "bg-primary/10 text-primary"
                           : "text-popover-foreground hover:bg-accent hover:text-accent-foreground",
