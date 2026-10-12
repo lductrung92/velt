@@ -272,8 +272,12 @@
   background: hsl(var(--muted) / 0.35);
 }
 .list-desktop td {
-  padding-top: 18px;
-  padding-bottom: 18px;
+  /* One density for every list. 18px came from the leads rows, which carry
+     three lines of text; on a single-line row it left more empty space than
+     content. The row's hit area is set by its controls (36px icon buttons),
+     not by this padding, so tightening it costs no reachability. */
+  padding-top: 14px;
+  padding-bottom: 14px;
   vertical-align: middle;
 }
 .list-desktop th:first-child,
