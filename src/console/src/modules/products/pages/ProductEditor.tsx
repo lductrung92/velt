@@ -46,10 +46,7 @@ import { parseApiError } from "@/utils/apiError";
 
 import { CategoryMultiSelect } from "../components/CategoryMultiSelect";
 import { ChipMultiSelect } from "../components/ChipMultiSelect";
-import {
-  GalleryPane,
-  type GalleryDraftItem,
-} from "../components/GalleryPane";
+import { GalleryPane, type GalleryDraftItem } from "../components/GalleryPane";
 import {
   MemberPicker,
   type ProductMemberDraft,
@@ -272,7 +269,12 @@ export default function ProductEditor() {
         const cover_path = await resolveCover(id);
         const saved = await update.mutateAsync({
           id,
-          body: { ...values, body_json: bodyJson, seo, ...(cover_path && { cover_path }) },
+          body: {
+            ...values,
+            body_json: bodyJson,
+            seo,
+            ...(cover_path && { cover_path }),
+          },
         });
         if (relationsDirty) await saveRelations(saved.id);
         form.reset({ ...values, slug: saved.slug });
@@ -288,7 +290,11 @@ export default function ProductEditor() {
 
     let created: Product;
     try {
-      created = await create.mutateAsync({ ...values, body_json: bodyJson, seo });
+      created = await create.mutateAsync({
+        ...values,
+        body_json: bodyJson,
+        seo,
+      });
     } catch (err) {
       fail(err);
       return;
@@ -299,7 +305,8 @@ export default function ProductEditor() {
     // nothing was saved would get the product created twice.
     try {
       const cover_path = await resolveCover(created.id);
-      if (cover_path) await update.mutateAsync({ id: created.id, body: { cover_path } });
+      if (cover_path)
+        await update.mutateAsync({ id: created.id, body: { cover_path } });
       await flushGallery(created.id);
       if (relationsDirty) await saveRelations(created.id);
       toast.success(t("products.saved"));
@@ -339,7 +346,10 @@ export default function ProductEditor() {
   if (isEdit && detail.isLoading) return <Skeleton className="h-96 w-full" />;
   if (isEdit && detail.isError) {
     return (
-      <Alert variant="danger" message={parseApiError(detail.error, t).message} />
+      <Alert
+        variant="danger"
+        message={parseApiError(detail.error, t).message}
+      />
     );
   }
 
@@ -368,7 +378,11 @@ export default function ProductEditor() {
           {isEdit && canPublish && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" disabled={transition.isPending}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={transition.isPending}
+                >
                   {t("products.transition.menu")}
                 </Button>
               </DropdownMenuTrigger>
@@ -395,7 +409,11 @@ export default function ProductEditor() {
           title={isEdit ? t("products.edit_title") : t("products.create_title")}
           breadcrumbs={[
             { labelKey: "nav.products", to: BACK },
-            { labelKey: isEdit ? "products.edit_title" : "products.create_title" },
+            {
+              labelKey: isEdit
+                ? "products.edit_title"
+                : "products.create_title",
+            },
           ]}
         />
 
@@ -414,7 +432,11 @@ export default function ProductEditor() {
                   <FormItem>
                     <FormLabel required>{t("products.col.name")}</FormLabel>
                     <FormControl>
-                      <TextField maxLength={200} disabled={!canEdit} {...field} />
+                      <TextField
+                        maxLength={200}
+                        disabled={!canEdit}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -445,7 +467,12 @@ export default function ProductEditor() {
                   <FormItem>
                     <FormLabel>{t("products.field.summary")}</FormLabel>
                     <FormControl>
-                      <Textarea rows={2} maxLength={500} disabled={!canEdit} {...field} />
+                      <Textarea
+                        rows={2}
+                        maxLength={500}
+                        disabled={!canEdit}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -491,7 +518,9 @@ export default function ProductEditor() {
                           label: t(`products.lifecycle.${l}`),
                         }))}
                         onChange={(o) =>
-                          field.onChange((o?.value as ProductLifecycle) ?? "idea")
+                          field.onChange(
+                            (o?.value as ProductLifecycle) ?? "idea",
+                          )
                         }
                       />
                     </FormControl>
@@ -613,6 +642,31 @@ export default function ProductEditor() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
+                  name="sort_order"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("products.col.sort_order")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          disabled={!canEdit}
+                          value={field.value}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value === ""
+                                ? 0
+                                : Number(e.target.value),
+                            )
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="is_featured"
                   render={({ field }) => (
                     <FormItem className="space-y-1.5">
@@ -632,29 +686,6 @@ export default function ProductEditor() {
                       <p className="text-xs text-muted-foreground">
                         {t("products.field.featured_help")}
                       </p>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="sort_order"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("products.col.sort_order")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={0}
-                          disabled={!canEdit}
-                          value={field.value}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === "" ? 0 : Number(e.target.value),
-                            )
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -749,7 +780,11 @@ export default function ProductEditor() {
                   <FormItem>
                     <FormLabel>{t("products.field.product_url")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://..." disabled={!canEdit} {...field} />
+                      <Input
+                        placeholder="https://..."
+                        disabled={!canEdit}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -762,7 +797,11 @@ export default function ProductEditor() {
                   <FormItem>
                     <FormLabel>{t("products.field.demo_url")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://..." disabled={!canEdit} {...field} />
+                      <Input
+                        placeholder="https://..."
+                        disabled={!canEdit}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -786,7 +825,9 @@ export default function ProductEditor() {
                 name="demo_instructions"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("products.field.demo_instructions")}</FormLabel>
+                    <FormLabel>
+                      {t("products.field.demo_instructions")}
+                    </FormLabel>
                     <FormControl>
                       <StringListField
                         value={field.value}
