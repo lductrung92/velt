@@ -61,6 +61,37 @@ func TestOverlay(t *testing.T) {
 			"the source document is reused for every locale, so overlaying one must not change it")
 	})
 
+	// The `seo` block is one declared field but several boxes on screen. Replacing
+	// it wholesale meant translating the SEO title silently threw away the
+	// Vietnamese description — a half-filled block has to fall back the same way a
+	// half-filled field does.
+	t.Run("a nested object merges key by key", func(t *testing.T) {
+		got := Overlay(
+			map[string]any{"seo": map[string]any{
+				"title": "Kho Gọn", "description": "Quản lý tồn kho.", "noindex": false,
+			}},
+			map[string]any{"seo": map[string]any{"title": "Lean Stock"}},
+		)
+		require.Equal(t, map[string]any{
+			"title": "Lean Stock", "description": "Quản lý tồn kho.", "noindex": false,
+		}, got["seo"])
+	})
+
+	t.Run("an empty string inside a nested object keeps the original", func(t *testing.T) {
+		got := Overlay(
+			map[string]any{"seo": map[string]any{"title": "Kho Gọn", "description": "Mô tả."}},
+			map[string]any{"seo": map[string]any{"title": "Lean Stock", "description": "  "}},
+		)
+		require.Equal(t, map[string]any{"title": "Lean Stock", "description": "Mô tả."}, got["seo"])
+	})
+
+	t.Run("a nested object does not mutate the base", func(t *testing.T) {
+		baseSEO := map[string]any{"title": "Kho Gọn", "description": "Mô tả."}
+		Overlay(map[string]any{"seo": baseSEO},
+			map[string]any{"seo": map[string]any{"title": "Lean Stock"}})
+		require.Equal(t, "Kho Gọn", baseSEO["title"])
+	})
+
 	t.Run("a field the declaration never allowed still passes through", func(t *testing.T) {
 		// Overlay itself does not police the field list — the service does, before
 		// anything is stored. This records that split so nobody adds a second,

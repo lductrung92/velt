@@ -14,9 +14,21 @@ func Overlay(base, tr map[string]any) map[string]any {
 		out[k] = v
 	}
 	for k, v := range tr {
-		if !isBlank(v) {
-			out[k] = v
+		if isBlank(v) {
+			continue
 		}
+		// A nested object is overlaid key by key, not replaced whole. The `seo`
+		// block is one field to the declaration but several to a translator:
+		// replacing it outright would mean filling in an English SEO title
+		// silently dropped the Vietnamese description, which is the opposite of
+		// what the fallback rule promises.
+		if sub, ok := v.(map[string]any); ok {
+			if baseSub, ok := out[k].(map[string]any); ok {
+				out[k] = Overlay(baseSub, sub)
+				continue
+			}
+		}
+		out[k] = v
 	}
 	return out
 }
