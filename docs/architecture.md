@@ -18,7 +18,7 @@ Stack: Go, chi, pgx/PostgreSQL, goose migrations. `cmd/api/main.go` chỉ wiring
 
 Luồng request: middleware → handler → service → repository → PostgreSQL. Handler decode/validate và trả HTTP; service kiểm permission và nghiệp vụ; repository thao tác persistence. `internal/httpx` thống nhất JSON/error envelope và identity. `internal/platform` cung cấp crypto, JWT, TOTP, rate limit, storage local/S3, mail, HTML sanitation, slug và revalidation. Redis dùng cho cache/limiter nếu cấu hình; có fallback khi không dùng Redis.
 
-Modules gồm `auth`, `account`, `admin`, `settings`, `files`, `cms`, `members`, `products`. CMS có articles, pages, taxonomy, menus, landing builder, widgets, comments và newsletter; có các route đọc công khai dưới `/api/public/cms`.
+Modules gồm `auth`, `account`, `admin`, `settings`, `files`, `cms`, `members`, `products`, `ai` và `crm`. Module `translation` đã có thiết kế nhưng **chưa viết code** — xem [docs/domains/translation/README.md](domains/translation/README.md). CMS có articles, pages, taxonomy, menus, landing builder, widgets, comments và newsletter; có các route đọc công khai dưới `/api/public/cms`.
 
 `members` là hồ sơ marketing, tách khỏi `users` là danh tính đăng nhập. API quản trị ở `/api/members`; roster công khai ở `/api/public/members`, chi tiết theo slug. Chỉ hồ sơ active xuất hiện ở public.
 
@@ -29,7 +29,7 @@ Modules gồm `auth`, `account`, `admin`, `settings`, `files`, `cms`, `members`,
 
 Publish chụp chi tiết vào `published_snapshot`; unpublish giữ snapshot. Quan hệ sản phẩm–danh mục, sản phẩm–thành viên và gallery có repository/endpoints riêng.
 
-**Khoảng cách với tài liệu API:** code hiện có `/api/public/product-categories`, nhưng chưa đăng ký `/api/public/products` hay `/api/public/products/{slug}`. Các route này trong `docs/apis/products-api.md` là hợp đồng cần triển khai, chưa phải chức năng đang chạy. Khi nối site, cần thêm read path chỉ đọc sản phẩm đã xuất bản từ snapshot, không dùng API quản trị cho khách.
+**Ghi chú cập nhật 2026-10-12:** `/api/public/products` và `/api/public/products/{slug}` nay đã đăng ký và chạy (đọc từ `published_snapshot`, chỉ sản phẩm đã xuất bản). Đoạn cảnh báo cũ về việc các route này chưa tồn tại đã không còn đúng.
 
 ## Console
 
