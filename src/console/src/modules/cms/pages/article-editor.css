@@ -37,6 +37,15 @@
   align-items: center;
   gap: 0.625rem;
 }
+/*
+ * Title and permalink are one block: the URL describes the thing named just
+ * above it, so they sit together and the card's own rhythm separates the pair
+ * from the next field rather than separating them from each other.
+ */
+.article-editor-titleblock {
+  margin-bottom: -0.5rem;
+}
+
 .article-editor-title input {
   min-height: 2.75rem;
   font-size: var(--font-size-base);

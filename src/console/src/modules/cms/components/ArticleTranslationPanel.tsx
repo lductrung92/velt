@@ -1,7 +1,8 @@
-import { Languages, Link2, Lock, PenLine, Search } from "lucide-react";
+import { Languages, Lock, PenLine, Search } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 
+import { SlugField } from "@/components/common/SlugField";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TextField } from "@/components/ui/text-field";
@@ -75,19 +76,41 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
         <CardContent className="space-y-6">
           {/* Same class the Vietnamese form gives its title, so switching
               language does not resize the field under the cursor. */}
-          <TranslatedField
-            id="tr-article-title"
-            className="article-editor-title"
-            label={tl("cms.articles.field.title")}
-          >
-            <TextField
+          <div className="article-editor-titleblock space-y-2">
+            <TranslatedField
               id="tr-article-title"
-              value={str(tr.values.title)}
-              disabled={readOnly}
-              maxLength={255}
-              onChange={(e) => tr.setField("title", e.target.value)}
-            />
-          </TranslatedField>
+              className="article-editor-title"
+              label={tl("cms.articles.field.title")}
+            >
+              <TextField
+                id="tr-article-title"
+                value={str(tr.values.title)}
+                disabled={readOnly}
+                maxLength={255}
+                onChange={(e) => tr.setField("title", e.target.value)}
+              />
+            </TranslatedField>
+
+            {/* Same row, same place as the source form: a translator should not
+              have to learn a second layout to change a URL. Left empty, the
+              page keeps the source language's address. */}
+            <div>
+              <SlugField
+                label={tl("cms.articles.editor.permalink")}
+                value={str(tr.values.slug)}
+                original={str(tr.values.slug)}
+                emptyValue={source.slug}
+                locale={tr.locale}
+                disabled={readOnly}
+                onChange={(v) => tr.setField("slug", v)}
+              />
+              {/* Only while there is nothing here: once a slug is set, the hint
+                  describes a state the record is no longer in. */}
+              {!str(tr.values.slug) && (
+                <p className="tr-caption mt-1.5">{tl("tr.slug_hint")}</p>
+              )}
+            </div>
+          </div>
 
           <TranslatedField
             id="tr-article-excerpt"
@@ -137,31 +160,6 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
       </Card>
 
       <aside className="article-editor-settings space-y-5">
-        <Card className="article-editor-card">
-          <CardHeader className="article-editor-heading">
-            <CardTitle>
-              <Link2 className="size-4 text-muted-foreground" aria-hidden />
-              {tl("cms.articles.editor.permalink")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <TranslatedField
-              id="tr-article-slug"
-              label={tl("cms.articles.field.slug")}
-            >
-              <TextField
-                id="tr-article-slug"
-                value={str(tr.values.slug)}
-                disabled={readOnly}
-                maxLength={255}
-                placeholder={source.slug}
-                onChange={(e) => tr.setField("slug", e.target.value)}
-              />
-            </TranslatedField>
-            <p className="tr-caption">{tl("tr.slug_hint")}</p>
-          </CardContent>
-        </Card>
-
         <Card className="article-editor-card">
           <CardHeader className="article-editor-heading">
             <CardTitle>

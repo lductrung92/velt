@@ -528,59 +528,61 @@ export default function ArticleEditor() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem className="article-editor-title">
-                    <FormLabel required>
-                      {t("cms.articles.field.title")}
-                    </FormLabel>
-                    <FormControl>
-                      <TextField
-                        placeholder={t("cms.articles.editor.title_ph")}
-                        maxLength={300}
-                        disabled={isReadOnly}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {/* Only after the first save: before that the server derives the
-                  slug from the title, and an empty box would just invite a
-                  worse answer. */}
-              {isEdit && article && (
+              <div className="article-editor-titleblock space-y-2">
                 <FormField
                   control={form.control}
-                  name="slug"
+                  name="title"
                   render={({ field }) => (
-                    <FormItem className="-mt-3">
-                      <SlugField
-                        label={t("cms.articles.editor.permalink")}
-                        value={field.value}
-                        original={article.slug}
-                        onChange={field.onChange}
-                        canEdit={allowSlugEdit}
-                        disabled={isReadOnly}
-                      />
+                    <FormItem className="article-editor-title">
+                      <FormLabel required>
+                        {t("cms.articles.field.title")}
+                      </FormLabel>
+                      <FormControl>
+                        <TextField
+                          placeholder={t("cms.articles.editor.title_ph")}
+                          maxLength={300}
+                          disabled={isReadOnly}
+                          {...field}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              )}
-              {isEdit && !allowSlugEdit && !isReadOnly && (
-                <Checkbox
-                  id="cms-article-regenerate-slug"
-                  label={t("cms.articles.field.regenerate_slug")}
-                  checked={regenerate}
-                  onChange={(e) => {
-                    setRegenerate(e.target.checked);
-                    setMediaDirty(true);
-                  }}
-                />
-              )}
+                {/* Only after the first save: before that the server derives the
+                  slug from the title, and an empty box would just invite a
+                  worse answer. */}
+                {isEdit && article && (
+                  <FormField
+                    control={form.control}
+                    name="slug"
+                    render={({ field }) => (
+                      <FormItem>
+                        <SlugField
+                          label={t("cms.articles.editor.permalink")}
+                          value={field.value}
+                          original={article.slug}
+                          onChange={field.onChange}
+                          canEdit={allowSlugEdit}
+                          disabled={isReadOnly}
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                {isEdit && !allowSlugEdit && !isReadOnly && (
+                  <Checkbox
+                    id="cms-article-regenerate-slug"
+                    label={t("cms.articles.field.regenerate_slug")}
+                    checked={regenerate}
+                    onChange={(e) => {
+                      setRegenerate(e.target.checked);
+                      setMediaDirty(true);
+                    }}
+                  />
+                )}
+              </div>
               <FormField
                 control={form.control}
                 name="body_html"

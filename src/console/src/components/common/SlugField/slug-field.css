@@ -15,10 +15,19 @@
   font-weight: 500;
   color: hsl(var(--muted-foreground));
 }
+/* Monospaced, because this is a URL and not prose: it makes a hyphen, an l and
+ * a 1 tell themselves apart, which is the whole reason anyone reads a slug. */
 .slug-field-value {
   min-width: 0;
   overflow-wrap: anywhere;
-  color: hsl(var(--foreground));
+  font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+  font-size: 0.8125rem;
+  letter-spacing: -0.01em;
+  color: hsl(var(--foreground) / 0.85);
+}
+/* Borrowed from another language rather than set here. */
+.slug-field-value[data-inherited] {
+  color: hsl(var(--muted-foreground));
 }
 /*
  * Both actions carry colour so they read as actions. Grey on a grey line is
@@ -47,6 +56,8 @@
   background: hsl(var(--destructive) / 0.08);
 }
 .slug-field[data-editing] input {
+  font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+  font-size: 0.8125rem;
   min-width: 0;
   flex: 1 1 auto;
   height: 2rem;
