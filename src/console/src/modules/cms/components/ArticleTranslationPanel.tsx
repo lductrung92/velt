@@ -15,7 +15,14 @@ const RichTextEditor = lazy(() =>
   })),
 );
 
-/** The source-language values the translator is working from. */
+/**
+ * The source-language values the translator is working from.
+ *
+ * Only two things still need them: the body, shown beside its translation, and
+ * the search preview, which walks the same fallback chain the published page
+ * will — an untranslated SEO field serves the Vietnamese one, so the preview has
+ * to show that rather than a blank.
+ */
 export interface ArticleSource {
   title: string;
   slug: string;
@@ -45,6 +52,10 @@ function str(v: unknown): string {
  */
 export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
   const { t } = useTranslation();
+  // Every label in this panel is rendered in the language being written, not in
+  // the console's own language. Writing English into boxes labelled in
+  // Vietnamese is exactly how a translator ends up typing in the wrong one.
+  const tl = (key: string) => t(key, { lng: tr.locale });
   const seo = (tr.values.seo ?? {}) as Record<string, unknown>;
   const setSeo = (key: string, value: string) =>
     tr.setField("seo", { ...seo, [key]: value });
@@ -59,7 +70,7 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
           <span className="article-editor-heading-icon">
             <PenLine className="size-4" aria-hidden />
           </span>
-          <CardTitle>{t("cms.articles.editor.content")}</CardTitle>
+          <CardTitle>{tl("cms.articles.editor.content")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Same class the Vietnamese form gives its title, so switching
@@ -67,8 +78,7 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
           <TranslatedField
             id="tr-article-title"
             className="article-editor-title"
-            label={t("cms.articles.field.title")}
-            source={source.title}
+            label={tl("cms.articles.field.title")}
           >
             <TextField
               id="tr-article-title"
@@ -81,8 +91,7 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
 
           <TranslatedField
             id="tr-article-excerpt"
-            label={t("cms.articles.field.excerpt")}
-            source={source.excerpt}
+            label={tl("cms.articles.field.excerpt")}
           >
             <Textarea
               id="tr-article-excerpt"
@@ -100,16 +109,16 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
                 right. */}
             <div className="tr-body-heads">
               <p className="text-sm font-medium leading-none">
-                {t("cms.articles.field.body")}
+                {tl("cms.articles.field.body")}
               </p>
-              <span className="tr-caption">{t("tr.source")}</span>
+              <span className="tr-caption">{tl("tr.source")}</span>
             </div>
             <div className="tr-body">
               <Suspense fallback={<Skeleton className="h-64 w-full" />}>
                 <RichTextEditor
                   value={str(tr.values.body_html)}
                   editable={!readOnly}
-                  ariaLabel={t("cms.articles.field.body")}
+                  ariaLabel={tl("cms.articles.field.body")}
                   className="article-editor-body"
                   onChange={(html) => tr.setField("body_html", html)}
                 />
@@ -119,7 +128,7 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
                 // The source body is the editor's own sanitised output, read
                 // back for reference only.
                 dangerouslySetInnerHTML={{
-                  __html: source.bodyHtml || `<p>${t("tr.source_empty")}</p>`,
+                  __html: source.bodyHtml || `<p>${tl("tr.source_empty")}</p>`,
                 }}
               />
             </div>
@@ -133,13 +142,12 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
             <span className="article-editor-heading-icon">
               <Link2 className="size-4" aria-hidden />
             </span>
-            <CardTitle>{t("cms.articles.editor.permalink")}</CardTitle>
+            <CardTitle>{tl("cms.articles.editor.permalink")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <TranslatedField
               id="tr-article-slug"
-              label={t("cms.articles.field.slug")}
-              source={source.slug}
+              label={tl("cms.articles.field.slug")}
             >
               <TextField
                 id="tr-article-slug"
@@ -150,7 +158,7 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
                 onChange={(e) => tr.setField("slug", e.target.value)}
               />
             </TranslatedField>
-            <p className="tr-caption">{t("tr.slug_hint")}</p>
+            <p className="tr-caption">{tl("tr.slug_hint")}</p>
           </CardContent>
         </Card>
 
@@ -159,14 +167,14 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
             <span className="article-editor-heading-icon">
               <Lock className="size-4" aria-hidden />
             </span>
-            <CardTitle>{t("tr.shared_title")}</CardTitle>
+            <CardTitle>{tl("tr.shared_title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="tr-shared">
-              <li>{t("cms.articles.field.status")}</li>
-              <li>{t("cms.articles.field.featured")}</li>
-              <li>{t("cms.articles.field.category")}</li>
-              <li>{t("cms.tags.title")}</li>
+              <li>{tl("cms.articles.field.status")}</li>
+              <li>{tl("cms.articles.field.featured")}</li>
+              <li>{tl("cms.articles.field.category")}</li>
+              <li>{tl("cms.tags.title")}</li>
             </ul>
           </CardContent>
         </Card>
@@ -177,13 +185,13 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
           <span className="article-editor-heading-icon">
             <Search className="size-4" aria-hidden />
           </span>
-          <CardTitle>{t("cms.articles.editor.seo")}</CardTitle>
+          <CardTitle>{tl("cms.articles.editor.seo")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="article-editor-search-preview">
             <p className="mb-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <Languages className="size-3.5" aria-hidden />
-              {t("cms.articles.editor.search_preview")}
+              {tl("cms.articles.editor.search_preview")}
             </p>
             <span className="text-xs font-medium text-muted-foreground">
               {"Zukatek"}
@@ -192,20 +200,22 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
                 untranslated field quietly serves the Vietnamese one, and this is
                 where the translator sees that happen. */}
             <p className="mt-1 break-words text-lg font-medium text-primary">
-              {str(seo.title) || str(tr.values.title) || source.title}
+              {str(seo.title) ||
+                source.seoTitle ||
+                str(tr.values.title) ||
+                source.title}
             </p>
             <p className="mt-1 break-words text-sm leading-6 text-muted-foreground">
               {str(seo.description) ||
+                source.seoDescription ||
                 str(tr.values.excerpt) ||
-                source.excerpt ||
-                source.seoDescription}
+                source.excerpt}
             </p>
           </div>
 
           <TranslatedField
             id="tr-article-seo-title"
-            label={t("cms.articles.seo.title")}
-            source={source.seoTitle}
+            label={tl("cms.articles.seo.title")}
           >
             <TextField
               id="tr-article-seo-title"
@@ -218,8 +228,7 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
 
           <TranslatedField
             id="tr-article-seo-desc"
-            label={t("cms.articles.seo.description")}
-            source={source.seoDescription}
+            label={tl("cms.articles.seo.description")}
           >
             <Textarea
               id="tr-article-seo-desc"

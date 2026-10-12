@@ -23,23 +23,24 @@
 .article-editor .article-editor-heading {
   flex-direction: row;
   align-items: center;
-  gap: 0.75rem;
+  /* Same 10px the dashboard panels put between a heading and its icon. */
+  gap: 0.625rem;
   padding: 1rem 1.25rem;
   background: hsl(var(--muted) / 0.2);
 }
 .article-editor-heading > :last-child {
   margin-top: 0;
 }
+/*
+ * A plain muted glyph, not a tinted tile — the same mark the dashboard panels
+ * use. The tile read as a button and gave every card heading more weight than
+ * the content under it.
+ */
 .article-editor-heading-icon {
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
   flex-shrink: 0;
-  border: 1px solid hsl(var(--primary) / 0.1);
-  border-radius: calc(var(--radius) - 2px);
-  color: hsl(var(--primary));
-  background: hsl(var(--primary) / 0.06);
+  color: hsl(var(--muted-foreground));
 }
 .article-editor-title input {
   min-height: 2.75rem;

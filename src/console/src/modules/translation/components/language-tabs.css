@@ -27,10 +27,6 @@
   background: transparent;
   gap: 0.5rem;
 }
-.tr-tabs[data-embedded] .tr-tabs-icon {
-  width: 1.75rem;
-  height: 1.75rem;
-}
 .tr-tabs[data-embedded] .tr-tab[data-active] {
   /* The bar's own surface is already white; a second white panel on it would
      read as a raised card rather than a selected tab. */
@@ -41,16 +37,13 @@
   margin-left: 0.25rem;
 }
 
+/* A plain muted glyph, matching the card headings and the dashboard panels.
+ * Once those dropped their tinted tiles this was the only one left on the page. */
 .tr-tabs-icon {
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
   flex-shrink: 0;
-  border: 1px solid hsl(var(--primary) / 0.1);
-  border-radius: calc(var(--radius) - 2px);
-  color: hsl(var(--primary));
-  background: hsl(var(--primary) / 0.06);
+  color: hsl(var(--muted-foreground));
 }
 .tr-tabs-list {
   display: flex;
@@ -121,29 +114,6 @@
   color: hsl(38 92% 38%);
 }
 
-/* ---- one translated field ---- */
-
-.tr-field-source {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.375rem;
-  font-size: var(--font-size-caption);
-  line-height: 1.5;
-  color: hsl(var(--muted-foreground));
-}
-.tr-field-source > span:first-child {
-  flex-shrink: 0;
-  font-weight: 600;
-  color: hsl(var(--foreground) / 0.65);
-}
-.tr-field-source > span:last-child {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.tr-field-source[data-empty] > span:last-child {
-  font-style: italic;
-}
-
 /* The original body, shown beside its translation rather than under it: an
  * article body is too long to hold in your head while scrolling past it. */
 .tr-body-heads {
@@ -191,8 +161,10 @@
 .tr-shared {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  font-size: var(--font-size-caption);
+  gap: 0.625rem;
+  /* Caption size belongs to hints about a control; this is a list of facts the
+     reader is meant to read, so it takes the body size the cards use. */
+  font-size: var(--font-size-sm);
   color: hsl(var(--muted-foreground));
 }
 .tr-shared li {
@@ -202,8 +174,8 @@
 }
 .tr-shared li::before {
   content: "";
-  width: 0.25rem;
-  height: 0.25rem;
+  width: 0.3125rem;
+  height: 0.3125rem;
   flex-shrink: 0;
   border-radius: 999px;
   background: hsl(var(--muted-foreground) / 0.5);

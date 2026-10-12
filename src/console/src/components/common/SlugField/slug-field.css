@@ -1,0 +1,36 @@
+/*
+ * One line under the title: label, the saved URL, and a way in. It stays a line
+ * rather than becoming a field so it reads as a fact about the record, not as
+ * something waiting to be filled in.
+ */
+.slug-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+}
+.slug-field-label {
+  flex-shrink: 0;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+}
+.slug-field-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: hsl(var(--foreground));
+}
+.slug-field-action {
+  flex-shrink: 0;
+  height: 1.75rem;
+  padding-inline: 0.5rem;
+  color: hsl(var(--muted-foreground));
+}
+.slug-field-action:hover {
+  color: hsl(var(--foreground));
+}
+.slug-field[data-editing] input {
+  min-width: 0;
+  flex: 1 1 auto;
+  height: 2rem;
+}

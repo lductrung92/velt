@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   Globe2,
   ImageIcon,
-  Link2,
   PenLine,
   Save,
   Search,
@@ -30,6 +29,7 @@ import {
   type ImageUploadValue,
 } from "@/components/common/ImageHandler";
 import { PageHeader } from "@/components/common/PageHeader";
+import { SlugField } from "@/components/common/SlugField";
 import { ImageNode } from "@/components/common/RichTextEditor/ImageExtension";
 import { Select } from "@/components/common/Select";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -356,10 +356,13 @@ export default function ArticleEditor() {
         };
         if (publishAt) body.publish_at = publishAt;
         if (st === "needs_revision") body.note = values.note.trim();
-        if (allowSlugEdit) {
-          const s = values.slug.trim();
-          if (s) body.slug = s;
-        } else if (regenerate) {
+        // Only when it actually changed: sending the current slug back on every
+        // save would re-run the rename path for nothing, and a slug is an
+        // address people already hold.
+        const nextSlug = values.slug.trim();
+        if (allowSlugEdit && nextSlug && nextSlug !== article.slug) {
+          body.slug = nextSlug;
+        } else if (!allowSlugEdit && regenerate) {
           body.regenerate_slug = true;
         }
         if (featured_path) body.featured_path = featured_path;
@@ -384,7 +387,6 @@ export default function ArticleEditor() {
         };
         if (values.category_id) body.category_id = values.category_id;
         if (publishAt) body.publish_at = publishAt;
-        if (allowSlugEdit && values.slug.trim()) body.slug = values.slug.trim();
         const created = await create.mutateAsync(body);
         const hadTranslations = tr.dirty;
         await tr.flush(created.id);
@@ -546,6 +548,39 @@ export default function ArticleEditor() {
                   </FormItem>
                 )}
               />
+              {/* Only after the first save: before that the server derives the
+                  slug from the title, and an empty box would just invite a
+                  worse answer. */}
+              {isEdit && article && (
+                <FormField
+                  control={form.control}
+                  name="slug"
+                  render={({ field }) => (
+                    <FormItem className="-mt-3">
+                      <SlugField
+                        label={t("cms.articles.editor.permalink")}
+                        value={field.value}
+                        original={article.slug}
+                        onChange={field.onChange}
+                        canEdit={allowSlugEdit}
+                        disabled={isReadOnly}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              {isEdit && !allowSlugEdit && !isReadOnly && (
+                <Checkbox
+                  id="cms-article-regenerate-slug"
+                  label={t("cms.articles.field.regenerate_slug")}
+                  checked={regenerate}
+                  onChange={(e) => {
+                    setRegenerate(e.target.checked);
+                    setMediaDirty(true);
+                  }}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="body_html"
@@ -724,49 +759,6 @@ export default function ArticleEditor() {
                 </p>
               </CardContent>
             </Card>
-            {(allowSlugEdit || isEdit) && (
-              <Card className="article-editor-card">
-                <CardHeader className="article-editor-heading">
-                  <span className="article-editor-heading-icon">
-                    <Link2 className="size-4" aria-hidden />
-                  </span>
-                  <CardTitle>{t("cms.articles.editor.permalink")}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {allowSlugEdit ? (
-                    <FormField
-                      control={form.control}
-                      name="slug"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("cms.articles.field.slug")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              maxLength={300}
-                              placeholder={t("cms.articles.field.slug_ph")}
-                              disabled={isReadOnly}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  ) : (
-                    <Checkbox
-                      id="cms-article-regenerate-slug"
-                      label={t("cms.articles.field.regenerate_slug")}
-                      checked={regenerate}
-                      disabled={isReadOnly}
-                      onChange={(e) => {
-                        setRegenerate(e.target.checked);
-                        setMediaDirty(true);
-                      }}
-                    />
-                  )}
-                </CardContent>
-              </Card>
-            )}
           </aside>
           <Card className="article-editor-seo article-editor-card" id="art-seo">
             <CardHeader className="article-editor-heading">
