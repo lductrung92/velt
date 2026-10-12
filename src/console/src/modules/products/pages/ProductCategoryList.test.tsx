@@ -31,7 +31,12 @@ function category(over: Record<string, unknown> = {}) {
 
 const TWO = [
   category(),
-  category({ id: "c2", slug: "ai-tu-dong-hoa", name: "AI & tự động hoá", sort_order: 1 }),
+  category({
+    id: "c2",
+    slug: "ai-tu-dong-hoa",
+    name: "AI & tự động hoá",
+    sort_order: 1,
+  }),
 ];
 
 function signIn(permissions: string[]) {
@@ -113,9 +118,7 @@ describe("ProductCategoryList", () => {
     renderPage();
 
     await screen.findAllByTestId("product-category-row");
-    await userEvent.click(
-      screen.getByRole("button", { name: /Tên danh mục/ }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /Tên danh mục/ }));
 
     const asc = screen.getAllByTestId("product-category-row");
     expect(asc[0]).toHaveTextContent("AI & tự động hoá");
@@ -136,9 +139,13 @@ describe("ProductCategoryList", () => {
     renderPage();
 
     await screen.findAllByTestId("product-category-row");
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.filter") }));
-    await userEvent.type(screen.getByLabelText(i18n.t("products.categories.search_label")), "ai");
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.apply") }));
+    // The search box sits in the toolbar now and filters as you type.
+    await userEvent.type(
+      screen.getByRole("searchbox", {
+        name: i18n.t("products.categories.search_label"),
+      }),
+      "ai",
+    );
 
     const rows = screen.getAllByTestId("product-category-row");
     expect(rows).toHaveLength(1);
@@ -157,12 +164,16 @@ describe("ProductCategoryList", () => {
 
     await screen.findAllByTestId("product-category-row");
     expect(
-      screen.getAllByRole("button", { name: i18n.t("products.categories.reorder") }).length,
+      screen.getAllByRole("button", {
+        name: i18n.t("products.categories.reorder"),
+      }).length,
     ).toBe(2);
 
     await userEvent.click(screen.getByRole("button", { name: /Tên danh mục/ }));
     expect(
-      screen.queryByRole("button", { name: i18n.t("products.categories.reorder") }),
+      screen.queryByRole("button", {
+        name: i18n.t("products.categories.reorder"),
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -193,8 +204,11 @@ describe("ProductCategoryList", () => {
     );
     renderPage();
 
+    // Scoped to the table: the desktop rows and the mobile cards both render,
+    // so each row's delete button exists twice.
+    const table = await screen.findByTestId("product-categories-table");
     await userEvent.click(
-      await screen.findByRole("button", { name: i18n.t("common.delete") }),
+      within(table).getByRole("button", { name: i18n.t("common.delete") }),
     );
     expect(
       await screen.findByText(

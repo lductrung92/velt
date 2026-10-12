@@ -13,27 +13,32 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Plus } from "lucide-react";
+import {
+  ArrowRight,
+  Package,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Search,
+  Shapes,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+import i18n from "@/app/i18n";
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { FilterChips } from "@/components/common/FilterChips";
-import { FilterPopover } from "@/components/common/FilterPopover";
-import { ListToolbar } from "@/components/common/ListToolbar";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SortableHead } from "@/components/common/SortableHead";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
-  TableEmpty,
   TableHead,
   TableHeader,
   TableRow,
@@ -49,8 +54,27 @@ import {
 } from "../hooks/useProductCategories";
 import type { ProductCategory } from "../services/productCategories.service";
 
-// Sorting (or searching) switches off drag-reorder — ordering by sort_order
-// only makes sense on the full, unfiltered list.
+import "@/styles/list-page.css";
+import "./product-categories.css";
+
+// The overview cards. There is no status here, so each card carries its own
+// predicate.
+const OVERVIEW = [
+  { key: "total", Icon: Shapes, match: null },
+  {
+    key: "used",
+    Icon: Package,
+    match: (c: ProductCategory) => c.product_count > 0,
+  },
+  {
+    key: "unused",
+    Icon: Package,
+    match: (c: ProductCategory) => c.product_count === 0,
+  },
+] as const;
+
+type Scope = (typeof OVERVIEW)[number]["key"];
+
 export default function ProductCategoryList() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -61,11 +85,12 @@ export default function ProductCategoryList() {
   const del = useDeleteProductCategory();
   const reorder = useReorderProductCategories();
 
-  const [deleteTarget, setDeleteTarget] = useState<ProductCategory | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProductCategory | null>(
+    null,
+  );
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<string | null>(null);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [draftQ, setDraftQ] = useState("");
+  const [scope, setScope] = useState<Scope>("total");
 
   // Local mirror so a drag renders instantly; the server call follows.
   const [order, setOrder] = useState<ProductCategory[]>([]);
@@ -75,15 +100,25 @@ export default function ProductCategoryList() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
-  // A search term or an active sort means the rows no longer reflect
-  // sort_order, so dragging them would write a meaningless order.
-  const reorderable = q === "" && sort === null;
+  // Anything that narrows or resequences the list means the rows no longer
+  // reflect sort_order, so dragging them would write an order the user cannot
+  // see. The overview cards count as narrowing.
+  const reorderable = q === "" && sort === null && scope === "total";
+  const hasFilters = !reorderable;
+
+  const counts = OVERVIEW.map(({ match }) =>
+    match ? order.filter(match).length : order.length,
+  );
 
   const rows = useMemo(() => {
     let list = order;
+    const card = OVERVIEW.find((o) => o.key === scope);
+    if (card?.match) list = list.filter(card.match);
     if (q) {
       const needle = q.toLowerCase();
       list = list.filter(
@@ -93,12 +128,14 @@ export default function ProductCategoryList() {
       );
     }
     if (sort) {
-      const key = (sort.startsWith("-") ? sort.slice(1) : sort) as "name" | "slug";
+      const key = (sort.startsWith("-") ? sort.slice(1) : sort) as
+        | "name"
+        | "slug";
       const dir = sort.startsWith("-") ? -1 : 1;
       list = [...list].sort((a, b) => a[key].localeCompare(b[key], "vi") * dir);
     }
     return list;
-  }, [order, q, sort]);
+  }, [order, q, sort, scope]);
 
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
@@ -135,129 +172,300 @@ export default function ProductCategoryList() {
     });
   };
 
-  const filterChips = q
-    ? [{ key: "q", label: t("products.categories.search_label"), value: q, onRemove: () => setQ("") }]
-    : [];
-
   return (
-    // space-y-3 is the shared list-page rhythm (see every cms list page);
-    // without it the header, toolbar and table set their own spacing.
-    <div className="space-y-3">
+    <div className="list-page" data-list="product-categories">
       <PageHeader
         title={t("products.categories.title")}
         subtitle={t("products.categories.subtitle")}
         breadcrumbs={[{ labelKey: "nav.product_categories" }]}
       />
 
-      <ListToolbar
-        onRefresh={() => void categories.refetch()}
-        refreshDisabled={categories.isFetching}
-        filter={
-          <FilterPopover
-            open={filterOpen}
-            onOpenChange={(open) => {
-              setFilterOpen(open);
-              if (open) setDraftQ(q);
-            }}
-            onApply={() => {
-              setQ(draftQ.trim());
-              setFilterOpen(false);
-            }}
-            onReset={() => setDraftQ("")}
-            filterActive={q !== ""}
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="product-category-q">
-                {t("products.categories.search_label")}
-              </Label>
-              <Input
-                id="product-category-q"
-                type="search"
-                value={draftQ}
-                placeholder={t("products.categories.search_ph")}
-                onChange={(e) => setDraftQ(e.target.value)}
-              />
-            </div>
-          </FilterPopover>
-        }
+      <div
+        className="list-overview"
+        aria-label={t("products.categories.overview.label")}
       >
-        {canManage && (
-          <Button type="button" onClick={() => navigate("/product-categories/new")}>
-            <Plus className="size-4" />
-            {t("common.add_new")}
-          </Button>
-        )}
-      </ListToolbar>
+        {OVERVIEW.map(({ key, Icon }, index) => (
+          <button
+            type="button"
+            key={key}
+            className="list-metric"
+            data-kind={key}
+            aria-pressed={scope === key}
+            onClick={() => setScope((cur) => (cur === key ? "total" : key))}
+          >
+            <span className="list-metric-top">
+              <span>{t(`products.categories.overview.${key}`)}</span>
+              <span className="list-metric-icon">
+                <Icon className="size-4" aria-hidden />
+              </span>
+            </span>
+            <strong>
+              {categories.isPending ? (
+                <Skeleton className="h-8 w-12" />
+              ) : categories.isError ? (
+                "—"
+              ) : (
+                new Intl.NumberFormat(i18n.language).format(counts[index])
+              )}
+            </strong>
+            <span className="list-metric-bottom">
+              {t(`products.categories.overview.${key}_hint`)}
+              <ArrowRight className="size-3.5" aria-hidden />
+            </span>
+          </button>
+        ))}
+      </div>
 
-      <FilterChips
-        items={filterChips}
-        onClearAll={q ? () => setQ("") : undefined}
-      />
-
-      {categories.isError ? (
-        <Alert
-          variant="danger"
-          message={parseApiError(categories.error, t).message}
-        />
-      ) : categories.isLoading && !categories.data ? (
-        <div className="space-y-2 p-3">
-          {Array.from({ length: 5 }, (_, i) => (
-            <Skeleton key={i} className="h-9 w-full" />
-          ))}
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <Table scroll={false} data-testid="product-categories-table">
-            <TableHeader>
-              <TableRow>
-                <SortableHead
-                  col="name"
-                  label={t("products.categories.col.name")}
-                  sort={sort}
-                  onSort={setSort}
-                />
-                <SortableHead
-                  col="slug"
-                  label={t("products.categories.col.slug")}
-                  sort={sort}
-                  onSort={setSort}
-                />
-                <TableHead className="text-right">
-                  {t("products.categories.col.product_count")}
-                </TableHead>
-                <TableHead className="text-right">
-                  {t("products.categories.col.sort_order")}
-                </TableHead>
-                <TableHead className="text-right">
-                  {t("products.categories.col.actions")}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 && <TableEmpty colSpan={5} />}
-              <SortableContext
-                items={rows.map((c) => c.id)}
-                strategy={verticalListSortingStrategy}
+      <section
+        className="list-panel"
+        aria-label={t("products.categories.list_title")}
+      >
+        <div className="list-panel-heading">
+          <div>
+            <h2>{t("products.categories.list_title")}</h2>
+            <p>
+              {categories.isPending || categories.isError
+                ? t("products.categories.list_hint")
+                : t("products.categories.record_count", {
+                    count: order.length,
+                  })}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={categories.isFetching}
+              onClick={() => void categories.refetch()}
+            >
+              <RotateCcw
+                className={
+                  categories.isFetching
+                    ? "size-3.5 animate-spin motion-reduce:animate-none"
+                    : "size-3.5"
+                }
+                aria-hidden
+              />
+              {t("common.refresh")}
+            </Button>
+            {canManage && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => navigate("/product-categories/new")}
               >
-                {rows.map((c) => (
-                  <ProductCategoryRow
-                    key={c.id}
-                    category={c}
-                    canManage={canManage}
-                    reorderable={canManage && reorderable}
-                    onEdit={(id) => navigate(`/product-categories/${id}`)}
-                    onDelete={() => setDeleteTarget(c)}
-                  />
-                ))}
-              </SortableContext>
-            </TableBody>
-          </Table>
-        </DndContext>
-      )}
+                <Plus className="size-4" />
+                {t("common.add_new")}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* No status axis here, so no tabs row — the toolbar carries the rule
+            that would otherwise come from it. */}
+        <div className="list-toolbar list-toolbar-edge">
+          <form
+            className="list-search"
+            onSubmit={(event) => event.preventDefault()}
+          >
+            <Search className="size-4" aria-hidden />
+            <Input
+              type="search"
+              value={q}
+              aria-label={t("products.categories.search_label")}
+              placeholder={t("products.categories.search_ph")}
+              // The whole list is already in memory, so searching as you type
+              // costs nothing and waiting for Enter would be pure friction.
+              onChange={(event) => setQ(event.target.value)}
+            />
+            <Button
+              type="submit"
+              variant="ghost"
+              size="icon"
+              aria-label={t("products.categories.search_label")}
+            >
+              <ArrowRight className="size-4" aria-hidden />
+            </Button>
+          </form>
+        </div>
+
+        {categories.isError ? (
+          <div className="list-error">
+            <Alert
+              variant="danger"
+              message={parseApiError(categories.error, t).message}
+            />
+            <Button
+              className="mt-3"
+              variant="outline"
+              size="sm"
+              onClick={() => void categories.refetch()}
+            >
+              {t("common.retry")}
+            </Button>
+          </div>
+        ) : categories.isPending ? (
+          <div className="list-loading" aria-label={t("common.loading")}>
+            {Array.from({ length: 5 }, (_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        ) : !rows.length ? (
+          <div className="list-empty">
+            <div className="list-empty-art" aria-hidden>
+              <span className="list-empty-ring" />
+              <div className="list-empty-card">
+                <span>
+                  <Shapes className="size-5" />
+                </span>
+                <div>
+                  <i />
+                  <i />
+                  <i />
+                </div>
+                <Plus className="list-empty-plus" />
+              </div>
+            </div>
+            <h3>
+              {t(
+                hasFilters
+                  ? "products.categories.no_results"
+                  : "products.categories.empty_title",
+              )}
+            </h3>
+            <p>
+              {t(
+                hasFilters
+                  ? "products.categories.no_results_hint"
+                  : "products.categories.empty_hint",
+              )}
+            </p>
+            {!hasFilters && canManage && (
+              <Button
+                size="sm"
+                onClick={() => navigate("/product-categories/new")}
+              >
+                <Plus className="size-4" />
+                {t("common.add_new")}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <>
+            {hasFilters && (
+              <p className="pcat-flat-notice">
+                {t("products.categories.flat_notice")}
+              </p>
+            )}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="list-desktop">
+                <Table
+                  scroll={false}
+                  data-testid="product-categories-table"
+                  wrapperClassName="list-table-wrap"
+                >
+                  <TableHeader>
+                    <TableRow>
+                      <SortableHead
+                        col="name"
+                        label={t("products.categories.col.name")}
+                        sort={sort}
+                        onSort={setSort}
+                      />
+                      <SortableHead
+                        col="slug"
+                        label={t("products.categories.col.slug")}
+                        sort={sort}
+                        onSort={setSort}
+                      />
+                      <TableHead>
+                        {t("products.categories.col.product_count")}
+                      </TableHead>
+                      <TableHead className="text-right">
+                        {t("products.categories.col.sort_order")}
+                      </TableHead>
+                      <TableHead className="text-right">
+                        {t("products.categories.col.actions")}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <SortableContext
+                      items={rows.map((c) => c.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {rows.map((c) => (
+                        <ProductCategoryRow
+                          key={c.id}
+                          category={c}
+                          canManage={canManage}
+                          reorderable={canManage && reorderable}
+                          onEdit={(id) => navigate(`/product-categories/${id}`)}
+                          onDelete={() => setDeleteTarget(c)}
+                        />
+                      ))}
+                    </SortableContext>
+                  </TableBody>
+                </Table>
+              </div>
+            </DndContext>
+
+            {/* Reading only: dragging needs a pointer, so the handle stays on
+                the desktop table. */}
+            <div className="list-mobile">
+              {rows.map((c) => (
+                <div className="pcat-mobile-card" key={c.id}>
+                  <div className="pcat-mobile-heading">
+                    <div className="pcat-name">
+                      <strong>{c.name}</strong>
+                    </div>
+                    {canManage && (
+                      <div className="pcat-row-actions">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t("common.edit")}
+                          onClick={() =>
+                            navigate(`/product-categories/${c.id}`)
+                          }
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t("common.delete")}
+                          onClick={() => setDeleteTarget(c)}
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="pcat-mobile-meta">
+                    <span
+                      className="pcat-count"
+                      data-empty={c.product_count === 0 ? "true" : "false"}
+                    >
+                      <Package className="size-3" aria-hidden />
+                      {t("products.categories.product_count", {
+                        count: c.product_count,
+                      })}
+                    </span>
+                    <span className="pcat-slug">{c.slug}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
 
       <ConfirmDialog
         open={!!deleteTarget}
@@ -268,6 +476,7 @@ export default function ProductCategoryList() {
           count: deleteTarget?.product_count ?? 0,
         })}
         confirmLabel={t("common.delete")}
+        confirmIcon={Trash2}
         destructive
         loading={del.isPending}
         onConfirm={confirmDelete}

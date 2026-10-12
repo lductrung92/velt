@@ -1239,6 +1239,26 @@
       "delete": {
         "title": "Delete category?",
         "description": "Delete {{name}}. {{count}} product(s) will be unlinked from it, not deleted."
+      },
+      "list_title": "Categories",
+      "list_hint": "Categories in the product catalog",
+      "record_count_one": "{{count}} category",
+      "record_count_other": "{{count}} categories",
+      "product_count_one": "{{count}} product",
+      "product_count_other": "{{count}} products",
+      "flat_notice": "Filtered, so reordering is paused.",
+      "empty_title": "No categories yet",
+      "empty_hint": "Categories let visitors filter the catalog on the site.",
+      "no_results": "No categories found",
+      "no_results_hint": "Try another search term.",
+      "overview": {
+        "label": "Category overview",
+        "total": "Total categories",
+        "total_hint": "Every category",
+        "used": "In use",
+        "used_hint": "Has products",
+        "unused": "Empty",
+        "unused_hint": "Could be merged or removed"
       }
     },
     "gallery": {

@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2 } from "lucide-react";
+import { GripVertical, Package, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -42,39 +42,47 @@ export function ProductCategoryRow({
       className={isDragging ? "opacity-50" : undefined}
       data-testid="product-category-row"
     >
-      <TableCell className="font-medium">
-        <div className="flex items-center gap-1">
+      <TableCell>
+        <div className="pcat-name">
           {canManage && reorderable && (
             <button
               type="button"
               aria-label={t("products.categories.reorder")}
               title={t("products.categories.reorder")}
-              className="cursor-grab touch-none rounded-sm p-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="pcat-grip"
               {...attributes}
               {...listeners}
             >
               <GripVertical className="size-4" />
             </button>
           )}
-          <span>{category.name}</span>
+          <strong>{category.name}</strong>
         </div>
       </TableCell>
-      <TableCell className="font-mono text-xs text-muted-foreground">
-        {category.slug}
+      <TableCell>
+        <span className="pcat-slug">{category.slug}</span>
       </TableCell>
-      <TableCell className="text-right text-muted-foreground">
-        {category.product_count}
+      <TableCell>
+        <span
+          className="pcat-count"
+          data-empty={category.product_count === 0 ? "true" : "false"}
+        >
+          <Package className="size-3" aria-hidden />
+          {t("products.categories.product_count", {
+            count: category.product_count,
+          })}
+        </span>
       </TableCell>
-      <TableCell className="text-right text-muted-foreground">
-        {category.sort_order}
+      <TableCell className="text-right">
+        <span className="pcat-order">{category.sort_order}</span>
       </TableCell>
       <TableCell className="text-right">
         {canManage && (
-          <div className="flex justify-end gap-1">
+          <div className="pcat-row-actions">
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size="icon"
               aria-label={t("common.edit")}
               title={t("common.edit")}
               onClick={() => onEdit(category.id)}
@@ -84,7 +92,7 @@ export function ProductCategoryRow({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size="icon"
               aria-label={t("common.delete")}
               title={t("common.delete")}
               onClick={() => onDelete(category.id)}

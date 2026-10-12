@@ -1287,6 +1287,26 @@
       "delete": {
         "title": "Xoá danh mục?",
         "description": "Xoá {{name}}. {{count}} sản phẩm sẽ bị gỡ khỏi danh mục này, không bị xoá."
+      },
+      "list_title": "Danh sách danh mục",
+      "list_hint": "Danh mục của catalog sản phẩm",
+      "record_count_one": "{{count}} danh mục",
+      "record_count_other": "{{count}} danh mục",
+      "product_count_one": "{{count}} sản phẩm",
+      "product_count_other": "{{count}} sản phẩm",
+      "flat_notice": "Đang lọc nên tạm khoá kéo sắp xếp.",
+      "empty_title": "Chưa có danh mục nào",
+      "empty_hint": "Danh mục giúp khách lọc sản phẩm trên website.",
+      "no_results": "Không tìm thấy danh mục",
+      "no_results_hint": "Thử đổi từ khoá tìm kiếm.",
+      "overview": {
+        "label": "Tổng quan danh mục",
+        "total": "Tổng số danh mục",
+        "total_hint": "Toàn bộ danh mục",
+        "used": "Có sản phẩm",
+        "used_hint": "Đang được dùng",
+        "unused": "Chưa có sản phẩm",
+        "unused_hint": "Có thể gộp hoặc bỏ"
       }
     },
     "gallery": {
