@@ -62,8 +62,11 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
           <CardTitle>{t("cms.articles.editor.content")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Same class the Vietnamese form gives its title, so switching
+              language does not resize the field under the cursor. */}
           <TranslatedField
             id="tr-article-title"
+            className="article-editor-title"
             label={t("cms.articles.field.title")}
             source={source.title}
           >

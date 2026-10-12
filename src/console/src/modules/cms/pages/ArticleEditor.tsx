@@ -468,19 +468,22 @@ export default function ArticleEditor() {
         />
         <EditorActionBar
           left={
-            <Button
-              type="button"
-              variant="outline"
-              disabled={saving}
-              onClick={() =>
-                dirty && !isReadOnly
-                  ? setLeaving(true)
-                  : navigate("/cms/articles")
-              }
-            >
-              <ArrowLeft className="size-4" aria-hidden />
-              {t("common.back")}
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={saving}
+                onClick={() =>
+                  dirty && !isReadOnly
+                    ? setLeaving(true)
+                    : navigate("/cms/articles")
+                }
+              >
+                <ArrowLeft className="size-4" aria-hidden />
+                {t("common.back")}
+              </Button>
+              <LanguageTabs tr={tr} disabled={!isEdit} embedded />
+            </>
           }
         >
           <ArticleStatusBadge status={status} />
@@ -497,7 +500,6 @@ export default function ArticleEditor() {
             message={t("cms.articles.editor.readonly_hint")}
           />
         )}
-        <LanguageTabs tr={tr} disabled={!isEdit} />
         {!tr.isBase && (
           <ArticleTranslationPanel
             tr={tr}

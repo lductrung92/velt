@@ -42,8 +42,8 @@
   background: hsl(var(--primary) / 0.06);
 }
 .article-editor-title input {
-  min-height: 3.5rem;
-  font-size: var(--font-size-xl);
+  min-height: 3rem;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   letter-spacing: -0.025em;
   padding: 0.75rem;

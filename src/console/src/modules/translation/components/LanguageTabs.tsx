@@ -15,6 +15,11 @@ interface Props {
   tr: EntityTranslation;
   /** Create screens have no record yet, so there is nothing to translate. */
   disabled?: boolean;
+  /**
+   * Render as a slot inside the editor action bar rather than as a band of its
+   * own: no card chrome, just a divider and the tabs.
+   */
+  embedded?: boolean;
 }
 
 /**
@@ -26,12 +31,12 @@ interface Props {
  * unfinished work is visible, so it is part of the control rather than a detail
  * tucked inside the form.
  */
-export function LanguageTabs({ tr, disabled }: Props) {
+export function LanguageTabs({ tr, disabled, embedded }: Props) {
   const { t } = useTranslation();
   if (!tr.enabled || tr.tabs.length < 2) return null;
 
   return (
-    <div className="tr-tabs">
+    <div className="tr-tabs" data-embedded={embedded || undefined}>
       <span className="tr-tabs-icon" aria-hidden>
         <Languages className="size-4" />
       </span>

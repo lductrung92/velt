@@ -15,6 +15,39 @@
   border-radius: var(--radius);
   background: hsl(var(--muted) / 0.2);
 }
+/*
+ * Embedded in the editor action bar: the bar already is the card, so the strip
+ * drops its own box and reads as one more control on that row. A divider keeps
+ * it from running into the Back button.
+ */
+.tr-tabs[data-embedded] {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  gap: 0.5rem;
+}
+.tr-tabs[data-embedded]::before {
+  content: "";
+  align-self: stretch;
+  width: 1px;
+  margin: 0 0.25rem;
+  background: hsl(var(--border));
+}
+.tr-tabs[data-embedded] .tr-tabs-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.tr-tabs[data-embedded] .tr-tab[data-active] {
+  /* The bar's own surface is already white; a second white panel on it would
+     read as a raised card rather than a selected tab. */
+  background: hsl(var(--muted) / 0.55);
+  box-shadow: none;
+}
+.tr-tabs[data-embedded] .tr-tabs-notice {
+  margin-left: 0.25rem;
+}
+
 .tr-tabs-icon {
   display: grid;
   place-items: center;

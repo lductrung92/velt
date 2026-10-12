@@ -11,6 +11,8 @@ interface Props {
   source?: string | null;
   /** The input itself, already bound by the caller. */
   children: ReactNode;
+  /** Lets a screen give one field the same treatment its own form gives it. */
+  className?: string;
 }
 
 /**
@@ -20,11 +22,17 @@ interface Props {
  * to remember the sentence they are translating, or to keep switching tabs to
  * re-read it, is the kind of friction that makes people stop translating.
  */
-export function TranslatedField({ id, label, source, children }: Props) {
+export function TranslatedField({
+  id,
+  label,
+  source,
+  children,
+  className,
+}: Props) {
   const { t } = useTranslation();
   const text = source?.trim() ?? "";
   return (
-    <div>
+    <div className={className}>
       {/* A plain Label, not FormLabel: these inputs live outside the article's
           react-hook-form, and FormLabel reads a FormField context that is not
           there. */}
