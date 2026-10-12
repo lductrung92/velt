@@ -1214,7 +1214,10 @@
       "revoke": "Thu hồi",
       "revoked": "Đã thu hồi",
       "revoked_toast": "Đã thu hồi token.",
-      "revoke_description": "Agent đang dùng token này sẽ mất quyền truy cập ngay lập tức. Không khôi phục được."
+      "revoke_description": "Agent đang dùng token này sẽ mất quyền truy cập ngay lập tức. Không khôi phục được.",
+      "expired": "Đã hết hạn",
+      "expires_at": "Hết hạn {{at}}",
+      "expired_at": "Đã hết hạn {{at}}"
     }
   },
   "chat": {

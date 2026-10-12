@@ -127,16 +127,10 @@ type APIError struct {
 	Body   string
 }
 
+// Error deliberately omits Body. The endpoint is operator-configurable and may
+// point inside the network, so echoing what it replied would turn a
+// misconfiguration into a way to read internal services through the admin UI.
+// Callers that need the detail log it (see the AI admin service).
 func (e *APIError) Error() string {
-	return fmt.Sprintf("ai provider: http %d: %s", e.Status, e.Body)
-}
-
-// trimBase normalises a base URL: no trailing slash, so joining a path is
-// predictable whichever way the operator typed it.
-func trimBase(raw, fallback string) string {
-	s := strings.TrimSpace(raw)
-	if s == "" {
-		s = fallback
-	}
-	return strings.TrimRight(s, "/")
+	return fmt.Sprintf("ai provider: http %d", e.Status)
 }

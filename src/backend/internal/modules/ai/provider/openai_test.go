@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -279,6 +280,68 @@ func TestFactoryPicksTheAdapterAndFallsBackSafely(t *testing.T) {
 }
 
 func TestBaseURLTrailingSlashDoesNotDouble(t *testing.T) {
-	require.Equal(t, "http://x/v1", trimBase("http://x/v1/", "fallback"))
-	require.Equal(t, "fallback", trimBase("   ", "fallback"))
+	got, err := checkBase("http://x/v1/", "http://fallback")
+	require.NoError(t, err)
+	require.Equal(t, "http://x/v1", got)
+
+	got, err = checkBase("   ", "http://fallback")
+	require.NoError(t, err)
+	require.Equal(t, "http://fallback", got)
+}
+
+// The endpoint is operator-configurable, so it is an outbound-request primitive
+// pointed wherever a setting says. Loopback and private addresses must keep
+// working — "run Ollama on localhost" is the reason this adapter exists — so
+// the policy bans only what cannot serve a model and is what an SSRF aims at.
+func TestEndpointPolicy(t *testing.T) {
+	ok := []string{
+		"http://127.0.0.1:11434/v1",   // the documented local-model setup
+		"http://192.168.1.50:8000/v1", // a model box on the LAN
+		"http://ollama:11434/v1",      // a container name
+		"https://api.openai.com/v1",
+	}
+	for _, u := range ok {
+		_, err := checkBase(u, "http://fallback")
+		require.NoErrorf(t, err, "%s must stay usable", u)
+	}
+
+	bad := []string{
+		"http://169.254.169.254/latest/meta-data", // IAM credentials
+		"http://169.254.1.1/v1",
+		"file:///etc/passwd",
+		"gopher://127.0.0.1:6379/_FLUSHALL",
+		"http:///v1", // no host
+	}
+	for _, u := range bad {
+		_, err := checkBase(u, "http://fallback")
+		require.ErrorIsf(t, err, ErrUnsafeEndpoint, "%s must be refused", u)
+	}
+}
+
+// A hostname that resolves to the metadata address would sail past a check on
+// the configured string, so the guard runs on the address actually dialled.
+func TestDialGuardRefusesTheMetadataAddressAfterDNS(t *testing.T) {
+	c := guardedClient(5 * time.Second)
+	_, err := c.Get("http://169.254.169.254/latest/meta-data/") //nolint:noctx // guard fires before any I/O
+	require.ErrorIs(t, err, ErrUnsafeEndpoint)
+}
+
+// A refused endpoint must not look like a working one. Ready() false is what
+// keeps /ai/status honest and the assistant in degraded mode.
+func TestUnsafeEndpointIsNotReady(t *testing.T) {
+	c := New(Config{Kind: KindOpenAI, Model: "m", BaseURL: "http://169.254.169.254/v1"})
+	require.False(t, c.Ready())
+	_, _, err := c.Stream(context.Background(), StreamRequest{
+		Messages: []Message{{Role: RoleUser, Content: "hi"}},
+	})
+	require.ErrorIs(t, err, ErrUnsafeEndpoint)
+}
+
+// The upstream body must not come back to the caller: the endpoint can point
+// inside the network, and the admin screen would happily render whatever an
+// internal service replied.
+func TestAPIErrorDoesNotLeakTheUpstreamBody(t *testing.T) {
+	e := &APIError{Status: 404, Body: `{"internal":"secret-value"}`}
+	require.NotContains(t, e.Error(), "secret-value")
+	require.Contains(t, e.Error(), "404")
 }

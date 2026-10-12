@@ -11,6 +11,7 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/ratelimit"
 )
 
 // visitorCookie carries the anonymous key that owns a conversation. It is not
@@ -22,16 +23,71 @@ const visitorCookie = "velt_visitor"
 // becoming a long-lived tracker.
 const cookieMaxAge = 7 * 24 * 3600
 
+// Per-IP ceilings for the one unauthenticated surface that spends money: every
+// visitor message is a paid model call, and starting a conversation mints a
+// fresh ai.max_turns budget. Without these, one script opens unlimited
+// conversations and bills every one of them.
+//
+// These are NOT the spend ceiling — ai.daily_token_cap is, and past it the
+// assistant degrades to the scripted bot. Their job is to stop a single caller
+// draining that shared daily budget before anyone else gets to use it. Sizing
+// follows from that: at 30 messages per 10 minutes one address needs more than
+// a day of sustained flooding to exhaust the default cap on its own.
+//
+// Keyed by IP alone. The visitor cookie is attacker-supplied, so limiting on it
+// stops nobody who matters. Mobile carriers here put many real users behind one
+// CGNAT address, which is why the ceilings sit well above what a person can
+// physically produce — a visitor cannot type faster than the model answers.
+const (
+	rlStartPerIP  = 30
+	rlStartWindow = time.Hour
+
+	rlSendPerIP  = 30
+	rlSendWindow = 10 * time.Minute
+
+	// Streams cost nothing to run but hold a connection; this caps the
+	// reconnect churn of an EventSource that keeps dropping.
+	rlStreamPerIP  = 60
+	rlStreamWindow = time.Minute
+)
+
 // Handler is the visitor-facing HTTP layer.
 type Handler struct {
-	svc    *Service
-	secure bool
+	svc        *Service
+	secure     bool
+	limiter    ratelimit.Limiter
+	trustProxy bool
 }
 
 // NewHandler builds the visitor-facing handler. `secure` marks the cookie for
-// HTTPS-only deployments.
-func NewHandler(svc *Service, secure bool) *Handler {
-	return &Handler{svc: svc, secure: secure}
+// HTTPS-only deployments; limiter/trustProxy drive the per-IP abuse guard.
+func NewHandler(svc *Service, secure bool, limiter ratelimit.Limiter, trustProxy bool) *Handler {
+	return &Handler{svc: svc, secure: secure, limiter: limiter, trustProxy: trustProxy}
+}
+
+// throttle applies a per-IP ceiling. It writes the 429 itself and reports true
+// when the caller must stop.
+//
+// A limiter error fails CLOSED. On this surface an unmeasurable burst costs real
+// money, so a visitor who has to retry is the cheaper outcome — the same choice
+// the login path makes.
+func (h *Handler) throttle(w http.ResponseWriter, r *http.Request,
+	action string, limit int, window time.Duration,
+) bool {
+	if h.limiter == nil {
+		return false
+	}
+	ok, retryAfter, err := h.limiter.Allow(r.Context(),
+		"chat:"+action+":ip:"+httpx.ClientIP(r, h.trustProxy), limit, window)
+	if err != nil {
+		httpx.WriteError(w, apperr.RateLimited(1))
+		return true
+	}
+	if !ok {
+		httpx.WriteError(w, apperr.RateLimited(retryAfter))
+		return true
+	}
+	return false
 }
 
 // visitorKey reads the caller's key, minting one if this is their first visit.
@@ -69,6 +125,9 @@ func pathID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 
 // Start handles POST /api/public/chat/conversations.
 func (h *Handler) Start(w http.ResponseWriter, r *http.Request) {
+	if h.throttle(w, r, "start", rlStartPerIP, rlStartWindow) {
+		return
+	}
 	var req StartRequest
 	if err := httpx.DecodeAndValidate(r, &req); err != nil {
 		httpx.WriteError(w, err)
@@ -85,6 +144,9 @@ func (h *Handler) Start(w http.ResponseWriter, r *http.Request) {
 
 // Send handles POST /api/public/chat/conversations/{id}/messages.
 func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
+	if h.throttle(w, r, "send", rlSendPerIP, rlSendWindow) {
+		return
+	}
 	key, ok := existingKey(r)
 	if !ok {
 		httpx.WriteError(w, apperr.NotFound("not_found"))
@@ -134,6 +196,9 @@ func (h *Handler) Transcript(w http.ResponseWriter, r *http.Request) {
 // stream one way, and reusing that one pipe for staff replies means one less
 // moving part — and SSE survives proxies that mangle upgrades.
 func (h *Handler) Stream(w http.ResponseWriter, r *http.Request) {
+	if h.throttle(w, r, "stream", rlStreamPerIP, rlStreamWindow) {
+		return
+	}
 	key, ok := existingKey(r)
 	if !ok {
 		httpx.WriteError(w, apperr.NotFound("not_found"))
@@ -214,7 +279,8 @@ func (h *Handler) Handoff(w http.ResponseWriter, r *http.Request) {
 }
 
 // RegisterPublic mounts the visitor-facing chat. No auth: a visitor never logs
-// in. Ownership is the cookie, and the limiter is applied by the caller.
+// in — ownership is the cookie, and the per-IP ceilings live in the handler
+// (see throttle). Nothing upstream throttles this surface.
 func RegisterPublic(r chi.Router, h *Handler) {
 	r.Post("/api/public/chat/conversations", h.Start)
 	r.Get("/api/public/chat/conversations/{id}", h.Transcript)

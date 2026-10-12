@@ -52,6 +52,8 @@ export interface McpToken {
   hint: string;
   last_used_at: string | null;
   revoked_at: string | null;
+  /** Null only for tokens issued before expiry existed; those never expire. */
+  expires_at: string | null;
   created_at: string;
 }
 

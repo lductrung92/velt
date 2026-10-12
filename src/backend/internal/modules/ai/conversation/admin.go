@@ -120,7 +120,18 @@ func (s *Service) Models(ctx context.Context, id *httpx.Identity) ([]string, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
-	return s.client(ctx).Models(ctx)
+	names, err := s.client(ctx).Models(ctx)
+	if err != nil {
+		// As in Test: the body is log-only, because this endpoint can be
+		// pointed at an internal host and the screen renders whatever comes
+		// back.
+		var apiErr *provider.APIError
+		if errors.As(err, &apiErr) {
+			s.Sec(ctx).Warn("ai: provider rejected the model list",
+				"status", apiErr.Status, "body", apiErr.Body)
+		}
+	}
+	return names, err
 }
 
 // probeTool is the tool a connection test offers. Trivial on purpose: if the
@@ -171,11 +182,14 @@ func (s *Service) Test(ctx context.Context, id *httpx.Identity) (TestResult, err
 	res.Reply = strings.TrimSpace(text)
 
 	if err != nil {
+		res.Error = err.Error()
+		// The upstream body stays in the log, never in the response: the
+		// endpoint is operator-configurable and may point inside the network.
+		// The operator gets the status code on screen and the detail here.
 		var apiErr *provider.APIError
 		if errors.As(err, &apiErr) {
-			res.Error = apiErr.Error()
-		} else {
-			res.Error = err.Error()
+			s.Sec(ctx).Warn("ai: provider rejected the probe",
+				"status", apiErr.Status, "body", apiErr.Body)
 		}
 		return res, nil
 	}

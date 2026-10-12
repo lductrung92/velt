@@ -125,11 +125,14 @@ func (r *pgxRepository) List(ctx context.Context, p ListParams) ([]Product, int,
 	if p.Lifecycle != "" {
 		add("p.lifecycle = $%d", p.Lifecycle)
 	}
+	// Build the containment operand with the JSON encoder rather than string
+	// concatenation: a quote or backslash in the filter would otherwise produce
+	// malformed JSON and fail the ::jsonb cast with a 500.
 	if p.Platform != "" {
-		add("p.platforms @> $%d::jsonb", `["`+p.Platform+`"]`)
+		add("p.platforms @> $%d::jsonb", jsonArray(p.Platform))
 	}
 	if p.Audience != "" {
-		add("p.audience @> $%d::jsonb", `["`+p.Audience+`"]`)
+		add("p.audience @> $%d::jsonb", jsonArray(p.Audience))
 	}
 	if p.Featured != nil {
 		add("p.is_featured = $%d", *p.Featured)
@@ -294,4 +297,14 @@ func (r *pgxRepository) SetStatus(ctx context.Context, id uuid.UUID, status stri
 		WHERE id = $1 RETURNING `+productColumns,
 		id, status, snapshot, stamp))
 	return p, err
+}
+
+// jsonArray encodes a single value as a one-element JSON array, for the @>
+// containment checks above.
+func jsonArray(v string) string {
+	b, err := json.Marshal([]string{v})
+	if err != nil {
+		return "[]"
+	}
+	return string(b)
 }

@@ -1,8 +1,13 @@
 package main
 
 import (
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,5 +42,46 @@ func TestTimeoutExceptStreams(t *testing.T) {
 		cancelled = false
 		h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, tc.path, nil))
 		require.Equal(t, tc.cancelled, cancelled, "path %s", tc.path)
+	}
+}
+
+// chi does not complain about a duplicate route: it silently keeps whichever
+// handler was registered last, so which code serves a path depends on the order
+// of the Register calls in this file. That is how an unauthenticated
+// /api/public/product-categories ended up with two implementations, the losing
+// one being an admin read with its permission check removed.
+//
+// A source scan is crude, but it is the only cheap way to see a collision that
+// the router itself hides.
+func TestNoRouteIsRegisteredTwice(t *testing.T) {
+	route := regexp.MustCompile(`r\.(Get|Post|Put|Patch|Delete|Head)\(\s*"(/[^"]*)"`)
+	seen := map[string][]string{}
+
+	root := filepath.Join("..", "..", "internal", "modules")
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
+			strings.HasSuffix(path, "_test.go") {
+			return err
+		}
+		src, err := os.ReadFile(path) //nolint:gosec // test-only walk of our own tree
+		if err != nil {
+			return err
+		}
+		for _, m := range route.FindAllStringSubmatch(string(src), -1) {
+			// Only absolute paths: a r.Route("/api/x") subtree registers
+			// relative children, which collide only within that subtree.
+			if !strings.HasPrefix(m[2], "/api/") {
+				continue
+			}
+			k := m[1] + " " + m[2]
+			seen[k] = append(seen[k], filepath.ToSlash(path))
+		}
+		return nil
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, seen, "the scan found no routes at all — the pattern drifted")
+
+	for k, files := range seen {
+		require.Lenf(t, files, 1, "%s is registered %d times: %v", k, len(files), files)
 	}
 }

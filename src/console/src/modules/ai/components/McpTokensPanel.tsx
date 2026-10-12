@@ -18,6 +18,11 @@ import {
 } from "../hooks/useAi";
 import type { IssuedToken } from "../services/ai.service";
 
+/** A token past its expiry still lists, but it no longer authenticates. */
+function expired(at: string | null): boolean {
+  return !!at && new Date(at).getTime() <= Date.now();
+}
+
 // Credentials for agents (Claude Desktop, Claude Code) to reach the catalog
 // and the pipeline over MCP.
 //
@@ -119,10 +124,23 @@ export function McpTokensPanel({ canManage }: { canManage: boolean }) {
                     ? t("ai.mcp.last_used", { at: formatDateTime(tk.last_used_at) })
                     : t("ai.mcp.never_used")}
                 </p>
+                {/* A credential with an end date has to say so, or the day it
+                    stops working looks like an outage. */}
+                {tk.expires_at && !tk.revoked_at && (
+                  <p className="text-xs text-muted-foreground">
+                    {t(expired(tk.expires_at) ? "ai.mcp.expired_at" : "ai.mcp.expires_at", {
+                      at: formatDateTime(tk.expires_at),
+                    })}
+                  </p>
+                )}
               </div>
               {tk.revoked_at ? (
                 <span className="text-xs text-muted-foreground">
                   {t("ai.mcp.revoked")}
+                </span>
+              ) : expired(tk.expires_at) ? (
+                <span className="text-xs text-muted-foreground">
+                  {t("ai.mcp.expired")}
                 </span>
               ) : (
                 canManage && (

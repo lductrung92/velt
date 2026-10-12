@@ -19,6 +19,12 @@ import (
 // it can be revoked instead of puzzled over.
 const tokenPrefix = "zkt_mcp_"
 
+// tokenTTL is how long a new credential stays valid. Long enough that an agent
+// config is not a chore to maintain, short enough that a leak nobody noticed
+// stops working on its own. Tokens issued before expiry existed have a NULL
+// expires_at and keep working — see migration 0033.
+const tokenTTL = 90 * 24 * time.Hour
+
 // Token is an issued credential, without the secret.
 type Token struct {
 	ID         uuid.UUID  `json:"id"`
@@ -27,6 +33,7 @@ type Token struct {
 	Hint       string     `json:"hint"`
 	LastUsedAt *time.Time `json:"last_used_at"`
 	RevokedAt  *time.Time `json:"revoked_at"`
+	ExpiresAt  *time.Time `json:"expires_at"`
 	CreatedAt  time.Time  `json:"created_at"`
 }
 
@@ -63,11 +70,11 @@ func (s *TokenStore) Issue(ctx context.Context, userID uuid.UUID, label string) 
 
 	var t Token
 	err := s.pool.QueryRow(ctx, `
-		INSERT INTO mcp_tokens (user_id, token_hash, token_hint, label)
-		VALUES ($1,$2,$3,$4)
-		RETURNING id, user_id, label, token_hint, last_used_at, revoked_at, created_at`,
-		userID, hashToken(secret), hint, strings.TrimSpace(label)).
-		Scan(&t.ID, &t.UserID, &t.Label, &t.Hint, &t.LastUsedAt, &t.RevokedAt, &t.CreatedAt)
+		INSERT INTO mcp_tokens (user_id, token_hash, token_hint, label, expires_at)
+		VALUES ($1,$2,$3,$4,$5)
+		RETURNING id, user_id, label, token_hint, last_used_at, revoked_at, expires_at, created_at`,
+		userID, hashToken(secret), hint, strings.TrimSpace(label), time.Now().Add(tokenTTL)).
+		Scan(&t.ID, &t.UserID, &t.Label, &t.Hint, &t.LastUsedAt, &t.RevokedAt, &t.ExpiresAt, &t.CreatedAt)
 	if err != nil {
 		return IssuedToken{}, shared.Wrap("issue mcp token", err)
 	}
@@ -81,9 +88,14 @@ func (s *TokenStore) Resolve(ctx context.Context, secret string) (uuid.UUID, err
 		return uuid.Nil, shared.ErrNotFound
 	}
 	var id, userID uuid.UUID
+	// Expiry is checked in the same statement as revocation: an expired token
+	// must be exactly as unusable as a revoked one, with no window where a
+	// second query could be skipped.
 	err := s.pool.QueryRow(ctx, `
 		SELECT id, user_id FROM mcp_tokens
-		 WHERE token_hash = $1 AND revoked_at IS NULL`, hashToken(secret)).Scan(&id, &userID)
+		 WHERE token_hash = $1
+		   AND revoked_at IS NULL
+		   AND (expires_at IS NULL OR expires_at > now())`, hashToken(secret)).Scan(&id, &userID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return uuid.Nil, shared.ErrNotFound
@@ -98,7 +110,7 @@ func (s *TokenStore) Resolve(ctx context.Context, secret string) (uuid.UUID, err
 // List returns a user's credentials, secrets excluded.
 func (s *TokenStore) List(ctx context.Context, userID uuid.UUID) ([]Token, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT id, user_id, label, token_hint, last_used_at, revoked_at, created_at
+		SELECT id, user_id, label, token_hint, last_used_at, revoked_at, expires_at, created_at
 		  FROM mcp_tokens WHERE user_id = $1 ORDER BY created_at DESC`, userID)
 	if err != nil {
 		return nil, shared.Wrap("list mcp tokens", err)
@@ -109,7 +121,7 @@ func (s *TokenStore) List(ctx context.Context, userID uuid.UUID) ([]Token, error
 	for rows.Next() {
 		var t Token
 		if err := rows.Scan(&t.ID, &t.UserID, &t.Label, &t.Hint,
-			&t.LastUsedAt, &t.RevokedAt, &t.CreatedAt); err != nil {
+			&t.LastUsedAt, &t.RevokedAt, &t.ExpiresAt, &t.CreatedAt); err != nil {
 			return nil, shared.Wrap("scan mcp token", err)
 		}
 		out = append(out, t)

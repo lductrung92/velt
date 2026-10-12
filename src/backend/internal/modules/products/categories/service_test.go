@@ -255,16 +255,22 @@ func TestList_IsOrderedBySortOrder(t *testing.T) {
 	require.Equal(t, []string{"B", "A"}, []string{res.Items[0].Name, res.Items[1].Name})
 }
 
-func TestListPublic_NeedsNoIdentity(t *testing.T) {
-	// The public site renders category filters without signing in.
+func TestList_RefusesWithoutPermission(t *testing.T) {
+	// This package has no unauthenticated read any more. It used to: ListPublic
+	// called the same helper List calls AFTER the permission check, and was
+	// mounted on /api/public/product-categories. It only stayed harmless because
+	// catalog registered the same path later and chi keeps the last handler.
+	// The public projection lives in catalog.PublicService; this one is gated.
 	svc, _ := newSvc(t)
 	ctx := context.Background()
 	_, err := svc.Create(ctx, manager(), CreateRequest{Name: "Cộng tác"})
 	require.NoError(t, err)
 
-	res, err := svc.ListPublic(ctx)
+	_, err = svc.List(ctx, nil)
+	require.Error(t, err)
+
+	_, err = svc.List(ctx, &httpx.Identity{Permissions: []string{"products.view"}})
 	require.NoError(t, err)
-	require.Len(t, res.Items, 1)
 }
 
 // --- SEO + sort order ---

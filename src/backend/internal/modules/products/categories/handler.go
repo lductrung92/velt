@@ -130,16 +130,6 @@ func (h *Handler) Reorder(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusNoContent, nil)
 }
 
-// ListPublic handles GET /api/public/product-categories — no auth.
-func (h *Handler) ListPublic(w http.ResponseWriter, r *http.Request) {
-	res, err := h.svc.ListPublic(r.Context())
-	if err != nil {
-		httpx.WriteError(w, err)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, res)
-}
-
 // Register mounts the category routes. `/order` is declared before `/{id}` so
 // the literal segment is obviously the more specific match to the next reader.
 func Register(r chi.Router, base *Service, authMW func(http.Handler) http.Handler) {
@@ -152,5 +142,9 @@ func Register(r chi.Router, base *Service, authMW func(http.Handler) http.Handle
 		r.Patch("/api/product-categories/{id}", h.Update)
 		r.Delete("/api/product-categories/{id}", h.Delete)
 	})
-	r.Get("/api/public/product-categories", h.ListPublic)
+	// The public read of this collection belongs to catalog.RegisterPublic,
+	// which serves a deliberately narrow projection. Registering a second
+	// handler for the same path here meant chi kept whichever one was wired
+	// last — and this package's version was the admin read with its permission
+	// check removed, one reordering away from being served to anonymous callers.
 }

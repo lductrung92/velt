@@ -18,10 +18,12 @@ const (
 
 // anthropicClient speaks Anthropic's Messages API.
 type anthropicClient struct {
-	http  *http.Client
-	base  string
-	key   string
-	model string
+	http *http.Client
+	base string
+	// baseErr records a configured endpoint this process refuses to call.
+	baseErr error
+	key     string
+	model   string
 }
 
 func newAnthropic(cfg Config) *anthropicClient {
@@ -29,20 +31,28 @@ func newAnthropic(cfg Config) *anthropicClient {
 	if model == "" {
 		model = "claude-sonnet-5-5"
 	}
+	base, err := checkBase(cfg.BaseURL, anthropicDefaultBase)
 	return &anthropicClient{
-		http:  &http.Client{Timeout: 120 * time.Second},
-		base:  trimBase(cfg.BaseURL, anthropicDefaultBase),
-		key:   strings.TrimSpace(cfg.APIKey),
-		model: model,
+		http:    guardedClient(120 * time.Second),
+		base:    base,
+		baseErr: err,
+		key:     strings.TrimSpace(cfg.APIKey),
+		model:   model,
 	}
 }
 
-func (c *anthropicClient) Ready() bool   { return c.key != "" }
+// Ready is false when the configured endpoint was refused, so a bad base URL
+// shows up as "not configured" in /ai/status instead of as a failure on the
+// first visitor message.
+func (c *anthropicClient) Ready() bool   { return c.key != "" && c.baseErr == nil }
 func (c *anthropicClient) Kind() string  { return KindAnthropic }
 func (c *anthropicClient) Model() string { return c.model }
 
 // Models lists the account's available models.
 func (c *anthropicClient) Models(ctx context.Context) ([]string, error) {
+	if c.baseErr != nil {
+		return nil, c.baseErr
+	}
 	if !c.Ready() {
 		return nil, ErrNotConfigured
 	}
@@ -109,6 +119,11 @@ type wireRequest struct {
 // Stream runs one assistant turn, including any tool round-trips, and returns
 // the final text plus what it cost.
 func (c *anthropicClient) Stream(ctx context.Context, req StreamRequest) (string, Usage, error) {
+	// Reported separately from ErrNotConfigured: "you set a URL we refuse to
+	// call" and "you set nothing" need different answers from the operator.
+	if c.baseErr != nil {
+		return "", Usage{}, c.baseErr
+	}
 	if !c.Ready() {
 		return "", Usage{}, ErrNotConfigured
 	}

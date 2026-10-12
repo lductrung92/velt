@@ -33,12 +33,8 @@ func (s *Service) List(ctx context.Context, id *httpx.Identity) (ListResponse, e
 	return s.list(ctx)
 }
 
-// ListPublic returns the taxonomy for the public site. No auth: a category name
-// is not privileged information, and the site needs it to render filters.
-func (s *Service) ListPublic(ctx context.Context) (ListResponse, error) {
-	return s.list(ctx)
-}
-
+// list is the shared read. Every caller must gate it first — List does, and
+// nothing in this package exposes it without an identity.
 func (s *Service) list(ctx context.Context) (ListResponse, error) {
 	rows, err := s.repo.List(ctx)
 	if err != nil {

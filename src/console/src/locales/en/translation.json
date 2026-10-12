@@ -1214,7 +1214,10 @@
       "revoke": "Revoke",
       "revoked": "Revoked",
       "revoked_toast": "Token revoked.",
-      "revoke_description": "Any agent using this token loses access immediately. This cannot be undone."
+      "revoke_description": "Any agent using this token loses access immediately. This cannot be undone.",
+      "expired": "Expired",
+      "expires_at": "Expires {{at}}",
+      "expired_at": "Expired {{at}}"
     }
   },
   "chat": {

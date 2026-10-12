@@ -50,6 +50,11 @@ func (h *Handler) Serve(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", ct)
 	}
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	// Uploads are magic-byte checked to four raster formats, so nothing active
+	// should ever reach here. This is the second lock: if one ever did, it
+	// executes nothing — and these files share an origin with the refresh
+	// cookie, so "executes nothing" is worth stating twice.
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.WriteHeader(http.StatusOK)
 	_, _ = io.Copy(w, rc)

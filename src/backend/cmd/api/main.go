@@ -249,7 +249,7 @@ func run() error {
 			}
 			return out, nil
 		},
-	}, cfg.CookieSecure)
+	}, cfg.CookieSecure, limiter, cfg.TrustProxyHeaders)
 	// cms bounded context (taxonomy + feature-flag settings + articles/pages/menus/
 	// landing/comments/newsletter); settingsSvc is the scoped reader/writer for the
 	// cms.* registry keys (CMS gates cms.settings.* itself).

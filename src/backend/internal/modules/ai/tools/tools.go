@@ -74,9 +74,17 @@ func (r *Registry) Visible(allow []string) []Tool {
 // was talked into it by the visitor — and that attempt must not reach Run.
 func (r *Registry) Call(ctx context.Context, allow []string, name string, raw json.RawMessage) (any, error) {
 	for _, n := range allow {
-		if n == name {
-			return r.byName[name].Run(ctx, raw)
+		if n != name {
+			continue
 		}
+		t, ok := r.byName[name]
+		if !ok || t.Run == nil {
+			// An allowlist naming a tool nobody registered is a wiring bug.
+			// Without this it is a nil-map-value call: a panic, mid-answer, on
+			// a visitor's request.
+			return nil, fmt.Errorf("tool %q is allowed but not registered", name)
+		}
+		return t.Run(ctx, raw)
 	}
 	return nil, fmt.Errorf("tool %q is not available here", name)
 }

@@ -99,10 +99,15 @@ func Load() (Config, error) {
 func (c Config) IsProd() bool { return c.Env == "prod" }
 
 // Validate enforces security-critical invariants the env-tag layer can't express.
-// Called at API startup (fail fast). The two signing secrets must be long enough
-// to resist offline brute force and MUST differ (the documented blast-radius
-// isolation collapses silently if an operator reuses one). In production, secure
-// cookies are mandatory and CORS must not trust localhost origins.
+// Called at API startup (fail fast). JWT_SECRET must be long enough to resist
+// offline brute force; ENCRYPTION_KEY is length-checked where it is decoded
+// (crypto.ParseKey insists on exactly 32 bytes). In production, secure cookies
+// are mandatory and CORS must not trust localhost origins.
+//
+// There is deliberately no second signing secret to compare against: the
+// customer token manager in platform/token is not wired into this deployment.
+// If it ever is, give it its own env var and add the "must differ" check here —
+// the blast-radius isolation its doc comment claims is not enforced anywhere.
 func (c Config) Validate() error {
 	if len(c.JWTSecret) < 32 {
 		return fmt.Errorf("JWT_SECRET must be at least 32 bytes")

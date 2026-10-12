@@ -19,26 +19,31 @@ const openaiDefaultBase = "https://api.openai.com/v1"
 // and DeepSeek — which is why "run a local model" needs no code here, only a
 // different base URL.
 type openaiClient struct {
-	http  *http.Client
-	base  string
-	key   string
-	model string
+	http *http.Client
+	base string
+	// baseErr records a configured endpoint this process refuses to call.
+	baseErr error
+	key     string
+	model   string
 }
 
 func newOpenAI(cfg Config) *openaiClient {
+	base, err := checkBase(cfg.BaseURL, openaiDefaultBase)
 	return &openaiClient{
 		// Longer than the Anthropic client's: a local model on CPU can take a
 		// minute to produce its first token.
-		http:  &http.Client{Timeout: 300 * time.Second},
-		base:  trimBase(cfg.BaseURL, openaiDefaultBase),
-		key:   strings.TrimSpace(cfg.APIKey),
-		model: strings.TrimSpace(cfg.Model),
+		http:    guardedClient(300 * time.Second),
+		base:    base,
+		baseErr: err,
+		key:     strings.TrimSpace(cfg.APIKey),
+		model:   strings.TrimSpace(cfg.Model),
 	}
 }
 
 // Ready needs a model but NOT a key: a local server usually has no auth, and
-// refusing to run without one would make the common local setup impossible.
-func (c *openaiClient) Ready() bool   { return c.model != "" }
+// refusing to run without one would make the common local setup impossible. A
+// refused endpoint is not ready at all.
+func (c *openaiClient) Ready() bool   { return c.model != "" && c.baseErr == nil }
 func (c *openaiClient) Kind() string  { return KindOpenAI }
 func (c *openaiClient) Model() string { return c.model }
 
@@ -50,6 +55,9 @@ func (c *openaiClient) auth(r *http.Request) {
 }
 
 func (c *openaiClient) Models(ctx context.Context) ([]string, error) {
+	if c.baseErr != nil {
+		return nil, c.baseErr
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+"/models", nil)
 	if err != nil {
 		return nil, err
@@ -127,6 +135,11 @@ func str(s string) *string { return &s }
 
 // Stream runs one assistant turn, including any tool round-trips.
 func (c *openaiClient) Stream(ctx context.Context, req StreamRequest) (string, Usage, error) {
+	// Reported separately from ErrNotConfigured: "you set a URL we refuse to
+	// call" and "you set nothing" need different answers from the operator.
+	if c.baseErr != nil {
+		return "", Usage{}, c.baseErr
+	}
 	if !c.Ready() {
 		return "", Usage{}, ErrNotConfigured
 	}

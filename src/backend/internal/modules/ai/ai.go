@@ -22,6 +22,7 @@ import (
 	"github.com/velt/backend/internal/modules/crm/leads"
 	"github.com/velt/backend/internal/modules/products/catalog"
 	settingssvc "github.com/velt/backend/internal/modules/settings"
+	"github.com/velt/backend/internal/platform/ratelimit"
 )
 
 // SettingDefs are the assistant's entries in the settings registry, exported
@@ -45,9 +46,12 @@ type Deps struct {
 // Register builds the assistant and mounts the visitor-facing chat.
 //
 // `secureCookies` marks the visitor cookie HTTPS-only; it follows the same
-// deployment flag the rest of the app uses.
+// deployment flag the rest of the app uses. `limiter`/`trustProxy` feed the
+// per-IP guard on the public chat — the only unauthenticated surface here that
+// spends money, so it must never be mounted without one.
 func Register(r chi.Router, pool *pgxpool.Pool, settings conversation.SettingsPort,
 	logger *slog.Logger, authMW func(http.Handler) http.Handler, deps Deps, secureCookies bool,
+	limiter ratelimit.Limiter, trustProxy bool,
 ) {
 	base := shared.NewBase(logger)
 
@@ -80,7 +84,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings conversation.SettingsPo
 		transcriptPort{read: svc.StaffTranscript},
 	)
 
-	conversation.RegisterPublic(r, conversation.NewHandler(svc, secureCookies))
+	conversation.RegisterPublic(r, conversation.NewHandler(svc, secureCookies, limiter, trustProxy))
 	staffH := conversation.NewStaffHandler(svc)
 	conversation.RegisterStaff(r, staffH, authMW)
 	conversation.RegisterAdmin(r, staffH, authMW)
