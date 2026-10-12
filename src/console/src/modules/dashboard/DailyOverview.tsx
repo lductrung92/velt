@@ -167,7 +167,7 @@ function CalendarPanel({ today }: { today: string }) {
         {Array.from({ length: 7 }, (_, index) => (
           <span
             key={index}
-            className="pb-2 text-xs font-medium text-muted-foreground"
+            className="pb-2 text-caption font-medium text-muted-foreground"
           >
             {format(`2026-01-${String(5 + index).padStart(2, "0")}`, {
               weekday: "short",
