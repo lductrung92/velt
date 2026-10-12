@@ -96,3 +96,7 @@ sessions/
 .wolf
 mockup/
 tham-khao/
+
+# Local dev run logs (scripts/dev.ps1 output redirected here)
+dev-start.log
+dev-start.error.log

@@ -3,13 +3,15 @@ import { render, screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/i18n";
 import { useAuthStore } from "@/store/auth.store";
 import { server } from "@/test/server";
 
 import Dashboard from "./Dashboard";
+
+vi.mock("./DailyOverview", () => ({ DailyOverview: () => null }));
 
 const API = "http://localhost/api";
 const t = (key: string) => i18n.t(key);

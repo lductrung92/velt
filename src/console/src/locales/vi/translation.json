@@ -25,6 +25,62 @@
       "article": "Viết bài mới",
       "page": "Tạo trang",
       "member": "Thêm thành viên"
+    },
+    "workspace": "ZUKATEK WORKSPACE",
+    "welcome": "Chào {{name}} 👋",
+    "friend": "bạn",
+    "welcome_description": "Build Simple. Grow Beyond.",
+    "empty_products": "Sản phẩm tiếp theo bắt đầu từ đây",
+    "empty_articles": "Chia sẻ câu chuyện đầu tiên",
+    "empty_products_description": "Thêm sản phẩm để quản lý thông tin và giới thiệu đến khách hàng.",
+    "empty_articles_description": "Viết bài để chia sẻ kiến thức, cập nhật và tin tức của Zukatek.",
+    "action_descriptions": {
+      "product": "Xây dựng danh mục sản phẩm",
+      "article": "Chia sẻ tin tức và kiến thức",
+      "page": "Thiết kế nội dung website",
+      "member": "Bổ sung hồ sơ đội ngũ"
+    },
+    "daily": {
+      "title": "Lịch & thời tiết",
+      "calendar_title": "Lịch âm · dương",
+      "weather_title": "Thời tiết",
+      "timezone": "Giờ Việt Nam · UTC+7",
+      "today": "Hôm nay",
+      "lunar_date": "Âm lịch {{day}}/{{month}}/{{year}}",
+      "lunar_year": "Năm {{name}}",
+      "leap": "(nhuận)",
+      "previous_month": "Tháng trước",
+      "next_month": "Tháng sau",
+      "select_date": "Chọn ngày {{solar}}, âm lịch {{lunar}}",
+      "calendar_hint": "Số lớn: ngày dương · Số nhỏ: ngày âm",
+      "choose_location": "Chọn địa điểm thời tiết",
+      "current_location": "Vị trí hiện tại",
+      "use_location": "Dùng vị trí hiện tại",
+      "refresh_weather": "Làm mới thời tiết",
+      "location_error": "Không lấy được vị trí. Bạn có thể chọn thành phố ở trên.",
+      "weather_error": "Chưa tải được thời tiết. Vui lòng kiểm tra kết nối và thử lại.",
+      "stale_weather": "Chưa cập nhật được thời tiết. Đang hiển thị dữ liệu lần tải trước.",
+      "current": "Hiện tại",
+      "high": "Cao nhất",
+      "low": "Thấp nhất",
+      "feels_like": "Cảm giác như",
+      "humidity": "Độ ẩm",
+      "wind": "Gió",
+      "next_seven": "7 ngày tiếp theo",
+      "rain_chance": "Khả năng mưa {{value}}",
+      "source": "Dữ liệu: Open-Meteo",
+      "updated_at": "Dữ liệu lúc {{time}} · UTC+7",
+      "conditions": {
+        "clear": "Trời quang",
+        "partly_cloudy": "Ít mây",
+        "cloudy": "Nhiều mây",
+        "fog": "Sương mù",
+        "drizzle": "Mưa phùn",
+        "rain": "Mưa",
+        "snow": "Tuyết",
+        "storm": "Dông",
+        "unknown": "Chưa xác định"
+      }
     }
   },
   "common": {
@@ -911,10 +967,6 @@
     "active": "Hiển thị trên website",
     "active_help": "Tắt để ẩn khỏi website mà vẫn giữ liên kết với sản phẩm đã làm.",
     "add_link": "Thêm liên kết",
-    "empty": {
-      "title": "Chưa có thành viên nào",
-      "description": "Thêm thành viên để hiển thị đội ngũ trên website."
-    },
     "delete": {
       "title": "Xoá thành viên?",
       "description": "{{name}} sẽ bị gỡ khỏi mọi sản phẩm. Nếu chỉ muốn ẩn khỏi website, hãy tắt “Hiển thị trên website”."
@@ -937,7 +989,16 @@
       "zalo": "Zalo",
       "links": "Liên kết",
       "link_label": "Nhãn"
-    }
+    },
+    "col": {
+      "name": "Thành viên",
+      "role": "Vai trò",
+      "skills": "Kỹ năng",
+      "sort_order": "Thứ tự",
+      "actions": "Thao tác"
+    },
+    "search_label": "Tìm thành viên",
+    "search_ph": "Tên, vai trò hoặc kỹ năng"
   },
   "products": {
     "title": "Sản phẩm",

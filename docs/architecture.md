@@ -49,7 +49,7 @@ Hiện có 5 hồ sơ chưa bổ sung thông tin và 16 mẫu sản phẩm có n
 
 ## Chạy local và kiểm tra
 
-- `scripts/dev.ps1`: chạy API + console; console mặc định cổng 5273, API theo config môi trường. Script này chưa khởi động site.
+- `scripts/dev.ps1`: chạy API + console + site SSR; console mặc định cổng 5273, site cổng 5373 (`-SitePort` để đổi), API theo config môi trường. Ctrl+C hoặc `-Stop` dừng cả ba dịch vụ; khi đổi cổng, dùng cùng tham số cho `-Stop`.
 - Site: `cd src/site; npm run dev`, mặc định `http://127.0.0.1:5373`.
 - Backend: `go test ./...`; các integration test DB cần database thử nghiệm riêng.
 - Console: scripts `typecheck`, `test`, `e2e` trong package.json.

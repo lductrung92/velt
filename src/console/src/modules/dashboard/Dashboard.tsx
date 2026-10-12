@@ -1,5 +1,7 @@
 import {
   ArrowRight,
+  CalendarDays,
+  Sparkles,
   FileStack,
   FileText,
   Package,
@@ -25,6 +27,9 @@ import { useAuthStore } from "@/store/auth.store";
 import { formatDateTime } from "@/utils/format";
 
 import { countPages, useDashboardData } from "./useDashboardData";
+import { DashboardArtwork } from "./DashboardArtwork";
+import { DailyOverview } from "./DailyOverview";
+import "./dashboard.css";
 
 interface RecentRecord {
   id: string;
@@ -55,9 +60,12 @@ function RecentPanel({
 }) {
   const { t } = useTranslation();
   return (
-    <section className="min-w-0 rounded-xl border bg-background">
+    <section className="dashboard-panel min-w-0 rounded-lg border bg-background">
       <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
-        <h2 className="text-base font-semibold">{title}</h2>
+        <h2 className="flex items-center gap-2.5 text-sm font-semibold">
+          <Icon className="size-4 text-muted-foreground" aria-hidden />
+          {title}
+        </h2>
         <Link
           to={to}
           className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline"
@@ -82,18 +90,39 @@ function RecentPanel({
           </Button>
         </div>
       ) : records.length === 0 ? (
-        <div className="flex min-h-60 flex-col items-center justify-center px-5 py-8 text-center">
-          <span className="mb-3 flex size-12 items-center justify-center rounded-xl bg-primary/5 text-primary">
-            <Icon className="size-6" strokeWidth={1.5} aria-hidden />
-          </span>
-          <p className="text-sm font-medium">{t("dashboard.empty_title")}</p>
-          <p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">
-            {t("dashboard.empty_description")}
+        <div className="dashboard-empty flex flex-col items-center justify-center px-5 py-7 text-center">
+          <div className="dashboard-empty-art" aria-hidden>
+            <span className="dashboard-empty-orbit" />
+            <span className="dashboard-empty-sheet dashboard-empty-sheet-back" />
+            <span className="dashboard-empty-sheet">
+              <span className="dashboard-empty-symbol">
+                <Icon className="size-6" strokeWidth={1.5} />
+              </span>
+              <span className="dashboard-empty-line" />
+              <span className="dashboard-empty-line dashboard-empty-line-short" />
+            </span>
+            <span className="dashboard-empty-plus">
+              <Plus className="size-3.5" />
+            </span>
+          </div>
+          <p className="text-sm font-semibold">
+            {t(
+              to === "/products"
+                ? "dashboard.empty_products"
+                : "dashboard.empty_articles",
+            )}
+          </p>
+          <p className="mt-2 max-w-64 text-xs leading-5 text-muted-foreground">
+            {t(
+              to === "/products"
+                ? "dashboard.empty_products_description"
+                : "dashboard.empty_articles_description",
+            )}
           </p>
           {createTo && (
-            <Button asChild variant="outline" className="mt-4">
+            <Button asChild variant="outline" className="mt-5 text-xs">
               <Link to={createTo}>
-                <Plus className="size-4" aria-hidden />
+                <Plus className="size-3.5" aria-hidden />
                 {t("dashboard.create_first")}
               </Link>
             </Button>
@@ -217,18 +246,16 @@ export default function Dashboard() {
   ].filter((action) => hasPermission(action.permission));
 
   return (
-    <div className="space-y-6">
+    <div className="dashboard space-y-5">
       <PageHeader
         title={t("dashboard.title")}
-        subtitle={t("dashboard.greeting", {
-          name: user?.full_name || user?.email,
-        })}
         actions={
           <div className="flex items-center gap-3">
             <time
-              className="hidden text-xs text-muted-foreground lg:block"
+              className="flex items-center gap-2 text-xs text-muted-foreground"
               dateTime={new Date().toISOString()}
             >
+              <CalendarDays className="size-3.5" aria-hidden />
               {new Intl.DateTimeFormat(i18n.resolvedLanguage || "vi", {
                 day: "numeric",
                 month: "long",
@@ -258,19 +285,36 @@ export default function Dashboard() {
           </div>
         }
       />
+      <section className="dashboard-welcome">
+        <div className="dashboard-welcome-copy">
+          <p className="dashboard-eyebrow">
+            <span />
+            {t("dashboard.workspace")}
+          </p>
+          <h2>
+            {t("dashboard.welcome", {
+              name: user?.full_name || user?.email || t("dashboard.friend"),
+            })}
+          </h2>
+          <p className="dashboard-welcome-description">
+            {t("dashboard.welcome_description")}
+          </p>
+        </div>
+        <DashboardArtwork />
+      </section>
       {stats.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {stats.map(({ key, icon: Icon, to, query, total }) => (
             <Link
               key={key}
               to={to}
-              className="group min-w-0 rounded-xl border bg-background p-4 transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5"
+              className={`dashboard-stat dashboard-tone-${key} group min-w-0 rounded-lg border bg-background p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5`}
             >
               <div className="flex min-h-10 items-center justify-between gap-2">
                 <span className="text-sm text-muted-foreground">
                   {t(`dashboard.stats.${key}`)}
                 </span>
-                <span className="flex size-9 items-center justify-center rounded-lg bg-primary/5 text-primary">
+                <span className="dashboard-stat-icon flex size-10 items-center justify-center rounded-lg">
                   <Icon className="size-[18px]" aria-hidden />
                 </span>
               </div>
@@ -281,14 +325,14 @@ export default function Dashboard() {
                     aria-label={t("common.loading")}
                   />
                 ) : (
-                  <span className="text-3xl font-semibold tabular-nums tracking-tight">
+                  <span className="text-4xl font-semibold tabular-nums tracking-tight">
                     {query.isError
                       ? "—"
                       : total?.toLocaleString(i18n.resolvedLanguage)}
                   </span>
                 )}
               </div>
-              <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+              <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-xs text-muted-foreground">
                 <span>
                   {t(
                     query.isError ? "dashboard.load_error" : "dashboard.manage",
@@ -303,46 +347,61 @@ export default function Dashboard() {
           ))}
         </div>
       ) : (
-        <p className="rounded-xl border bg-background p-6 text-sm text-muted-foreground">
+        <p className="rounded-lg border bg-background p-6 text-sm text-muted-foreground">
           {t("dashboard.no_access")}
         </p>
       )}
 
-      {actions.length > 0 && (
-        <section className="rounded-xl border bg-background px-5 py-5">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold">
+      <div
+        className={
+          actions.length > 0
+            ? "dashboard-content"
+            : "dashboard-content dashboard-content-no-actions"
+        }
+      >
+        {actions.length > 0 && (
+          <section className="dashboard-quick dashboard-panel min-w-0 rounded-lg border bg-background p-5">
+            <span className="dashboard-quick-heading-icon">
+              <Sparkles className="size-5" aria-hidden />
+            </span>
+            <h2 className="mt-3 text-base font-semibold">
               {t("dashboard.quick_title")}
             </h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
               {t("dashboard.quick_description")}
             </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {actions.map(({ key, icon: Icon, to }) => (
-              <Link
-                key={key}
-                to={to}
-                className="group flex items-center gap-3 rounded-lg border border-dashed p-3.5 transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Icon
-                  className="size-5 shrink-0 text-primary"
-                  strokeWidth={1.5}
-                  aria-hidden
-                />
-                <span className="min-w-0 flex-1 text-sm font-medium">
-                  {t(`dashboard.actions.${key}`)}
-                </span>
-                <Plus
-                  className="size-4 shrink-0 text-muted-foreground group-hover:text-primary"
-                  aria-hidden
-                />
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-      <div className="grid items-start gap-5 xl:grid-cols-2">
+            <div className="mt-5 space-y-2">
+              {actions.map(({ key, icon: Icon, to }) => (
+                <Link
+                  key={key}
+                  to={to}
+                  aria-label={t(`dashboard.actions.${key}`)}
+                  className="dashboard-quick-link group flex items-center gap-3 rounded-lg p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span className="dashboard-quick-icon flex size-9 shrink-0 items-center justify-center rounded-lg">
+                    <Icon
+                      className="size-[18px]"
+                      strokeWidth={1.6}
+                      aria-hidden
+                    />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-semibold">
+                      {t(`dashboard.actions.${key}`)}
+                    </span>
+                    <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">
+                      {t(`dashboard.action_descriptions.${key}`)}
+                    </span>
+                  </span>
+                  <Plus
+                    className="size-3.5 shrink-0 text-muted-foreground group-hover:text-primary"
+                    aria-hidden
+                  />
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
         {access.products && (
           <RecentPanel
             title={t("dashboard.recent_products")}
@@ -390,6 +449,7 @@ export default function Dashboard() {
           />
         )}
       </div>
+      <DailyOverview />
     </div>
   );
 }

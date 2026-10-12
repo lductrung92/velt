@@ -25,6 +25,62 @@
       "article": "Write an article",
       "page": "Create a page",
       "member": "Add member"
+    },
+    "workspace": "ZUKATEK WORKSPACE",
+    "welcome": "Hello {{name}} 👋",
+    "friend": "there",
+    "welcome_description": "Build Simple. Grow Beyond.",
+    "empty_products": "Your next product starts here",
+    "empty_articles": "Share your first story",
+    "empty_products_description": "Add a product to manage its details and introduce it to your customers.",
+    "empty_articles_description": "Write an article to share insights, updates and news from Zukatek.",
+    "action_descriptions": {
+      "product": "Build your product catalog",
+      "article": "Share news and insights",
+      "page": "Design your website content",
+      "member": "Add a team profile"
+    },
+    "daily": {
+      "title": "Calendar & weather",
+      "calendar_title": "Solar · lunar calendar",
+      "weather_title": "Weather",
+      "timezone": "Vietnam time · UTC+7",
+      "today": "Today",
+      "lunar_date": "Lunar {{day}}/{{month}}/{{year}}",
+      "lunar_year": "Year of {{name}}",
+      "leap": "(leap month)",
+      "previous_month": "Previous month",
+      "next_month": "Next month",
+      "select_date": "Select {{solar}}, lunar date {{lunar}}",
+      "calendar_hint": "Large number: solar day · Small number: lunar day",
+      "choose_location": "Choose weather location",
+      "current_location": "Current location",
+      "use_location": "Use current location",
+      "refresh_weather": "Refresh weather",
+      "location_error": "Location is unavailable. Please select a city above.",
+      "weather_error": "Weather is unavailable. Check your connection and try again.",
+      "stale_weather": "Weather could not be refreshed. Showing previously loaded data.",
+      "current": "Now",
+      "high": "High",
+      "low": "Low",
+      "feels_like": "Feels like",
+      "humidity": "Humidity",
+      "wind": "Wind",
+      "next_seven": "Next 7 days",
+      "rain_chance": "Chance of rain {{value}}",
+      "source": "Weather by Open-Meteo",
+      "updated_at": "Data at {{time}} · UTC+7",
+      "conditions": {
+        "clear": "Clear sky",
+        "partly_cloudy": "Partly cloudy",
+        "cloudy": "Overcast",
+        "fog": "Fog",
+        "drizzle": "Drizzle",
+        "rain": "Rain",
+        "snow": "Snow",
+        "storm": "Thunderstorm",
+        "unknown": "Unavailable"
+      }
     }
   },
   "common": {
@@ -911,10 +967,6 @@
     "active": "Show on website",
     "active_help": "Turn off to hide from the website while keeping links to past products.",
     "add_link": "Add link",
-    "empty": {
-      "title": "No members yet",
-      "description": "Add a member to show your team on the website."
-    },
     "delete": {
       "title": "Delete member?",
       "description": "{{name}} will be removed from every product. To hide them from the website instead, turn off “Show on website”."
@@ -937,7 +989,16 @@
       "zalo": "Zalo",
       "links": "Links",
       "link_label": "Label"
-    }
+    },
+    "col": {
+      "name": "Member",
+      "role": "Role",
+      "skills": "Skills",
+      "sort_order": "Order",
+      "actions": "Actions"
+    },
+    "search_label": "Search members",
+    "search_ph": "Name, role or skill"
   },
   "products": {
     "title": "Products",

@@ -1,10 +1,10 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    Starts the velt dev stack: Go API (src/backend) + React console (src/console).
+    Starts the dev stack: Go API + React console + React SSR site.
 
 .DESCRIPTION
-    One window, both logs, Ctrl+C stops everything.
+    One window, all logs, Ctrl+C stops everything.
 
     The API is BUILT to a temp binary and run directly rather than via `go run`,
     because `go run` spawns the compiled exe as a child: killing `go` leaves that
@@ -19,17 +19,23 @@
     the console + CORS are configured against that one value.
 
 .PARAMETER Stop
-    Kills whatever is listening on the two ports and exits. Use this to clear
+    Kills whatever is listening on the three ports and exits. Use this to clear
     orphans left by a crashed run.
+
+.PARAMETER SitePort
+    Public React SSR site port (default 5373). The site binds to 127.0.0.1.
 
 .EXAMPLE
     .\scripts\dev.ps1
 .EXAMPLE
     .\scripts\dev.ps1 -Stop
+.EXAMPLE
+    .\scripts\dev.ps1 -SitePort 5374
 #>
 [CmdletBinding()]
 param(
-    [int]$ConsolePort = 5273,
+    [ValidateRange(1, 65535)][int]$ConsolePort = 5273,
+    [ValidateRange(1, 65535)][int]$SitePort = 5373,
     [switch]$Stop
 )
 
@@ -38,6 +44,7 @@ $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $BackendDir = Join-Path $Root 'src\backend'
 $ConsoleDir = Join-Path $Root 'src\console'
+$SiteDir = Join-Path $Root 'src\site'
 $BuildDir = Join-Path $env:TEMP 'velt-dev'
 $ApiExe = Join-Path $BuildDir 'velt-api.exe'
 
@@ -122,6 +129,7 @@ if ($Stop) {
     $stopApiPort = if ($addr -match ':(\d+)$') { [int]$Matches[1] } else { 8081 }
     Stop-Port -Port $stopApiPort -Label 'api'
     Stop-Port -Port $ConsolePort -Label 'console'
+    Stop-Port -Port $SitePort -Label 'site'
     Write-Host ''
     exit 0
 }
@@ -151,6 +159,9 @@ Write-Ok 'env files present'
 
 $addr = Get-EnvValue -Path $backendEnv -Key 'HTTP_ADDR'
 $ApiPort = if ($addr -match ':(\d+)$') { [int]$Matches[1] } else { 8081 }
+if ($ApiPort -eq $ConsolePort -or $ApiPort -eq $SitePort -or $ConsolePort -eq $SitePort) {
+    Fail 'api, console and site must use different ports' 'adjust -ConsolePort, -SitePort or HTTP_ADDR in src\backend\.env.'
+}
 
 # The console talks to the API by absolute URL, and the API allow-lists the
 # console origin. A mismatch here fails at runtime as an opaque CORS error, so
@@ -163,7 +174,7 @@ $cors = Get-EnvValue -Path $backendEnv -Key 'CORS_ALLOWED_ORIGINS'
 if ($cors -and $cors -notmatch ":$ConsolePort(,|$)") {
     Fail "CORS_ALLOWED_ORIGINS does not include the console origin (port $ConsolePort)" "add http://localhost:$ConsolePort to CORS_ALLOWED_ORIGINS in src\backend\.env."
 }
-Write-Ok "ports api=$ApiPort console=$ConsolePort, origins aligned"
+Write-Ok "ports api=$ApiPort console=$ConsolePort site=$SitePort, origins aligned"
 
 $dbUrl = Get-EnvValue -Path $backendEnv -Key 'DATABASE_URL'
 if ($dbUrl -match '@([^:/]+):(\d+)/') {
@@ -177,7 +188,7 @@ if ($dbUrl -match '@([^:/]+):(\d+)/') {
     Write-Step 'DATABASE_URL not in host:port form - skipping reachability check'
 }
 
-foreach ($p in @(@{ Port = $ApiPort; Label = 'api' }, @{ Port = $ConsolePort; Label = 'console' })) {
+foreach ($p in @(@{ Port = $ApiPort; Label = 'api' }, @{ Port = $ConsolePort; Label = 'console' }, @{ Port = $SitePort; Label = 'site' })) {
     $owners = @(Get-PortOwner -Port $p.Port)
     if ($owners.Count -gt 0) {
         $names = ($owners | ForEach-Object {
@@ -186,23 +197,30 @@ foreach ($p in @(@{ Port = $ApiPort; Label = 'api' }, @{ Port = $ConsolePort; La
             }) -join ', '
         $fix = if ($p.Label -eq 'api') {
             'run .\scripts\dev.ps1 -Stop, or change HTTP_ADDR in src\backend\.env.'
-        } else {
+        } elseif ($p.Label -eq 'console') {
             'run .\scripts\dev.ps1 -Stop, or pass a different -ConsolePort.'
+        } else {
+            'run .\scripts\dev.ps1 -Stop, or pass a different -SitePort.'
         }
         Fail "port $($p.Port) ($($p.Label)) already in use by $names" $fix
     }
 }
 Write-Ok 'ports free'
 
-if (-not (Test-Path (Join-Path $ConsoleDir 'node_modules'))) {
-    Write-Step 'installing console dependencies (first run)'
-    Push-Location $ConsoleDir
-    try {
-        & npm.cmd install
-        if ($LASTEXITCODE -ne 0) { Fail 'npm install failed' }
-    } finally { Pop-Location }
+foreach ($frontend in @(@{ Dir = $ConsoleDir; Label = 'console' }, @{ Dir = $SiteDir; Label = 'site' })) {
+    if (-not (Test-Path (Join-Path $frontend.Dir 'package.json'))) {
+        Fail "missing $($frontend.Label) package.json" "check $($frontend.Dir)."
+    }
+    if (-not (Test-Path (Join-Path $frontend.Dir 'node_modules'))) {
+        Write-Step "installing $($frontend.Label) dependencies (first run)"
+        Push-Location $frontend.Dir
+        try {
+            & npm.cmd install
+            if ($LASTEXITCODE -ne 0) { Fail "$($frontend.Label) npm install failed" }
+        } finally { Pop-Location }
+    }
+    Write-Ok "$($frontend.Label) dependencies present"
 }
-Write-Ok 'console dependencies present'
 
 Write-Step 'building api'
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
@@ -216,18 +234,35 @@ Write-Ok "api built -> $ApiExe"
 # ── Run ──────────────────────────────────────────────────────────────────────
 $api = $null
 $web = $null
+$site = $null
 try {
-    # -NoNewWindow keeps both children attached to this console, so their logs
+    # -NoNewWindow keeps children attached to this console, so their logs
     # interleave here instead of hiding in separate windows.
     $api = Start-Process -FilePath $ApiExe -WorkingDirectory $BackendDir -NoNewWindow -PassThru
     $viteBin = Join-Path $ConsoleDir 'node_modules\vite\bin\vite.js'
     $web = Start-Process -FilePath 'node' `
-        -ArgumentList $viteBin, '--port', $ConsolePort, '--strictPort' `
+        -ArgumentList ('"{0}"' -f $viteBin), '--port', $ConsolePort, '--strictPort' `
         -WorkingDirectory $ConsoleDir -NoNewWindow -PassThru
+
+    # Scope site-only settings to process creation; API/console and the parent
+    # shell retain their existing PORT/HOST values (PowerShell 5.1 compatible).
+    $previousPort = $env:PORT
+    $previousHost = $env:HOST
+    try {
+        $env:PORT = [string]$SitePort
+        $env:HOST = '127.0.0.1'
+        $site = Start-Process -FilePath 'node' -ArgumentList 'server.mjs' `
+            -WorkingDirectory $SiteDir -NoNewWindow -PassThru
+    } finally {
+        $env:PORT = $previousPort
+        $env:HOST = $previousHost
+    }
 
     Write-Host ''
     Write-Host '  console  ' -NoNewline -ForegroundColor Cyan
     Write-Host "http://localhost:$ConsolePort"
+    Write-Host '  site     ' -NoNewline -ForegroundColor Cyan
+    Write-Host "http://127.0.0.1:$SitePort"
     Write-Host '  api      ' -NoNewline -ForegroundColor Cyan
     Write-Host "http://localhost:$ApiPort/api  (health: /healthz)"
     Write-Host '  stop     ' -NoNewline -ForegroundColor Cyan
@@ -237,11 +272,12 @@ try {
     while ($true) {
         if ($api.HasExited) { Write-Host "`n  api exited (code $($api.ExitCode))" -ForegroundColor Red; break }
         if ($web.HasExited) { Write-Host "`n  console exited (code $($web.ExitCode))" -ForegroundColor Red; break }
+        if ($site.HasExited) { Write-Host "`n  site exited (code $($site.ExitCode))" -ForegroundColor Red; break }
         Start-Sleep -Milliseconds 500
     }
 } finally {
     Write-Host "`n  shutting down" -ForegroundColor DarkGray
-    foreach ($proc in @($api, $web)) {
+    foreach ($proc in @($api, $web, $site)) {
         if ($proc -and -not $proc.HasExited) {
             Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
         }
@@ -249,5 +285,6 @@ try {
     # Belt and braces: a child that outlived its parent still holds the port.
     Stop-Port -Port $ApiPort -Label 'api'
     Stop-Port -Port $ConsolePort -Label 'console'
+    Stop-Port -Port $SitePort -Label 'site'
     Write-Host ''
 }

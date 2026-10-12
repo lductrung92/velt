@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { I18nextProvider } from "react-i18next";
@@ -147,14 +147,67 @@ describe("MemberList", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the empty state when there is no one yet", async () => {
+  it("uses the standard empty row, keeping the header visible", async () => {
+    // docs/styles/console/table.md §2: one empty treatment across every list
+    // table, header included — not a page-level empty state.
     signIn(MANAGER);
     server.use(http.get(`${API}/members`, () => HttpResponse.json(page([]))));
     renderPage();
 
+    const table = await screen.findByTestId("members-table");
     expect(
-      await screen.findByText(i18n.t("members.empty.title")),
+      within(table).getByText(i18n.t("common.empty_state.default_title")),
     ).toBeInTheDocument();
+    expect(within(table).getByText(i18n.t("members.col.name"))).toBeInTheDocument();
+  });
+
+  it("filters by the search term", async () => {
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/members`, () =>
+        HttpResponse.json(
+          page([
+            member(),
+            member({ id: "m2", full_name: "Bình Trần", slug: "binh-tran", role: "Thiết kế" }),
+          ]),
+        ),
+      ),
+    );
+    renderPage();
+
+    await screen.findAllByTestId("member-row");
+    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.filter") }));
+    await userEvent.type(
+      screen.getByLabelText(i18n.t("members.search_label")),
+      "Thiết kế",
+    );
+    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.apply") }));
+
+    const rows = screen.getAllByTestId("member-row");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("Bình Trần");
+  });
+
+  it("hides the drag handle while the list is filtered or sorted", async () => {
+    // Reordering a subset would write an order the user never chose, and that
+    // order is what the public team page renders.
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/members`, () =>
+        HttpResponse.json(page([member(), member({ id: "m2", full_name: "Bình Trần" })])),
+      ),
+    );
+    renderPage();
+
+    await screen.findAllByTestId("member-row");
+    expect(
+      screen.getAllByRole("button", { name: i18n.t("members.reorder") }),
+    ).toHaveLength(2);
+
+    await userEvent.click(screen.getByRole("button", { name: /Thành viên/ }));
+    expect(
+      screen.queryByRole("button", { name: i18n.t("members.reorder") }),
+    ).not.toBeInTheDocument();
   });
 
   it("warns that deleting unlinks the member from every product", async () => {
@@ -193,10 +246,9 @@ describe("MemberList", () => {
     );
     renderPage();
 
+    // An error must not look like an empty roster.
     await waitFor(() =>
-      expect(
-        screen.queryByText(i18n.t("members.empty.title")),
-      ).not.toBeInTheDocument(),
+      expect(screen.queryByTestId("members-table")).not.toBeInTheDocument(),
     );
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });

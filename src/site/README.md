@@ -4,6 +4,20 @@ Website công khai được migration từ `mockup` sang React + TypeScript. Tra
 
 ## Chạy local
 
+Từ thư mục gốc dự án, chạy cả API, console và site:
+
+```powershell
+.\scripts\dev.ps1
+# Đổi cổng site nếu cần:
+.\scripts\dev.ps1 -SitePort 5374
+# Dừng stack (dùng cùng tham số cổng đã chọn):
+.\scripts\dev.ps1 -Stop -SitePort 5374
+```
+
+Site mặc định ở `http://127.0.0.1:5373`, console ở `http://localhost:5273`. Script cài dependencies khi chưa có và dừng cả ba dịch vụ khi nhấn Ctrl+C.
+
+Để chỉ chạy site:
+
 ```powershell
 cd E:\startup\velt\src\site
 npm ci

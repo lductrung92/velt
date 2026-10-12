@@ -13,23 +13,35 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Plus, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { EmptyState } from "@/components/common/EmptyState";
+import { FilterChips } from "@/components/common/FilterChips";
+import { FilterPopover } from "@/components/common/FilterPopover";
 import { ListToolbar } from "@/components/common/ListToolbar";
 import { PageHeader } from "@/components/common/PageHeader";
+import { SortableHead } from "@/components/common/SortableHead";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableEmpty,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
-import { MemberCard } from "../components/MemberCard";
+import { MemberRow } from "../components/MemberRow";
 import {
   useDeleteMember,
   useMembers,
@@ -38,9 +50,11 @@ import {
 import type { Member } from "../services/members.service";
 
 // The roster is a curated list a team edits by hand, not a dataset: one page
-// holds it. There is deliberately no search or pagination — filtering would
-// make the drag order meaningless (you cannot reorder a subset), and that
-// ordering is the whole point of this screen.
+// holds it, so there is no pagination.
+//
+// Searching and sorting both switch drag-reorder off — ordering by sort_order
+// only means anything on the full, unfiltered list, and that ordering is what
+// the public team page renders. Same rule as the product taxonomy screen.
 const PAGE_SIZE = 100;
 
 export default function MemberList() {
@@ -49,11 +63,15 @@ export default function MemberList() {
   const { hasPermission } = usePermission();
   const canManage = hasPermission("members.manage");
 
-  const [pending, setPending] = useState<Member | null>(null);
-
   const list = useMembers({ page: 1, page_size: PAGE_SIZE });
   const reorder = useReorderMembers();
   const remove = useDeleteMember();
+
+  const [pending, setPending] = useState<Member | null>(null);
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState<string | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [draftQ, setDraftQ] = useState("");
 
   // Local mirror so a drag renders instantly; the server call follows.
   const [order, setOrder] = useState<Member[]>([]);
@@ -65,6 +83,35 @@ export default function MemberList() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+
+  const reorderable = q === "" && sort === null;
+
+  const rows = useMemo(() => {
+    let out = order;
+    if (q) {
+      const needle = q.toLowerCase();
+      out = out.filter(
+        (m) =>
+          m.full_name.toLowerCase().includes(needle) ||
+          (m.role ?? "").toLowerCase().includes(needle) ||
+          m.skills.some((s) => s.toLowerCase().includes(needle)),
+      );
+    }
+    if (sort) {
+      const [col, dir] = sort.split(":");
+      const sign = dir === "desc" ? -1 : 1;
+      out = [...out].sort((a, b) => {
+        const av = col === "role" ? (a.role ?? "") : a.full_name;
+        const bv = col === "role" ? (b.role ?? "") : b.full_name;
+        return sign * av.localeCompare(bv, "vi");
+      });
+    }
+    return out;
+  }, [order, q, sort]);
+
+  const filterChips = q
+    ? [{ key: "q", label: t("members.search_label"), value: q, onRemove: () => setQ("") }]
+    : [];
 
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
@@ -108,6 +155,32 @@ export default function MemberList() {
       <ListToolbar
         onRefresh={() => void list.refetch()}
         refreshDisabled={list.isFetching}
+        filter={
+          <FilterPopover
+            open={filterOpen}
+            onOpenChange={(open) => {
+              setFilterOpen(open);
+              if (open) setDraftQ(q);
+            }}
+            onApply={() => {
+              setQ(draftQ.trim());
+              setFilterOpen(false);
+            }}
+            onReset={() => setDraftQ("")}
+            filterActive={q !== ""}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="member-q">{t("members.search_label")}</Label>
+              <Input
+                id="member-q"
+                type="search"
+                value={draftQ}
+                placeholder={t("members.search_ph")}
+                onChange={(e) => setDraftQ(e.target.value)}
+              />
+            </div>
+          </FilterPopover>
+        }
       >
         {canManage && (
           <Button type="button" onClick={() => navigate("/members/new")}>
@@ -117,44 +190,65 @@ export default function MemberList() {
         )}
       </ListToolbar>
 
+      <FilterChips items={filterChips} onClearAll={q ? () => setQ("") : undefined} />
+
       {list.isError ? (
         <Alert variant="danger" message={parseApiError(list.error, t).message} />
       ) : list.isLoading && !list.data ? (
-        <div className="space-y-2">
-          {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-[72px] w-full" />
+        <div className="space-y-2 p-3">
+          {Array.from({ length: 5 }, (_, i) => (
+            <Skeleton key={i} className="h-9 w-full" />
           ))}
         </div>
-      ) : order.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title={t("members.empty.title")}
-          description={t("members.empty.description")}
-          onAdd={canManage ? () => navigate("/members/new") : undefined}
-        />
       ) : (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext
-            items={order.map((m) => m.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <ul className="space-y-2" data-testid="member-list">
-              {order.map((m) => (
-                <li key={m.id}>
-                  <MemberCard
+          <Table scroll={false} data-testid="members-table">
+            <TableHeader>
+              <TableRow>
+                <SortableHead
+                  col="name"
+                  label={t("members.col.name")}
+                  sort={sort}
+                  onSort={setSort}
+                />
+                <SortableHead
+                  col="role"
+                  label={t("members.col.role")}
+                  sort={sort}
+                  onSort={setSort}
+                />
+                <TableHead>{t("members.col.skills")}</TableHead>
+                <TableHead className="text-right">
+                  {t("members.col.sort_order")}
+                </TableHead>
+                <TableHead className="text-right">
+                  {t("members.col.actions")}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 && <TableEmpty colSpan={5} />}
+              <SortableContext
+                items={rows.map((m) => m.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {rows.map((m) => (
+                  <MemberRow
+                    key={m.id}
                     member={m}
                     canManage={canManage}
+                    reorderable={canManage && reorderable}
                     onEdit={(id) => navigate(`/members/${id}`)}
                     onDelete={setPending}
                   />
-                </li>
-              ))}
-            </ul>
-          </SortableContext>
+                ))}
+              </SortableContext>
+            </TableBody>
+          </Table>
         </DndContext>
       )}
 
