@@ -4,6 +4,7 @@ Bản dịch của nội dung do người dùng nhập — tên sản phẩm, ti
 sử thành viên. Đọc file này trước khi viết migration hoặc code.
 
 - Hợp đồng HTTP: [docs/apis/translation-api.md](../../apis/translation-api.md)
+- Kế hoạch thi công: [implementation.md](implementation.md)
 - Nguồn dữ liệu sản phẩm: [docs/domains/products/README.md](../products/README.md)
 - Bối cảnh kinh doanh: [OVERVIEW.md](../../../OVERVIEW.md)
 
@@ -385,6 +386,8 @@ sách chỉ ẩn nó đi, dữ liệu vẫn còn.
 
 Bước 2 là bước đáng sợ nhất vì nó chạm `published_snapshot`. Làm một thực thể cho
 chạy thật rồi mới nhân ra, để nếu kiến trúc sai thì sửa khi còn rẻ.
+
+Chi tiết từng file và từng điểm nối: [implementation.md](implementation.md).
 
 ## 15. Quyết định đã chốt
 
