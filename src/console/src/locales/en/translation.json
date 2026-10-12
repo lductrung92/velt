@@ -376,11 +376,40 @@
     },
     "rbac": {
       "title": "Roles & Permissions",
-      "subtitle": "View roles and their permissions (read-only)",
+      "subtitle": "Explore roles and access scopes across Zukatek.",
       "select_role": "Select a role",
       "no_perms": "This role has no permissions",
       "show_more": "Show more ({{count}})",
-      "show_less": "Show less"
+      "show_less": "Show less",
+      "roles_label": "Role directory",
+      "permissions_label": "Granted permissions",
+      "people_count": "{{count}} users",
+      "perm_count": "{{count}} permissions",
+      "readonly_hint": "Read-only overview. Selecting a role does not change anyone's access.",
+      "system_role": "System role",
+      "custom_role": "Custom role",
+      "summary_people": "Users",
+      "summary_permissions": "Permissions",
+      "summary_groups": "Permission groups",
+      "retry": "Try again",
+      "loading": "Loading permissions",
+      "no_roles": "No roles to display",
+      "search": "Find a permission or group…",
+      "clear_search": "Clear search",
+      "no_matches": "No matching permissions",
+      "result_count": "{{count}} permissions in {{groups}} groups",
+      "resources": {
+        "ai": "AI assistant",
+        "cms": "Content management",
+        "crm": "Customer care",
+        "members": "Team",
+        "products": "Products",
+        "users": "Users",
+        "roles": "Roles",
+        "permissions": "Permission catalog",
+        "sessions": "Login sessions",
+        "settings": "Settings"
+      }
     },
     "sessions": {
       "title": "Sessions",
@@ -881,6 +910,34 @@
         "og_title": "OG title",
         "og_description": "OG description",
         "og_image": "OG image"
+      },
+      "list_title": "Articles",
+      "list_hint": "Articles in the system",
+      "record_count_one": "{{count}} article",
+      "record_count_other": "{{count}} articles",
+      "search_label": "Search articles",
+      "search_ph": "Title or slug",
+      "filter_status": "Filter by status",
+      "all_statuses": "All",
+      "all_categories": "All categories",
+      "all_tags": "All tags",
+      "no_category": "Uncategorised",
+      "empty_title": "No articles yet",
+      "empty_hint": "Articles you create show up here with their review state and publishing schedule.",
+      "no_results": "No articles found",
+      "no_results_hint": "Try removing a filter or changing the search term.",
+      "not_published": "Not published",
+      "actions_for": "Actions for {{title}}",
+      "overview": {
+        "label": "Article overview",
+        "total": "Total articles",
+        "total_hint": "Every article",
+        "draft": "Drafts",
+        "draft_hint": "Still being written",
+        "pending_review": "Awaiting review",
+        "pending_review_hint": "Needs a reviewer",
+        "published": "Published",
+        "published_hint": "Live on the site"
       }
     }
   },
@@ -1283,7 +1340,6 @@
     "closed_notice": "This conversation has ended. Its history is still available.",
     "keyboard_hint": "Enter to send · Shift + Enter for a new line"
   },
-
   "leads": {
     "title": "Customers",
     "subtitle": "Understand customer needs, follow up and grow your sales opportunities.",

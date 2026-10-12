@@ -1,0 +1,489 @@
+/*
+ * List-page chrome, shared by every console list screen.
+ *
+ * It owns the shell and nothing about any one domain: the page column, the
+ * overview cards, the panel, its toolbar, the status tabs, the table, the
+ * empty state and the mobile card list. What goes INSIDE a row belongs to the
+ * screen that renders it (see leads.css, articles.css).
+ *
+ * The split is the point. If a rule names a status, a column or a record, it
+ * is not chrome and does not live here.
+ *
+ * Contract for a consumer:
+ *   .list-page            flex column wrapper
+ *     .list-overview        grid of .list-metric buttons (optional)
+ *       .list-metric          set --list-metric-accent per card to recolour it
+ *     .list-panel           bordered card holding the list
+ *       .list-panel-heading   h2 + p
+ *       .list-toolbar         .list-search + .list-filter-controls
+ *       .list-tabs            buttons with aria-pressed; `i` is the status dot,
+ *                             coloured by the consumer
+ *       .list-table-wrap      .list-desktop (table) + .list-mobile (cards)
+ *       .list-pagination
+ *     .list-empty           empty state with .list-empty-art
+ *
+ * Type scale follows docs/styles/console/typography.md: 14px for a record's
+ * name and controls, 12px for everything secondary.
+ *
+ * SCOPING: every stylesheet in this app is bundled globally, so a screen that
+ * overrides a `list-*` class MUST scope it to its own page:
+ *
+ *   <div className="list-page" data-list="articles">
+ *   [data-list="articles"] .list-metric[data-kind="draft"] { ... }
+ *
+ * Without that, one screen's status palette silently repaints another's.
+ */
+
+.list-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.list-page > div:first-child {
+  margin-bottom: 0;
+}
+.list-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+.list-metric {
+  --list-metric-accent: var(--primary);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  padding: 0.875rem 1rem;
+  min-width: 0;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--background));
+  overflow: hidden;
+  box-shadow: 0 3px 16px rgb(15 35 75 / 3%);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.list-metric::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 20px;
+  width: 60px;
+  height: 3px;
+  border-radius: 0 0 5px 5px;
+  background: hsl(var(--list-metric-accent));
+}
+.list-metric:hover {
+  border-color: hsl(var(--list-metric-accent) / 0.4);
+  box-shadow: 0 5px 20px rgb(15 35 75 / 7%);
+}
+.list-metric[aria-pressed="true"] {
+  border-color: hsl(var(--list-metric-accent) / 0.35);
+}
+.list-metric-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: hsl(var(--muted-foreground));
+  font-size: var(--font-size-sm);
+}
+.list-metric-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.125rem;
+  height: 2.125rem;
+  border-radius: var(--radius);
+  background: hsl(var(--list-metric-accent) / 0.09);
+  color: hsl(var(--list-metric-accent));
+}
+.list-metric-icon > svg {
+  width: 18px;
+  height: 18px;
+}
+.list-metric > strong {
+  display: flex;
+  align-items: center;
+  min-height: 2rem;
+  margin-top: 0.375rem;
+  font-size: var(--font-size-3xl);
+  font-weight: 600;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+}
+.list-metric-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid hsl(var(--border) / 0.6);
+  color: hsl(var(--muted-foreground));
+  font-size: var(--font-size-xs);
+}
+.list-metric:hover .list-metric-bottom > svg {
+  color: hsl(var(--list-metric-accent));
+}
+.list-panel {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--background));
+  min-width: 0;
+  overflow: hidden;
+  box-shadow: 0 3px 16px hsl(var(--foreground) / 0.015);
+}
+.list-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 20px 15px;
+}
+.list-panel-heading h2 {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+.list-panel-heading p {
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+}
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 20px 18px;
+}
+.list-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 410px;
+  flex: 1;
+  min-width: 220px;
+}
+.list-search > svg {
+  position: absolute;
+  left: 11px;
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+}
+.list-page .list-search input {
+  height: 36px;
+  padding-left: 34px;
+  padding-right: 38px;
+  font-size: var(--font-size-sm);
+  background: hsl(var(--muted) / 0.25);
+}
+.list-page .list-search button {
+  position: absolute;
+  right: 3px;
+  height: 30px;
+  width: 30px;
+}
+.list-filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+/* The theme select renders a trigger button inside its own wrapper, so the
+   width belongs on the wrapper rather than on a `select` tag that no longer
+   exists here. */
+.list-page .list-filter-select {
+  width: 180px;
+}
+.list-page .list-filter-select button {
+  font-size: var(--font-size-sm);
+}
+.list-tabs {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid hsl(var(--border));
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.list-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 11px 0 13px;
+  border-bottom: 2px solid transparent;
+  color: hsl(var(--muted-foreground));
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+.list-tabs button[aria-pressed="true"] {
+  color: hsl(var(--primary));
+  border-bottom-color: hsl(var(--primary));
+}
+.list-tabs button i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+.list-page .list-filter-chips {
+  padding: 12px 20px;
+  border-bottom: 1px solid hsl(var(--border));
+}
+.list-page .list-filter-chips > span {
+  font-size: var(--font-size-xs);
+}
+.list-error {
+  padding: 24px;
+}
+.list-loading {
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+}
+.list-page .list-table-wrap {
+  border: 0;
+  border-radius: 0;
+}
+.list-desktop table {
+  /* Fill the panel. Without width the table sizes to its content, which only
+     looked right on a screen whose columns happened to be wide enough; a
+     narrower list left a gap and let long cells crowd their neighbours. */
+  width: 100%;
+  min-width: 930px;
+  table-layout: auto;
+}
+.list-desktop th {
+  font-size: var(--font-size-xs);
+  height: 43px;
+  background: hsl(var(--muted) / 0.35);
+}
+.list-desktop td {
+  padding-top: 18px;
+  padding-bottom: 18px;
+  vertical-align: middle;
+}
+.list-desktop th:first-child,
+.list-desktop td:first-child {
+  padding-left: 20px;
+}
+.list-desktop th:last-child,
+.list-desktop td:last-child {
+  padding-right: 16px;
+}
+.list-pagination {
+  padding: 0 20px;
+}
+.list-mobile {
+  display: none;
+}
+.list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px 50px;
+  min-height: 340px;
+  text-align: center;
+}
+.list-empty h3 {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin-top: 16px;
+}
+.list-empty > p {
+  font-size: var(--font-size-sm);
+  max-width: 380px;
+  line-height: 1.8;
+  color: hsl(var(--muted-foreground));
+  margin: 10px 0 21px;
+}
+.list-empty-art {
+  position: relative;
+  height: 103px;
+  width: 122px;
+}
+.list-empty-ring {
+  position: absolute;
+  width: 103px;
+  height: 103px;
+  top: 0;
+  left: 9px;
+  border-radius: 50%;
+  border: 1px dashed hsl(var(--primary) / 0.2);
+  background: radial-gradient(
+    circle,
+    hsl(var(--primary) / 0.04),
+    transparent 70%
+  );
+}
+.list-empty-card {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 72px;
+  height: 90px;
+  padding: 12px;
+  left: 24px;
+  top: 5px;
+  transform: rotate(-8deg);
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--primary) / 0.18);
+  background: hsl(var(--background));
+  box-shadow: 0 8px 15px hsl(var(--primary) / 0.05);
+}
+.list-empty-card > span {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.06);
+  padding: 5px;
+  border-radius: calc(var(--radius) - 2px);
+  width: 30px;
+}
+.list-empty-card i {
+  display: block;
+  height: 3px;
+  margin-bottom: 5px;
+  border-radius: 2px;
+  background: hsl(var(--primary) / 0.13);
+}
+.list-empty-card i:nth-child(2) {
+  width: 75%;
+}
+.list-empty-card i:nth-child(3) {
+  width: 50%;
+}
+.list-empty-plus {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--primary) / 0.18);
+  color: hsl(var(--primary));
+  border-radius: calc(var(--radius) - 2px);
+  bottom: 3px;
+  right: -11px;
+}
+.list-page button:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+@media (max-width: 1100px) {
+  .list-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .list-search {
+    max-width: none;
+  }
+
+  .list-filter-controls {
+    flex: 1;
+  }
+
+  .list-page .list-filter-select {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+  }
+}
+@media (max-width: 767px) {
+  .list-page {
+    gap: 16px;
+  }
+
+  .list-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .list-metric {
+    /* Never taller than the desktop card: the narrow screen has less room to
+         spend, not more. */
+    padding: 0.875rem;
+  }
+
+  .list-metric-top {
+    gap: 6px;
+    font-size: var(--font-size-sm);
+  }
+
+  .list-panel-heading {
+    padding: 16px 14px;
+    align-items: flex-start;
+  }
+
+  .list-toolbar {
+    padding: 0 14px 16px;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .list-search {
+    min-width: 0;
+    width: 100%;
+    flex: none;
+  }
+
+  .list-filter-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+    gap: 8px;
+    width: 100%;
+    flex: none;
+  }
+
+  .list-tabs {
+    gap: 19px;
+    padding: 0 14px;
+  }
+
+  .list-tabs button {
+    font-size: var(--font-size-sm);
+  }
+
+  .list-desktop {
+    display: none;
+  }
+
+  .list-mobile {
+    display: block;
+  }
+
+  .list-page .list-filter-chips {
+    padding: 12px 14px;
+  }
+
+  .list-pagination {
+    padding: 0 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .list-metric {
+    transition: none;
+  }
+}
+
+/* A sortable heading is a button inside a th; it must read as a heading, not as
+   a control. Lives here because sorting is list chrome, not a domain concern. */
+.list-desktop th button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  white-space: nowrap;
+}
+.list-desktop th button:hover {
+  color: hsl(var(--foreground));
+}

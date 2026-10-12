@@ -103,13 +103,17 @@ describe("ArticleList", () => {
     );
     renderPage();
 
-    expect(await screen.findByText("First post")).toBeInTheDocument();
-    expect(screen.getByText("first-post")).toBeInTheDocument();
+    // Scoped to the table: the screen renders the desktop table and the mobile
+    // card list together and lets CSS show one, so an unscoped query matches
+    // each row twice.
+    const table = await screen.findByTestId("cms-articles-table");
+    expect(within(table).getByText("First post")).toBeInTheDocument();
+    expect(within(table).getByText("first-post")).toBeInTheDocument();
     expect(
-      screen.getByText(i18n.t("content_status.draft")),
+      within(table).getByText(i18n.t("content_status.draft")),
     ).toBeInTheDocument();
-    expect(screen.getByText("News")).toBeInTheDocument();
-    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(within(table).getByText("News")).toBeInTheDocument();
+    expect(within(table).getByText("Alice")).toBeInTheDocument();
   });
 
   it("read-only viewer: no create button and no row actions", async () => {
@@ -122,12 +126,14 @@ describe("ArticleList", () => {
     );
     renderPage();
 
-    await screen.findByText("First post");
+    await screen.findByTestId("cms-articles-table");
     expect(
       screen.queryByRole("button", { name: i18n.t("cms.articles.btn.create") }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: ACTIONS() }),
+      within(screen.getByTestId("cms-articles-table")).queryByRole("button", {
+        name: ACTIONS(),
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -141,7 +147,7 @@ describe("ArticleList", () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("First post");
+    await screen.findByTestId("cms-articles-table");
 
     await user.click(
       screen.getByRole("button", { name: i18n.t("cms.articles.btn.create") }),
@@ -160,7 +166,8 @@ describe("ArticleList", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(await screen.findByRole("link", { name: "First post" }));
+    const table = await screen.findByTestId("cms-articles-table");
+    await user.click(within(table).getByRole("link", { name: "First post" }));
     expect(await screen.findByText("EDITOR DETAIL")).toBeInTheDocument();
   });
 
@@ -176,7 +183,7 @@ describe("ArticleList", () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("First post");
+    await screen.findByTestId("cms-articles-table");
     // Default sort is -updated_at.
     await waitFor(() => expect(sorts[0]).toBe("-updated_at"));
 
@@ -198,7 +205,7 @@ describe("ArticleList", () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("First post");
+    await screen.findByTestId("cms-articles-table");
 
     // Default is -updated_at (desc); clicking Updated must reach ascending
     // (regression: the default column used to be stuck on descending).
@@ -223,9 +230,13 @@ describe("ArticleList", () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("First post");
+    await screen.findByTestId("cms-articles-table");
 
-    await user.click(screen.getByRole("button", { name: ACTIONS() }));
+    await user.click(
+      within(screen.getByTestId("cms-articles-table")).getByRole("button", {
+        name: ACTIONS(),
+      }),
+    );
     await user.click(
       await screen.findByRole("menuitem", { name: i18n.t("common.delete") }),
     );
@@ -253,9 +264,13 @@ describe("ArticleList", () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("First post");
+    await screen.findByTestId("cms-articles-table");
 
-    await user.click(screen.getByRole("button", { name: ACTIONS() }));
+    await user.click(
+      within(screen.getByTestId("cms-articles-table")).getByRole("button", {
+        name: ACTIONS(),
+      }),
+    );
     await user.click(
       await screen.findByRole("menuitem", { name: i18n.t("common.delete") }),
     );

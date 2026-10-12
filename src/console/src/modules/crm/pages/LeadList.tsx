@@ -63,6 +63,7 @@ import {
   type Lead,
   type LeadStatus,
 } from "../services/leads.service";
+import "@/styles/list-page.css";
 import "./leads.css";
 
 const OVERVIEW = [
@@ -336,21 +337,21 @@ export default function LeadList() {
     );
 
   return (
-    <div className="leads-page">
+    <div className="list-page" data-list="leads">
       <PageHeader title={t("leads.title")} subtitle={t("leads.subtitle")} />
-      <div className="leads-overview" aria-label={t("leads.overview.label")}>
+      <div className="list-overview" aria-label={t("leads.overview.label")}>
         {OVERVIEW.map(({ status: value, key, Icon }, index) => (
           <button
             type="button"
             key={key}
-            className="leads-metric"
+            className="list-metric"
             data-kind={key}
             aria-pressed={value ? status === value : !hasFilters}
             onClick={() => (value ? setStage(value) : reset())}
           >
-            <span className="leads-metric-top">
+            <span className="list-metric-top">
               <span>{t(`leads.overview.${key}`)}</span>
-              <span className="leads-metric-icon">
+              <span className="list-metric-icon">
                 <Icon className="size-4" aria-hidden />
               </span>
             </span>
@@ -365,7 +366,7 @@ export default function LeadList() {
                 )
               )}
             </strong>
-            <span className="leads-metric-bottom">
+            <span className="list-metric-bottom">
               {t(`leads.overview.${key}_hint`)}
               <ArrowRight className="size-3.5" aria-hidden />
             </span>
@@ -373,8 +374,8 @@ export default function LeadList() {
         ))}
       </div>
 
-      <section className="leads-panel" aria-label={t("leads.list_title")}>
-        <div className="leads-panel-heading">
+      <section className="list-panel" aria-label={t("leads.list_title")}>
+        <div className="list-panel-heading">
           <div>
             <h2>{t("leads.list_title")}</h2>
             <p>
@@ -403,9 +404,9 @@ export default function LeadList() {
             {t("common.refresh")}
           </Button>
         </div>
-        <div className="leads-toolbar">
+        <div className="list-toolbar">
           <form
-            className="leads-search"
+            className="list-search"
             onSubmit={(event) => {
               event.preventDefault();
               setQ(draftQ.trim());
@@ -437,11 +438,11 @@ export default function LeadList() {
               <ArrowRight className="size-4" />
             </Button>
           </form>
-          <div className="leads-filter-controls">
+          <div className="list-filter-controls">
             {/* "All" is the cleared state, not an option in the list: the theme
                 select already offers a ✕, and keeping both would give two ways
                 to say the same thing. */}
-            <div className="leads-filter-select">
+            <div className="list-filter-select">
               <Select
                 inputId="lead-filter-source"
                 aria-label={t("leads.col.source")}
@@ -462,7 +463,7 @@ export default function LeadList() {
                 }}
               />
             </div>
-            <div className="leads-filter-select">
+            <div className="list-filter-select">
               <Select
                 inputId="lead-filter-assignee"
                 aria-label={t("leads.col.assignee")}
@@ -485,7 +486,7 @@ export default function LeadList() {
           </div>
         </div>
         <div
-          className="leads-tabs"
+          className="list-tabs"
           role="group"
           aria-label={t("leads.filter_status")}
         >
@@ -510,12 +511,12 @@ export default function LeadList() {
           ))}
         </div>
         <FilterChips
-          className="leads-filter-chips"
+          className="list-filter-chips"
           items={chips}
           onClearAll={chips.length ? reset : undefined}
         />
         {list.isError ? (
-          <div className="leads-error">
+          <div className="list-error">
             <Alert
               variant="danger"
               message={parseApiError(list.error, t).message}
@@ -530,16 +531,16 @@ export default function LeadList() {
             </Button>
           </div>
         ) : list.isPending ? (
-          <div className="leads-loading" aria-label={t("common.loading")}>
+          <div className="list-loading" aria-label={t("common.loading")}>
             {Array.from({ length: 5 }, (_, i) => (
               <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
         ) : !rows.length ? (
-          <div className="leads-empty">
-            <div className="leads-empty-art" aria-hidden>
-              <span className="leads-empty-ring" />
-              <div className="leads-empty-card">
+          <div className="list-empty">
+            <div className="list-empty-art" aria-hidden>
+              <span className="list-empty-ring" />
+              <div className="list-empty-card">
                 <span>
                   <Users className="size-5" />
                 </span>
@@ -548,7 +549,7 @@ export default function LeadList() {
                   <i />
                   <i />
                 </div>
-                <UserPlus className="leads-empty-plus" />
+                <UserPlus className="list-empty-plus" />
               </div>
             </div>
             <h3>{t(hasFilters ? "leads.no_results" : "leads.empty_title")}</h3>
@@ -579,11 +580,11 @@ export default function LeadList() {
           </div>
         ) : (
           <>
-            <div className="leads-desktop">
+            <div className="list-desktop">
               <Table
                 scroll={false}
                 data-testid="leads-table"
-                wrapperClassName="leads-table-wrap"
+                wrapperClassName="list-table-wrap"
               >
                 <TableHeader>
                   <TableRow>
@@ -624,7 +625,7 @@ export default function LeadList() {
                 </TableBody>
               </Table>
             </div>
-            <div className="leads-mobile">
+            <div className="list-mobile">
               {rows.map((lead) => (
                 <article
                   key={lead.id}
@@ -653,7 +654,7 @@ export default function LeadList() {
                 </article>
               ))}
             </div>
-            <div className="leads-pagination">
+            <div className="list-pagination">
               <TablePagination
                 page={list.data?.page ?? page}
                 pageSize={list.data?.page_size ?? DEFAULT_PAGE_SIZE}

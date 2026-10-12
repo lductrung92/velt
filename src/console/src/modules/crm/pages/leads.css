@@ -1,270 +1,39 @@
-.leads-page {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+/* Lead-row content. The page chrome around it is src/styles/list-page.css;
+ * only what is specific to a customer record lives here. */
+
+/* --- CRM status accents, handed to the shared chrome --- */
+[data-list="leads"] .list-metric[data-kind="new"] {
+  --list-metric-accent: 195 72% 37%;
 }
-.leads-page > div:first-child {
-  margin-bottom: 0;
+[data-list="leads"] .list-metric[data-kind="qualified"] {
+  --list-metric-accent: 265 65% 55%;
 }
-.leads-overview {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
+[data-list="leads"] .list-metric[data-kind="won"] {
+  --list-metric-accent: 166 75% 30%;
 }
-.leads-metric {
-  --lead-metric-accent: var(--primary);
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  text-align: left;
-  padding: 0.875rem 1rem;
-  min-width: 0;
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius);
-  background: hsl(var(--background));
-  overflow: hidden;
-  box-shadow: 0 3px 16px rgb(15 35 75 / 3%);
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+.dark [data-list="leads"] .list-metric[data-kind="new"] {
+  --list-metric-accent: 195 65% 65%;
 }
-.leads-metric::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto auto 20px;
-  width: 60px;
-  height: 3px;
-  border-radius: 0 0 5px 5px;
-  background: hsl(var(--lead-metric-accent));
+.dark [data-list="leads"] .list-metric[data-kind="qualified"] {
+  --list-metric-accent: 265 70% 75%;
 }
-.leads-metric:hover {
-  border-color: hsl(var(--lead-metric-accent) / 0.4);
-  box-shadow: 0 5px 20px rgb(15 35 75 / 7%);
+.dark [data-list="leads"] .list-metric[data-kind="won"] {
+  --list-metric-accent: 166 55% 62%;
 }
-.leads-metric[aria-pressed="true"] {
-  border-color: hsl(var(--lead-metric-accent) / 0.35);
-}
-.leads-metric-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: hsl(var(--muted-foreground));
-  font-size: var(--font-size-sm);
-}
-.leads-metric-icon {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 2.125rem;
-  height: 2.125rem;
-  border-radius: var(--radius);
-  background: hsl(var(--lead-metric-accent) / 0.09);
-  color: hsl(var(--lead-metric-accent));
-}
-.leads-metric-icon > svg {
-  width: 18px;
-  height: 18px;
-}
-.leads-metric[data-kind="new"] {
-  --lead-metric-accent: 195 72% 37%;
-}
-.leads-metric[data-kind="qualified"] {
-  --lead-metric-accent: 265 65% 55%;
-}
-.leads-metric[data-kind="won"] {
-  --lead-metric-accent: 166 75% 30%;
-}
-.dark .leads-metric[data-kind="new"] {
-  --lead-metric-accent: 195 65% 65%;
-}
-.dark .leads-metric[data-kind="qualified"] {
-  --lead-metric-accent: 265 70% 75%;
-}
-.dark .leads-metric[data-kind="won"] {
-  --lead-metric-accent: 166 55% 62%;
-}
-.leads-metric > strong {
-  display: flex;
-  align-items: center;
-  min-height: 2rem;
-  margin-top: 0.375rem;
-  font-size: var(--font-size-3xl);
-  font-weight: 600;
-  letter-spacing: -1px;
-  font-variant-numeric: tabular-nums;
-}
-.leads-metric-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding-top: 0.5rem;
-  margin-top: 0.5rem;
-  border-top: 1px solid hsl(var(--border) / 0.6);
-  color: hsl(var(--muted-foreground));
-  font-size: var(--font-size-xs);
-}
-.leads-metric:hover .leads-metric-bottom > svg {
-  color: hsl(var(--lead-metric-accent));
-}
-.leads-panel {
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius);
-  background: hsl(var(--background));
-  min-width: 0;
-  overflow: hidden;
-  box-shadow: 0 3px 16px hsl(var(--foreground) / 0.015);
-}
-.leads-panel-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 20px 20px 15px;
-}
-.leads-panel-heading h2 {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-}
-.leads-panel-heading p {
-  margin-top: 4px;
-  font-size: var(--font-size-xs);
-  color: hsl(var(--muted-foreground));
-}
-.leads-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 0 20px 18px;
-}
-.leads-search {
-  position: relative;
-  display: flex;
-  align-items: center;
-  max-width: 410px;
-  flex: 1;
-  min-width: 220px;
-}
-.leads-search > svg {
-  position: absolute;
-  left: 11px;
-  color: hsl(var(--muted-foreground));
-  pointer-events: none;
-}
-.leads-page .leads-search input {
-  height: 36px;
-  padding-left: 34px;
-  padding-right: 38px;
-  font-size: var(--font-size-sm);
-  background: hsl(var(--muted) / 0.25);
-}
-.leads-page .leads-search button {
-  position: absolute;
-  right: 3px;
-  height: 30px;
-  width: 30px;
-}
-.leads-filter-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-/* The theme select renders a trigger button inside its own wrapper, so the
-   width belongs on the wrapper rather than on a `select` tag that no longer
-   exists here. */
-.leads-page .leads-filter-select {
-  width: 180px;
-}
-.leads-page .leads-filter-select button {
-  font-size: var(--font-size-sm);
-}
-.leads-tabs {
-  display: flex;
-  gap: 22px;
-  align-items: center;
-  padding: 0 20px;
-  border-bottom: 1px solid hsl(var(--border));
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-.leads-tabs button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  white-space: nowrap;
-  padding: 11px 0 13px;
-  border-bottom: 2px solid transparent;
-  color: hsl(var(--muted-foreground));
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-}
-.leads-tabs button[aria-pressed="true"] {
-  color: hsl(var(--primary));
-  border-bottom-color: hsl(var(--primary));
-}
-.leads-tabs button i {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: hsl(var(--muted-foreground) / 0.5);
-}
-.leads-tabs button[data-status="new"] i {
+[data-list="leads"] .list-tabs button[data-status="new"] i {
   background: hsl(var(--primary));
 }
-.leads-tabs button[data-status="contacted"] i {
+[data-list="leads"] .list-tabs button[data-status="contacted"] i {
   background: #1684a6;
 }
-.leads-tabs button[data-status="qualified"] i {
+[data-list="leads"] .list-tabs button[data-status="qualified"] i {
   background: #8952d4;
 }
-.leads-tabs button[data-status="won"] i {
+[data-list="leads"] .list-tabs button[data-status="won"] i {
   background: #13896f;
 }
-.leads-page .leads-filter-chips {
-  padding: 12px 20px;
-  border-bottom: 1px solid hsl(var(--border));
-}
-.leads-page .leads-filter-chips > span {
-  font-size: var(--font-size-xs);
-}
-.leads-error {
-  padding: 24px;
-}
-.leads-loading {
-  padding: 20px;
-  display: grid;
-  gap: 14px;
-}
-.leads-page .leads-table-wrap {
-  border: 0;
-  border-radius: 0;
-}
-.leads-desktop table {
-  min-width: 930px;
-}
-.leads-desktop th {
-  font-size: var(--font-size-xs);
-  height: 43px;
-  background: hsl(var(--muted) / 0.35);
-}
-.leads-desktop td {
-  padding-top: 18px;
-  padding-bottom: 18px;
-  vertical-align: middle;
-}
-.leads-desktop th:first-child,
-.leads-desktop td:first-child {
-  padding-left: 20px;
-}
-.leads-desktop th:last-child,
-.leads-desktop td:last-child {
-  padding-right: 16px;
-}
+
+/* --- Row content --- */
 .lead-contact {
   display: flex;
   align-items: flex-start;
@@ -463,7 +232,7 @@
 }
 /* The stage pill carries the colour and the border; the select inside it is
    just the control, so it stays transparent and inherits. */
-.leads-page .lead-stage button[role="combobox"] {
+[data-list="leads"] .lead-stage button[role="combobox"] {
   height: 31px;
   width: 100%;
   border: 0;
@@ -477,8 +246,8 @@
 /* The pill's colour IS the status. The theme trigger paints its value
    `text-foreground` and its chevron muted, so both are handed back to the
    pill — otherwise every stage reads the same black. */
-.leads-page .lead-stage button[role="combobox"] span,
-.leads-page .lead-stage button[role="combobox"] svg {
+[data-list="leads"] .lead-stage button[role="combobox"] span,
+[data-list="leads"] .lead-stage button[role="combobox"] svg {
   color: inherit;
 }
 .lead-stage > span {
@@ -499,201 +268,41 @@
   font-weight: 400;
   color: hsl(var(--foreground));
 }
-.leads-pagination {
-  padding: 0 20px;
-}
-.leads-mobile {
-  display: none;
-}
-.leads-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 24px 50px;
-  min-height: 340px;
-  text-align: center;
-}
-.leads-empty h3 {
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  margin-top: 16px;
-}
-.leads-empty > p {
-  font-size: var(--font-size-sm);
-  max-width: 380px;
-  line-height: 1.8;
-  color: hsl(var(--muted-foreground));
-  margin: 10px 0 21px;
-}
-.leads-empty-art {
-  position: relative;
-  height: 103px;
-  width: 122px;
-}
-.leads-empty-ring {
-  position: absolute;
-  width: 103px;
-  height: 103px;
-  top: 0;
-  left: 9px;
-  border-radius: 50%;
-  border: 1px dashed hsl(var(--primary) / 0.2);
-  background: radial-gradient(
-    circle,
-    hsl(var(--primary) / 0.04),
-    transparent 70%
-  );
-}
-.leads-empty-card {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  width: 72px;
-  height: 90px;
-  padding: 12px;
-  left: 24px;
-  top: 5px;
-  transform: rotate(-8deg);
-  border-radius: var(--radius);
-  border: 1px solid hsl(var(--primary) / 0.18);
-  background: hsl(var(--background));
-  box-shadow: 0 8px 15px hsl(var(--primary) / 0.05);
-}
-.leads-empty-card > span {
-  color: hsl(var(--primary));
-  background: hsl(var(--primary) / 0.06);
-  padding: 5px;
-  border-radius: calc(var(--radius) - 2px);
-  width: 30px;
-}
-.leads-empty-card i {
-  display: block;
-  height: 3px;
-  margin-bottom: 5px;
-  border-radius: 2px;
-  background: hsl(var(--primary) / 0.13);
-}
-.leads-empty-card i:nth-child(2) {
-  width: 75%;
-}
-.leads-empty-card i:nth-child(3) {
-  width: 50%;
-}
-.leads-empty-plus {
-  position: absolute;
-  width: 24px;
-  height: 24px;
-  padding: 4px;
-  background: hsl(var(--background));
-  border: 1px solid hsl(var(--primary) / 0.18);
-  color: hsl(var(--primary));
-  border-radius: calc(var(--radius) - 2px);
-  bottom: 3px;
-  right: -11px;
-}
-.leads-page button:focus-visible {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 2px;
-}
-@media (max-width: 1100px) {
-  .leads-toolbar {
-    flex-wrap: wrap;
-  }
-  .leads-search {
-    max-width: none;
-  }
-  .leads-filter-controls {
-    flex: 1;
-  }
-  .leads-page .leads-filter-select {
-    flex: 1;
-    min-width: 0;
-    width: auto;
-  }
-}
 @media (max-width: 767px) {
-  .leads-page {
-    gap: 16px;
-  }
-  .leads-overview {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-  }
-  .leads-metric {
-    /* Never taller than the desktop card: the narrow screen has less room to
-       spend, not more. */
-    padding: 0.875rem;
-  }
-  .leads-metric-top {
-    gap: 6px;
-    font-size: var(--font-size-sm);
-  }
-  .leads-panel-heading {
-    padding: 16px 14px;
-    align-items: flex-start;
-  }
-  .leads-toolbar {
-    padding: 0 14px 16px;
-    flex-direction: column;
-    flex-wrap: nowrap;
-    align-items: stretch;
-    gap: 10px;
-  }
-  .leads-search {
-    min-width: 0;
-    width: 100%;
-    flex: none;
-  }
-  .leads-filter-controls {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
-    gap: 8px;
-    width: 100%;
-    flex: none;
-  }
-  .leads-tabs {
-    gap: 19px;
-    padding: 0 14px;
-  }
-  .leads-tabs button {
-    font-size: var(--font-size-sm);
-  }
-  .leads-desktop {
-    display: none;
-  }
-  .leads-mobile {
-    display: block;
-  }
   .lead-mobile-card {
     padding: 18px 14px;
     border-bottom: 1px solid hsl(var(--border));
   }
+
   .lead-mobile-card:last-child {
     border-bottom: 0;
   }
+
   .lead-mobile-heading {
     display: flex;
     justify-content: space-between;
     gap: 8px;
   }
+
   .lead-mobile-heading > .lead-contact {
     min-width: 0;
     flex: 1;
     width: auto;
   }
+
   .lead-mobile-heading > button {
     flex-shrink: 0;
     width: 36px;
     height: 36px;
   }
+
   .lead-mobile-card .lead-note {
     max-width: none;
     white-space: normal;
     overflow: visible;
     line-height: 1.6;
   }
+
   .lead-mobile-stage {
     display: flex;
     align-items: center;
@@ -701,9 +310,11 @@
     gap: 12px;
     margin: 15px 0;
   }
+
   .lead-mobile-stage .lead-source {
     align-items: flex-end;
   }
+
   .lead-mobile-products {
     display: flex;
     gap: 10px;
@@ -711,13 +322,16 @@
     font-size: var(--font-size-xs);
     color: hsl(var(--muted-foreground));
   }
+
   .lead-mobile-products > span {
     flex-shrink: 0;
     padding-top: 4px;
   }
+
   .lead-mobile-products .lead-products {
     max-width: none;
   }
+
   .lead-mobile-footer {
     display: flex;
     align-items: center;
@@ -727,22 +341,12 @@
     padding-top: 13px;
     border-top: 1px solid hsl(var(--border) / 0.65);
   }
+
   .lead-mobile-footer > span:last-child {
     display: flex;
     align-items: center;
     gap: 5px;
     color: hsl(var(--muted-foreground));
     font-size: var(--font-size-xs);
-  }
-  .leads-page .leads-filter-chips {
-    padding: 12px 14px;
-  }
-  .leads-pagination {
-    padding: 0 14px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .leads-metric {
-    transition: none;
   }
 }

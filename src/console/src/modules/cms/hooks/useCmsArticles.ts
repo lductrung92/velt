@@ -1,6 +1,7 @@
 import {
   keepPreviousData,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -20,6 +21,29 @@ export function useArticles(params: ArticleListParams) {
     queryKey: cmsKeys.articleList(params),
     queryFn: () => articlesService.list(params),
     placeholderData: keepPreviousData,
+  });
+}
+
+// Counts for the overview cards. Each one is a page_size=1 request read for its
+// `total`, so the figures come from the server rather than from whatever rows
+// the current page and filters happen to hold.
+export function useArticleOverview(
+  statuses: readonly string[],
+  enabled: boolean,
+) {
+  return useQueries({
+    queries: statuses.map((status) => {
+      const params: ArticleListParams = {
+        status: (status || undefined) as ArticleListParams["status"],
+        page: 1,
+        page_size: 1,
+      };
+      return {
+        queryKey: cmsKeys.articleList(params),
+        queryFn: () => articlesService.list(params),
+        enabled,
+      };
+    }),
   });
 }
 
