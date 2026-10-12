@@ -103,26 +103,29 @@ export function EditorActionBar({ left, center, children, className }: Props) {
             : undefined
         }
       >
-        {/* The side groups share the leftover space equally (flex-1 basis-0),
-            which is what keeps the middle slot dead centre however wide the
-            back button or the action buttons happen to be. */}
+        {/* From lg up the side groups share the leftover space equally
+            (flex-1 basis-0), which is what holds the middle slot dead centre
+            however wide the back button or the actions happen to be. Below that
+            the centre drops to a row of its own: making the sides flexible on a
+            narrow bar collapses them to nothing while the buttons inside keep
+            their width, and the middle slot lands on top of them. */}
         <div
           className={cn(
             "flex min-w-0 items-center gap-2",
-            center && "flex-1 basis-0",
+            center && "lg:flex-1 lg:basis-0",
           )}
         >
           {left}
         </div>
         {center && (
-          <div className="flex min-w-0 shrink-0 items-center gap-2">
+          <div className="order-last flex w-full min-w-0 items-center gap-2 lg:order-none lg:w-auto lg:shrink-0">
             {center}
           </div>
         )}
         <div
           className={cn(
             "flex flex-wrap items-center gap-2",
-            center && "flex-1 basis-0 justify-end",
+            center && "lg:flex-1 lg:basis-0 lg:justify-end",
           )}
         >
           {children}
