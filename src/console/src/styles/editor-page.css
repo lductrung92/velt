@@ -1,0 +1,180 @@
+/*
+ * Editor-page chrome, shared by every console record editor.
+ *
+ * Sibling of list-page.css and built on the same split: this file owns the
+ * shell — the three-area grid, the cards, their heading band, the title block,
+ * the rich-text body, the search preview. Anything that names a field, a
+ * status or a record belongs to the screen that renders it.
+ *
+ * Contract for a consumer:
+ *   <form className="editor-page" data-editor="article">
+ *     EditorActionBar                 left / center (language tabs) / right
+ *     .editor-grid                    main + side + wide
+ *       .editor-main   .editor-card     the content card
+ *         .editor-heading                CardHeader; the h2 carries its own icon
+ *         .editor-titleblock             title + permalink, one unit
+ *           .editor-title                  the name of the record
+ *           SlugField                      the saved URL, locked
+ *         .editor-body                   rich text
+ *       .editor-side   .editor-card     publish / media / relations
+ *       .editor-wide   .editor-card     SEO, full width under the main column
+ *         .editor-seo-preview
+ *         .editor-social
+ *
+ * The heading band is deliberately identical to the dashboard panels: a 16px
+ * muted glyph inside the h2, 16px/600 text, 10px apart, in a 57px row. The
+ * tinted background is the one thing the editor keeps for itself.
+ *
+ * SCOPING: every stylesheet in this app is bundled globally, so a screen that
+ * overrides one of these classes MUST scope it to its own editor:
+ *   [data-editor="product"] .editor-body .ProseMirror { min-height: 32rem; }
+ */
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  grid-template-areas: "main side" "wide side";
+  gap: 1.25rem;
+  align-items: start;
+}
+.editor-main {
+  grid-area: main;
+}
+.editor-side {
+  grid-area: side;
+  min-width: 0;
+}
+.editor-wide {
+  grid-area: wide;
+}
+
+.editor-page .editor-card {
+  min-width: 0;
+  border-radius: var(--radius);
+  box-shadow: 0 3px 16px hsl(var(--foreground) / 0.025);
+}
+.editor-page .editor-heading {
+  flex-direction: row;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: hsl(var(--muted) / 0.2);
+}
+/*
+ * The icon lives inside the heading itself, the way the dashboard panels build
+ * theirs: one line of text with a mark in front of it, rather than a separate
+ * tile sitting next to a title. That is also what keeps the band the same
+ * height as those panels — the icon no longer sets the row height.
+ */
+.editor-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+/*
+ * Name and permalink are one block: the URL describes the thing named just
+ * above it, so they sit together and the card's own rhythm separates the pair
+ * from the next field rather than separating them from each other.
+ */
+.editor-titleblock {
+  margin-bottom: -0.5rem;
+}
+.editor-title input {
+  min-height: 2.75rem;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  padding: 0.75rem;
+}
+
+.editor-body .ProseMirror {
+  min-height: 24rem;
+  padding: 1.25rem;
+  font-size: var(--font-size-sm);
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.editor-body .ProseMirror p {
+  margin: 0 0 0.75rem;
+}
+.editor-body .ProseMirror h2 {
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  margin: 1.25rem 0 0.75rem;
+}
+.editor-body .ProseMirror h3 {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+}
+.editor-body .ProseMirror ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+.editor-body .ProseMirror ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+}
+.editor-body .ProseMirror blockquote {
+  border-left: 3px solid hsl(var(--primary) / 0.25);
+  padding-left: 1rem;
+  color: hsl(var(--muted-foreground));
+}
+.editor-body .ProseMirror pre {
+  overflow-x: auto;
+  max-width: 100%;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  background: hsl(var(--muted));
+}
+
+.editor-page .editor-image {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 16 / 9;
+}
+.editor-image button[title] {
+  opacity: 1;
+}
+
+.editor-seo-preview {
+  border: 1px dashed hsl(var(--border));
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: hsl(var(--muted) / 0.15);
+}
+.editor-social {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.6fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 1279px) {
+  .editor-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "main" "side" "wide";
+  }
+  .editor-side {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .editor-side > * {
+    margin-top: 0 !important;
+  }
+}
+@media (max-width: 767px) {
+  .editor-side,
+  .editor-social {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .editor-body .ProseMirror {
+    min-height: 20rem;
+    padding: 1rem;
+  }
+  .editor-title input {
+    font-size: var(--font-size-lg);
+  }
+}

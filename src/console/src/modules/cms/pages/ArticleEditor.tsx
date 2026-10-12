@@ -58,7 +58,7 @@ import { useEntityTranslation } from "@/modules/translation/hooks/useEntityTrans
 import { ArticleImageButton } from "../components/ArticleImageButton";
 import { ArticleTranslationPanel } from "../components/ArticleTranslationPanel";
 import { ArticleStatusBadge } from "../components/ArticleStatusBadge";
-import "./article-editor.css";
+import "@/styles/editor-page.css";
 import {
   useArticle,
   useCreateArticle,
@@ -455,7 +455,12 @@ export default function ArticleEditor() {
 
   return (
     <Form {...form}>
-      <form onSubmit={onSubmit} noValidate className="article-editor space-y-5">
+      <form
+        onSubmit={onSubmit}
+        noValidate
+        className="editor-page space-y-5"
+        data-editor="article"
+      >
         <PageHeader
           title={
             isEdit
@@ -516,24 +521,21 @@ export default function ArticleEditor() {
             }}
           />
         )}
-        <div className="article-editor-grid" hidden={!tr.isBase}>
-          <Card
-            className="article-editor-content article-editor-card"
-            id="art-basic"
-          >
-            <CardHeader className="article-editor-heading">
+        <div className="editor-grid" hidden={!tr.isBase}>
+          <Card className="editor-main editor-card" id="art-basic">
+            <CardHeader className="editor-heading">
               <CardTitle>
                 <PenLine className="size-4 text-muted-foreground" aria-hidden />
                 {t("cms.articles.editor.content")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="article-editor-titleblock space-y-2">
+              <div className="editor-titleblock space-y-2">
                 <FormField
                   control={form.control}
                   name="title"
                   render={({ field }) => (
-                    <FormItem className="article-editor-title">
+                    <FormItem className="editor-title">
                       <FormLabel required>
                         {t("cms.articles.field.title")}
                       </FormLabel>
@@ -596,7 +598,7 @@ export default function ArticleEditor() {
                         value={field.value}
                         editable={!isReadOnly}
                         ariaLabel={t("cms.articles.field.body")}
-                        className="article-editor-body"
+                        className="editor-body"
                         extraExtensions={bodyExtensions}
                         renderToolbarExtras={renderBodyToolbar}
                         onChange={(html, json) => {
@@ -635,11 +637,11 @@ export default function ArticleEditor() {
             </CardContent>
           </Card>
           <aside
-            className="article-editor-settings space-y-4"
+            className="editor-side space-y-4"
             aria-label={t("cms.articles.editor.settings")}
           >
-            <Card className="article-editor-card">
-              <CardHeader className="article-editor-heading">
+            <Card className="editor-card">
+              <CardHeader className="editor-heading">
                 <CardTitle>
                   <SlidersHorizontal
                     className="size-4 text-muted-foreground"
@@ -737,8 +739,8 @@ export default function ArticleEditor() {
                 />
               </CardContent>
             </Card>
-            <Card className="article-editor-card">
-              <CardHeader className="article-editor-heading">
+            <Card className="editor-card">
+              <CardHeader className="editor-heading">
                 <CardTitle>
                   <ImageIcon
                     className="size-4 text-muted-foreground"
@@ -752,7 +754,7 @@ export default function ArticleEditor() {
                   type="rounded"
                   ratio={16 / 9}
                   width={280}
-                  className="article-editor-image"
+                  className="editor-image"
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   showCamera={false}
                   disabled={isReadOnly}
@@ -768,15 +770,15 @@ export default function ArticleEditor() {
               </CardContent>
             </Card>
           </aside>
-          <Card className="article-editor-seo article-editor-card" id="art-seo">
-            <CardHeader className="article-editor-heading">
+          <Card className="editor-wide editor-card" id="art-seo">
+            <CardHeader className="editor-heading">
               <CardTitle>
                 <Search className="size-4 text-muted-foreground" aria-hidden />
                 {t("cms.articles.editor.seo")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="article-editor-search-preview">
+              <div className="editor-seo-preview">
                 <p className="mb-3 text-xs font-medium text-muted-foreground">
                   {t("cms.articles.editor.search_preview")}
                 </p>
@@ -894,7 +896,7 @@ export default function ArticleEditor() {
                   <Globe2 className="size-4 text-primary" aria-hidden />
                   {t("cms.articles.editor.social")}
                 </h3>
-                <div className="article-editor-social">
+                <div className="editor-social">
                   <div className="space-y-4">
                     {" "}
                     <FormField
@@ -945,7 +947,7 @@ export default function ArticleEditor() {
                       type="rounded"
                       ratio={16 / 9}
                       width={280}
-                      className="article-editor-image"
+                      className="editor-image"
                       accept="image/jpeg,image/png,image/webp,image/gif"
                       showCamera={false}
                       disabled={isReadOnly}
