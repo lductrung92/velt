@@ -67,10 +67,10 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
         id="art-translation"
       >
         <CardHeader className="article-editor-heading">
-          <span className="article-editor-heading-icon">
-            <PenLine className="size-4" aria-hidden />
-          </span>
-          <CardTitle>{tl("cms.articles.editor.content")}</CardTitle>
+          <CardTitle>
+            <PenLine className="size-4 text-muted-foreground" aria-hidden />
+            {tl("cms.articles.editor.content")}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Same class the Vietnamese form gives its title, so switching
@@ -139,10 +139,10 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
       <aside className="article-editor-settings space-y-5">
         <Card className="article-editor-card">
           <CardHeader className="article-editor-heading">
-            <span className="article-editor-heading-icon">
-              <Link2 className="size-4" aria-hidden />
-            </span>
-            <CardTitle>{tl("cms.articles.editor.permalink")}</CardTitle>
+            <CardTitle>
+              <Link2 className="size-4 text-muted-foreground" aria-hidden />
+              {tl("cms.articles.editor.permalink")}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <TranslatedField
@@ -164,10 +164,10 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
 
         <Card className="article-editor-card">
           <CardHeader className="article-editor-heading">
-            <span className="article-editor-heading-icon">
-              <Lock className="size-4" aria-hidden />
-            </span>
-            <CardTitle>{tl("tr.shared_title")}</CardTitle>
+            <CardTitle>
+              <Lock className="size-4 text-muted-foreground" aria-hidden />
+              {tl("tr.shared_title")}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="tr-shared">
@@ -182,10 +182,10 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
 
       <Card className="article-editor-seo article-editor-card">
         <CardHeader className="article-editor-heading">
-          <span className="article-editor-heading-icon">
-            <Search className="size-4" aria-hidden />
-          </span>
-          <CardTitle>{tl("cms.articles.editor.seo")}</CardTitle>
+          <CardTitle>
+            <Search className="size-4 text-muted-foreground" aria-hidden />
+            {tl("cms.articles.editor.seo")}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="article-editor-search-preview">

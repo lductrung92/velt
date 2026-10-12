@@ -23,24 +23,19 @@
 .article-editor .article-editor-heading {
   flex-direction: row;
   align-items: center;
-  /* Same 10px the dashboard panels put between a heading and its icon. */
-  gap: 0.625rem;
   padding: 1rem 1.25rem;
   background: hsl(var(--muted) / 0.2);
 }
-.article-editor-heading > :last-child {
-  margin-top: 0;
-}
 /*
- * A plain muted glyph, not a tinted tile — the same mark the dashboard panels
- * use. The tile read as a button and gave every card heading more weight than
- * the content under it.
+ * The icon lives inside the heading itself, the way the dashboard panels build
+ * theirs: one line of text with a mark in front of it, rather than a separate
+ * tile sitting next to a title. That is also what keeps the band the same
+ * height as those panels — the icon no longer sets the row height.
  */
-.article-editor-heading-icon {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  color: hsl(var(--muted-foreground));
+.article-editor-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
 }
 .article-editor-title input {
   min-height: 2.75rem;

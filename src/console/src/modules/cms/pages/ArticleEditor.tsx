@@ -522,10 +522,10 @@ export default function ArticleEditor() {
             id="art-basic"
           >
             <CardHeader className="article-editor-heading">
-              <span className="article-editor-heading-icon">
-                <PenLine className="size-4" aria-hidden />
-              </span>
-              <CardTitle>{t("cms.articles.editor.content")}</CardTitle>
+              <CardTitle>
+                <PenLine className="size-4 text-muted-foreground" aria-hidden />
+                {t("cms.articles.editor.content")}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
@@ -638,10 +638,13 @@ export default function ArticleEditor() {
           >
             <Card className="article-editor-card">
               <CardHeader className="article-editor-heading">
-                <span className="article-editor-heading-icon">
-                  <SlidersHorizontal className="size-4" aria-hidden />
-                </span>
-                <CardTitle>{t("cms.articles.editor.publish")}</CardTitle>
+                <CardTitle>
+                  <SlidersHorizontal
+                    className="size-4 text-muted-foreground"
+                    aria-hidden
+                  />
+                  {t("cms.articles.editor.publish")}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
                 {!isReadOnly && (
@@ -734,10 +737,13 @@ export default function ArticleEditor() {
             </Card>
             <Card className="article-editor-card">
               <CardHeader className="article-editor-heading">
-                <span className="article-editor-heading-icon">
-                  <ImageIcon className="size-4" aria-hidden />
-                </span>
-                <CardTitle>{t("cms.articles.field.featured")}</CardTitle>
+                <CardTitle>
+                  <ImageIcon
+                    className="size-4 text-muted-foreground"
+                    aria-hidden
+                  />
+                  {t("cms.articles.field.featured")}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <ImageUpload
@@ -762,10 +768,10 @@ export default function ArticleEditor() {
           </aside>
           <Card className="article-editor-seo article-editor-card" id="art-seo">
             <CardHeader className="article-editor-heading">
-              <span className="article-editor-heading-icon">
-                <Search className="size-4" aria-hidden />
-              </span>
-              <CardTitle>{t("cms.articles.editor.seo")}</CardTitle>
+              <CardTitle>
+                <Search className="size-4 text-muted-foreground" aria-hidden />
+                {t("cms.articles.editor.seo")}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="article-editor-search-preview">
