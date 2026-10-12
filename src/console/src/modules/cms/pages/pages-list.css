@@ -1,0 +1,155 @@
+/* Page-row content. The chrome around it is src/styles/list-page.css; only what
+ * is specific to a static page lives here.
+ *
+ * Every rule that touches a shared `list-*` class is scoped to this screen —
+ * stylesheets are bundled globally, so an unscoped override repaints the other
+ * list screens too. */
+
+/* --- Page status accents, handed to the shared chrome --- */
+[data-list="pages"] .list-metric[data-kind="draft"] {
+  --list-metric-accent: 220 9% 46%;
+}
+[data-list="pages"] .list-metric[data-kind="published"] {
+  --list-metric-accent: 166 75% 30%;
+}
+[data-list="pages"] .list-metric[data-kind="landing"] {
+  --list-metric-accent: 265 65% 55%;
+}
+.dark [data-list="pages"] .list-metric[data-kind="draft"] {
+  --list-metric-accent: 220 13% 69%;
+}
+.dark [data-list="pages"] .list-metric[data-kind="published"] {
+  --list-metric-accent: 166 55% 62%;
+}
+.dark [data-list="pages"] .list-metric[data-kind="landing"] {
+  --list-metric-accent: 265 70% 75%;
+}
+[data-list="pages"] .list-tabs button[data-status="draft"] i {
+  background: hsl(220 9% 46%);
+}
+[data-list="pages"] .list-tabs button[data-status="scheduled"] i {
+  background: #8952d4;
+}
+[data-list="pages"] .list-tabs button[data-status="published"] i {
+  background: #13896f;
+}
+[data-list="pages"] .list-tabs button[data-status="archived"] i {
+  background: hsl(var(--muted-foreground));
+}
+
+/* The title column takes the slack; the rest keep their natural width. */
+[data-list="pages"] .list-desktop td:first-child,
+[data-list="pages"] .list-desktop th:first-child {
+  width: 46%;
+  max-width: 0;
+}
+
+/* --- Row content --- */
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+/* Depth is an inline style on the row, because it comes from the data rather
+   than from a fixed set of levels. */
+.page-title[data-depth="0"] > .page-branch {
+  display: none;
+}
+/* The elbow that makes a child read as a child. Drawn rather than indented
+   with whitespace so the relationship survives a narrow column. */
+.page-branch {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin-left: 2px;
+  border-left: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+  border-bottom-left-radius: 4px;
+}
+.page-title > a {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.page-title > a:hover {
+  color: hsl(var(--primary));
+}
+.page-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border: 1px solid hsl(265 65% 55% / 0.22);
+  border-radius: 999px;
+  background: hsl(265 65% 55% / 0.07);
+  font-size: var(--font-size-xs);
+  color: hsl(265 65% 45%);
+  white-space: nowrap;
+}
+.dark .page-badge {
+  color: hsl(265 70% 78%);
+}
+.page-children {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+/* The slug is the public URL; monospace so a stray character is visible. */
+.page-path {
+  display: inline-block;
+  max-width: 100%;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.page-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+/* A flat list is a deliberate state, not a glitch — say so once, above the
+   table, rather than letting the missing hierarchy look like a bug. */
+.page-flat-notice {
+  padding: 10px 20px 0;
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+}
+
+@media (max-width: 767px) {
+  .page-mobile-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .page-mobile-card:last-child {
+    border-bottom: 0;
+  }
+  .page-mobile-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .page-mobile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+  }
+  .page-flat-notice {
+    padding: 10px 14px 0;
+  }
+}

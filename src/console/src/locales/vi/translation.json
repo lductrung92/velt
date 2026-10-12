@@ -599,6 +599,38 @@
         "deleted": "Đã xoá trang",
         "published": "Đã xuất bản",
         "unpublished": "Đã gỡ xuất bản"
+      },
+      "list_title": "Danh sách trang",
+      "list_hint": "Trang tĩnh của website",
+      "record_count_one": "{{count}} trang",
+      "record_count_other": "{{count}} trang",
+      "search_label": "Tìm trang",
+      "search_ph": "Tiêu đề hoặc đường dẫn",
+      "filter_status": "Lọc theo trạng thái",
+      "all_statuses": "Tất cả",
+      "empty_title": "Chưa có trang nào",
+      "empty_hint": "Trang tĩnh như Giới thiệu hay Liên hệ sẽ nằm ở đây, kèm cây phân cấp.",
+      "no_results": "Không tìm thấy trang",
+      "no_results_hint": "Thử bỏ bớt bộ lọc hoặc đổi từ khoá tìm kiếm.",
+      "flat_notice": "Đang lọc nên danh sách hiển thị phẳng, không theo cây.",
+      "child_count_one": "{{count}} trang con",
+      "child_count_other": "{{count}} trang con",
+      "col": {
+        "title": "Trang",
+        "path": "Đường dẫn",
+        "status": "Trạng thái",
+        "actions": "Thao tác"
+      },
+      "overview": {
+        "label": "Tổng quan trang",
+        "total": "Tổng số trang",
+        "total_hint": "Toàn bộ cây trang",
+        "draft": "Bản nháp",
+        "draft_hint": "Chưa công khai",
+        "published": "Đã xuất bản",
+        "published_hint": "Đang hiển thị công khai",
+        "landing": "Trang landing",
+        "landing_hint": "Dựng bằng trình kéo thả"
       }
     },
     "settings": {

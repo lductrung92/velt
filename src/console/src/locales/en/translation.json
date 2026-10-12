@@ -551,6 +551,38 @@
         "deleted": "Page deleted",
         "published": "Page published",
         "unpublished": "Page unpublished"
+      },
+      "list_title": "Pages",
+      "list_hint": "Static pages on the site",
+      "record_count_one": "{{count}} page",
+      "record_count_other": "{{count}} pages",
+      "search_label": "Search pages",
+      "search_ph": "Title or path",
+      "filter_status": "Filter by status",
+      "all_statuses": "All",
+      "empty_title": "No pages yet",
+      "empty_hint": "Static pages such as About or Contact live here, with their hierarchy.",
+      "no_results": "No pages found",
+      "no_results_hint": "Try removing a filter or changing the search term.",
+      "flat_notice": "Filtered, so the list is flat rather than nested.",
+      "child_count_one": "{{count}} child page",
+      "child_count_other": "{{count}} child pages",
+      "col": {
+        "title": "Page",
+        "path": "Path",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "overview": {
+        "label": "Page overview",
+        "total": "Total pages",
+        "total_hint": "The whole page tree",
+        "draft": "Drafts",
+        "draft_hint": "Not public yet",
+        "published": "Published",
+        "published_hint": "Live on the site",
+        "landing": "Landing pages",
+        "landing_hint": "Built with the page builder"
       }
     },
     "settings": {

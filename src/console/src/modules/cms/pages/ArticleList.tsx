@@ -552,91 +552,82 @@ export default function ArticleList() {
                   : "cms.articles.empty_hint",
               )}
             </p>
-            {hasFilters ? (
-              <Button variant="outline" size="sm" onClick={reset}>
-                {t("common.reset")}
+            {!hasFilters && canCreate && (
+              <Button size="sm" onClick={() => navigate("/cms/articles/new")}>
+                <Plus className="size-4" />
+                {t("cms.articles.btn.create")}
               </Button>
-            ) : (
-              canCreate && (
-                <Button size="sm" onClick={() => navigate("/cms/articles/new")}>
-                  <Plus className="size-4" />
-                  {t("cms.articles.btn.create")}
-                </Button>
-              )
             )}
           </div>
         ) : (
           <>
-            <div className="list-table-wrap">
-              <div className="list-desktop">
-                <Table scroll={false} data-testid="cms-articles-table">
-                  <TableHeader>
-                    <TableRow>
-                      {sortHead("title", t("cms.articles.col.title"))}
-                      {sortHead("status", t("cms.articles.col.status"))}
-                      <TableHead>{t("cms.articles.col.category")}</TableHead>
-                      <TableHead>{t("cms.articles.col.author")}</TableHead>
-                      {sortHead(
-                        "published_at",
-                        t("cms.articles.col.published"),
-                      )}
-                      {sortHead("updated_at", t("cms.articles.col.updated"))}
-                      <TableHead className="text-right">
-                        {t("cms.articles.col.actions")}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((a) => (
-                      <TableRow key={a.id} data-testid="cms-article-row">
-                        <TableCell>{titleCell(a)}</TableCell>
-                        <TableCell>
-                          <ArticleStatusBadge status={a.status} />
-                        </TableCell>
-                        <TableCell>{taxonomy(a)}</TableCell>
-                        <TableCell>{author(a)}</TableCell>
-                        <TableCell>
-                          {a.published_at ? (
-                            <span className="article-dates">
-                              <strong>{date(a.published_at)}</strong>
-                            </span>
-                          ) : (
-                            <span className="article-muted">
-                              {t("cms.articles.not_published")}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
+            <div className="list-desktop">
+              <Table
+                scroll={false}
+                data-testid="cms-articles-table"
+                wrapperClassName="list-table-wrap"
+              >
+                <TableHeader>
+                  <TableRow>
+                    {sortHead("title", t("cms.articles.col.title"))}
+                    {sortHead("status", t("cms.articles.col.status"))}
+                    <TableHead>{t("cms.articles.col.category")}</TableHead>
+                    <TableHead>{t("cms.articles.col.author")}</TableHead>
+                    {sortHead("published_at", t("cms.articles.col.published"))}
+                    {sortHead("updated_at", t("cms.articles.col.updated"))}
+                    <TableHead className="text-right">
+                      {t("cms.articles.col.actions")}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((a) => (
+                    <TableRow key={a.id} data-testid="cms-article-row">
+                      <TableCell>{titleCell(a)}</TableCell>
+                      <TableCell>
+                        <ArticleStatusBadge status={a.status} />
+                      </TableCell>
+                      <TableCell>{taxonomy(a)}</TableCell>
+                      <TableCell>{author(a)}</TableCell>
+                      <TableCell>
+                        {a.published_at ? (
                           <span className="article-dates">
-                            <strong>{date(a.updated_at)}</strong>
-                            <span>{time(a.updated_at)}</span>
+                            <strong>{date(a.published_at)}</strong>
                           </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {actions(a)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                        ) : (
+                          <span className="article-muted">
+                            {t("cms.articles.not_published")}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="article-dates">
+                          <strong>{date(a.updated_at)}</strong>
+                          <span>{time(a.updated_at)}</span>
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">{actions(a)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
 
-              <div className="list-mobile">
-                {items.map((a) => (
-                  <div className="article-mobile-card" key={a.id}>
-                    <div className="article-mobile-heading">
-                      {titleCell(a)}
-                      {actions(a)}
-                    </div>
-                    <div className="article-mobile-meta">
-                      <ArticleStatusBadge status={a.status} />
-                      {taxonomy(a)}
-                      {author(a)}
-                    </div>
-                    {dates(a)}
+            <div className="list-mobile">
+              {items.map((a) => (
+                <div className="article-mobile-card" key={a.id}>
+                  <div className="article-mobile-heading">
+                    {titleCell(a)}
+                    {actions(a)}
                   </div>
-                ))}
-              </div>
+                  <div className="article-mobile-meta">
+                    <ArticleStatusBadge status={a.status} />
+                    {taxonomy(a)}
+                    {author(a)}
+                  </div>
+                  {dates(a)}
+                </div>
+              ))}
             </div>
 
             <div className="list-pagination">
