@@ -872,10 +872,32 @@
         }
       },
       "search_label": "Search",
-      "search_ph": "Search by name or slug",
+      "search_ph": "Name or slug",
       "editor": {
         "settings": "Settings",
         "basic": "Basic information"
+      },
+      "list_title": "Categories",
+      "list_hint": "The article category tree",
+      "record_count_one": "{{count}} category",
+      "record_count_other": "{{count}} categories",
+      "article_count_one": "{{count}} article",
+      "article_count_other": "{{count}} articles",
+      "flat_notice": "Filtered, so the list is flat and reordering is paused.",
+      "empty_title": "No categories yet",
+      "empty_hint": "Categories group articles together and shape the public URLs.",
+      "no_results": "No categories found",
+      "no_results_hint": "Try another search term or clear the filter.",
+      "overview": {
+        "label": "Category overview",
+        "total": "Total categories",
+        "total_hint": "The whole tree",
+        "roots": "Top level",
+        "roots_hint": "At the root of the tree",
+        "used": "In use",
+        "used_hint": "Has articles",
+        "unused": "Empty",
+        "unused_hint": "Could be merged or removed"
       }
     },
     "articles": {

@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2 } from "lucide-react";
+import { FileText, GripVertical, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -47,44 +47,49 @@ export function CategoryTreeRow({
     <TableRow
       ref={setNodeRef}
       style={style}
+      data-testid="cms-category-row"
       className={isDragging ? "opacity-50" : undefined}
     >
-      <TableCell className="font-medium">
-        <div
-          className="flex items-center gap-1"
-          style={{ paddingLeft: depth * INDENT_WIDTH }}
-        >
+      <TableCell style={{ paddingLeft: 20 + depth * INDENT_WIDTH }}>
+        <div className="category-name">
           {canManage && reorderable && (
             <button
               type="button"
               aria-label={t("cms.categories.reorder")}
               title={t("cms.categories.reorder")}
-              className="cursor-grab touch-none rounded-sm p-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="category-grip"
               {...attributes}
               {...listeners}
             >
               <GripVertical className="size-4" />
             </button>
           )}
-          <span>{node.name}</span>
+          {depth > 0 && <span className="category-branch" aria-hidden />}
+          <strong>{node.name}</strong>
         </div>
       </TableCell>
-      <TableCell className="font-mono text-xs text-muted-foreground">
-        {node.slug}
+      <TableCell>
+        <span className="category-slug">{node.slug}</span>
       </TableCell>
-      <TableCell className="text-right text-muted-foreground">
-        {node.articleCount}
+      <TableCell>
+        <span
+          className="category-count"
+          data-empty={node.articleCount === 0 ? "true" : "false"}
+        >
+          <FileText className="size-3" aria-hidden />
+          {t("cms.categories.article_count", { count: node.articleCount })}
+        </span>
       </TableCell>
-      <TableCell className="text-right text-muted-foreground">
-        {node.sortOrder}
+      <TableCell className="text-right">
+        <span className="category-order">{node.sortOrder}</span>
       </TableCell>
       <TableCell className="text-right">
         {canManage && (
-          <div className="flex justify-end gap-1">
+          <div className="category-row-actions">
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size="icon"
               aria-label={t("common.edit")}
               title={t("common.edit")}
               onClick={() => onEdit(node.id)}
@@ -94,7 +99,7 @@ export function CategoryTreeRow({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size="icon"
               aria-label={t("common.delete")}
               title={t("common.delete")}
               onClick={() => onDelete(node.id)}

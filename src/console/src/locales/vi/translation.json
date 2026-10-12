@@ -920,10 +920,32 @@
         }
       },
       "search_label": "Tìm kiếm",
-      "search_ph": "Tìm theo tên hoặc slug",
+      "search_ph": "Tên hoặc đường dẫn",
       "editor": {
         "settings": "Thiết lập",
         "basic": "Thông tin cơ bản"
+      },
+      "list_title": "Danh sách chuyên mục",
+      "list_hint": "Cây chuyên mục của bài viết",
+      "record_count_one": "{{count}} chuyên mục",
+      "record_count_other": "{{count}} chuyên mục",
+      "article_count_one": "{{count}} bài",
+      "article_count_other": "{{count}} bài",
+      "flat_notice": "Đang lọc nên danh sách hiển thị phẳng và tạm khoá kéo sắp xếp.",
+      "empty_title": "Chưa có chuyên mục nào",
+      "empty_hint": "Chuyên mục giúp nhóm bài viết lại và tạo đường dẫn cho website.",
+      "no_results": "Không tìm thấy chuyên mục",
+      "no_results_hint": "Thử đổi từ khoá hoặc bỏ bộ lọc.",
+      "overview": {
+        "label": "Tổng quan chuyên mục",
+        "total": "Tổng số mục",
+        "total_hint": "Toàn bộ cây chuyên mục",
+        "roots": "Mục gốc",
+        "roots_hint": "Nằm ở cấp cao nhất",
+        "used": "Có bài viết",
+        "used_hint": "Đang được dùng",
+        "unused": "Chưa có bài",
+        "unused_hint": "Có thể gộp hoặc bỏ"
       }
     },
     "articles": {

@@ -17,7 +17,9 @@
  *       .list-panel-heading   h2 + p
  *       .list-toolbar         .list-search + .list-filter-controls
  *       .list-tabs            buttons with aria-pressed; `i` is the status dot,
- *                             coloured by the consumer
+ *                             coloured by the consumer. A screen with no status
+ *                             axis omits it and adds .list-toolbar-edge to the
+ *                             toolbar so the panel still gets its dividing rule.
  *       .list-table-wrap      .list-desktop (table) + .list-mobile (cards)
  *       .list-pagination
  *     .list-empty           empty state with .list-empty-art
@@ -157,6 +159,12 @@
   justify-content: space-between;
   gap: 14px;
   padding: 0 20px 18px;
+}
+/* The tabs row normally closes the toolbar with a rule. A list with no status
+   axis has no tabs, so it asks for that rule here instead — otherwise the
+   controls run straight into the table with nothing between them. */
+.list-toolbar-edge {
+  border-bottom: 1px solid hsl(var(--border));
 }
 .list-search {
   position: relative;

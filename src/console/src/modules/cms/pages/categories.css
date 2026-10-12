@@ -1,0 +1,161 @@
+/* Category-row content. The chrome around it is src/styles/list-page.css; only
+ * what is specific to a taxonomy node lives here.
+ *
+ * Every rule that touches a shared `list-*` class is scoped to this screen —
+ * stylesheets are bundled globally, so an unscoped override repaints the other
+ * list screens too. */
+
+/* --- Overview accents, handed to the shared chrome --- */
+[data-list="categories"] .list-metric[data-kind="roots"] {
+  --list-metric-accent: 265 65% 55%;
+}
+[data-list="categories"] .list-metric[data-kind="used"] {
+  --list-metric-accent: 166 75% 30%;
+}
+[data-list="categories"] .list-metric[data-kind="unused"] {
+  --list-metric-accent: 32 95% 44%;
+}
+.dark [data-list="categories"] .list-metric[data-kind="roots"] {
+  --list-metric-accent: 265 70% 75%;
+}
+.dark [data-list="categories"] .list-metric[data-kind="used"] {
+  --list-metric-accent: 166 55% 62%;
+}
+.dark [data-list="categories"] .list-metric[data-kind="unused"] {
+  --list-metric-accent: 38 92% 65%;
+}
+
+/* The name column takes the slack; counts and actions keep their own width. */
+[data-list="categories"] .list-desktop td:first-child,
+[data-list="categories"] .list-desktop th:first-child {
+  width: 46%;
+  max-width: 0;
+}
+
+/* --- Row content --- */
+
+.category-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+/* The elbow that makes a child read as a child, drawn rather than spelled with
+   whitespace so the relationship survives a narrow column. */
+.category-branch {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin-right: 2px;
+  border-left: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+  border-bottom-left-radius: 4px;
+}
+.category-name > strong {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* The handle only appears on the unfiltered tree, where sort_order is the
+   thing being changed. It stays dim until the row is approached so a long list
+   does not read as a field of grip dots. */
+.category-grip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 4px;
+  color: hsl(var(--muted-foreground) / 0.45);
+  cursor: grab;
+  touch-action: none;
+  transition: color 0.15s;
+}
+tr:hover > td .category-grip,
+.category-grip:focus-visible {
+  color: hsl(var(--muted-foreground));
+}
+.category-grip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+.category-slug {
+  display: inline-block;
+  max-width: 100%;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* An article count is a link to work: zero is worth noticing, not hiding. */
+.category-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--muted) / 0.4);
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+.category-count[data-empty="true"] {
+  border-color: hsl(32 95% 44% / 0.22);
+  background: hsl(32 95% 44% / 0.07);
+  color: hsl(32 95% 36%);
+}
+.dark .category-count[data-empty="true"] {
+  color: hsl(38 92% 68%);
+}
+.category-order {
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+  font-variant-numeric: tabular-nums;
+}
+.category-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+/* A flat list is a deliberate state, not a glitch: say so once, above the
+   table, rather than letting the missing hierarchy and the missing drag
+   handles look like a bug. */
+.category-flat-notice {
+  padding: 10px 20px 0;
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+}
+
+@media (max-width: 767px) {
+  .category-mobile-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .category-mobile-card:last-child {
+    border-bottom: 0;
+  }
+  .category-mobile-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .category-mobile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+  }
+  .category-flat-notice {
+    padding: 10px 14px 0;
+  }
+}
