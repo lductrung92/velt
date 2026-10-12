@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import {
   leadsService,
@@ -16,6 +21,20 @@ export function useLeads(params: LeadListParams) {
   return useQuery({
     queryKey: leadKeys.list(params),
     queryFn: () => leadsService.list(params),
+  });
+}
+
+// Use server totals, not counts from the currently paginated/filtered rows.
+export function useLeadOverview(enabled: boolean) {
+  return useQueries({
+    queries: ["", "new", "qualified", "won"].map((status) => {
+      const params = { status, page: 1, page_size: 1 };
+      return {
+        queryKey: leadKeys.list(params),
+        queryFn: () => leadsService.list(params),
+        enabled,
+      };
+    }),
   });
 }
 

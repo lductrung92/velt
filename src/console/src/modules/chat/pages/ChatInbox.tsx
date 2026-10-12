@@ -1,5 +1,23 @@
-import { MessageSquare, Send, UserCheck, UserMinus, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import {
+  ArrowDown,
+  ArrowLeft,
+  Bot,
+  CheckCheck,
+  ChevronRight,
+  Headphones,
+  Inbox,
+  Loader2,
+  MessageCircle,
+  MessageSquare,
+  RotateCcw,
+  Search,
+  Send,
+  User,
+  UserCheck,
+  UserMinus,
+  X,
+} from "lucide-react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -7,6 +25,7 @@ import { Alert } from "@/components/common/Alert";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge, type StatusTone } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -22,7 +41,8 @@ import {
   useReply,
   useTranscript,
 } from "../hooks/useChat";
-import type { ConversationState, MessageRole } from "../services/chat.service";
+import type { ConversationState, InboxItem } from "../services/chat.service";
+import "./chat-inbox.css";
 
 const STATE_TONE: Record<ConversationState, StatusTone> = {
   bot: "neutral",
@@ -30,250 +50,616 @@ const STATE_TONE: Record<ConversationState, StatusTone> = {
   human: "success",
   closed: "neutral",
 };
+const FILTERS = ["all", "waiting", "human", "bot", "closed"] as const;
+type Filter = (typeof FILTERS)[number];
+const reference = (id: string) => id.slice(-6).toUpperCase();
 
-/** Who said it. `staff` is a colleague, `assistant` is the bot — a transcript
- *  read back later has to be able to tell them apart. */
-function roleTone(role: MessageRole): string {
-  switch (role) {
-    case "visitor":
-      return "bg-muted";
-    case "staff":
-      return "bg-primary text-primary-foreground";
-    case "system":
-      return "bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200";
-    default:
-      return "bg-background border";
-  }
+function ConversationArtwork() {
+  return (
+    <div className="chat-welcome-art" aria-hidden="true">
+      <div className="chat-welcome-orbit" />
+      <div className="chat-art-card chat-art-card-back">
+        <User />
+        <div>
+          <i />
+          <i />
+        </div>
+      </div>
+      <div className="chat-art-card chat-art-card-front">
+        <Bot />
+        <div>
+          <i />
+          <i />
+          <i />
+        </div>
+        <span>
+          <CheckCheck />
+        </span>
+      </div>
+      <span className="chat-art-badge">
+        <MessageCircle />
+      </span>
+    </div>
+  );
 }
 
-// The operator's side of the assistant: the live queue, and one conversation at
-// a time. Opening this screen puts you on duty — see usePresenceHeartbeat.
+// Opening this screen keeps the existing operator heartbeat active. Actions
+// use the existing staff endpoints and their server authorization.
 export default function ChatInbox() {
-  const { t } = useTranslation();
-  const [selected, setSelected] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
-
-  const inbox = useInbox();
+  const { t, i18n } = useTranslation();
+  const [selection, setSelection] = useState<InboxItem | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [search, setSearch] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [newMessages, setNewMessages] = useState(false);
+  const selected = selection?.id ?? null;
+  const inbox = useInbox(filter === "all" ? undefined : filter);
   const transcript = useTranscript(selected);
   const claim = useClaim();
   const release = useRelease();
   const closeOne = useCloseConversation();
   const reply = useReply(selected);
   const log = useRef<HTMLDivElement>(null);
-
-  // Being on this screen IS being on duty. The assistant refuses a handoff when
-  // nobody has beaten recently, so leaving the screen takes you off the rota.
+  const atBottom = useRef(true);
   usePresenceHeartbeat(true);
 
-  const current = inbox.data?.find((c) => c.id === selected) ?? null;
+  const current = inbox.data?.find((c) => c.id === selected) ?? selection;
+  const draft = selected ? (drafts[selected] ?? "") : "";
+  const query = search.trim().toLocaleLowerCase(i18n.language);
+  const conversations = (inbox.data ?? []).filter(
+    (c) =>
+      !query ||
+      `${c.id} ${c.last_message ?? ""}`
+        .toLocaleLowerCase(i18n.language)
+        .includes(query),
+  );
+  const lastMessage = transcript.data?.at(-1)?.id;
+  const sendingDisabled =
+    !current || current.state === "closed" || reply.isPending;
+  const fail = (err: unknown) => toast.error(parseApiError(err, t).message);
+  const time = (iso: string) =>
+    new Intl.DateTimeFormat(i18n.language, {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(iso));
+  const date = (iso: string) =>
+    new Intl.DateTimeFormat(i18n.language, {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(iso));
 
   useEffect(() => {
-    if (log.current) log.current.scrollTop = log.current.scrollHeight;
-  }, [transcript.data]);
+    if (!log.current) return;
+    if (atBottom.current) log.current.scrollTop = log.current.scrollHeight;
+    else if (lastMessage) setNewMessages(true);
+  }, [lastMessage, selected]);
 
-  const fail = (err: unknown) => toast.error(parseApiError(err, t).message);
+  useEffect(() => {
+    const element = log.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => {
+      if (atBottom.current) element.scrollTop = element.scrollHeight;
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [selected]);
 
+  const open = (item: InboxItem) => {
+    atBottom.current = true;
+    setNewMessages(false);
+    setSelection(item);
+  };
   const send = () => {
     const text = draft.trim();
-    if (!text || !selected) return;
+    if (!text || !selected || sendingDisabled) return;
+    const sentTo = selected;
     reply.mutate(text, {
-      onSuccess: () => setDraft(""),
+      onSuccess: () => {
+        setDrafts((previous) => ({ ...previous, [sentTo]: "" }));
+        atBottom.current = true;
+      },
       onError: fail,
     });
   };
+  const changeState = (state: ConversationState) => {
+    if (current)
+      setSelection((previous) =>
+        previous?.id === current.id ? { ...current, state } : previous,
+      );
+  };
 
   return (
-    <div className="space-y-3">
-      <PageHeader title={t("chat.title")} subtitle={t("chat.subtitle")} />
-
-      {inbox.isError ? (
-        <Alert variant="danger" message={parseApiError(inbox.error, t).message} />
-      ) : (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-          {/* Queue */}
-          <div className="space-y-2" data-testid="chat-inbox">
-            {inbox.isLoading && !inbox.data ? (
-              Array.from({ length: 4 }, (_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))
-            ) : (inbox.data ?? []).length === 0 ? (
-              <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-                {t("chat.empty")}
-              </p>
+    <div className="console-chat">
+      <PageHeader
+        title={t("chat.title")}
+        subtitle={t("chat.subtitle")}
+        actions={
+          <span className="chat-support-label">
+            <Headphones className="size-3.5" aria-hidden />
+            {t("chat.support_workspace")}
+          </span>
+        }
+      />
+      <div className="console-chat-workspace" data-thread-open={!!selected}>
+        <aside
+          className="chat-queue"
+          aria-label={t("chat.conversations")}
+          data-testid="chat-inbox"
+        >
+          <div className="chat-queue-heading">
+            <h2>
+              <MessageSquare className="size-4 text-primary" aria-hidden />
+              {t("chat.conversations")}
+              <span className="chat-count">
+                {inbox.isPending ? "—" : conversations.length}
+              </span>
+            </h2>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label={t("chat.refresh")}
+              title={t("chat.refresh")}
+              disabled={inbox.isFetching}
+              onClick={() => void inbox.refetch()}
+            >
+              <RotateCcw
+                className={cn(
+                  "size-3.5",
+                  inbox.isFetching && "animate-spin motion-reduce:animate-none",
+                )}
+                aria-hidden
+              />
+            </Button>
+          </div>
+          <div className="chat-queue-tools">
+            <div className="chat-search">
+              <Search className="size-4" aria-hidden />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t("chat.search_ph")}
+                aria-label={t("chat.search_label")}
+              />
+              {search && (
+                <button
+                  type="button"
+                  aria-label={t("chat.clear_search")}
+                  onClick={() => setSearch("")}
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
+            </div>
+            <div
+              className="chat-filters"
+              role="group"
+              aria-label={t("chat.filter_label")}
+            >
+              {FILTERS.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={filter === value}
+                  onClick={() => {
+                    if (current) setSelection(current);
+                    setFilter(value);
+                  }}
+                >
+                  {t(`chat.filter.${value}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="chat-queue-list">
+            {inbox.isPending ? (
+              <div className="space-y-3 p-4" aria-label={t("common.loading")}>
+                {Array.from({ length: 5 }, (_, i) => (
+                  <Skeleton key={i} className="h-20 w-full" />
+                ))}
+              </div>
+            ) : inbox.isError ? (
+              <div className="p-4">
+                <Alert
+                  variant="danger"
+                  message={parseApiError(inbox.error, t).message}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => void inbox.refetch()}
+                >
+                  {t("common.retry")}
+                </Button>
+              </div>
+            ) : !conversations.length ? (
+              <div className="chat-queue-empty">
+                <span>
+                  <Inbox className="size-6" strokeWidth={1.5} aria-hidden />
+                </span>
+                <h3>
+                  {t(
+                    search || filter !== "all"
+                      ? "chat.no_results"
+                      : "chat.empty",
+                  )}
+                </h3>
+                <p>
+                  {t(
+                    search || filter !== "all"
+                      ? "chat.no_results_hint"
+                      : "chat.empty_hint",
+                  )}
+                </p>
+                {(search || filter !== "all") && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setSearch("");
+                      setFilter("all");
+                    }}
+                  >
+                    {t("chat.reset_filters")}
+                  </Button>
+                )}
+              </div>
             ) : (
-              (inbox.data ?? []).map((c) => (
+              conversations.map((c) => (
                 <button
                   key={c.id}
                   type="button"
                   data-testid="chat-inbox-row"
-                  onClick={() => setSelected(c.id)}
-                  className={cn(
-                    "w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent",
-                    selected === c.id && "border-primary bg-accent",
-                  )}
+                  aria-pressed={selected === c.id}
+                  className="chat-conversation"
+                  onClick={() => open(c)}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <StatusBadge tone={STATE_TONE[c.state]}>
-                      {t(`chat.state.${c.state}`)}
-                    </StatusBadge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDateTime(c.last_activity_at)}
+                  <span className="chat-visitor-avatar" data-state={c.state}>
+                    <User className="size-4" aria-hidden />
+                    <i />
+                  </span>
+                  <span className="chat-conversation-copy">
+                    <span className="chat-conversation-top">
+                      <strong>
+                        {t("chat.visitor_name", { id: reference(c.id) })}
+                      </strong>
+                      <time
+                        dateTime={c.last_activity_at}
+                        title={formatDateTime(c.last_activity_at)}
+                      >
+                        {time(c.last_activity_at)}
+                      </time>
                     </span>
-                  </div>
-                  <p className="mt-1.5 line-clamp-2 text-sm">
-                    {c.last_message ?? t("chat.no_messages")}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t("chat.message_count", { count: c.message_count })}
-                    {c.lead_id && ` · ${t("chat.has_lead")}`}
-                  </p>
+                    <span className="chat-conversation-preview">
+                      {c.last_message ?? t("chat.no_messages")}
+                    </span>
+                    <span className="chat-conversation-meta">
+                      <span className="chat-state-label" data-state={c.state}>
+                        {t(`chat.filter.${c.state}`)}
+                      </span>
+                      <span>
+                        {t("chat.message_count", { count: c.message_count })}
+                        {c.lead_id && (
+                          <UserCheck
+                            className="ml-1 inline size-3"
+                            aria-label={t("chat.has_lead")}
+                          />
+                        )}
+                      </span>
+                    </span>
+                  </span>
+                  <ChevronRight
+                    className="chat-conversation-arrow size-3.5"
+                    aria-hidden
+                  />
                 </button>
               ))
             )}
           </div>
-
-          {/* Thread */}
-          <div className="flex min-h-[28rem] flex-col rounded-lg border">
-            {!selected ? (
-              <div className="flex flex-1 items-center justify-center p-6 text-center">
-                <p className="text-sm text-muted-foreground">
-                  <MessageSquare className="mx-auto mb-2 size-6" />
-                  {t("chat.pick_one")}
-                </p>
+          <div className="chat-queue-footer">
+            <span className="chat-sync-dot" />
+            {t("chat.queue_hint")}
+          </div>
+        </aside>
+        <section
+          className="chat-detail"
+          aria-label={t("chat.conversation_detail")}
+        >
+          {!current ? (
+            <div className="chat-welcome">
+              <span className="chat-welcome-eyebrow">
+                {t("chat.brand")} · {t("chat.customer_support")}
+              </span>
+              <ConversationArtwork />
+              <h2>{t("chat.welcome_title")}</h2>
+              <p>{t("chat.welcome_description")}</p>
+              <div className="chat-welcome-features">
+                <span>
+                  <Bot className="size-4" aria-hidden />
+                  {t("chat.welcome_ai")}
+                </span>
+                <span>
+                  <Headphones className="size-4" aria-hidden />
+                  {t("chat.welcome_team")}
+                </span>
               </div>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-                  <StatusBadge tone={STATE_TONE[current?.state ?? "bot"]}>
-                    {t(`chat.state.${current?.state ?? "bot"}`)}
-                  </StatusBadge>
-                  <div className="flex flex-wrap gap-2">
-                    {current?.state !== "human" && current?.state !== "closed" && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={claim.isPending}
-                        onClick={() =>
-                          claim.mutate(selected, {
-                            onSuccess: () => toast.success(t("chat.claimed")),
-                            onError: fail,
-                          })
-                        }
-                      >
-                        <UserCheck className="size-4" />
-                        {t("chat.claim")}
-                      </Button>
-                    )}
-                    {current?.state === "human" && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={release.isPending}
-                        onClick={() =>
-                          release.mutate(selected, {
-                            onSuccess: () => toast.success(t("chat.released")),
-                            onError: fail,
-                          })
-                        }
-                      >
-                        <UserMinus className="size-4" />
-                        {t("chat.release")}
-                      </Button>
-                    )}
-                    {current?.state !== "closed" && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={closeOne.isPending}
-                        onClick={() =>
-                          closeOne.mutate(selected, {
-                            onSuccess: () => toast.success(t("chat.closed_toast")),
-                            onError: fail,
-                          })
-                        }
-                      >
-                        <X className="size-4" />
-                        {t("chat.close")}
-                      </Button>
-                    )}
+            </div>
+          ) : (
+            <>
+              <div className="chat-thread-heading">
+                <div className="chat-thread-identity">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="chat-back"
+                    aria-label={t("chat.back_to_inbox")}
+                    onClick={() => setSelection(null)}
+                  >
+                    <ArrowLeft className="size-4" />
+                  </Button>
+                  <span className="chat-visitor-avatar">
+                    <User className="size-5" aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <h2>
+                      {t("chat.visitor_name", { id: reference(current.id) })}
+                    </h2>
+                    <div className="chat-thread-status">
+                      <StatusBadge tone={STATE_TONE[current.state]}>
+                        {t(`chat.state.${current.state}`)}
+                      </StatusBadge>
+                      {current.lead_id && (
+                        <span title={t("chat.has_lead")}>
+                          <UserCheck className="size-3.5" aria-hidden />
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-
+                <div className="chat-thread-actions">
+                  {current.state !== "human" && current.state !== "closed" && (
+                    <Button
+                      size="sm"
+                      disabled={claim.isPending}
+                      onClick={() =>
+                        claim.mutate(current.id, {
+                          onSuccess: () => {
+                            changeState("human");
+                            toast.success(t("chat.claimed"));
+                          },
+                          onError: fail,
+                        })
+                      }
+                    >
+                      <UserCheck className="size-3.5" />
+                      {t("chat.claim")}
+                    </Button>
+                  )}
+                  {current.state === "human" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={release.isPending}
+                      onClick={() =>
+                        release.mutate(current.id, {
+                          onSuccess: () => {
+                            changeState("bot");
+                            toast.success(t("chat.released"));
+                          },
+                          onError: fail,
+                        })
+                      }
+                    >
+                      <UserMinus className="size-3.5" />
+                      {t("chat.release")}
+                    </Button>
+                  )}
+                  {current.state !== "closed" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={closeOne.isPending}
+                      onClick={() =>
+                        closeOne.mutate(current.id, {
+                          onSuccess: () => {
+                            changeState("closed");
+                            toast.success(t("chat.closed_toast"));
+                          },
+                          onError: fail,
+                        })
+                      }
+                    >
+                      <X className="size-3.5" />
+                      {t("chat.close")}
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="chat-thread-body">
                 <div
                   ref={log}
-                  className="flex-1 space-y-3 overflow-y-auto p-4"
+                  className="chat-message-log"
                   data-testid="chat-thread"
+                  aria-label={t("chat.message_history")}
+                  aria-busy={transcript.isPending}
+                  onScroll={() => {
+                    const el = log.current;
+                    if (el) {
+                      atBottom.current =
+                        el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+                      if (atBottom.current) setNewMessages(false);
+                    }
+                  }}
                 >
-                  {transcript.isLoading ? (
-                    <Skeleton className="h-24 w-full" />
-                  ) : (
-                    (transcript.data ?? []).map((m) => (
-                      <div
-                        key={m.id}
-                        data-testid="chat-message"
-                        className={cn(
-                          "flex flex-col gap-1",
-                          m.role === "staff" ? "items-end" : "items-start",
-                        )}
+                  {transcript.isPending ? (
+                    <div className="space-y-5">
+                      <Skeleton className="h-16 w-2/3" />
+                      <Skeleton className="ml-auto h-20 w-3/4" />
+                      <Skeleton className="h-16 w-1/2" />
+                    </div>
+                  ) : transcript.isError ? (
+                    <div>
+                      <Alert
+                        variant="danger"
+                        message={parseApiError(transcript.error, t).message}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-3"
+                        onClick={() => void transcript.refetch()}
                       >
-                        <span className="text-xs text-muted-foreground">
-                          {t(`chat.role.${m.role}`)} · {formatDateTime(m.created_at)}
-                        </span>
-                        <div
-                          className={cn(
-                            "max-w-[80%] rounded-lg px-3 py-2 text-sm",
-                            roleTone(m.role),
-                          )}
-                        >
-                          {m.content}
-                        </div>
-                      </div>
+                        {t("common.retry")}
+                      </Button>
+                    </div>
+                  ) : !transcript.data?.length ? (
+                    <div className="chat-thread-empty">
+                      <MessageCircle
+                        className="size-8"
+                        strokeWidth={1.2}
+                        aria-hidden
+                      />
+                      <p>{t("chat.no_messages")}</p>
+                    </div>
+                  ) : (
+                    transcript.data.map((m, index) => (
+                      <Fragment key={m.id}>
+                        {(index === 0 ||
+                          date(m.created_at) !==
+                            date(transcript.data[index - 1].created_at)) && (
+                          <div className="chat-date-divider">
+                            <span>{date(m.created_at)}</span>
+                          </div>
+                        )}
+                        {m.role === "system" ? (
+                          <div
+                            className="chat-system-message"
+                            data-testid="chat-message"
+                          >
+                            <span>{m.content}</span>
+                            <time dateTime={m.created_at}>
+                              {time(m.created_at)}
+                            </time>
+                          </div>
+                        ) : (
+                          <div
+                            className="chat-message-row"
+                            data-role={m.role}
+                            data-testid="chat-message"
+                          >
+                            <span className="chat-message-avatar">
+                              {m.role === "assistant" ? (
+                                <Bot className="size-4" />
+                              ) : m.role === "staff" ? (
+                                <Headphones className="size-4" />
+                              ) : (
+                                <User className="size-4" />
+                              )}
+                            </span>
+                            <div className="chat-message-content">
+                              <div className="chat-message-label">
+                                <span>{t(`chat.role.${m.role}`)}</span>
+                                <time
+                                  dateTime={m.created_at}
+                                  title={formatDateTime(m.created_at)}
+                                >
+                                  {time(m.created_at)}
+                                </time>
+                              </div>
+                              <div className="chat-message-bubble">
+                                {m.content}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </Fragment>
                     ))
                   )}
                 </div>
-
-                <div className="border-t p-3">
-                  {/* Replying does NOT require having claimed it: a colleague
-                      covering for someone at lunch is normal, and the author is
-                      recorded either way. */}
-                  <div className="flex items-end gap-2">
-                    <Textarea
-                      rows={2}
-                      value={draft}
-                      maxLength={2000}
-                      disabled={current?.state === "closed"}
-                      placeholder={t("chat.reply_ph")}
-                      aria-label={t("chat.reply_ph")}
-                      onChange={(e) => setDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          send();
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      disabled={!draft.trim() || reply.isPending}
-                      onClick={send}
-                    >
-                      <Send className="size-4" />
-                      {t("chat.send")}
-                    </Button>
+                {newMessages && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="chat-new-messages"
+                    onClick={() => {
+                      if (log.current)
+                        log.current.scrollTop = log.current.scrollHeight;
+                      atBottom.current = true;
+                      setNewMessages(false);
+                    }}
+                  >
+                    <ArrowDown className="size-3.5" />
+                    {t("chat.new_messages")}
+                  </Button>
+                )}
+              </div>
+              <div className="chat-composer">
+                {current.state === "closed" ? (
+                  <div className="chat-closed-notice">
+                    <CheckCheck className="size-4" />
+                    {t("chat.closed_notice")}
                   </div>
-                  {current?.state === "bot" && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {t("chat.bot_still_answering")}
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+                ) : (
+                  <>
+                    {current.state === "bot" && (
+                      <p className="chat-bot-notice">
+                        <Bot className="size-3.5 shrink-0" aria-hidden />
+                        {t("chat.bot_still_answering")}
+                      </p>
+                    )}
+                    <div className="chat-composer-box">
+                      <Textarea
+                        rows={2}
+                        value={draft}
+                        maxLength={2000}
+                        disabled={sendingDisabled}
+                        placeholder={t("chat.reply_ph")}
+                        aria-label={t("chat.reply_ph")}
+                        onChange={(e) => {
+                          if (selected)
+                            setDrafts((old) => ({
+                              ...old,
+                              [selected]: e.target.value,
+                            }));
+                        }}
+                        onKeyDown={(e) => {
+                          if (
+                            e.key === "Enter" &&
+                            !e.shiftKey &&
+                            !e.nativeEvent.isComposing
+                          ) {
+                            e.preventDefault();
+                            send();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        disabled={!draft.trim() || sendingDisabled}
+                        aria-label={t("chat.send")}
+                        title={t("chat.send")}
+                        onClick={send}
+                      >
+                        {reply.isPending ? (
+                          <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+                        ) : (
+                          <Send className="size-4" />
+                        )}
+                      </Button>
+                    </div>
+                    <div className="chat-composer-footer">
+                      <span>{t("chat.keyboard_hint")}</span>
+                      <span>{draft.length}/2000</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

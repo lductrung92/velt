@@ -5,7 +5,8 @@ import { chatService, type ConversationState } from "../services/chat.service";
 
 export const chatKeys = {
   all: ["chat"] as const,
-  inbox: (state?: ConversationState) => [...chatKeys.all, "inbox", state ?? "live"] as const,
+  inbox: (state?: ConversationState) =>
+    [...chatKeys.all, "inbox", state ?? "live"] as const,
   transcript: (id: string) => [...chatKeys.all, "transcript", id] as const,
 };
 
@@ -25,6 +26,7 @@ export function useTranscript(id: string | null) {
     queryKey: chatKeys.transcript(id ?? ""),
     queryFn: () => chatService.transcript(id as string),
     enabled: !!id,
+    refetchInterval: id ? 5_000 : false,
   });
 }
 
