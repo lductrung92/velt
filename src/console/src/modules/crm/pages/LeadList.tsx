@@ -26,6 +26,7 @@ import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { FilterChips, type FilterChip } from "@/components/common/FilterChips";
 import { PageHeader } from "@/components/common/PageHeader";
+import { Select } from "@/components/common/Select";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -35,7 +36,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -237,27 +237,28 @@ export default function LeadList() {
           aria-label={t("leads.change_status", {
             name: lead.name || t("leads.no_name"),
           })}
-          value={lead.status}
-          disabled={update.isPending}
-          onChange={(event) =>
+          isSearchable={false}
+          isClearable={false}
+          isDisabled={update.isPending}
+          value={{
+            value: lead.status,
+            label: t(`leads.status.${lead.status}`),
+          }}
+          options={LEAD_STATUSES.map((value) => ({
+            value,
+            label: t(`leads.status.${value}`),
+          }))}
+          onChange={(option) =>
+            option &&
             update.mutate(
-              {
-                id: lead.id,
-                body: { status: event.target.value as LeadStatus },
-              },
+              { id: lead.id, body: { status: option.value as LeadStatus } },
               {
                 onSuccess: () => toast.success(t("leads.status_saved")),
                 onError: fail,
               },
             )
           }
-        >
-          {LEAD_STATUSES.map((value) => (
-            <option key={value} value={value}>
-              {t(`leads.status.${value}`)}
-            </option>
-          ))}
-        </Select>
+        />
       ) : (
         <span>{t(`leads.status.${lead.status}`)}</span>
       )}
@@ -437,32 +438,50 @@ export default function LeadList() {
             </Button>
           </form>
           <div className="leads-filter-controls">
-            <Select
-              value={source}
-              aria-label={t("leads.col.source")}
-              onChange={(event) => {
-                setSource(event.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">{t("leads.all_sources")}</option>
-              {["chat", "form", "manual"].map((value) => (
-                <option value={value} key={value}>
-                  {t(`leads.source.${value}`)}
-                </option>
-              ))}
-            </Select>
-            <Select
-              value={assignee}
-              aria-label={t("leads.col.assignee")}
-              onChange={(event) => {
-                setAssignee(event.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">{t("leads.all_owners")}</option>
-              <option value="unassigned">{t("leads.unassigned")}</option>
-            </Select>
+            {/* "All" is the cleared state, not an option in the list: the theme
+                select already offers a ✕, and keeping both would give two ways
+                to say the same thing. */}
+            <div className="leads-filter-select">
+              <Select
+                inputId="lead-filter-source"
+                aria-label={t("leads.col.source")}
+                isSearchable={false}
+                placeholder={t("leads.all_sources")}
+                value={
+                  source
+                    ? { value: source, label: t(`leads.source.${source}`) }
+                    : null
+                }
+                options={["chat", "form", "manual"].map((value) => ({
+                  value,
+                  label: t(`leads.source.${value}`),
+                }))}
+                onChange={(option) => {
+                  setSource(option?.value ?? "");
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div className="leads-filter-select">
+              <Select
+                inputId="lead-filter-assignee"
+                aria-label={t("leads.col.assignee")}
+                isSearchable={false}
+                placeholder={t("leads.all_owners")}
+                value={
+                  assignee
+                    ? { value: assignee, label: t("leads.unassigned") }
+                    : null
+                }
+                options={[
+                  { value: "unassigned", label: t("leads.unassigned") },
+                ]}
+                onChange={(option) => {
+                  setAssignee(option?.value ?? "");
+                  setPage(1);
+                }}
+              />
+            </div>
           </div>
         </div>
         <div

@@ -24,7 +24,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
+import { Select } from "@/components/common/Select";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import {
@@ -120,7 +120,7 @@ function CalendarPanel({ today }: { today: string }) {
           {Number(dateKey.slice(-2))}
         </span>
         <div className="min-w-0">
-          <p className="text-xs font-semibold capitalize">
+          <p className="text-sm font-semibold capitalize">
             {format(dateKey, { weekday: "long" })}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -135,7 +135,7 @@ function CalendarPanel({ today }: { today: string }) {
             })}
             {lunar.leap && ` ${t("dashboard.daily.leap")}`}
           </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             {t("dashboard.daily.lunar_year", { name: lunar.yearName })}
           </p>
         </div>
@@ -167,7 +167,7 @@ function CalendarPanel({ today }: { today: string }) {
         {Array.from({ length: 7 }, (_, index) => (
           <span
             key={index}
-            className="pb-2 text-[10px] font-medium text-muted-foreground"
+            className="pb-2 text-xs font-medium text-muted-foreground"
           >
             {format(`2026-01-${String(5 + index).padStart(2, "0")}`, {
               weekday: "short",
@@ -194,9 +194,9 @@ function CalendarPanel({ today }: { today: string }) {
               if (!day.inMonth) setMonth(day.key.slice(0, 7));
             }}
           >
-            <span className="text-xs font-medium tabular-nums">{day.day}</span>
+            <span className="text-sm font-medium tabular-nums">{day.day}</span>
             <span
-              className={`text-[9px] tabular-nums ${day.lunar.day === 1 ? "text-primary" : "text-muted-foreground"}`}
+              className={`text-caption tabular-nums ${day.lunar.day === 1 ? "text-primary" : "text-muted-foreground"}`}
             >
               {day.lunar.day === 1
                 ? `${day.lunar.day}/${day.lunar.month}`
@@ -205,7 +205,7 @@ function CalendarPanel({ today }: { today: string }) {
           </button>
         ))}
       </div>
-      <p className="mt-3 text-center text-[10px] text-muted-foreground">
+      <p className="mt-3 text-center text-xs text-muted-foreground">
         {t("dashboard.daily.calendar_hint")}
       </p>
     </section>
@@ -296,23 +296,38 @@ function WeatherPanel({ today }: { today: string }) {
           {t("dashboard.daily.weather_title")}
         </h3>
         <div className="flex min-w-0 items-center gap-2">
-          <Select
-            aria-label={t("dashboard.daily.choose_location")}
-            className="w-40 text-xs"
-            value={location.id}
-            onChange={(event) => selectCity(event.target.value)}
-          >
-            {weatherCities.map((city) => (
-              <option key={city.id} value={city.id}>
-                {city.name}
-              </option>
-            ))}
-            {location.id === "current" && (
-              <option value="current">
-                {t("dashboard.daily.current_location")}
-              </option>
-            )}
-          </Select>
+          {/* "Current location" only exists as an option once geolocation has
+              produced one, so it is appended rather than always listed. */}
+          <div className="w-40">
+            <Select
+              aria-label={t("dashboard.daily.choose_location")}
+              className="text-sm"
+              isSearchable={false}
+              isClearable={false}
+              value={{
+                value: location.id,
+                label:
+                  location.id === "current"
+                    ? t("dashboard.daily.current_location")
+                    : location.name,
+              }}
+              options={[
+                ...weatherCities.map((city) => ({
+                  value: city.id,
+                  label: city.name,
+                })),
+                ...(location.id === "current"
+                  ? [
+                      {
+                        value: "current",
+                        label: t("dashboard.daily.current_location"),
+                      },
+                    ]
+                  : []),
+              ]}
+              onChange={(option) => option && selectCity(option.value)}
+            />
+          </div>
           <Button
             variant="outline"
             size="icon"
@@ -376,13 +391,13 @@ function WeatherPanel({ today }: { today: string }) {
           <div className="dashboard-weather-current mt-5 rounded-lg bg-primary/5 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="flex items-center gap-1.5 text-xs font-medium">
+                <p className="flex items-center gap-1.5 text-sm font-medium">
                   <MapPin className="size-3.5 text-primary" aria-hidden />
                   {location.id === "current"
                     ? t("dashboard.daily.current_location")
                     : location.name}
                 </p>
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {t("dashboard.daily.today")} ·{" "}
                   {format(weather.daily.time[0], {
                     day: "numeric",
@@ -390,7 +405,7 @@ function WeatherPanel({ today }: { today: string }) {
                   })}
                 </p>
               </div>
-              <span className="rounded-md bg-background/70 px-2 py-1 text-[10px] text-muted-foreground">
+              <span className="rounded-md bg-background/70 px-2 py-1 text-xs text-muted-foreground">
                 {t("dashboard.daily.current")}
               </span>
             </div>
@@ -430,7 +445,7 @@ function WeatherPanel({ today }: { today: string }) {
             </div>
             <div className="dashboard-weather-details grid grid-cols-3 gap-3 border-t border-primary/10 pt-4 text-xs">
               <div>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {t("dashboard.daily.feels_like")}
                 </p>
                 <p className="mt-1.5 font-medium">
@@ -438,7 +453,7 @@ function WeatherPanel({ today }: { today: string }) {
                 </p>
               </div>
               <div>
-                <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Droplets className="size-3" aria-hidden />
                   {t("dashboard.daily.humidity")}
                 </p>
@@ -447,7 +462,7 @@ function WeatherPanel({ today }: { today: string }) {
                 </p>
               </div>
               <div>
-                <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Wind className="size-3" aria-hidden />
                   {t("dashboard.daily.wind")}
                 </p>
@@ -457,7 +472,7 @@ function WeatherPanel({ today }: { today: string }) {
               </div>
             </div>
           </div>
-          <h4 className="mb-3 mt-5 text-xs font-semibold">
+          <h4 className="mb-3 mt-5 text-sm font-semibold">
             {t("dashboard.daily.next_seven")}
           </h4>
           <div className="dashboard-weather-forecast">
@@ -472,17 +487,17 @@ function WeatherPanel({ today }: { today: string }) {
                   className="dashboard-weather-day rounded-lg border px-2 py-3 text-center"
                   title={condition}
                 >
-                  <p className="text-[11px] font-medium capitalize">
+                  <p className="text-xs font-medium capitalize">
                     {format(date, { weekday: "short" })}
                   </p>
-                  <p className="mt-1 text-[10px] text-muted-foreground">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {format(date, { day: "2-digit", month: "2-digit" })}
                   </p>
                   <div className="my-3 flex justify-center">
                     <WeatherIcon code={weather.daily.weather_code[i]} />
                   </div>
                   <span className="sr-only">{condition}</span>
-                  <p className="whitespace-nowrap text-xs tabular-nums">
+                  <p className="whitespace-nowrap text-sm tabular-nums">
                     <strong className="font-semibold">
                       {number(weather.daily.temperature_2m_max[i], "°")}
                     </strong>{" "}
@@ -491,7 +506,7 @@ function WeatherPanel({ today }: { today: string }) {
                     </span>
                   </p>
                   <p
-                    className="mt-2 flex items-center justify-center gap-1 text-[10px] text-muted-foreground"
+                    className="mt-2 flex items-center justify-center gap-1 text-xs text-muted-foreground"
                     aria-label={t("dashboard.daily.rain_chance", {
                       value: number(
                         weather.daily.precipitation_probability_max[i],
@@ -509,7 +524,7 @@ function WeatherPanel({ today }: { today: string }) {
               );
             })}
           </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
             <a
               href="https://open-meteo.com/"
               target="_blank"
@@ -551,7 +566,7 @@ export function DailyOverview() {
         <h2 id="dashboard-daily-title" className="text-base font-semibold">
           {t("dashboard.daily.title")}
         </h2>
-        <span className="text-[11px] text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {t("dashboard.daily.timezone")}
         </span>
       </div>

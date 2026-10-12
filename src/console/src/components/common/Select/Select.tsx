@@ -36,6 +36,10 @@ export interface SelectProps<Option extends SelectOption = SelectOption> {
   isSearchable?: boolean;
   /** id forwarded to the trigger so a <label htmlFor> associates. */
   inputId?: string;
+  /** Accessible name when there is no visible label — a filter in a toolbar,
+   *  say. A combobox without one is unusable by screen reader and unfindable by
+   *  role in a test. */
+  "aria-label"?: string;
   /** Controlled search term — provide with `onInputChange` for server-side
    *  filtering (internal filtering is then disabled). */
   inputValue?: string;
@@ -58,6 +62,7 @@ export function Select<Option extends SelectOption = SelectOption>({
   isClearable = true,
   isSearchable = true,
   inputId,
+  "aria-label": ariaLabel,
   inputValue,
   onInputChange,
   searchDebounceMs = 250,
@@ -112,6 +117,7 @@ export function Select<Option extends SelectOption = SelectOption>({
             type="button"
             id={inputId}
             role="combobox"
+            aria-label={ariaLabel}
             aria-expanded={open}
             aria-invalid={invalid || undefined}
             disabled={isDisabled}

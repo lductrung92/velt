@@ -6,6 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -17,6 +18,16 @@ import { vietnamDateKey } from "./calendar";
 import { WEATHER_ENDPOINT } from "./weather.service";
 
 const t = (key: string) => i18n.t(key);
+
+// The city picker is the theme select — a popover, not a <select> — so a choice
+// is made by opening it and clicking the option.
+async function pickCity(name: string) {
+  const user = userEvent.setup();
+  await user.click(
+    screen.getByRole("combobox", { name: t("dashboard.daily.choose_location") }),
+  );
+  await user.click(await screen.findByRole("option", { name }));
+}
 const time = Array.from({ length: 8 }, (_, i) => {
   const date = new Date(`${vietnamDateKey()}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + i);
@@ -71,7 +82,7 @@ describe("Calendar and weather overview", () => {
       screen.getByRole("combobox", {
         name: t("dashboard.daily.choose_location"),
       }),
-    ).toHaveValue("da-nang");
+    ).toHaveTextContent("Đà Nẵng");
     expect(container.querySelectorAll(".dashboard-weather-day")).toHaveLength(
       7,
     );
@@ -101,9 +112,7 @@ describe("Calendar and weather overview", () => {
     );
     renderOverview();
     await screen.findByText("27°");
-    fireEvent.change(screen.getByRole("combobox"), {
-      target: { value: "ha-noi" },
-    });
+    await pickCity("Hà Nội");
     expect(await screen.findByText("21°")).toBeInTheDocument();
     expect(localStorage.getItem("zukatek.dashboard.weather.city")).toBe(
       "ha-noi",

@@ -19,6 +19,14 @@ import type { Lead } from "../services/leads.service";
 import LeadList from "./LeadList";
 
 const t = (key: string) => i18n.t(key);
+
+// The source/owner filters are the theme select: a popover, not a <select>, so
+// a value is chosen by opening it and clicking the option.
+async function pick(name: string, option: string) {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("combobox", { name }));
+  await user.click(await screen.findByRole("option", { name: option }));
+}
 const lead: Lead = {
   id: "lead-1",
   name: "Khách kiểm thử",
@@ -137,10 +145,7 @@ describe("CRM lead workspace", () => {
         screen.getByRole("group", { name: t("leads.filter_status") }),
       ).getByRole("button", { name: t("leads.status.new") }),
     );
-    fireEvent.change(
-      screen.getByRole("combobox", { name: t("leads.col.assignee") }),
-      { target: { value: "unassigned" } },
-    );
+    await pick(t("leads.col.assignee"), t("leads.unassigned"));
     await waitFor(() => {
       expect(requests.at(-1)?.searchParams.get("status")).toBe("new");
       expect(requests.at(-1)?.searchParams.get("assignee")).toBe("unassigned");
@@ -179,18 +184,16 @@ describe("CRM lead workspace", () => {
     );
     mount();
     expect(await screen.findByText(t("leads.empty_title"))).toBeVisible();
-    fireEvent.change(
-      screen.getByRole("combobox", { name: t("leads.col.source") }),
-      { target: { value: "form" } },
-    );
+    await pick(t("leads.col.source"), t("leads.source.form"));
     expect(await screen.findByText(t("leads.no_results"))).toBeVisible();
     fireEvent.click(
       screen.getByRole("button", { name: t("leads.reset_filters") }),
     );
     expect(await screen.findByText(t("leads.empty_title"))).toBeVisible();
+    // Cleared, not merely re-queried: the trigger falls back to its placeholder.
     expect(
       screen.getByRole("combobox", { name: t("leads.col.source") }),
-    ).toHaveValue("");
+    ).toHaveTextContent(t("leads.all_sources"));
   });
 
   it("renders a read-only pipeline without management or chat controls when not permitted", async () => {
@@ -222,12 +225,16 @@ describe("CRM lead workspace", () => {
     );
     mount();
     const table = await screen.findByTestId("leads-table");
-    fireEvent.change(within(table).getByRole("combobox"), {
-      target: { value: "won" },
-    });
+    const user = userEvent.setup();
+    await user.click(within(table).getByRole("combobox"));
+    await user.click(
+      await screen.findByRole("option", { name: t("leads.status.won") }),
+    );
     await waitFor(() => expect(payload).toEqual({ status: "won" }));
     await waitFor(() =>
-      expect(within(table).getByRole("combobox")).toHaveValue("won"),
+      expect(within(table).getByRole("combobox")).toHaveTextContent(
+        t("leads.status.won"),
+      ),
     );
   });
 

@@ -173,8 +173,13 @@
   gap: 10px;
   min-width: 0;
 }
-.leads-page .leads-filter-controls select {
+/* The theme select renders a trigger button inside its own wrapper, so the
+   width belongs on the wrapper rather than on a `select` tag that no longer
+   exists here. */
+.leads-page .leads-filter-select {
   width: 180px;
+}
+.leads-page .leads-filter-select button {
   font-size: var(--font-size-sm);
 }
 .leads-tabs {
@@ -452,7 +457,9 @@
 .dark .lead-stage[data-status="won"] {
   color: #6bd3b3;
 }
-.leads-page .lead-stage select {
+/* The stage pill carries the colour and the border; the select inside it is
+   just the control, so it stays transparent and inherits. */
+.leads-page .lead-stage button[role="combobox"] {
   height: 31px;
   width: 100%;
   border: 0;
@@ -461,15 +468,18 @@
   font-size: var(--font-size-xs);
   color: inherit;
   padding-left: 10px;
-  padding-right: 6px;
+  padding-right: 26px;
+}
+/* The pill's colour IS the status. The theme trigger paints its value
+   `text-foreground` and its chevron muted, so both are handed back to the
+   pill — otherwise every stage reads the same black. */
+.leads-page .lead-stage button[role="combobox"] span,
+.leads-page .lead-stage button[role="combobox"] svg {
+  color: inherit;
 }
 .lead-stage > span {
   font-size: var(--font-size-xs);
   padding: 7px 10px;
-}
-.lead-stage option {
-  color: hsl(var(--foreground));
-  background: hsl(var(--background));
 }
 .lead-created {
   display: flex;
@@ -591,7 +601,7 @@
   .leads-filter-controls {
     flex: 1;
   }
-  .leads-page .leads-filter-controls select {
+  .leads-page .leads-filter-select {
     flex: 1;
     min-width: 0;
     width: auto;
