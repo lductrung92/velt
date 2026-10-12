@@ -3,12 +3,14 @@ package catalog
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 
 	"github.com/google/uuid"
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/modules/products/shared"
+	"github.com/velt/backend/internal/platform/pubdocs"
 	"github.com/velt/backend/internal/platform/storage"
 )
 
@@ -17,20 +19,57 @@ const (
 	publicMaxPageSize     = 60
 )
 
+// publicReader is the read seam the public catalog needs (PublicRepository
+// satisfies it; a fake stands in for tests).
+type publicReader interface {
+	ListPublished(ctx context.Context, p PublicListParams) ([]json.RawMessage, int, error)
+	GetPublishedBySlug(ctx context.Context, locale, slug string) (*PublishedProduct, error)
+	ListPublicCategories(ctx context.Context) ([]PublicCategory, error)
+	IDsBySlugs(ctx context.Context, slugs []string) ([]uuid.UUID, error)
+}
+
+// localeLister is the one thing the public catalog needs from the translation
+// module: which languages exist. nil means Vietnamese only, which is also what
+// the feature switched off looks like.
+type localeLister interface {
+	Locales(ctx context.Context) []string
+}
+
 // PublicService serves the published catalog to the site. It has no permission
 // gate — there is no caller identity — so its only safety rule is that it can
-// only ever read published snapshots.
+// only ever read published documents.
 type PublicService struct {
 	*shared.Base
-	repo *PublicRepository
+	repo publicReader
 	// The snapshot freezes seo.og_path (a storage key), not a URL — the admin
 	// response never built one — so the public layer resolves it here.
-	urls storage.URLer
+	urls    storage.URLer
+	locales localeLister
 }
 
 // NewPublicService builds the public catalog service.
-func NewPublicService(base *shared.Base, repo *PublicRepository, urls storage.URLer) *PublicService {
+func NewPublicService(base *shared.Base, repo publicReader, urls storage.URLer) *PublicService {
 	return &PublicService{Base: base, repo: repo, urls: urls}
+}
+
+// SetLocales wires the translation module's language list (called once at
+// startup). Unset → Vietnamese only.
+func (s *PublicService) SetLocales(l localeLister) { s.locales = l }
+
+// resolveLocale maps the ?locale= parameter onto a language that is actually
+// published. Anything unknown serves the original rather than an error: a
+// visitor who mistypes a query parameter has not earned an error page.
+func (s *PublicService) resolveLocale(ctx context.Context, raw string) string {
+	want := strings.ToLower(strings.TrimSpace(raw))
+	if want == "" || want == baseLocale || s.locales == nil {
+		return baseLocale
+	}
+	for _, l := range s.locales.Locales(ctx) {
+		if l == want {
+			return want
+		}
+	}
+	return baseLocale
 }
 
 func (s *PublicService) mediaURL(ctx context.Context, path *string) *string {
@@ -65,6 +104,7 @@ func (p PublicListParams) normalize() PublicListParams {
 // List returns one page of the published catalog.
 func (s *PublicService) List(ctx context.Context, p PublicListParams) (PublicListResponse, error) {
 	p = p.normalize()
+	p.Locale = s.resolveLocale(ctx, p.Locale)
 	snaps, total, err := s.repo.ListPublished(ctx, p)
 	if err != nil {
 		return PublicListResponse{}, s.MapRepoErr(ctx, "public list products", err)
@@ -85,25 +125,32 @@ func (s *PublicService) List(ctx context.Context, p PublicListParams) (PublicLis
 	return PublicListResponse{Items: items, Total: total, Page: p.Page, PageSize: p.PageSize}, nil
 }
 
-// GetBySlug returns one published product page.
+// GetBySlug returns one published product page in the requested language.
 //
 // A draft and a product that does not exist both answer 404: telling them apart
-// would confirm that an unpublished slug is taken.
-func (s *PublicService) GetBySlug(ctx context.Context, slug string) (PublicDetail, error) {
+// would confirm that an unpublished slug is taken. A retired slug, or another
+// language's slug for the same product, comes back as ErrMoved for the handler
+// to answer with a 301.
+func (s *PublicService) GetBySlug(ctx context.Context, locale, slug string) (PublicDetail, error) {
 	slug = strings.TrimSpace(slug)
 	if slug == "" {
 		return PublicDetail{}, apperr.NotFound("not_found")
 	}
-	raw, err := s.repo.GetPublishedBySlug(ctx, slug)
+	want := s.resolveLocale(ctx, locale)
+	doc, err := s.repo.GetPublishedBySlug(ctx, want, slug)
+	var moved ErrMoved
+	if errors.As(err, &moved) {
+		return PublicDetail{}, moved
+	}
 	if err != nil {
 		return PublicDetail{}, s.MapRepoErr(ctx, "public get product", err)
 	}
-	full, err := decodeSnapshot(raw)
+	full, err := decodeSnapshot(doc.Body)
 	if err != nil {
 		s.Sec(ctx).Error("products: public detail snapshot decode", "slug", slug, "err", err)
 		return PublicDetail{}, apperr.Internal()
 	}
-	return s.toPublicDetail(ctx, full), nil
+	return s.toPublicDetail(ctx, full, want, doc.Alternates), nil
 }
 
 // Categories returns the filter vocabulary: categories that currently hold at
@@ -153,7 +200,11 @@ func toPublicListItem(f Response) PublicListItem {
 	}
 }
 
-func (s *PublicService) toPublicDetail(ctx context.Context, f Response) PublicDetail {
+func (s *PublicService) toPublicDetail(ctx context.Context, f Response, locale string, alternates []pubdocs.Ref) PublicDetail {
+	alts := make([]PublicAlternate, 0, len(alternates))
+	for _, a := range alternates {
+		alts = append(alts, PublicAlternate{Locale: a.Locale, Slug: a.Slug, XDefault: a.Locale == baseLocale})
+	}
 	members := make([]PublicMemberRef, 0, len(f.Members))
 	for _, m := range f.Members {
 		members = append(members, PublicMemberRef{
@@ -168,6 +219,7 @@ func (s *PublicService) toPublicDetail(ctx context.Context, f Response) PublicDe
 	}
 	return PublicDetail{
 		Slug:       f.Slug,
+		Locale:     locale,
 		Name:       f.Name,
 		Summary:    f.Summary,
 		BodyHTML:   f.BodyHTML,
@@ -201,6 +253,7 @@ func (s *PublicService) toPublicDetail(ctx context.Context, f Response) PublicDe
 		Members:     members,
 		Gallery:     gallery,
 		PublishedAt: f.PublishedAt,
+		Alternates:  alts,
 	}
 }
 

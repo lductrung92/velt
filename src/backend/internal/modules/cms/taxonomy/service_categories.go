@@ -175,6 +175,7 @@ func (s *Service) DeleteCategory(ctx context.Context, id *httpx.Identity, catID 
 	} else if err != nil {
 		return apperr.Internal()
 	}
+	s.purgeTranslations(ctx, EntityCategory, catID)
 	s.Sec(ctx).Info("cms category deleted", "actor", id.UserID, "category", catID)
 	return nil
 }

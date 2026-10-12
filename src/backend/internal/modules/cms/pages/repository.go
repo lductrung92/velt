@@ -26,7 +26,6 @@ type Repository interface {
 	PublishPage(ctx context.Context, id uuid.UUID, snapshot []byte) (*Page, error)
 	RefreshPageSnapshot(ctx context.Context, id uuid.UUID, snapshot []byte) error
 	UnpublishPage(ctx context.Context, id uuid.UUID) (*Page, error)
-	GetPublishedPageBySlug(ctx context.Context, slug string) (*Page, error)
 }
 
 type pgxRepository struct {
@@ -89,14 +88,6 @@ func (r *pgxRepository) ListPages(ctx context.Context) ([]Page, error) {
 
 func (r *pgxRepository) GetPage(ctx context.Context, id uuid.UUID) (*Page, error) {
 	return scanPage(r.pool.QueryRow(ctx, `SELECT `+pageColumns+` FROM cms_pages WHERE id = $1`, id))
-}
-
-// GetPublishedPageBySlug returns a published page by slug (public read). Slugs are
-// unique per parent; for a flat public lookup we take the first match (root-first).
-func (r *pgxRepository) GetPublishedPageBySlug(ctx context.Context, slug string) (*Page, error) {
-	return scanPage(r.pool.QueryRow(ctx, `SELECT `+pageColumns+`
-		FROM cms_pages WHERE slug = $1 AND status = 'published'
-		ORDER BY parent_id NULLS FIRST LIMIT 1`, slug))
 }
 
 func (r *pgxRepository) CreatePage(ctx context.Context, w pageWrite) (*Page, error) {

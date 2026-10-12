@@ -149,6 +149,7 @@ func (s *Service) DeleteTag(ctx context.Context, id *httpx.Identity, tagID uuid.
 	if err := s.repo.DeleteTag(ctx, tagID); err != nil {
 		return apperr.Internal()
 	}
+	s.purgeTranslations(ctx, EntityTag, tagID)
 	s.Sec(ctx).Info("cms tag deleted", "actor", id.UserID, "tag", tagID)
 	return nil
 }
@@ -175,6 +176,9 @@ func (s *Service) MergeTags(ctx context.Context, id *httpx.Identity, req MergeTa
 	if err := s.repo.MergeTags(ctx, req.SourceID, req.TargetID); err != nil {
 		return TagResponse{}, apperr.Internal()
 	}
+	// A merge deletes the source tag, so its translations go the same way as on
+	// a plain delete. The target keeps its own.
+	s.purgeTranslations(ctx, EntityTag, req.SourceID)
 	s.Sec(ctx).Info("cms tags merged", "actor", id.UserID, "source", req.SourceID, "target", req.TargetID)
 
 	target, err := s.repo.GetTag(ctx, req.TargetID)

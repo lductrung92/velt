@@ -75,9 +75,20 @@ type PublicDemo struct {
 	Instructions []string `json:"instructions"`
 }
 
+// PublicAlternate is one language's address for this product, for hreflang.
+//
+// Slug rather than a full path: the backend does not own the site's URL layout,
+// and guessing a prefix here would be a second place to keep it right.
+type PublicAlternate struct {
+	Locale   string `json:"locale"`
+	Slug     string `json:"slug"`
+	XDefault bool   `json:"x_default"`
+}
+
 // PublicDetail is the product page.
 type PublicDetail struct {
 	Slug       string  `json:"slug"`
+	Locale     string  `json:"locale"`
 	Name       string  `json:"name"`
 	Summary    *string `json:"summary"`
 	BodyHTML   *string `json:"body_html"`
@@ -101,11 +112,16 @@ type PublicDetail struct {
 	Gallery    []PublicMediaItem   `json:"gallery"`
 
 	PublishedAt *time.Time `json:"published_at"`
+	// Alternates lists every language this product is published in, the one
+	// being read included: hreflang is ignored unless each version points at the
+	// others AND at itself.
+	Alternates []PublicAlternate `json:"alternates"`
 }
 
 // PublicListParams is the resolved public query. There is deliberately no
 // Status field: the site must not be able to ask for drafts.
 type PublicListParams struct {
+	Locale    string // the service resolves it; "" means the source language
 	Query     string
 	Category  string // category slug
 	Lifecycle string

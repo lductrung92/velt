@@ -13,6 +13,7 @@ import (
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/products/shared"
 	"github.com/velt/backend/internal/platform/htmlsan"
+	"github.com/velt/backend/internal/platform/pubdocs"
 	"github.com/velt/backend/internal/platform/slug"
 	"github.com/velt/backend/internal/platform/storage"
 )
@@ -34,6 +35,10 @@ type Service struct {
 	store    storage.Storage
 	urls     storage.URLer
 	settings SettingsPort
+	// pub and tr are wired after construction (see public_sync.go) and are both
+	// optional: unset means no public read model and no translations.
+	pub *pubdocs.Store
+	tr  Translator
 }
 
 // NewService wires the catalog service onto the shared products base. store and
@@ -144,6 +149,9 @@ func (s *Service) Create(ctx context.Context, id *httpx.Identity, req CreateRequ
 	p, err := s.repo.Create(ctx, w, actor)
 	if err != nil {
 		return Response{}, s.MapRepoErr(ctx, "create product", err)
+	}
+	if err := s.syncPublic(ctx, p); err != nil {
+		return Response{}, err
 	}
 	return s.detail(ctx, *p)
 }
@@ -272,6 +280,12 @@ func (s *Service) Update(ctx context.Context, id *httpx.Identity, productID uuid
 		shared.DeleteOldMedia(ctx, s.store, prefix, cur.CoverPath, updated.CoverPath)
 		shared.DeleteOldMedia(ctx, s.store, prefix, cur.SEO.OGPath, updated.SEO.OGPath)
 	}
+	// A published product keeps the body it was published with, but its address
+	// is the live slug: re-syncing here is what lets a rename take effect without
+	// forcing a republish, and leaves a 301 behind on the old URL.
+	if err := s.syncPublic(ctx, updated); err != nil {
+		return Response{}, err
+	}
 	return s.detail(ctx, *updated)
 }
 
@@ -283,6 +297,19 @@ func (s *Service) Delete(ctx context.Context, id *httpx.Identity, productID uuid
 	}
 	if err := s.repo.Delete(ctx, productID); err != nil {
 		return s.MapRepoErr(ctx, "delete product", err)
+	}
+	// An orphan in the public read model is not wasted space: it is a URL still
+	// serving a product that no longer exists. Same for the translation store.
+	if s.pub != nil {
+		if err := s.pub.Purge(ctx, EntityProduct, productID); err != nil {
+			s.Sec(ctx).Error("products: purge public doc", "product_id", productID, "err", err)
+			return apperr.Internal()
+		}
+	}
+	if s.tr != nil {
+		if err := s.tr.Purge(ctx, EntityProduct, productID); err != nil {
+			s.Sec(ctx).Warn("products: purge translations failed", "product_id", productID, "err", err)
+		}
 	}
 	if err := shared.PurgeMediaTree(ctx, s.store, mediaPrefix(productID)); err != nil {
 		s.Sec(ctx).Warn("products: purge media failed", "product_id", productID, "err", err)
@@ -338,6 +365,9 @@ func (s *Service) transition(ctx context.Context, id *httpx.Identity, productID 
 	p, err := s.repo.SetStatus(ctx, productID, status, snapshot, stamp)
 	if err != nil {
 		return Response{}, s.MapRepoErr(ctx, "transition product", err)
+	}
+	if err := s.syncPublic(ctx, p); err != nil {
+		return Response{}, err
 	}
 	// Both slugs: publishing under a new slug has to clear the old URL too, or
 	// the site keeps serving a page that no longer exists.

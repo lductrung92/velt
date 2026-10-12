@@ -16,6 +16,7 @@ import (
 type Service struct {
 	*shared.Base
 	repo Repository
+	tr   Translator
 }
 
 // NewService wires the category service onto the shared products base.
@@ -141,6 +142,7 @@ func (s *Service) Delete(ctx context.Context, id *httpx.Identity, catID uuid.UUI
 	if err := s.repo.Delete(ctx, catID); err != nil {
 		return s.MapRepoErr(ctx, "delete category", err)
 	}
+	s.purgeTranslations(ctx, catID)
 	return nil
 }
 

@@ -113,6 +113,10 @@ type ListParams struct {
 	ActiveOnly bool
 	Page       int
 	PageSize   int
+	// Locale is the requested language of the public roster; empty, unknown or
+	// "vi" all mean the Vietnamese columns as stored. The console list ignores
+	// it — an editor works in the source language.
+	Locale string
 }
 
 // --- Response DTOs ---

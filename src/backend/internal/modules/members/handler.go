@@ -57,6 +57,7 @@ func listParams(r *http.Request) ListParams {
 		ActiveOnly: q.Get("active") == "true",
 		Page:       page,
 		PageSize:   size,
+		Locale:     q.Get("locale"),
 	}
 }
 
@@ -238,7 +239,7 @@ func (h *Handler) ListPublic(w http.ResponseWriter, r *http.Request) {
 
 // GetPublic handles GET /api/public/members/{slug} — active member, no auth.
 func (h *Handler) GetPublic(w http.ResponseWriter, r *http.Request) {
-	res, err := h.svc.GetPublicBySlug(r.Context(), chi.URLParam(r, "slug"))
+	res, err := h.svc.GetPublicBySlug(r.Context(), r.URL.Query().Get("locale"), chi.URLParam(r, "slug"))
 	if err != nil {
 		httpx.WriteError(w, err)
 		return

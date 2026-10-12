@@ -260,7 +260,7 @@ func TestGetPublicBySlug_HiddenMemberIs404(t *testing.T) {
 	require.NoError(t, err)
 	repo.rows[created.ID].IsActive = false
 
-	_, err = svc.GetPublicBySlug(ctx, created.Slug)
+	_, err = svc.GetPublicBySlug(ctx, "", created.Slug)
 	require.Equal(t, 404, status(t, err))
 }
 
@@ -270,7 +270,7 @@ func TestGetPublicBySlug_ReturnsActiveMember(t *testing.T) {
 	created, err := svc.Create(ctx, id, CreateRequest{FullName: "Public"})
 	require.NoError(t, err)
 
-	res, err := svc.GetPublicBySlug(ctx, created.Slug)
+	res, err := svc.GetPublicBySlug(ctx, "", created.Slug)
 	require.NoError(t, err)
 	require.Equal(t, created.ID, res.ID)
 }

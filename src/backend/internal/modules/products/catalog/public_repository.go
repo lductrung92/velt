@@ -3,30 +3,51 @@ package catalog
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/velt/backend/internal/modules/products/shared"
+	"github.com/velt/backend/internal/platform/pubdocs"
 )
 
 // PublicRepository reads the published catalog.
 //
-// Visibility comes from the live `status` column — that is the editorial switch.
+// The list and the detail read the shared public read model (published_docs),
+// where the frozen copy and its translations live: one row per published URL,
+// so asking for a language is asking for a row rather than a second code path.
 // Everything a visitor can SEE, including what they filter and sort by, comes
-// from `published_snapshot`. Mixing the two would let an unpublished draft edit
-// change which products a filter returns while the product page still shows the
-// old content, so the list and the detail page would disagree.
+// from that frozen body — a draft edit cannot change which products a filter
+// returns while the product page still shows the old content.
+//
+// The category vocabulary below still reads `published_snapshot` directly: it
+// is a Vietnamese-only filter list, and moving it is a separate change.
 type PublicRepository struct {
 	pool *pgxpool.Pool
+	docs *pubdocs.Store
 }
 
 // NewPublicRepository builds the public catalog reader.
-func NewPublicRepository(pool *pgxpool.Pool) *PublicRepository {
-	return &PublicRepository{pool: pool}
+func NewPublicRepository(pool *pgxpool.Pool, docs *pubdocs.Store) *PublicRepository {
+	return &PublicRepository{pool: pool, docs: docs}
+}
+
+// ErrMoved reports that the requested slug is no longer the product's address
+// in the language asked for. The caller answers 301 rather than 404, so links
+// already handed out survive a rename and the ranking that URL earned is kept.
+type ErrMoved struct{ Slug string }
+
+func (e ErrMoved) Error() string { return "product moved to " + e.Slug }
+
+// PublishedProduct is one published document: the frozen body plus every
+// language the product is live in, including the one being read — hreflang is
+// ignored unless each version points at the others AND at itself.
+type PublishedProduct struct {
+	Body       json.RawMessage
+	Alternates []pubdocs.Ref
 }
 
 // publishedOnly is the visibility predicate, used by every query here. A row
@@ -43,58 +64,64 @@ func jsonScalar(v string) string {
 func publicSortClause(sort string) string {
 	switch sort {
 	case "name":
-		return `published_snapshot->>'name' ASC`
+		return `body->>'name' ASC`
 	case "newest":
-		return `published_at DESC NULLS LAST, published_snapshot->>'name' ASC`
+		return `published_at DESC NULLS LAST, body->>'name' ASC`
 	default: // "featured"
-		return `(published_snapshot->>'is_featured')::boolean DESC,
-		        (published_snapshot->>'sort_order')::int ASC,
-		        published_snapshot->>'name' ASC`
+		return `(body->>'is_featured')::boolean DESC,
+		        (body->>'sort_order')::int ASC,
+		        body->>'name' ASC`
 	}
 }
 
-// ListPublished returns one page of published snapshots plus the total.
+// ListPublished returns one page of published documents plus the total.
+//
+// It queries published_docs directly rather than through pubdocs.Store.List:
+// the catalog filters and sorts on fields inside the body (category, lifecycle,
+// audience, platform, curation order), which the shared list helper does not
+// take. The visibility predicate is the shared one — a live row with a body.
 func (r *PublicRepository) ListPublished(ctx context.Context, p PublicListParams) ([]json.RawMessage, int, error) {
-	conds := []string{publishedOnly}
-	args := []any{}
+	conds := []string{"entity = $1", "locale = $2", "is_current", "body IS NOT NULL"}
+	args := []any{EntityProduct, p.Locale}
 	add := func(tmpl string, val any) {
 		args = append(args, val)
 		conds = append(conds, fmt.Sprintf(tmpl, len(args)))
 	}
 
 	if p.Query != "" {
-		add(`(published_snapshot->>'name' ILIKE '%%' || $%d || '%%'
-		   OR published_snapshot->>'summary' ILIKE '%%' || $%[1]d || '%%')`, p.Query)
+		// search_text holds name + summary, the pair this used to ILIKE over two
+		// JSON fields — same matches, but on a trigram-indexed column.
+		add(`search_text ILIKE '%%' || $%d || '%%'`, p.Query)
 	}
 	if p.Category != "" {
-		// Containment, not a join: the snapshot carries the categories the
-		// product had when it was published.
-		add(`published_snapshot->'categories' @> $%d::jsonb`,
+		// Containment, not a join: the body carries the categories the product
+		// had when it was published.
+		add(`body->'categories' @> $%d::jsonb`,
 			`[{"slug":`+jsonScalar(p.Category)+`}]`)
 	}
 	if p.Lifecycle != "" {
-		add(`published_snapshot->>'lifecycle' = $%d`, p.Lifecycle)
+		add(`body->>'lifecycle' = $%d`, p.Lifecycle)
 	}
 	if p.Audience != "" {
-		add(`published_snapshot->'audience' @> $%d::jsonb`, jsonScalar(p.Audience))
+		add(`body->'audience' @> $%d::jsonb`, jsonScalar(p.Audience))
 	}
 	if p.Platform != "" {
-		add(`published_snapshot->'platforms' @> $%d::jsonb`, jsonScalar(p.Platform))
+		add(`body->'platforms' @> $%d::jsonb`, jsonScalar(p.Platform))
 	}
 	if p.Featured != nil {
-		add(`(published_snapshot->>'is_featured')::boolean = $%d`, *p.Featured)
+		add(`(body->>'is_featured')::boolean = $%d`, *p.Featured)
 	}
 	where := strings.Join(conds, " AND ")
 
 	var total int
 	if err := r.pool.QueryRow(ctx,
-		`SELECT count(*) FROM products WHERE `+where, args...).Scan(&total); err != nil {
+		`SELECT count(*) FROM published_docs WHERE `+where, args...).Scan(&total); err != nil {
 		return nil, 0, shared.Wrap("count published products", err)
 	}
 
 	args = append(args, p.PageSize, (p.Page-1)*p.PageSize)
 	rows, err := r.pool.Query(ctx,
-		`SELECT published_snapshot FROM products WHERE `+where+
+		`SELECT body FROM published_docs WHERE `+where+
 			` ORDER BY `+publicSortClause(p.Sort)+
 			fmt.Sprintf(` LIMIT $%d OFFSET $%d`, len(args)-1, len(args)), args...)
 	if err != nil {
@@ -113,21 +140,51 @@ func (r *PublicRepository) ListPublished(ctx context.Context, p PublicListParams
 	return out, total, rows.Err()
 }
 
-// GetPublishedBySlug returns one published snapshot. The slug is matched on the
-// live column: a slug change takes effect immediately for routing, while the
-// content served stays the frozen one until the next publish.
-func (r *PublicRepository) GetPublishedBySlug(ctx context.Context, slug string) (json.RawMessage, error) {
-	var snap json.RawMessage
-	err := r.pool.QueryRow(ctx,
-		`SELECT published_snapshot FROM products WHERE slug = $1 AND `+publishedOnly, slug,
-	).Scan(&snap)
+// GetPublishedBySlug returns one published product in the requested language.
+//
+// Three outcomes besides the product: shared.ErrNotFound, and ErrMoved either
+// because the slug was retired by a rename, or because it is another language's
+// address for the same product. Both get a 301 instead of a 404, which is what
+// keeps one product from living at two indexable URLs.
+func (r *PublicRepository) GetPublishedBySlug(ctx context.Context, locale, slug string) (*PublishedProduct, error) {
+	found, err := r.docs.Get(ctx, EntityProduct, locale, slug)
+	if errors.Is(err, pubdocs.ErrNotFound) {
+		return nil, r.crossLocaleRedirect(ctx, locale, slug)
+	}
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, shared.ErrNotFound
-		}
 		return nil, shared.Wrap("get published product", err)
 	}
-	return snap, nil
+	if !found.IsCurrent {
+		return nil, ErrMoved{Slug: found.CurrentSlug}
+	}
+	alts, err := r.docs.Alternates(ctx, EntityProduct, found.EntityID)
+	if err != nil {
+		return nil, shared.Wrap("product alternates", err)
+	}
+	return &PublishedProduct{Body: found.Body, Alternates: alts}, nil
+}
+
+// crossLocaleRedirect handles a slug that exists, but belongs to a different
+// language of the same product — the case where a visitor lands on /en/<the
+// Vietnamese slug> after a translated slug was set. It always returns an error.
+func (r *PublicRepository) crossLocaleRedirect(ctx context.Context, locale, slug string) error {
+	if locale == baseLocale {
+		return shared.ErrNotFound
+	}
+	base, err := r.docs.Get(ctx, EntityProduct, baseLocale, slug)
+	if err != nil || !base.IsCurrent {
+		return shared.ErrNotFound
+	}
+	alts, err := r.docs.Alternates(ctx, EntityProduct, base.EntityID)
+	if err != nil {
+		return shared.Wrap("product alternates", err)
+	}
+	for _, a := range alts {
+		if a.Locale == locale {
+			return ErrMoved{Slug: a.Slug}
+		}
+	}
+	return shared.ErrNotFound
 }
 
 // PublicCategory is a taxonomy entry the site can offer as a filter.

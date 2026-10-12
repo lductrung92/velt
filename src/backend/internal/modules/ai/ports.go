@@ -46,7 +46,9 @@ func (p catalogPort) SearchPublished(ctx context.Context, query string, limit in
 }
 
 func (p catalogPort) GetPublished(ctx context.Context, slug string) (*tools.CatalogDetail, error) {
-	d, err := p.pub.GetBySlug(ctx, slug)
+	// Empty locale, which resolves to Vietnamese: the assistant answers in the
+	// language of the site it is embedded in, and that site is Vietnamese.
+	d, err := p.pub.GetBySlug(ctx, "", slug)
 	if err != nil {
 		// "No such published product" is an answer, not a fault: the model
 		// should say so rather than retry around an error.

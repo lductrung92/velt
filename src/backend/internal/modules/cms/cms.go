@@ -43,7 +43,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 	// A page may attach a landing; its published sections resolve in-process.
 	landingPublic := landing.NewPublicService(landing.NewRepository(pool), resolver, store)
 	r.Route("/api/public/cms", func(r chi.Router) {
-		pages.RegisterPublic(r, pool, resolver, landingPublic)
+		w.PublicPages = pages.RegisterPublic(r, resolver, landingPublic, docs)
 		w.PublicArticles = articles.RegisterPublic(r, pool, store, docs)
 		newsletter.RegisterPublic(r, base, pool, limiter, trustProxy)
 	})
@@ -51,8 +51,8 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 	r.Route("/api/cms", func(r chi.Router) {
 		r.Use(authMW)
 		widgets.RegisterPreview(r, base, resolver)
-		taxonomy.Register(r, base, pool)
-		pages.Register(r, base, pool, landing.NewPagesPort(landing.NewRepository(pool), store))
+		w.Taxonomy = taxonomy.Register(r, base, pool)
+		w.Pages = pages.Register(r, base, pool, landing.NewPagesPort(landing.NewRepository(pool), store))
 		w.Articles = articles.Register(r, base, pool, store)
 		menus.Register(r, base, pool)
 		landing.Register(r, base, pool, store)
@@ -62,6 +62,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 	})
 
 	w.Articles.SetPublicDocs(docs)
+	w.Pages.SetPublicDocs(docs)
 	return w
 }
 
@@ -71,6 +72,9 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 type Wiring struct {
 	Articles       *articles.Service
 	PublicArticles *articles.PublicService
+	Pages          *pages.Service
+	PublicPages    *pages.PublicService
+	Taxonomy       *taxonomy.Service
 }
 
 // SettingDefs returns the CMS feature-flag definitions for the settings registry

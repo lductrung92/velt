@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 
 	"github.com/velt/backend/internal/modules/cms/shared"
 	"github.com/velt/backend/internal/modules/cms/shared/cmstest"
+	"github.com/velt/backend/internal/modules/cms/widgets"
+	"github.com/velt/backend/internal/platform/pubdocs"
 )
 
 // fakeRepo is an in-memory page Repository for service unit tests.
@@ -208,14 +211,115 @@ func (r *fakeRepo) UnpublishPage(_ context.Context, id uuid.UUID) (*Page, error)
 	return &cp, nil
 }
 
-func (r *fakeRepo) GetPublishedPageBySlug(_ context.Context, slug string) (*Page, error) {
-	for _, p := range r.pages {
-		if p.Slug == slug && p.Status == PageStatusPublished {
-			cp := *p
-			return &cp, nil
+// fakeDocs is an in-memory published_docs. It is keyed by (entity, locale, slug)
+// — the real table's primary key, which IS the URL — and it enforces the two
+// constraints that key exists for: one record per URL, and one live URL per
+// record and language. Those are exactly what the page publish path is now
+// being tested against, so the fake has to honour them or the tests prove
+// nothing.
+type fakeDocs struct {
+	rows map[string]*fakeDocRow // entity \x00 locale \x00 slug
+}
+
+type fakeDocRow struct {
+	entityID  uuid.UUID
+	isCurrent bool
+	doc       pubdocs.Doc
+}
+
+func newFakeDocs() *fakeDocs { return &fakeDocs{rows: map[string]*fakeDocRow{}} }
+
+func docKey(entity, locale, slug string) string { return entity + "\x00" + locale + "\x00" + slug }
+
+// Publish mirrors the store: every doc is checked for a clash BEFORE anything is
+// written, because the real one runs in a single transaction and a half-applied
+// publish would hide the behaviour the caller leans on.
+func (f *fakeDocs) Publish(_ context.Context, entity string, id uuid.UUID, docs []pubdocs.Doc) error {
+	keep := map[string]bool{}
+	for _, d := range docs {
+		k := docKey(entity, d.Locale, d.Slug)
+		if row, ok := f.rows[k]; ok && row.entityID != id {
+			return pubdocs.ErrSlugTaken{Locale: d.Locale, Slug: d.Slug}
+		}
+		keep[k] = true
+	}
+	for k, row := range f.rows {
+		if row.entityID == id && row.isCurrent && !keep[k] {
+			row.isCurrent, row.doc.Body = false, nil // retired → answers 301
 		}
 	}
-	return nil, shared.ErrNotFound
+	for _, d := range docs {
+		f.rows[docKey(entity, d.Locale, d.Slug)] = &fakeDocRow{entityID: id, isCurrent: true, doc: d}
+	}
+	return nil
+}
+
+func (f *fakeDocs) Unpublish(ctx context.Context, entity string, id uuid.UUID) error {
+	return f.Publish(ctx, entity, id, nil)
+}
+
+func (f *fakeDocs) Purge(_ context.Context, entity string, id uuid.UUID) error {
+	for k, row := range f.rows {
+		if row.entityID == id && strings.HasPrefix(k, entity+"\x00") {
+			delete(f.rows, k)
+		}
+	}
+	return nil
+}
+
+func (f *fakeDocs) Get(_ context.Context, entity, locale, slug string) (*pubdocs.Found, error) {
+	row, ok := f.rows[docKey(entity, locale, slug)]
+	if !ok {
+		return nil, pubdocs.ErrNotFound
+	}
+	found := &pubdocs.Found{
+		Body: row.doc.Body, IsCurrent: row.isCurrent,
+		EntityID: row.entityID, PublishedAt: row.doc.PublishedAt,
+	}
+	if row.isCurrent {
+		return found, nil
+	}
+	for _, other := range f.rows {
+		if other.entityID == row.entityID && other.isCurrent && other.doc.Locale == locale {
+			found.CurrentSlug = other.doc.Slug
+			return found, nil
+		}
+	}
+	return nil, pubdocs.ErrNotFound
+}
+
+func (f *fakeDocs) Alternates(_ context.Context, entity string, id uuid.UUID) ([]pubdocs.Ref, error) {
+	out := []pubdocs.Ref{}
+	for k, row := range f.rows {
+		if row.entityID == id && row.isCurrent && strings.HasPrefix(k, entity+"\x00") {
+			out = append(out, pubdocs.Ref{Locale: row.doc.Locale, Slug: row.doc.Slug})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Locale < out[j].Locale })
+	return out, nil
+}
+
+// fakeTranslator stands in for the translation module: a fixed language list and
+// a fixed bundle of values.
+type fakeTranslator struct {
+	locales []string
+	values  map[uuid.UUID]map[string]map[string]any
+	purged  []uuid.UUID
+	bundErr error
+}
+
+func (f *fakeTranslator) Locales(context.Context) []string { return f.locales }
+
+func (f *fakeTranslator) Bundle(_ context.Context, _ string, _ []uuid.UUID, _ []string) (map[uuid.UUID]map[string]map[string]any, error) {
+	if f.bundErr != nil {
+		return nil, f.bundErr
+	}
+	return f.values, nil
+}
+
+func (f *fakeTranslator) Purge(_ context.Context, _ string, id uuid.UUID) error {
+	f.purged = append(f.purged, id)
+	return nil
 }
 
 // fakeLandingAdmin records the landing cascade calls the pages service makes.
@@ -261,6 +365,7 @@ func (f *fakeLandingAdmin) Unpublish(_ context.Context, id uuid.UUID) error {
 type tenv struct {
 	svc      *Service
 	repo     *fakeRepo
+	docs     *fakeDocs
 	settings *cmstest.FakeSettings
 	landing  *fakeLandingAdmin
 }
@@ -271,6 +376,17 @@ func newTestSvc(t *testing.T) *tenv {
 	repo := newFakeRepo(clk)
 	fs := &cmstest.FakeSettings{}
 	lp := &fakeLandingAdmin{}
+	docs := newFakeDocs()
 	base := shared.NewBase(fs, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	return &tenv{svc: NewService(base, repo, lp), repo: repo, settings: fs, landing: lp}
+	svc := NewService(base, repo, lp)
+	// Wired by default: the read model is where a published page now lives, so a
+	// test that publishes without it would be testing the pre-migration module.
+	svc.SetPublicDocs(docs)
+	return &tenv{svc: svc, repo: repo, docs: docs, settings: fs, landing: lp}
+}
+
+// publicSvc builds the public read over the same in-memory read model the
+// service publishes into, so a test can follow one page from publish to page view.
+func (e *tenv) publicSvc(landing LandingPort) *PublicService {
+	return NewPublicService(NewPublicRepository(e.docs), widgets.NewResolver(widgets.Ports{}), landing)
 }

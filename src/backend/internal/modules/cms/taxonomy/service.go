@@ -9,6 +9,7 @@ import (
 type Service struct {
 	*shared.Base
 	repo Repository
+	tr   Translator
 }
 
 // NewService wires the taxonomy service onto the shared CMS base.

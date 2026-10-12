@@ -10,28 +10,51 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/velt/backend/internal/modules/products/shared"
+	"github.com/velt/backend/internal/platform/pubdocs"
 )
 
 // fakePublicRepo stands in for Postgres. The SQL predicates are exercised by the
 // integration pass against the real database; what matters here is that the
 // service never widens what the repository hands it.
 type fakePublicRepo struct {
-	snaps map[string]json.RawMessage // slug -> snapshot
-	order []string
-	cats  []PublicCategory
-	err   error
+	docs   map[string]*PublishedProduct // "<locale>|<slug>" -> published document
+	bodies []json.RawMessage
+	total  int
+	cats   []PublicCategory
+	moved  string // non-empty → GetPublishedBySlug reports a 301 target
+
+	lastParams PublicListParams
+	lastLocale string
 }
 
-func (f *fakePublicRepo) list() ([]json.RawMessage, int, error) {
-	if f.err != nil {
-		return nil, 0, f.err
-	}
-	out := []json.RawMessage{}
-	for _, slug := range f.order {
-		out = append(out, f.snaps[slug])
-	}
-	return out, len(out), nil
+func (f *fakePublicRepo) ListPublished(_ context.Context, p PublicListParams) ([]json.RawMessage, int, error) {
+	f.lastParams = p
+	return f.bodies, f.total, nil
 }
+
+func (f *fakePublicRepo) GetPublishedBySlug(_ context.Context, locale, slug string) (*PublishedProduct, error) {
+	f.lastLocale = locale
+	if f.moved != "" {
+		return nil, ErrMoved{Slug: f.moved}
+	}
+	if d, ok := f.docs[locale+"|"+slug]; ok {
+		return d, nil
+	}
+	return nil, shared.ErrNotFound
+}
+
+func (f *fakePublicRepo) ListPublicCategories(context.Context) ([]PublicCategory, error) {
+	return f.cats, nil
+}
+
+func (f *fakePublicRepo) IDsBySlugs(context.Context, []string) ([]uuid.UUID, error) {
+	return nil, nil
+}
+
+// fakeLocales stands in for the translation module's language list.
+type fakeLocales struct{ list []string }
+
+func (f fakeLocales) Locales(context.Context) []string { return f.list }
 
 // publicEnv wires a PublicService over a stub reader.
 type publicEnv struct {
@@ -41,8 +64,8 @@ type publicEnv struct {
 
 func newPublicEnv(t *testing.T) *publicEnv {
 	t.Helper()
-	repo := &fakePublicRepo{snaps: map[string]json.RawMessage{}}
-	return &publicEnv{repo: repo, svc: &PublicService{Base: shared.NewBase(nil)}}
+	repo := &fakePublicRepo{docs: map[string]*PublishedProduct{}}
+	return &publicEnv{repo: repo, svc: NewPublicService(shared.NewBase(nil), repo, nil)}
 }
 
 // snapshotOf freezes a Response exactly the way transition() does.
@@ -86,7 +109,7 @@ func sampleResponse() Response {
 
 func TestPublicDetailDropsInternalFields(t *testing.T) {
 	env := newPublicEnv(t)
-	out := env.svc.toPublicDetail(context.Background(), sampleResponse())
+	out := env.svc.toPublicDetail(context.Background(), sampleResponse(), baseLocale, nil)
 
 	body, err := json.Marshal(out)
 	require.NoError(t, err)
@@ -126,7 +149,7 @@ func TestPublicEmptyListsSerializeAsArrays(t *testing.T) {
 	// The site should never have to tell "no categories" from "not loaded".
 	env := newPublicEnv(t)
 	bare := Response{Slug: "x", Name: "X", Lifecycle: "idea"}
-	out := env.svc.toPublicDetail(context.Background(), bare)
+	out := env.svc.toPublicDetail(context.Background(), bare, baseLocale, nil)
 
 	body, err := json.Marshal(out)
 	require.NoError(t, err)
@@ -172,8 +195,69 @@ func TestPublicListParamsNormalize(t *testing.T) {
 
 func TestPublicGetRejectsBlankSlug(t *testing.T) {
 	env := newPublicEnv(t)
-	_, err := env.svc.GetBySlug(context.Background(), "   ")
+	_, err := env.svc.GetBySlug(context.Background(), "", "   ")
 	require.Error(t, err)
+}
+
+func TestPublicResolveLocale(t *testing.T) {
+	env := newPublicEnv(t)
+	ctx := context.Background()
+
+	// No translation module wired: everything is the source language.
+	require.Equal(t, baseLocale, env.svc.resolveLocale(ctx, "en"))
+
+	env.svc.SetLocales(fakeLocales{list: []string{"en"}})
+	require.Equal(t, "en", env.svc.resolveLocale(ctx, " EN "))
+	require.Equal(t, baseLocale, env.svc.resolveLocale(ctx, ""))
+	// A mistyped parameter serves the original rather than an error page.
+	require.Equal(t, baseLocale, env.svc.resolveLocale(ctx, "fr"))
+}
+
+func TestPublicListPassesResolvedLocale(t *testing.T) {
+	env := newPublicEnv(t)
+	env.svc.SetLocales(fakeLocales{list: []string{"en"}})
+
+	_, err := env.svc.List(context.Background(), PublicListParams{Locale: "en"})
+	require.NoError(t, err)
+	require.Equal(t, "en", env.repo.lastParams.Locale)
+
+	_, err = env.svc.List(context.Background(), PublicListParams{Locale: "fr"})
+	require.NoError(t, err)
+	require.Equal(t, baseLocale, env.repo.lastParams.Locale)
+}
+
+func TestPublicGetBySlugMovedReachesCaller(t *testing.T) {
+	// The handler needs the 301 target, so ErrMoved must not be flattened into
+	// a 404 on the way out of the service.
+	env := newPublicEnv(t)
+	env.repo.moved = "lean-stock"
+
+	_, err := env.svc.GetBySlug(context.Background(), "", "kho-gon")
+	var moved ErrMoved
+	require.ErrorAs(t, err, &moved)
+	require.Equal(t, "lean-stock", moved.Slug)
+}
+
+func TestPublicGetBySlugAlternatesIncludeSelf(t *testing.T) {
+	env := newPublicEnv(t)
+	env.svc.SetLocales(fakeLocales{list: []string{"en"}})
+	env.repo.docs["en|lean-stock"] = &PublishedProduct{
+		Body: snapshotOf(t, sampleResponse()),
+		Alternates: []pubdocs.Ref{
+			{Locale: "vi", Slug: "bang-cong-viec"}, {Locale: "en", Slug: "lean-stock"},
+		},
+	}
+
+	out, err := env.svc.GetBySlug(context.Background(), "en", "lean-stock")
+	require.NoError(t, err)
+	require.Equal(t, "en", out.Locale)
+	require.Equal(t, "en", env.repo.lastLocale)
+	// hreflang is ignored unless every version points at the others and itself,
+	// and x-default is the source language.
+	require.Len(t, out.Alternates, 2)
+	require.True(t, out.Alternates[0].XDefault)
+	require.False(t, out.Alternates[1].XDefault)
+	require.Equal(t, "lean-stock", out.Alternates[1].Slug)
 }
 
 func TestPublicSortClauseIsFixedText(t *testing.T) {

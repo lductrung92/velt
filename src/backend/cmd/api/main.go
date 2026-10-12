@@ -227,14 +227,18 @@ func run() error {
 	// AI assistant will use to record a lead in-process, so it never needs an
 	// unauthenticated HTTP write.
 	crmLeads := crm.Register(r, pool, logger, authMW)
+	// The public read model: one row per published URL, shared by every content
+	// type. It replaces the per-table published_snapshot column and is what makes
+	// a second language a row rather than a schema change.
+	publicDocs := pubdocs.New(pool)
 	// products bounded context: the catalog VELT sells, plus its own taxonomy.
-	publicCatalog := products.Register(r, pool, store, settingsSvc, logger, authMW,
-		revalidate.NewHTTP(cfg.CustomerWebBaseURL, cfg.RevalidateSecret, logger))
+	productsWiring := products.Register(r, pool, store, settingsSvc, logger, authMW,
+		revalidate.NewHTTP(cfg.CustomerWebBaseURL, cfg.RevalidateSecret, logger), publicDocs)
 	// ai bounded context: the site assistant. It reads the catalog through the
 	// SAME public service the site uses (published snapshots only) and the
 	// public member roster — no second path to the data with its own rules.
 	ai.Register(r, pool, settingsSvc, logger, authMW, ai.Deps{
-		Catalog: publicCatalog,
+		Catalog: productsWiring.PublicCatalog,
 		Leads:   crmLeads,
 		Roster: func(ctx context.Context) ([]aitools.Person, error) {
 			res, err := membersSvc.ListPublic(ctx, members.ListParams{PageSize: 100})
@@ -261,10 +265,6 @@ func run() error {
 	// (articles_list / categories_showcase). Stateless over the pool. Games is left
 	// nil — there is no games catalog in this deployment, so a games_list widget
 	// resolves to nothing (the resolver is nil-safe by design).
-	// The public read model: one row per published URL, shared by every content
-	// type. It replaces the per-table published_snapshot column and is what makes
-	// a second language a row rather than a schema change.
-	publicDocs := pubdocs.New(pool)
 	cmsWiring := cms.Register(r, pool, settingsSvc, store, logger, authMW, widgets.Ports{
 		Articles:   cmsArticlesPort{cmsarticles.NewPublicRepository(pool, publicDocs)},
 		Categories: cmsCategoriesPort{cmstaxonomy.NewPublicRepository(pool)},
@@ -273,15 +273,38 @@ func run() error {
 	// Translation has no permissions of its own: every write defers to the gate of
 	// the module that owns the content, so the CMS author-only rule covers an
 	// article's translations exactly as it covers the article.
+	// One arm per declared entity, each deferring to the gate of the module that
+	// owns the content. An entity with no arm here is unreachable rather than
+	// unguarded, which is why the default is 404 and not 403.
 	translationSvc := translation.Register(r, pool, settingsSvc, authMW,
 		func(ctx context.Context, id *httpx.Identity, entity string, entityID uuid.UUID) error {
-			if entity == cmsarticles.EntityArticle {
+			switch entity {
+			case translation.EntityArticle:
 				return cmsWiring.Articles.AuthorizeTranslate(ctx, id, entityID)
+			case translation.EntityPage:
+				return cmsWiring.Pages.AuthorizeTranslate(ctx, id, entityID)
+			case translation.EntityCMSCategory:
+				return cmsWiring.Taxonomy.AuthorizeTranslateCategory(ctx, id, entityID)
+			case translation.EntityTag:
+				return cmsWiring.Taxonomy.AuthorizeTranslateTag(ctx, id, entityID)
+			case translation.EntityProduct:
+				return productsWiring.Catalog.AuthorizeTranslate(ctx, id, entityID)
+			case translation.EntityProductCategory:
+				return productsWiring.Categories.AuthorizeTranslate(ctx, id, entityID)
+			case translation.EntityMember:
+				return membersSvc.AuthorizeTranslate(ctx, id, entityID)
 			}
 			return apperr.NotFound("not_found")
 		})
 	cmsWiring.Articles.SetTranslator(translationSvc)
 	cmsWiring.PublicArticles.SetLocales(translationSvc)
+	cmsWiring.Pages.SetTranslator(translationSvc)
+	cmsWiring.PublicPages.SetLocales(translationSvc)
+	cmsWiring.Taxonomy.SetTranslator(translationSvc)
+	productsWiring.Catalog.SetTranslator(translationSvc)
+	productsWiring.PublicCatalog.SetLocales(translationSvc)
+	productsWiring.Categories.SetTranslator(translationSvc)
+	membersSvc.SetTranslator(translationSvc)
 	// Public asset serving (avatars + CMS article media) when the storage driver
 	// is local; the S3 driver serves them straight from the bucket endpoint.
 	files.RegisterRoutes(r, filesHandler)

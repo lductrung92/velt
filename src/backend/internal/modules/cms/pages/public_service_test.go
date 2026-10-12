@@ -10,7 +10,6 @@ import (
 
 	"github.com/velt/backend/internal/modules/cms/shared"
 	"github.com/velt/backend/internal/modules/cms/shared/cmstest"
-	"github.com/velt/backend/internal/modules/cms/widgets"
 )
 
 // spyRevalidator records the tags a publish asks to revalidate.
@@ -64,8 +63,8 @@ func TestPublicPage_ResolvesInlineWidgets(t *testing.T) {
 	_, err = env.svc.PublishPage(ctx, cmstest.SuperActor(), created.ID)
 	require.NoError(t, err)
 
-	pub := NewPublicService(env.repo, widgets.NewResolver(widgets.Ports{}), nil)
-	page, err := pub.GetPublishedPage(ctx, created.Slug)
+	pub := env.publicSvc(nil)
+	page, err := pub.GetPublishedPage(ctx, "", created.Slug)
 	require.NoError(t, err)
 
 	require.Len(t, page.InlineWidgets, 1)
@@ -97,8 +96,8 @@ func TestPublicPage_AttachedLandingSections(t *testing.T) {
 	require.NoError(t, err)
 
 	port := fakeLandingPort{secs: []shared.PublicSection{{Type: "hero", SortOrder: 0}}}
-	pub := NewPublicService(env.repo, widgets.NewResolver(widgets.Ports{}), port)
-	page, err := pub.GetPublishedPage(ctx, created.Slug)
+	pub := env.publicSvc(port)
+	page, err := pub.GetPublishedPage(ctx, "", created.Slug)
 	require.NoError(t, err)
 	require.Len(t, page.Sections, 1)
 	require.Equal(t, "hero", page.Sections[0].Type)
@@ -120,8 +119,8 @@ func TestPublicPage_AttachedLandingUnpublished_EmptySections(t *testing.T) {
 	require.NoError(t, err)
 
 	port := fakeLandingPort{secs: nil} // landing not published → no sections
-	pub := NewPublicService(env.repo, widgets.NewResolver(widgets.Ports{}), port)
-	page, err := pub.GetPublishedPage(ctx, created.Slug)
+	pub := env.publicSvc(port)
+	page, err := pub.GetPublishedPage(ctx, "", created.Slug)
 	require.NoError(t, err)
 	require.NotNil(t, page.Sections)
 	require.Empty(t, page.Sections)
@@ -139,8 +138,8 @@ func TestPublicPage_NoLanding_EmptySections(t *testing.T) {
 	require.NoError(t, err)
 
 	port := fakeLandingPort{secs: []shared.PublicSection{{Type: "hero"}}}
-	pub := NewPublicService(env.repo, widgets.NewResolver(widgets.Ports{}), port)
-	page, err := pub.GetPublishedPage(ctx, created.Slug)
+	pub := env.publicSvc(port)
+	page, err := pub.GetPublishedPage(ctx, "", created.Slug)
 	require.NoError(t, err)
 	require.NotNil(t, page.Sections)
 	require.Empty(t, page.Sections)

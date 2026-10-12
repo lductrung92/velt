@@ -31,6 +31,11 @@ type Service struct {
 	*shared.Base
 	repo    Repository
 	landing LandingAdminPort // nil-safe: cascade skipped when absent
+	// pub and tr are wired after construction (see public_sync.go) and are both
+	// allowed to stay nil, which is what this module looked like before the
+	// public read model and translations existed.
+	pub publicDocWriter
+	tr  Translator
 }
 
 // NewService wires the pages service onto the shared CMS base. landing may be
@@ -122,6 +127,12 @@ func (s *Service) CreatePage(ctx context.Context, id *httpx.Identity, req Create
 		return PageDetailResponse{}, mapWriteErr(err)
 	}
 	s.Sec(ctx).Info("cms page created", "actor", id.UserID, "page", created.ID, "kind", req.Kind)
+	// A new page is always a draft, so this only ever asserts "nothing public
+	// here". It is called anyway so that every write path leaves the read model
+	// in step without the reader having to prove which ones cannot.
+	if err := s.syncPublic(ctx, created); err != nil {
+		return PageDetailResponse{}, err
+	}
 	return toPageDetail(*created), nil
 }
 
@@ -156,6 +167,9 @@ func (s *Service) UpdatePage(ctx context.Context, id *httpx.Identity, pageID uui
 	// Save = live: a published page re-freezes its snapshot so title/body/SEO/
 	// inline-widget edits reach the public page immediately.
 	s.refreshLivePageSnapshot(ctx, updated)
+	if err := s.syncPublic(ctx, updated); err != nil {
+		return PageDetailResponse{}, err
+	}
 	return toPageDetail(*updated), nil
 }
 
@@ -209,6 +223,19 @@ func (s *Service) DeletePage(ctx context.Context, id *httpx.Identity, pageID uui
 		}
 		return apperr.Internal()
 	}
+	// An orphan in the public read model is not wasted space: it is a URL still
+	// serving a page that no longer exists. Same for the translation store.
+	if s.pub != nil {
+		if err := s.pub.Purge(ctx, EntityPage, pageID); err != nil {
+			s.Sec(ctx).Error("purge public doc", "page", pageID, "error", err)
+			return apperr.Internal()
+		}
+	}
+	if s.tr != nil {
+		if err := s.tr.Purge(ctx, EntityPage, pageID); err != nil {
+			s.Sec(ctx).Warn("purge page translations failed", "page", pageID, "err", err)
+		}
+	}
 	// The attached landing lives and dies with its page (there is no standalone
 	// landing screen anymore) → delete it too. Best-effort: the page is already
 	// gone; a leftover landing is logged, never a user-facing failure.
@@ -258,6 +285,9 @@ func (s *Service) PublishPage(ctx context.Context, id *httpx.Identity, pageID uu
 		return PageDetailResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms page published", "actor", id.UserID, "page", pageID, "from", cur.Status, "to", updated.Status)
+	if err := s.syncPublic(ctx, updated); err != nil {
+		return PageDetailResponse{}, err
+	}
 	s.Revalidate(ctx, "page:"+updated.Slug)
 	return toPageDetail(*updated), nil
 }
@@ -290,6 +320,9 @@ func (s *Service) UnpublishPage(ctx context.Context, id *httpx.Identity, pageID 
 		}
 	}
 	s.Sec(ctx).Info("cms page unpublished", "actor", id.UserID, "page", pageID)
+	if err := s.syncPublic(ctx, updated); err != nil {
+		return PageDetailResponse{}, err
+	}
 	s.Revalidate(ctx, "page:"+updated.Slug)
 	return toPageDetail(*updated), nil
 }
@@ -322,6 +355,9 @@ func (s *Service) refreshLivePageSnapshot(ctx context.Context, p *Page) {
 		s.Sec(ctx).Warn("cms page: live snapshot refresh failed", "page", p.ID, "err", err)
 		return
 	}
+	// Keep the in-memory row in step: syncPublic publishes from this field, and a
+	// stale one would push the pre-edit body out to the public read model.
+	p.PublishedSnapshot = snap
 	s.Revalidate(ctx, "page:"+p.Slug)
 }
 

@@ -31,18 +31,57 @@ type Declaration struct {
 
 // declarations lists every translatable entity.
 //
-// Only `article` for now: the other six are wired one at a time, because an
-// entity declared here but not folded into its module's publish path would
-// accept translations that never reach a page.
+// `slug` is declared only for the entities that publish a locale-keyed row into
+// published_docs. The rest resolve their slug against their own table, so a
+// translated slug would hand a visitor a URL that 404s — and an input box that
+// is silently ignored is a faster way to lose trust in a feature than not
+// offering it at all.
 var declarations = []Declaration{
 	{
 		Entity: EntityArticle,
 		Fields: []string{"slug", "title", "excerpt", "body_html", "seo"},
 	},
+	// A static page is mostly its body. Translating only its title would leave
+	// an English heading over Vietnamese prose, with nothing else on the page to
+	// carry it — worse than the half-translated state the fallback rule exists
+	// to make tolerable.
+	{
+		Entity: EntityPage,
+		Fields: []string{"slug", "title", "body_html", "seo"},
+	},
+	{
+		Entity: EntityProduct,
+		Fields: []string{"slug", "name", "summary", "body_html", "highlights", "seo"},
+	},
+	{
+		Entity: EntityProductCategory,
+		Fields: []string{"name", "description", "seo"},
+	},
+	{
+		Entity: EntityCMSCategory,
+		Fields: []string{"name", "description", "seo"},
+	},
+	{
+		Entity: EntityTag,
+		Fields: []string{"name"},
+	},
+	{
+		Entity: EntityMember,
+		Fields: []string{"role", "bio"},
+	},
 }
 
-// EntityArticle is the entity key for a CMS article.
-const EntityArticle = "article"
+// Entity keys. They are the first segment of every translation route, so they
+// are part of the HTTP contract and must match the owning module's own constant.
+const (
+	EntityArticle         = "article"
+	EntityPage            = "page"
+	EntityProduct         = "product"
+	EntityProductCategory = "product_category"
+	EntityCMSCategory     = "cms_category"
+	EntityTag             = "tag"
+	EntityMember          = "member"
+)
 
 // Declared returns the declaration for an entity, or false if it is not
 // translatable. To a caller, an undeclared entity does not exist.

@@ -39,6 +39,7 @@ type Service struct {
 	store    storage.Storage
 	urls     storage.URLer
 	settings SettingsPort
+	tr       Translator
 	log      *slog.Logger
 }
 
@@ -94,9 +95,26 @@ func (s *Service) List(ctx context.Context, id *httpx.Identity, p ListParams) (L
 }
 
 // ListPublic returns active members for the public site. No auth, no permission.
+// p.Locale picks the language; anything not configured serves Vietnamese.
 func (s *Service) ListPublic(ctx context.Context, p ListParams) (ListResponse, error) {
 	p.ActiveOnly = true
-	return s.list(ctx, p)
+	res, err := s.list(ctx, p)
+	if err != nil {
+		return ListResponse{}, err
+	}
+	locale := s.resolveLocale(ctx, p.Locale)
+	if locale == baseLocale {
+		return res, nil
+	}
+	ids := make([]uuid.UUID, len(res.Items))
+	for i := range res.Items {
+		ids[i] = res.Items[i].ID
+	}
+	byID := s.translations(ctx, locale, ids)
+	for i := range res.Items {
+		overlayMember(&res.Items[i], byID[res.Items[i].ID])
+	}
+	return res, nil
 }
 
 func (s *Service) list(ctx context.Context, p ListParams) (ListResponse, error) {
@@ -127,7 +145,7 @@ func (s *Service) Get(ctx context.Context, id *httpx.Identity, memberID uuid.UUI
 // GetPublicBySlug returns one ACTIVE member by slug for the public site. A
 // hidden member is reported as not found: whether a profile exists but is
 // hidden is not public information.
-func (s *Service) GetPublicBySlug(ctx context.Context, slug string) (Response, error) {
+func (s *Service) GetPublicBySlug(ctx context.Context, locale, slug string) (Response, error) {
 	m, err := s.repo.GetBySlug(ctx, slug)
 	if err != nil {
 		return Response{}, s.mapRepoErr(ctx, "get by slug", err)
@@ -135,7 +153,11 @@ func (s *Service) GetPublicBySlug(ctx context.Context, slug string) (Response, e
 	if !m.IsActive {
 		return Response{}, apperr.NotFound("not_found")
 	}
-	return s.toResponse(ctx, *m), nil
+	res := s.toResponse(ctx, *m)
+	if loc := s.resolveLocale(ctx, locale); loc != baseLocale {
+		overlayMember(&res, s.translations(ctx, loc, []uuid.UUID{m.ID})[m.ID])
+	}
+	return res, nil
 }
 
 // --- Writes ---
@@ -271,6 +293,7 @@ func (s *Service) Delete(ctx context.Context, id *httpx.Identity, memberID uuid.
 		return s.mapRepoErr(ctx, "delete", err)
 	}
 	s.deleteFile(ctx, cur.AvatarPath)
+	s.purgeTranslations(ctx, memberID)
 	return nil
 }
 

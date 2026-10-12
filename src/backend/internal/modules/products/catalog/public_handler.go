@@ -4,7 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 
@@ -36,6 +38,7 @@ func publicListParams(r *http.Request) PublicListParams {
 		featured = &b
 	}
 	return PublicListParams{
+		Locale:    q.Get("locale"),
 		Query:     strings.TrimSpace(q.Get("q")),
 		Category:  q.Get("category"),
 		Lifecycle: q.Get("lifecycle"),
@@ -85,13 +88,30 @@ func (h *PublicHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetProduct handles GET /api/public/products/{slug}.
+//
+// A retired slug, or another language's slug for the same product, comes back as
+// ErrMoved and is answered with 301 — one product must not be reachable at two
+// indexable URLs, and links already handed out have to keep working.
 func (h *PublicHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
-	res, err := h.svc.GetBySlug(r.Context(), chi.URLParam(r, "slug"))
+	res, err := h.svc.GetBySlug(r.Context(), r.URL.Query().Get("locale"), chi.URLParam(r, "slug"))
+	var moved ErrMoved
+	if errors.As(err, &moved) {
+		http.Redirect(w, r, redirectTarget(r, moved.Slug), http.StatusMovedPermanently)
+		return
+	}
 	if err != nil {
 		httpx.WriteError(w, err)
 		return
 	}
 	writeCached(w, r, res)
+}
+
+// redirectTarget swaps the slug in the current path and keeps the query string,
+// so ?locale= survives the redirect.
+func redirectTarget(r *http.Request, slug string) string {
+	u := *r.URL
+	u.Path = path.Join(path.Dir(r.URL.Path), slug)
+	return u.RequestURI()
 }
 
 // ListCategories handles GET /api/public/product-categories.
