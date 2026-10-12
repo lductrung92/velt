@@ -32,6 +32,20 @@ function category(over: Record<string, unknown> = {}) {
   };
 }
 
+// The translation view the server returns for a declared entity. `slug` is not
+// in it: a product category resolves its URL against its own table.
+function trView(values?: Record<string, unknown>) {
+  return {
+    entity: "product_category",
+    entity_id: "c1",
+    base_locale: "vi",
+    locales: ["en"],
+    translatable_fields: ["name", "description", "seo"],
+    translations: values ? { en: { values, updated_at: "u" } } : {},
+    requires_republish: false,
+  };
+}
+
 function signIn(permissions: string[]) {
   useAuthStore.getState().setSession(
     {
@@ -76,7 +90,7 @@ beforeEach(() => useAuthStore.getState().clear());
 afterEach(() => useAuthStore.getState().clear());
 
 describe("ProductCategoryEditor", () => {
-  it("renders both sections and no parent selector", async () => {
+  it("renders every card and no parent selector", async () => {
     // The whole point of this screen vs the CMS one: the taxonomy is flat.
     signIn(MANAGER);
     server.use(
@@ -84,15 +98,30 @@ describe("ProductCategoryEditor", () => {
     );
     renderAt("/product-categories/new");
 
-    // Each section label appears twice: once in the nav rail, once as the card
-    // title — same as the CMS category editor.
+    // One heading per card on the shared editor grid: content, placement, SEO.
     expect(
-      await screen.findAllByText(i18n.t("products.categories.editor.basic")),
-    ).toHaveLength(2);
+      await screen.findByText(i18n.t("products.categories.editor.basic")),
+    ).toBeInTheDocument();
     expect(
-      screen.getAllByText(i18n.t("products.categories.seo.heading")),
-    ).toHaveLength(2);
+      screen.getByText(i18n.t("products.categories.editor.placement")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(i18n.t("products.categories.seo.heading")),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/Chuyên mục cha|Danh mục cha/)).not.toBeInTheDocument();
+  });
+
+  it("create: no slug field at all — the server derives it from the name", async () => {
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/product-categories`, () => HttpResponse.json({ items: [] })),
+    );
+    renderAt("/product-categories/new");
+
+    await screen.findByLabelText(/Tên danh mục/);
+    expect(
+      screen.queryByText(i18n.t("products.categories.editor.permalink")),
+    ).not.toBeInTheDocument();
   });
 
   it("requires a name", async () => {
@@ -143,11 +172,11 @@ describe("ProductCategoryEditor", () => {
     await waitFor(() => expect(posted).toHaveBeenCalled());
     expect(posted.mock.calls[0][0]).toMatchObject({
       name: "Giáo dục",
-      // Slug left blank: the server derives it.
-      slug: "",
       sort_order: 0,
       seo: { title: "Giáo dục | VELT", description: "", keywords: "" },
     });
+    // No slug key at all on create: the server derives it from the name.
+    expect(posted.mock.calls[0][0]).not.toHaveProperty("slug");
   });
 
   it("prefills every field when editing", async () => {
@@ -162,13 +191,64 @@ describe("ProductCategoryEditor", () => {
     await waitFor(async () =>
       expect(await screen.findByLabelText(/Tên danh mục/)).toHaveValue("Cộng tác"),
     );
-    expect(screen.getByLabelText(/^Slug/)).toHaveValue("cong-tac");
+    // The permalink is a locked row, not an input — it is an address people
+    // already hold.
+    expect(screen.getByText("cong-tac")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("cong-tac")).not.toBeInTheDocument();
     expect(
       screen.getByLabelText(i18n.t("products.categories.col.sort_order")),
     ).toHaveValue(3);
     expect(
       screen.getByLabelText(i18n.t("products.categories.seo.title")),
     ).toHaveValue("Công cụ cộng tác | VELT");
+  });
+
+  it("translation: the English tab is written before the record itself", async () => {
+    signIn(MANAGER);
+    const calls: string[] = [];
+    let putBody: Record<string, unknown> | undefined;
+    server.use(
+      http.get(`${API}/public/settings`, () =>
+        HttpResponse.json({
+          "translation.enabled": true,
+          "translation.locales": "en",
+        }),
+      ),
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({ items: [category()] }),
+      ),
+      http.get(`${API}/translations/product_category/c1`, () =>
+        HttpResponse.json(trView()),
+      ),
+      http.put(
+        `${API}/translations/product_category/c1/en`,
+        async ({ request }) => {
+          calls.push("translation");
+          putBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(trView({ name: "Collaboration" }));
+        },
+      ),
+      http.patch(`${API}/product-categories/c1`, () => {
+        calls.push("record");
+        return HttpResponse.json(category());
+      }),
+    );
+    renderAt("/product-categories/c1");
+
+    await userEvent.click(await screen.findByRole("tab", { name: /English/ }));
+    // The panel is labelled in the language being written, so this box is
+    // "Name" and not "Tên danh mục".
+    await userEvent.type(screen.getByLabelText("Name"), "Collaboration");
+    // The Vietnamese form stays mounted behind it: switching language must not
+    // throw away what is in it.
+    expect(screen.getByLabelText(/Tên danh mục/)).toHaveValue("Cộng tác");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
+
+    await waitFor(() => expect(calls).toEqual(["translation", "record"]));
+    expect(putBody).toMatchObject({ values: { name: "Collaboration" } });
   });
 
   it("reports an id that is not in the taxonomy", async () => {

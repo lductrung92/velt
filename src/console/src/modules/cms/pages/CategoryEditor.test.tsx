@@ -69,7 +69,24 @@ function baseHandlers() {
   return [
     http.get(`${API}/cms/categories`, () => HttpResponse.json(catTree())),
     http.get(`${API}/cms/settings`, () => HttpResponse.json(settingsView())),
+    http.get(`${API}/public/settings`, () =>
+      HttpResponse.json({ "translation.enabled": false }),
+    ),
   ];
+}
+
+// The translation view the server returns for a declared entity. `slug` is not
+// in it: a category resolves its URL against its own table.
+function trView(values?: Record<string, unknown>) {
+  return {
+    entity: "cms_category",
+    entity_id: "a",
+    base_locale: "vi",
+    locales: ["en"],
+    translatable_fields: ["name", "description", "seo"],
+    translations: values ? { en: { values, updated_at: "u" } } : {},
+    requires_republish: false,
+  };
 }
 
 function signIn(permissions: string[]) {
@@ -158,6 +175,83 @@ describe("CategoryEditor", () => {
     await waitFor(() =>
       expect(patchBody).toMatchObject({ name: "Tin mới", updated_at: "u-a" }),
     );
+  });
+
+  it("create: no permalink row — the server derives the slug from the name", async () => {
+    signIn(MANAGER);
+    server.use(...baseHandlers());
+    renderEditor("/cms/categories/new");
+
+    await screen.findAllByRole("textbox");
+    expect(
+      screen.queryByText(i18n.t("cms.categories.editor.permalink")),
+    ).not.toBeInTheDocument();
+  });
+
+  it("edit: the permalink is locked and an unchanged slug is not sent", async () => {
+    signIn(MANAGER);
+    let patchBody: Record<string, unknown> | undefined;
+    server.use(
+      ...baseHandlers(),
+      http.patch(`${API}/cms/categories/a`, async ({ request }) => {
+        patchBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: "a" });
+      }),
+    );
+    const user = userEvent.setup();
+    renderEditor("/cms/categories/a");
+
+    expect(await screen.findByText("tin-tuc")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("tin-tuc")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: SAVE() }));
+
+    await waitFor(() => expect(patchBody).toBeDefined());
+    // Re-sending the current slug would re-run the rename path for an address
+    // people already hold.
+    expect(patchBody).not.toHaveProperty("slug");
+  });
+
+  it("translation: the English tab is written before the record itself", async () => {
+    signIn(MANAGER);
+    const calls: string[] = [];
+    let putBody: Record<string, unknown> | undefined;
+    server.use(
+      // First wins in MSW, so this one overrides the disabled flag in
+      // baseHandlers().
+      http.get(`${API}/public/settings`, () =>
+        HttpResponse.json({
+          "translation.enabled": true,
+          "translation.locales": "en",
+        }),
+      ),
+      ...baseHandlers(),
+      http.get(`${API}/translations/cms_category/a`, () =>
+        HttpResponse.json(trView()),
+      ),
+      http.put(`${API}/translations/cms_category/a/en`, async ({ request }) => {
+        calls.push("translation");
+        putBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(trView({ name: "News" }));
+      }),
+      http.patch(`${API}/cms/categories/a`, () => {
+        calls.push("record");
+        return HttpResponse.json({ id: "a" });
+      }),
+    );
+    const user = userEvent.setup();
+    renderEditor("/cms/categories/a");
+
+    await user.click(await screen.findByRole("tab", { name: /English/ }));
+    // The panel is labelled in the language being written, so this box is
+    // "Name" and not "Tên".
+    await user.type(screen.getByLabelText("Name"), "News");
+    // The Vietnamese form stays mounted behind it: switching language must not
+    // throw away what is in it.
+    expect(screen.getByDisplayValue("Tin tức")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: SAVE() }));
+
+    await waitFor(() => expect(calls).toEqual(["translation", "record"]));
+    expect(putBody).toMatchObject({ values: { name: "News" } });
   });
 
   it("validation: empty name blocks submit", async () => {

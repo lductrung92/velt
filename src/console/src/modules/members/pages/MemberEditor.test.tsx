@@ -78,9 +78,7 @@ describe("MemberEditor", () => {
     signIn(MANAGER);
     renderAt("/members/new");
 
-    expect(
-      await screen.findByLabelText(/Họ và tên/),
-    ).toBeInTheDocument();
+    expect(await screen.findByLabelText(/Họ và tên/)).toBeInTheDocument();
     expect(screen.getByText(i18n.t("members.field.links"))).toBeInTheDocument();
   });
 
@@ -89,7 +87,9 @@ describe("MemberEditor", () => {
     signIn(MANAGER);
     renderAt("/members/new");
     expect(
-      await screen.findByRole("button", { name: i18n.t("image.upload.trigger") }),
+      await screen.findByRole("button", {
+        name: i18n.t("image.upload.trigger"),
+      }),
     ).toBeInTheDocument();
   });
 
@@ -151,10 +151,14 @@ describe("MemberEditor", () => {
     renderAt("/members/m1");
 
     await waitFor(async () =>
-      expect(await screen.findByLabelText(/Họ và tên/)).toHaveValue("An Nguyễn"),
+      expect(await screen.findByLabelText(/Họ và tên/)).toHaveValue(
+        "An Nguyễn",
+      ),
     );
     expect(screen.getByText("Go")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("https://github.com/an")).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue("https://github.com/an"),
+    ).toBeInTheDocument();
   });
 
   it("sends the edited fields on save", async () => {
@@ -179,5 +183,99 @@ describe("MemberEditor", () => {
 
     await waitFor(() => expect(patched).toHaveBeenCalled());
     expect(patched.mock.calls[0][0]).toMatchObject({ role: "Tech Lead" });
+  });
+});
+
+describe("MemberEditor translations", () => {
+  const TRANSLATION_FIELDS = ["role", "bio"];
+
+  function translationView(values: Record<string, unknown> = {}) {
+    return {
+      entity: "member",
+      entity_id: "m1",
+      base_locale: "vi",
+      locales: ["en"],
+      translatable_fields: TRANSLATION_FIELDS,
+      translations: { en: { values, updated_at: "2026-01-01T00:00:00Z" } },
+      requires_republish: false,
+    };
+  }
+
+  function translationHandlers() {
+    return [
+      http.get(`${API}/public/settings`, () =>
+        HttpResponse.json({
+          "translation.enabled": true,
+          "translation.locales": "en",
+        }),
+      ),
+      http.get(`${API}/members/m1`, () => HttpResponse.json(member())),
+      http.get(`${API}/translations/member/m1`, () =>
+        HttpResponse.json(translationView()),
+      ),
+    ];
+  }
+
+  it("offers no permalink before the member exists", async () => {
+    signIn(MANAGER);
+    server.use(...translationHandlers());
+    renderAt("/members/new");
+
+    expect(await screen.findByLabelText(/Họ và tên/)).toBeInTheDocument();
+    expect(
+      screen.queryByText(i18n.t("members.field.permalink")),
+    ).not.toBeInTheDocument();
+  });
+
+  it("leaves an unchanged slug out of the save", async () => {
+    signIn(MANAGER);
+    const patched = vi.fn();
+    server.use(
+      ...translationHandlers(),
+      http.patch(`${API}/members/m1`, async ({ request }) => {
+        patched(await request.json());
+        return HttpResponse.json(member());
+      }),
+    );
+    renderAt("/members/m1");
+
+    // The permalink is locked: the saved slug reads as text, not as an input.
+    expect(await screen.findByText("an-nguyen")).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
+
+    await waitFor(() => expect(patched).toHaveBeenCalled());
+    expect(patched.mock.calls[0][0]).not.toHaveProperty("slug");
+  });
+
+  it("stores the translation before the member itself is written", async () => {
+    signIn(MANAGER);
+    const calls: string[] = [];
+    server.use(
+      ...translationHandlers(),
+      http.put(`${API}/translations/member/m1/en`, async ({ request }) => {
+        calls.push("translation");
+        await request.json();
+        return HttpResponse.json(translationView({ role: "Tech Lead" }));
+      }),
+      http.patch(`${API}/members/m1`, async ({ request }) => {
+        calls.push("member");
+        await request.json();
+        return HttpResponse.json(member());
+      }),
+    );
+    renderAt("/members/m1");
+
+    await userEvent.click(await screen.findByRole("tab", { name: /English/ }));
+    await userEvent.type(
+      screen.getByLabelText(i18n.t("members.field.role", { lng: "en" })),
+      "Tech Lead",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
+
+    await waitFor(() => expect(calls).toEqual(["translation", "member"]));
   });
 });

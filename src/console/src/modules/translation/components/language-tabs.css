@@ -190,14 +190,3 @@
     max-height: 14rem;
   }
 }
-
-/*
- * The source-language form stays MOUNTED while another language is edited, so
- * switching tabs never throws away unsaved edits or tears down the rich-text
- * editor. It is hidden with the `hidden` attribute, which also removes it from
- * the accessibility tree — but `display: grid` on that container outranks the
- * browser's own rule for [hidden], so it has to be restated here.
- */
-.article-editor-grid[hidden] {
-  display: none;
-}

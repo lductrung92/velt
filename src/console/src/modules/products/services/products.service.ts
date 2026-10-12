@@ -15,7 +15,7 @@ export const PRODUCT_LIFECYCLES: ProductLifecycle[] = ["idea", "building", "laun
 export const PRODUCT_AUDIENCES = ["individual", "team", "business"] as const;
 export const PRODUCT_PLATFORMS = ["web", "ios", "android", "desktop"] as const;
 
-// The SEO block is the same shape the CMS pages use, so PageSeoSection renders
+// The SEO block is the same shape the CMS pages use, so the same helpers serve
 // it unchanged; og_path is products-only and lives beside it.
 export type ProductSEO = PageSEO & { og_path?: string | null };
 

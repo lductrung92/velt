@@ -483,7 +483,16 @@
       "editor": {
         "new_title": "New page",
         "edit_title": "Edit page",
-        "basic": "Basic"
+        "basic": "Basic",
+        "content": "Page content",
+        "settings": "Page settings",
+        "permalink": "Permalink",
+        "kind_hint": "A landing page is built with the drag-and-drop designer as soon as it exists.",
+        "publish_hint": "Use the Publish button above to put the page on the site.",
+        "search_preview": "Search appearance preview",
+        "preview_title": "Your page title",
+        "preview_description": "The SEO description will appear here.",
+        "social": "Social sharing"
       },
       "blocks": {
         "no_editor": "No editor for this widget yet."
@@ -663,7 +672,11 @@
       "empty_hint": "Tags group articles by topic without moving them between categories.",
       "no_results": "No tags found",
       "no_results_hint": "Try another search term.",
-      "actions_for": "Actions for tag {{name}}"
+      "actions_for": "Actions for tag {{name}}",
+      "translate": {
+        "heading": "Name in other languages",
+        "hint": "Leave empty and that language reuses the Vietnamese name."
+      }
     },
     "landings": {
       "field": {
@@ -886,7 +899,12 @@
       "search_ph": "Name or slug",
       "editor": {
         "settings": "Settings",
-        "basic": "Basic information"
+        "basic": "Basic information",
+        "permalink": "Permalink",
+        "placement": "Placement",
+        "search_preview": "Search appearance preview",
+        "preview_title": "Your category name",
+        "preview_description": "The SEO description or the category description will appear here."
       },
       "list_title": "Categories",
       "list_hint": "The article category tree",
@@ -1129,7 +1147,8 @@
       "email_help": "Public contact address, separate from the login email.",
       "zalo": "Zalo",
       "links": "Links",
-      "link_label": "Label"
+      "link_label": "Label",
+      "permalink": "Permalink"
     },
     "col": {
       "name": "Member",
@@ -1188,7 +1207,14 @@
       "demo": "Try it",
       "seo": "SEO",
       "gallery": "Gallery",
-      "people": "Categories & team"
+      "people": "Categories & team",
+      "permalink": "Permalink",
+      "details": "Product details",
+      "settings": "Settings",
+      "search_preview": "Search preview",
+      "preview_title": "Product name",
+      "preview_description": "The summary shown in search results.",
+      "social": "Social sharing"
     },
     "field": {
       "slug_ph": "auto-generated-from-name",
@@ -1241,7 +1267,13 @@
         "product_count": "PRODUCTS"
       },
       "editor": {
-        "basic": "Basics"
+        "basic": "Basics",
+        "permalink": "Permalink",
+        "settings": "Settings",
+        "placement": "Placement",
+        "search_preview": "Search appearance preview",
+        "preview_title": "Your category name",
+        "preview_description": "The SEO description or the category description will appear here."
       },
       "seo": {
         "heading": "SEO",

@@ -18,7 +18,9 @@ const API = "http://localhost/api";
 // now, so every test needs their lists stubbed.
 function stubLists() {
   return [
-    http.get(`${API}/product-categories`, () => HttpResponse.json({ items: [] })),
+    http.get(`${API}/product-categories`, () =>
+      HttpResponse.json({ items: [] }),
+    ),
     http.get(`${API}/members`, () =>
       HttpResponse.json({ items: [], total: 0, page: 1, page_size: 100 }),
     ),
@@ -114,29 +116,28 @@ beforeEach(() => {
 afterEach(() => useAuthStore.getState().clear());
 
 describe("ProductEditor", () => {
-  it("renders every section without crashing", async () => {
+  it("renders every card on the shared editor chrome", async () => {
     signIn(AUTHOR);
-    renderAt("/products/new");
+    const { container } = renderAt("/products/new");
 
-    // These labels appear twice: once in the nav rail, once as the card title.
-    for (const key of ["basic", "content", "demo"]) {
+    // One heading each now the nav rail is gone: the cards themselves are the
+    // map of the screen.
+    for (const key of [
+      "content",
+      "details",
+      "gallery",
+      "people",
+      "demo",
+      "seo",
+    ]) {
       expect(
         await screen.findAllByText(i18n.t(`products.editor.${key}`)),
-      ).toHaveLength(2);
+      ).toHaveLength(1);
     }
-
-    // SEO is the exception, and deliberately so. The card is PageSeoSection —
-    // shared with the CMS editors and carrying its own heading — so the nav
-    // label and the card title differ. They used to match because the editor
-    // wrapped that card in a second one, which is the nesting this replaced.
-    expect(
-      await screen.findAllByText(i18n.t("products.editor.seo")),
-    ).toHaveLength(1);
-    expect(
-      await screen.findByText(i18n.t("cms.pages.seo.heading")),
-    ).toBeInTheDocument();
-    // The anchor the nav scrolls to has to live on the card itself.
-    expect(document.querySelector("#prod-seo")).not.toBeNull();
+    // The three grid areas the shared chrome lays out.
+    expect(container.querySelector(".editor-main")).not.toBeNull();
+    expect(container.querySelector(".editor-side")).not.toBeNull();
+    expect(container.querySelector(".editor-wide#prod-seo")).not.toBeNull();
   });
 
   it("lets a brand-new product be filled in before it is saved", async () => {
@@ -146,12 +147,16 @@ describe("ProductEditor", () => {
 
     await screen.findByLabelText(/Tên sản phẩm/);
     // Scoped: the gallery has its own upload button with the same label.
-    const basic = container.querySelector("#prod-basic") as HTMLElement;
+    const side = container.querySelector(".editor-side") as HTMLElement;
     expect(
-      within(basic).getByRole("button", { name: i18n.t("image.upload.trigger") }),
+      within(side).getByRole("button", {
+        name: i18n.t("image.upload.trigger"),
+      }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: i18n.t("products.gallery.add_video") }),
+      screen.getByRole("button", {
+        name: i18n.t("products.gallery.add_video"),
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: i18n.t("products.members.add") }),
@@ -177,19 +182,25 @@ describe("ProductEditor", () => {
 
     await userEvent.type(await screen.findByLabelText(/Tên sản phẩm/), "Test");
     await userEvent.click(
-      screen.getByRole("button", { name: i18n.t("products.gallery.add_video") }),
+      screen.getByRole("button", {
+        name: i18n.t("products.gallery.add_video"),
+      }),
     );
     await userEvent.type(
       await screen.findByLabelText(i18n.t("products.gallery.video_url")),
       "https://youtu.be/abc",
     );
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.add") }));
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.add") }),
+    );
 
     // Still a draft: the product does not exist, so nothing was sent.
     expect(await screen.findByTestId("gallery-item")).toBeInTheDocument();
     expect(addedVideo).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
     await waitFor(() => expect(posted).toHaveBeenCalled());
     await waitFor(() => expect(addedVideo).toHaveBeenCalled());
     expect(addedVideo.mock.calls[0][0]).toMatchObject({
@@ -225,7 +236,9 @@ describe("ProductEditor", () => {
         setCats(await request.json());
         return HttpResponse.json(product());
       }),
-      http.put(`${API}/products/p1/members`, () => HttpResponse.json(product())),
+      http.put(`${API}/products/p1/members`, () =>
+        HttpResponse.json(product()),
+      ),
       http.get(`${API}/products/p1`, () => HttpResponse.json(product())),
     );
     renderAt("/products/new");
@@ -234,7 +247,9 @@ describe("ProductEditor", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Cộng tác" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
 
     await waitFor(() => expect(setCats).toHaveBeenCalled());
     expect(setCats.mock.calls[0][0]).toMatchObject({ category_ids: ["c1"] });
@@ -288,7 +303,9 @@ describe("ProductEditor", () => {
 
   it("loads an existing product into the form", async () => {
     signIn(AUTHOR);
-    server.use(http.get(`${API}/products/p1`, () => HttpResponse.json(product())));
+    server.use(
+      http.get(`${API}/products/p1`, () => HttpResponse.json(product())),
+    );
     renderAt("/products/p1");
 
     await waitFor(async () =>
@@ -296,14 +313,110 @@ describe("ProductEditor", () => {
         "Bảng công việc",
       ),
     );
-    expect(screen.getByLabelText(/^Slug/)).toHaveValue("bang-cong-viec");
-    expect(screen.getByLabelText(i18n.t("products.col.version"))).toHaveValue("0.9.0");
+    // The saved address is a locked row, not an input.
+    expect(screen.getByText("bang-cong-viec")).toBeInTheDocument();
+    expect(screen.getByLabelText(i18n.t("products.col.version"))).toHaveValue(
+      "0.9.0",
+    );
     expect(screen.getByText("Go")).toBeInTheDocument();
+  });
+
+  it("offers no permalink before the product exists", async () => {
+    // The server derives the slug from the name, so there is nothing to show
+    // and nothing to send.
+    signIn(AUTHOR);
+    renderAt("/products/new");
+
+    await screen.findByLabelText(/Tên sản phẩm/);
+    expect(
+      screen.queryByText(i18n.t("products.editor.permalink")),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sends the slug only once it has been changed", async () => {
+    signIn(AUTHOR);
+    const patched = vi.fn();
+    server.use(
+      http.get(`${API}/products/p1`, () => HttpResponse.json(product())),
+      http.patch(`${API}/products/p1`, async ({ request }) => {
+        const body = await request.json();
+        patched(body);
+        return HttpResponse.json({ ...product(), ...(body as object) });
+      }),
+    );
+    renderAt("/products/p1");
+
+    await screen.findByText("bang-cong-viec");
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
+    await waitFor(() => expect(patched).toHaveBeenCalled());
+    expect(patched.mock.calls[0][0]).not.toHaveProperty("slug");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.edit") }),
+    );
+    const slug = screen.getByDisplayValue("bang-cong-viec");
+    await userEvent.clear(slug);
+    await userEvent.type(slug, "bang-viec");
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
+
+    await waitFor(() => expect(patched).toHaveBeenCalledTimes(2));
+    expect(patched.mock.calls[1][0]).toMatchObject({ slug: "bang-viec" });
+  });
+
+  it("stores a translation before the product write, so one Save publishes it", async () => {
+    signIn(AUTHOR);
+    const calls: string[] = [];
+    server.use(
+      http.get(`${API}/public/settings`, () =>
+        HttpResponse.json({
+          "translation.enabled": true,
+          "translation.locales": "en",
+        }),
+      ),
+      http.get(`${API}/translations/product/p1`, () =>
+        HttpResponse.json({
+          entity: "product",
+          entity_id: "p1",
+          base_locale: "vi",
+          locales: ["en"],
+          translatable_fields: ["slug", "name", "summary", "body_html", "seo"],
+          translations: {},
+          requires_republish: false,
+        }),
+      ),
+      http.put(`${API}/translations/product/p1/en`, () => {
+        calls.push("translation");
+        return HttpResponse.json({});
+      }),
+      http.get(`${API}/products/p1`, () => HttpResponse.json(product())),
+      http.patch(`${API}/products/p1`, () => {
+        calls.push("product");
+        return HttpResponse.json(product());
+      }),
+    );
+    renderAt("/products/p1");
+
+    await userEvent.click(await screen.findByRole("tab", { name: /English/ }));
+    await userEvent.type(
+      await screen.findByLabelText(i18n.t("products.col.name", { lng: "en" })),
+      "Task board",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
+
+    await waitFor(() => expect(calls).toEqual(["translation", "product"]));
   });
 
   it("marks the selected audience and platform chips as pressed", async () => {
     signIn(AUTHOR);
-    server.use(http.get(`${API}/products/p1`, () => HttpResponse.json(product())));
+    server.use(
+      http.get(`${API}/products/p1`, () => HttpResponse.json(product())),
+    );
     renderAt("/products/p1");
 
     await screen.findByLabelText(/Tên sản phẩm/);
@@ -311,7 +424,9 @@ describe("ProductEditor", () => {
       screen.getByRole("button", { name: i18n.t("products.audience.team") }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(
-      screen.getByRole("button", { name: i18n.t("products.audience.individual") }),
+      screen.getByRole("button", {
+        name: i18n.t("products.audience.individual"),
+      }),
     ).toHaveAttribute("aria-pressed", "false");
     expect(
       screen.getByRole("button", { name: i18n.t("products.platform.web") }),
@@ -321,12 +436,16 @@ describe("ProductEditor", () => {
   it("hides the publishing menu from an author without products.publish", async () => {
     // Authoring and publishing are separate permissions on purpose.
     signIn(AUTHOR);
-    server.use(http.get(`${API}/products/p1`, () => HttpResponse.json(product())));
+    server.use(
+      http.get(`${API}/products/p1`, () => HttpResponse.json(product())),
+    );
     renderAt("/products/p1");
 
     await screen.findByLabelText(/Tên sản phẩm/);
     expect(
-      screen.queryByRole("button", { name: i18n.t("products.transition.menu") }),
+      screen.queryByRole("button", {
+        name: i18n.t("products.transition.menu"),
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -369,7 +488,9 @@ describe("ProductEditor", () => {
     );
     renderAt("/products/p1");
 
-    const version = await screen.findByLabelText(i18n.t("products.col.version"));
+    const version = await screen.findByLabelText(
+      i18n.t("products.col.version"),
+    );
     await userEvent.clear(version);
     await userEvent.type(version, "1.0.0");
     await userEvent.click(

@@ -1,5 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ImageIcon,
+  Mail,
+  Plus,
+  Save,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -13,6 +21,7 @@ import {
   type ImageUploadValue,
 } from "@/components/common/ImageHandler";
 import { PageHeader } from "@/components/common/PageHeader";
+import { SlugField } from "@/components/common/SlugField";
 import { StringListField } from "@/components/common/StringListField";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,8 +41,11 @@ import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { usePermission } from "@/modules/auth";
+import { LanguageTabs } from "@/modules/translation/components/LanguageTabs";
+import { useEntityTranslation } from "@/modules/translation/hooks/useEntityTranslation";
 import { parseApiError } from "@/utils/apiError";
 
+import { MemberTranslationPanel } from "../components/MemberTranslationPanel";
 import {
   useCreateMember,
   useDeleteMemberAvatar,
@@ -47,6 +59,8 @@ import {
   type MemberFormValues,
 } from "../schemas/member";
 import type { Member } from "../services/members.service";
+import "@/styles/editor-page.css";
+import "./member-editor.css";
 
 const BACK = "/members";
 
@@ -80,9 +94,13 @@ export default function MemberEditor() {
   });
   const links = useFieldArray({ control: form.control, name: "links" });
 
-  useUnsavedGuard(form.formState.isDirty || avatarDirty);
-
   const member = detail.data;
+  // Translations live outside this form: their shape is locale x declared field,
+  // which a static zod schema cannot describe.
+  const tr = useEntityTranslation("member", member?.id);
+
+  useUnsavedGuard(form.formState.isDirty || avatarDirty || tr.dirty);
+
   useEffect(() => {
     if (!member) return;
     form.reset({
@@ -109,7 +127,6 @@ export default function MemberEditor() {
     // way, so the wire shape is just the trimmed form state.
     const body = {
       full_name: values.full_name,
-      slug: values.slug,
       role: values.role,
       bio: values.bio,
       email: values.email,
@@ -124,7 +141,22 @@ export default function MemberEditor() {
 
     if (isEdit && id) {
       try {
-        const saved = await update.mutateAsync({ id, body });
+        // Before the member write, so one Save carries both: the record write is
+        // what the rest of the app reacts to, and a translation stored after it
+        // would wait for a second one.
+        await tr.flush(id);
+        // Only when it actually changed: a slug is an address people already
+        // hold — in a referral link here — so sending the current one back on
+        // every save would re-run the rename path for nothing.
+        const nextSlug = values.slug.trim();
+        const saved = await update.mutateAsync({
+          id,
+          body:
+            nextSlug && nextSlug !== member?.slug
+              ? { ...body, slug: nextSlug }
+              : body,
+        });
+        await tr.refresh();
         await resolveAvatar(saved.id);
         setAvatarDirty(false);
         form.reset({ ...values, slug: saved.slug });
@@ -159,7 +191,9 @@ export default function MemberEditor() {
   // it to. Untouched slots fall through and change nothing.
   const resolveAvatar = async (memberId: string) => {
     if (avatar.kind === "pending") {
-      const file = new File([avatar.blob], "avatar", { type: avatar.blob.type });
+      const file = new File([avatar.blob], "avatar", {
+        type: avatar.blob.type,
+      });
       await uploadAvatar.mutateAsync({ id: memberId, file });
       return;
     }
@@ -175,14 +209,33 @@ export default function MemberEditor() {
   }
   if (isEdit && detail.isError) {
     return (
-      <Alert variant="danger" message={parseApiError(detail.error, t).message} />
+      <Alert
+        variant="danger"
+        message={parseApiError(detail.error, t).message}
+      />
     );
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={onSubmit} className="space-y-6">
+      <form
+        onSubmit={onSubmit}
+        className="editor-page space-y-5"
+        data-editor="member"
+      >
+        <PageHeader
+          title={isEdit ? t("members.edit_title") : t("members.create_title")}
+          subtitle={t("members.editor_subtitle")}
+          breadcrumbs={[
+            { labelKey: "nav.members", to: BACK },
+            {
+              labelKey: isEdit ? "members.edit_title" : "members.create_title",
+            },
+          ]}
+        />
+
         <EditorActionBar
+          center={<LanguageTabs tr={tr} disabled={!isEdit} embedded />}
           left={
             <Button
               type="button"
@@ -201,67 +254,28 @@ export default function MemberEditor() {
           </Button>
         </EditorActionBar>
 
-        <PageHeader
-          title={isEdit ? t("members.edit_title") : t("members.create_title")}
-          subtitle={t("members.editor_subtitle")}
-          breadcrumbs={[
-            { labelKey: "nav.members", to: BACK },
-            { labelKey: isEdit ? "members.edit_title" : "members.create_title" },
-          ]}
-        />
+        {!tr.isBase && <MemberTranslationPanel tr={tr} readOnly={!canManage} />}
 
-        <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle>{t("members.photo")}</CardTitle>
+        {/* The source-language form stays mounted while another language is on
+            screen, so a half-filled profile survives a tab switch. */}
+        <div className="editor-grid" hidden={!tr.isBase}>
+          <Card className="editor-main editor-card">
+            <CardHeader className="editor-heading">
+              <CardTitle>
+                <UserRound
+                  className="size-4 text-muted-foreground"
+                  aria-hidden
+                />
+                {t("members.section.basics")}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col items-center gap-3">
-              <ImageUpload
-                type="circle"
-                radius={64}
-                value={avatar}
-                onChange={(next) => {
-                  setAvatar(next);
-                  setAvatarDirty(true);
-                }}
-                disabled={!canManage}
-              />
-
-              <FormField
-                control={form.control}
-                name="is_active"
-                render={({ field }) => (
-                  <FormItem className="flex w-full items-center justify-between gap-3 pt-2">
-                    <div>
-                      <FormLabel>{t("members.active")}</FormLabel>
-                      <p className="text-xs text-muted-foreground">
-                        {t("members.active_help")}
-                      </p>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={!canManage}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("members.section.basics")}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              <div className="editor-titleblock space-y-2">
                 <FormField
                   control={form.control}
                   name="full_name"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="editor-title">
                       <FormLabel required>
                         {t("members.field.full_name")}
                       </FormLabel>
@@ -276,83 +290,142 @@ export default function MemberEditor() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="slug"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("members.field.slug")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          maxLength={160}
-                          placeholder={t("members.field.slug_ph")}
-                          disabled={!canManage}
-                          {...field}
-                        />
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        {t("members.field.slug_help")}
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("members.field.role")}</FormLabel>
-                      <FormControl>
-                        <TextField
-                          maxLength={160}
-                          disabled={!canManage}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="bio"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("members.field.bio")}</FormLabel>
-                      <FormControl>
-                        <Textarea rows={4} disabled={!canManage} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="skills"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("members.field.skills")}</FormLabel>
-                      <FormControl>
-                        <StringListField
+                {/* Only after the first save: before that the server derives the
+                    slug from the name, and an empty box would just invite a
+                    worse answer. */}
+                {isEdit && member && (
+                  <FormField
+                    control={form.control}
+                    name="slug"
+                    render={({ field }) => (
+                      <FormItem>
+                        <SlugField
+                          label={t("members.field.permalink")}
                           value={field.value}
+                          original={member.slug}
                           onChange={field.onChange}
                           disabled={!canManage}
-                          placeholder={t("members.field.skills_ph")}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {t("members.field.slug_help")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("members.field.role")}</FormLabel>
+                    <FormControl>
+                      <TextField
+                        maxLength={160}
+                        disabled={!canManage}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="bio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("members.field.bio")}</FormLabel>
+                    <FormControl>
+                      <Textarea rows={4} disabled={!canManage} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="skills"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("members.field.skills")}</FormLabel>
+                    <FormControl>
+                      <StringListField
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={!canManage}
+                        placeholder={t("members.field.skills_ph")}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          <aside
+            className="editor-side space-y-4"
+            aria-label={t("members.photo")}
+          >
+            <Card className="editor-card">
+              <CardHeader className="editor-heading">
+                <CardTitle>
+                  <ImageIcon
+                    className="size-4 text-muted-foreground"
+                    aria-hidden
+                  />
+                  {t("members.photo")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center gap-3">
+                <ImageUpload
+                  type="circle"
+                  radius={64}
+                  value={avatar}
+                  onChange={(next) => {
+                    setAvatar(next);
+                    setAvatarDirty(true);
+                  }}
+                  disabled={!canManage}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="is_active"
+                  render={({ field }) => (
+                    <FormItem className="flex w-full items-center justify-between gap-3 border-t pt-4">
+                      <div>
+                        <FormLabel>{t("members.active")}</FormLabel>
+                        <p className="text-xs text-muted-foreground">
+                          {t("members.active_help")}
+                        </p>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={!canManage}
                         />
                       </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
               </CardContent>
             </Card>
+          </aside>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("members.section.contact")}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          <Card className="editor-wide editor-card">
+            <CardHeader className="editor-heading">
+              <CardTitle>
+                <Mail className="size-4 text-muted-foreground" aria-hidden />
+                {t("members.section.contact")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="email"
@@ -392,71 +465,71 @@ export default function MemberEditor() {
                     </FormItem>
                   )}
                 />
+              </div>
 
-                <div className="space-y-2">
-                  {/* A plain Label, not FormLabel: this heading labels the whole
-                      repeater, so it lives outside any FormField context. */}
-                  <Label>{t("members.field.links")}</Label>
-                  {links.fields.map((row, i) => (
-                    <div key={row.id} className="flex items-start gap-2">
-                      <FormField
-                        control={form.control}
-                        name={`links.${i}.label`}
-                        render={({ field }) => (
-                          <FormItem className="w-40 shrink-0">
-                            <FormControl>
-                              <Input
-                                placeholder={t("members.field.link_label")}
-                                disabled={!canManage}
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`links.${i}.url`}
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormControl>
-                              <Input
-                                placeholder="https://..."
-                                disabled={!canManage}
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t("common.remove")}
-                        disabled={!canManage}
-                        onClick={() => links.remove(i)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!canManage || links.fields.length >= 20}
-                    onClick={() => links.append({ label: "", url: "" })}
-                  >
-                    <Plus className="size-4" />
-                    {t("members.add_link")}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <div className="space-y-2 border-t pt-5">
+                {/* A plain Label, not FormLabel: this heading labels the whole
+                    repeater, so it lives outside any FormField context. */}
+                <Label>{t("members.field.links")}</Label>
+                {links.fields.map((row, i) => (
+                  <div key={row.id} className="flex items-start gap-2">
+                    <FormField
+                      control={form.control}
+                      name={`links.${i}.label`}
+                      render={({ field }) => (
+                        <FormItem className="w-40 shrink-0">
+                          <FormControl>
+                            <Input
+                              placeholder={t("members.field.link_label")}
+                              disabled={!canManage}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`links.${i}.url`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input
+                              placeholder="https://..."
+                              disabled={!canManage}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t("common.remove")}
+                      disabled={!canManage}
+                      onClick={() => links.remove(i)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!canManage || links.fields.length >= 20}
+                  onClick={() => links.append({ label: "", url: "" })}
+                >
+                  <Plus className="size-4" />
+                  {t("members.add_link")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </form>
     </Form>

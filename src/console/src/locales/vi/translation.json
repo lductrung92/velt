@@ -531,7 +531,16 @@
       "editor": {
         "new_title": "Tạo trang",
         "edit_title": "Sửa trang",
-        "basic": "Thông tin cơ bản"
+        "basic": "Thông tin cơ bản",
+        "content": "Nội dung trang",
+        "settings": "Cài đặt trang",
+        "permalink": "Đường dẫn",
+        "kind_hint": "Trang landing được dựng bằng trình kéo thả ngay sau khi tạo.",
+        "publish_hint": "Dùng nút Xuất bản ở trên để đưa trang lên website.",
+        "search_preview": "Xem trước trên kết quả tìm kiếm",
+        "preview_title": "Tiêu đề trang của bạn",
+        "preview_description": "Mô tả SEO sẽ hiển thị ở đây.",
+        "social": "Chia sẻ mạng xã hội"
       },
       "blocks": {
         "no_editor": "Widget này chưa có form."
@@ -711,7 +720,11 @@
       "empty_hint": "Thẻ giúp gom bài viết theo chủ đề mà không cần đổi chuyên mục.",
       "no_results": "Không tìm thấy thẻ",
       "no_results_hint": "Thử đổi từ khoá tìm kiếm.",
-      "actions_for": "Thao tác với thẻ {{name}}"
+      "actions_for": "Thao tác với thẻ {{name}}",
+      "translate": {
+        "heading": "Tên theo ngôn ngữ khác",
+        "hint": "Để trống thì ngôn ngữ đó dùng tên tiếng Việt."
+      }
     },
     "landings": {
       "field": {
@@ -934,7 +947,12 @@
       "search_ph": "Tên hoặc đường dẫn",
       "editor": {
         "settings": "Thiết lập",
-        "basic": "Thông tin cơ bản"
+        "basic": "Thông tin cơ bản",
+        "permalink": "Đường dẫn",
+        "placement": "Vị trí trong cây",
+        "search_preview": "Minh họa hiển thị tìm kiếm",
+        "preview_title": "Tên chuyên mục của bạn",
+        "preview_description": "Mô tả SEO hoặc mô tả chuyên mục sẽ hiển thị tại đây."
       },
       "list_title": "Danh sách chuyên mục",
       "list_hint": "Cây chuyên mục của bài viết",
@@ -1177,7 +1195,8 @@
       "email_help": "Email công khai để khách liên hệ, khác email đăng nhập.",
       "zalo": "Zalo",
       "links": "Liên kết",
-      "link_label": "Nhãn"
+      "link_label": "Nhãn",
+      "permalink": "Đường dẫn"
     },
     "col": {
       "name": "Thành viên",
@@ -1236,7 +1255,14 @@
       "demo": "Dùng thử",
       "seo": "SEO",
       "gallery": "Thư viện",
-      "people": "Danh mục & đội ngũ"
+      "people": "Danh mục & đội ngũ",
+      "permalink": "Đường dẫn",
+      "details": "Đặc điểm sản phẩm",
+      "settings": "Thiết lập",
+      "search_preview": "Xem trước trên Google",
+      "preview_title": "Tên sản phẩm",
+      "preview_description": "Mô tả ngắn hiển thị trong kết quả tìm kiếm.",
+      "social": "Chia sẻ mạng xã hội"
     },
     "field": {
       "slug_ph": "tu-dong-tao-tu-ten",
@@ -1289,7 +1315,13 @@
         "product_count": "SẢN PHẨM"
       },
       "editor": {
-        "basic": "Thông tin cơ bản"
+        "basic": "Thông tin cơ bản",
+        "permalink": "Đường dẫn",
+        "settings": "Thiết lập",
+        "placement": "Vị trí hiển thị",
+        "search_preview": "Minh họa hiển thị tìm kiếm",
+        "preview_title": "Tên danh mục của bạn",
+        "preview_description": "Mô tả SEO hoặc mô tả danh mục sẽ hiển thị tại đây."
       },
       "seo": {
         "heading": "SEO",

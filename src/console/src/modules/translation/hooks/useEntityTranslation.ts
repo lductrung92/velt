@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAppConfig } from "@/app/useAppConfig";
 
@@ -25,7 +25,15 @@ function normalize(value: unknown): unknown {
 
 function filled(value: unknown): boolean {
   if (typeof value === "string") return textOf(value) !== "";
-  if (value && typeof value === "object") return Object.keys(value).length > 0;
+  // Recurse rather than count keys. A grouped field like `seo` is several boxes
+  // on screen, and emptying the last of them leaves `{title: ""}` behind — an
+  // object with a key but nothing in it. Counting keys called that translated
+  // and the progress chip stuck one short of the truth, which is the one number
+  // telling anyone the work is unfinished.
+  if (Array.isArray(value)) return value.some(filled);
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).some(filled);
+  }
   return false;
 }
 
@@ -113,6 +121,11 @@ export function useEntityTranslation(
   const [edits, setEdits] = useState<Record<string, Record<string, unknown>>>(
     {},
   );
+
+  // Drafts belong to the record, not to the component. A dialog reused across
+  // the rows of a list keeps this hook mounted while entityId changes under it,
+  // and without this the text typed for one record appears in the next one.
+  useEffect(() => setEdits({}), [entityId]);
 
   const stored = useCallback(
     (loc: string): Record<string, unknown> =>

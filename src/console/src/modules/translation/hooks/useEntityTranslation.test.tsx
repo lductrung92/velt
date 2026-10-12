@@ -10,12 +10,24 @@ import { useEntityTranslation } from "./useEntityTranslation";
 
 const API = "http://localhost/api";
 const ID = "11111111-1111-1111-1111-111111111111";
+const OTHER_ID = "22222222-2222-2222-2222-222222222222";
 
 function mockEndpoints(
   values: Record<string, unknown> = {},
   onPut?: (body: unknown) => void,
 ) {
   server.use(
+    http.get(`${API}/translations/article/${OTHER_ID}`, () =>
+      HttpResponse.json({
+        entity: "article",
+        entity_id: OTHER_ID,
+        base_locale: "vi",
+        locales: ["en"],
+        translatable_fields: ["slug", "title", "excerpt", "body_html", "seo"],
+        translations: {},
+        requires_republish: false,
+      }),
+    ),
     http.get(`${API}/public/settings`, () =>
       HttpResponse.json({
         "translation.enabled": true,
@@ -74,6 +86,25 @@ describe("useEntityTranslation", () => {
     );
   });
 
+  // Emptying the last box of a grouped field leaves the group behind with a key
+  // and no content. Counting keys called that translated, so the chip read 1/5
+  // for a language nobody had written a word of.
+  it("counts a grouped field by its contents, not by its keys", async () => {
+    mockEndpoints({ seo: { title: "", description: "   " } });
+    const result = await mounted();
+    await waitFor(() =>
+      expect(result.current.progress("en")).toEqual({ done: 0, total: 5 }),
+    );
+  });
+
+  it("counts a grouped field once any box inside it is written", async () => {
+    mockEndpoints({ seo: { title: "Lean Stock", description: "" } });
+    const result = await mounted();
+    await waitFor(() =>
+      expect(result.current.progress("en")).toEqual({ done: 1, total: 5 }),
+    );
+  });
+
   // A rich-text editor fires onChange once on mount with an empty paragraph.
   // Counting that as translated inflated the tab's progress, and marking it
   // dirty made merely opening a language tab block navigation and then write
@@ -116,6 +147,26 @@ describe("useEntityTranslation", () => {
     expect(result.current.dirty).toBe(false);
     await act(async () => result.current.flush(ID));
     expect(puts).toEqual([]);
+  });
+
+  // One dialog serves every row of a list, so this hook stays mounted while the
+  // record under it changes. Keying drafts by locale alone leaked what was typed
+  // for one record into the next one.
+  it("drops the draft when the record changes", async () => {
+    mockEndpoints({});
+    const { result, rerender } = renderHook(
+      ({ id }: { id: string }) => useEntityTranslation("article", id),
+      { wrapper, initialProps: { id: ID } },
+    );
+    await waitFor(() => expect(result.current.fields).toHaveLength(5));
+
+    act(() => result.current.setLocale("en"));
+    act(() => result.current.setField("title", "Draft for the first record"));
+    await waitFor(() => expect(result.current.dirty).toBe(true));
+
+    rerender({ id: OTHER_ID });
+    await waitFor(() => expect(result.current.dirty).toBe(false));
+    expect(result.current.values.title).toBeUndefined();
   });
 
   it("stays switched off when the module is disabled", async () => {

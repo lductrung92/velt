@@ -1,0 +1,15 @@
+/*
+ * Member-editor overrides on the shared editor chrome (src/styles/editor-page.css).
+ * Scoped to this screen, because every stylesheet here is bundled globally.
+ */
+
+/*
+ * The member keeps a single photo card in the side column, so the stacked
+ * layout has nothing to pair it with: the shared two-column rule would leave it
+ * at half width with dead space beside it.
+ */
+@media (max-width: 1279px) {
+  [data-editor="member"] .editor-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
