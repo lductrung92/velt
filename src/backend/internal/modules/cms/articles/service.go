@@ -11,6 +11,7 @@ import (
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/cms/shared"
+	"github.com/velt/backend/internal/platform/pubdocs"
 	"github.com/velt/backend/internal/platform/storage"
 )
 
@@ -19,6 +20,11 @@ type Service struct {
 	*shared.Base
 	repo  Repository
 	files storage.Storage
+	// pub and tr are wired after construction (see public_sync.go) and are both
+	// allowed to stay nil, which is what this module looked like before the
+	// public read model and translations existed.
+	pub *pubdocs.Store
+	tr  Translator
 }
 
 // NewService wires the articles service onto the shared CMS base.
@@ -183,6 +189,9 @@ func (s *Service) CreateArticle(ctx context.Context, id *httpx.Identity, req Cre
 		return ArticleResponse{}, mapArticleWriteErr(err)
 	}
 	s.Sec(ctx).Info("cms article created", "actor", id.UserID, "article", created.ID, "status", created.Status)
+	if err := s.syncPublic(ctx, created); err != nil {
+		return ArticleResponse{}, err
+	}
 	if created.Status == ArticleStatusPublished {
 		s.Revalidate(ctx, "articles", "article:"+created.Slug)
 	}
@@ -281,6 +290,9 @@ func (s *Service) UpdateArticle(ctx context.Context, id *httpx.Identity, article
 	}
 	s.gcInlineMedia(ctx, articleID, body)
 	s.Sec(ctx).Info("cms article updated", "actor", id.UserID, "article", articleID, "from", cur.Status, "to", updated.Status)
+	if err := s.syncPublic(ctx, updated); err != nil {
+		return ArticleResponse{}, err
+	}
 	// Refresh the public cache when the article is (or just stopped being) public.
 	if updated.Status == ArticleStatusPublished || cur.Status == ArticleStatusPublished {
 		s.Revalidate(ctx, "articles", "article:"+updated.Slug)
@@ -398,6 +410,19 @@ func (s *Service) DeleteArticle(ctx context.Context, id *httpx.Identity, article
 	}
 	if err := s.repo.DeleteArticle(ctx, articleID); err != nil {
 		return apperr.Internal()
+	}
+	// An orphan in the public read model is not wasted space: it is a URL still
+	// serving an article that no longer exists. Same for the translation store.
+	if s.pub != nil {
+		if err := s.pub.Purge(ctx, EntityArticle, articleID); err != nil {
+			s.Sec(ctx).Error("purge public doc", "article", articleID, "error", err)
+			return apperr.Internal()
+		}
+	}
+	if s.tr != nil {
+		if err := s.tr.Purge(ctx, EntityArticle, articleID); err != nil {
+			s.Sec(ctx).Warn("purge article translations failed", "article", articleID, "err", err)
+		}
 	}
 	// Reclaim the article's whole media folder (featured/og + any mid-edit
 	// uploads) — the row is gone, so nothing references it. Best-effort.

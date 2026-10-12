@@ -1,7 +1,23 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Editor } from "@tiptap/react";
-import { ArrowLeft, Save } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  Globe2,
+  ImageIcon,
+  Link2,
+  PenLine,
+  Save,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -16,7 +32,7 @@ import {
 import { PageHeader } from "@/components/common/PageHeader";
 import { ImageNode } from "@/components/common/RichTextEditor/ImageExtension";
 import { Select } from "@/components/common/Select";
-import { SectionNavLayout } from "@/components/common/SectionNavLayout";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,7 +52,13 @@ import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
+import { LanguageTabs } from "@/modules/translation/components/LanguageTabs";
+import { useEntityTranslation } from "@/modules/translation/hooks/useEntityTranslation";
+
 import { ArticleImageButton } from "../components/ArticleImageButton";
+import { ArticleTranslationPanel } from "../components/ArticleTranslationPanel";
+import { ArticleStatusBadge } from "../components/ArticleStatusBadge";
+import "./article-editor.css";
 import {
   useArticle,
   useCreateArticle,
@@ -85,6 +107,9 @@ export default function ArticleEditor() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [id]);
 
   const { hasPermission } = usePermission();
   const isReviewer = hasPermission("cms.article.review");
@@ -143,7 +168,14 @@ export default function ArticleEditor() {
     mode: "onTouched",
   });
   const status = form.watch("status");
-  useUnsavedGuard(form.formState.isDirty);
+  const [mediaDirty, setMediaDirty] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  // Translations live outside this form: their shape is locale x declared
+  // field, which a static zod schema cannot describe (same reason the SEO and
+  // image state sit outside it).
+  const tr = useEntityTranslation("article", article?.id);
+  const dirty = form.formState.isDirty || mediaDirty || tr.dirty;
+  useUnsavedGuard(dirty);
 
   // Editor is read-only for an editor (non-reviewer) once the article is out for
   // publishing (workflow-states §4).
@@ -154,6 +186,7 @@ export default function ArticleEditor() {
 
   useEffect(() => {
     if (!article) return;
+    setMediaDirty(false);
     form.reset({
       ...articleFormDefaults,
       title: article.title,
@@ -280,9 +313,7 @@ export default function ArticleEditor() {
       if (out.content) out.content = rewrite(out.content);
       return out;
     };
-    const nextJson = json
-      ? (rewrite(json) as Record<string, unknown>)
-      : json;
+    const nextJson = json ? (rewrite(json) as Record<string, unknown>) : json;
 
     for (const p of pendingInline) URL.revokeObjectURL(p.url);
     setPendingInline([]);
@@ -296,6 +327,7 @@ export default function ArticleEditor() {
       form.setError("category_id", {
         message: t("errors.validation.required"),
       });
+      document.getElementById("cms-article-category")?.focus();
       return;
     }
     const st = values.status as ArticleStatus;
@@ -332,7 +364,14 @@ export default function ArticleEditor() {
         }
         if (featured_path) body.featured_path = featured_path;
         if (og_path) body.og_path = og_path;
+        // Before the article write, not after: publishing reads the stored
+        // translations, so the other order would republish the previous ones
+        // and force a second Save to get this one onto the site.
+        await tr.flush(article.id);
         await update.mutateAsync({ id: article.id, body });
+        // That write republished the article, which is what clears "needs
+        // republishing" — so the translation view has to be read again.
+        await tr.refresh();
         toast.success(t("cms.articles.toast.update_success"));
       } else {
         const body: CreateArticleBody = {
@@ -347,6 +386,8 @@ export default function ArticleEditor() {
         if (publishAt) body.publish_at = publishAt;
         if (allowSlugEdit && values.slug.trim()) body.slug = values.slug.trim();
         const created = await create.mutateAsync(body);
+        const hadTranslations = tr.dirty;
+        await tr.flush(created.id);
         const featured_path = await resolveImage(
           created.id,
           featured,
@@ -359,7 +400,9 @@ export default function ArticleEditor() {
           bodyJson,
         );
         const rewritten = inline.html !== values.body_html;
-        if (featured_path || og_path || rewritten) {
+        // hadTranslations joins the condition so a brand-new article published
+        // with a translation still gets one republish that includes it.
+        if (featured_path || og_path || rewritten || hadTranslations) {
           await update.mutateAsync({
             id: created.id,
             body: {
@@ -408,211 +451,91 @@ export default function ArticleEditor() {
     );
   }
 
-  const sections = [
-    { id: "art-basic", label: t("cms.articles.editor.basic") },
-    { id: "art-seo", label: t("cms.articles.editor.seo") },
-  ];
-
   return (
     <Form {...form}>
-      <form onSubmit={onSubmit} noValidate className="space-y-4">
+      <form onSubmit={onSubmit} noValidate className="article-editor space-y-5">
         <PageHeader
           title={
             isEdit
               ? t("cms.articles.editor.edit_title")
               : t("cms.articles.editor.new_title")
           }
+          subtitle={t("cms.articles.editor.subtitle")}
           breadcrumbs={[
             { labelKey: "nav.cms_articles", to: "/cms/articles" },
             { label: isEdit ? (article?.title ?? "") : t("common.new") },
           ]}
         />
-
         <EditorActionBar
           left={
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate("/cms/articles")}
+              disabled={saving}
+              onClick={() =>
+                dirty && !isReadOnly
+                  ? setLeaving(true)
+                  : navigate("/cms/articles")
+              }
             >
-              <ArrowLeft className="size-4" />
+              <ArrowLeft className="size-4" aria-hidden />
               {t("common.back")}
             </Button>
           }
         >
+          <ArticleStatusBadge status={status} />
           {!isReadOnly && (
             <Button type="submit" loading={saving}>
-              <Save className="size-4" />
+              <Save className="size-4" aria-hidden />
               {t("common.save")}
             </Button>
           )}
         </EditorActionBar>
-
-        {/* Rail clears the app topbar (56px) + the sticky EditorActionBar
-            (~60px) so its first link isn't hidden behind the bar. */}
-        <SectionNavLayout sections={sections} stickyClass="md:top-[7.5rem]">
-          {/* Thông tin cơ bản */}
-          <Card id="art-basic">
-            <CardHeader>
-              <CardTitle>{t("cms.articles.editor.basic")}</CardTitle>
+        {isReadOnly && (
+          <Alert
+            variant="info"
+            message={t("cms.articles.editor.readonly_hint")}
+          />
+        )}
+        <LanguageTabs tr={tr} disabled={!isEdit} />
+        {!tr.isBase && (
+          <ArticleTranslationPanel
+            tr={tr}
+            readOnly={isReadOnly}
+            source={{
+              title: form.watch("title"),
+              slug: form.watch("slug"),
+              excerpt: form.watch("excerpt"),
+              bodyHtml: form.watch("body_html"),
+              seoTitle: form.watch("seo_title"),
+              seoDescription: form.watch("seo_description"),
+            }}
+          />
+        )}
+        <div className="article-editor-grid" hidden={!tr.isBase}>
+          <Card
+            className="article-editor-content article-editor-card"
+            id="art-basic"
+          >
+            <CardHeader className="article-editor-heading">
+              <span className="article-editor-heading-icon">
+                <PenLine className="size-4" aria-hidden />
+              </span>
+              <CardTitle>{t("cms.articles.editor.content")}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <FormField
                 control={form.control}
                 name="title"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="article-editor-title">
                     <FormLabel required>
                       {t("cms.articles.field.title")}
                     </FormLabel>
                     <FormControl>
                       <TextField
+                        placeholder={t("cms.articles.editor.title_ph")}
                         maxLength={300}
-                        disabled={isReadOnly}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {allowSlugEdit ? (
-                <FormField
-                  control={form.control}
-                  name="slug"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("cms.articles.field.slug")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          maxLength={300}
-                          placeholder={t("cms.articles.field.slug_ph")}
-                          disabled={isReadOnly}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ) : (
-                isEdit && (
-                  <Checkbox
-                    id="cms-article-regenerate-slug"
-                    label={t("cms.articles.field.regenerate_slug")}
-                    checked={regenerate}
-                    disabled={isReadOnly}
-                    onChange={(e) => setRegenerate(e.target.checked)}
-                  />
-                )
-              )}
-              <div className="space-y-1.5">
-                <p className="text-sm font-medium">
-                  {t("cms.articles.field.featured")}
-                </p>
-                <ImageUpload
-                  type="rounded"
-                  ratio={16 / 9}
-                  width={280}
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  showCamera={false}
-                  disabled={isReadOnly}
-                  value={featured}
-                  onChange={setFeatured}
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="category_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required={categorize}>
-                        {t("cms.articles.field.category")}
-                      </FormLabel>
-                      <Select<Option>
-                        inputId="cms-article-category"
-                        options={categoryOptions}
-                        isDisabled={isReadOnly}
-                        value={
-                          categoryOptions.find(
-                            (o) => o.value === field.value,
-                          ) ?? null
-                        }
-                        placeholder={t("cms.articles.field.category_ph")}
-                        onChange={(o) => field.onChange(o?.value ?? "")}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {!isReadOnly && (
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("cms.articles.field.status")}</FormLabel>
-                        <Select<Option>
-                          inputId="cms-article-status"
-                          options={statusOptions}
-                          isClearable={false}
-                          value={
-                            statusOptions.find(
-                              (o) => o.value === field.value,
-                            ) ?? null
-                          }
-                          onChange={(o) => o && field.onChange(o.value)}
-                        />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </div>
-              {!isReadOnly && status === "scheduled" && (
-                <FormField
-                  control={form.control}
-                  name="publish_at"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required>
-                        {t("cms.articles.field.publish_at")}
-                      </FormLabel>
-                      <FormControl>
-                        <Input type="datetime-local" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-              {!isReadOnly && status === "needs_revision" && (
-                <FormField
-                  control={form.control}
-                  name="note"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required>
-                        {t("cms.articles.field.note")}
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea rows={2} maxLength={1000} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-              <FormField
-                control={form.control}
-                name="excerpt"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("cms.articles.field.excerpt")}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={3}
-                        maxLength={500}
                         disabled={isReadOnly}
                         {...field}
                       />
@@ -634,7 +557,7 @@ export default function ArticleEditor() {
                         value={field.value}
                         editable={!isReadOnly}
                         ariaLabel={t("cms.articles.field.body")}
-                        className="[&_.ProseMirror]:min-h-[9.3rem]"
+                        className="article-editor-body"
                         extraExtensions={bodyExtensions}
                         renderToolbarExtras={renderBodyToolbar}
                         onChange={(html, json) => {
@@ -647,88 +570,309 @@ export default function ArticleEditor() {
                   </FormItem>
                 )}
               />
+              <div className="border-t pt-5">
+                <FormField
+                  control={form.control}
+                  name="excerpt"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("cms.articles.field.excerpt")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          maxLength={500}
+                          disabled={isReadOnly}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  {t("cms.articles.editor.excerpt_hint")}
+                </p>
+              </div>
             </CardContent>
           </Card>
-
-          {/* SEO & Open Graph */}
-          <Card id="art-seo">
-            <CardHeader>
+          <aside
+            className="article-editor-settings space-y-4"
+            aria-label={t("cms.articles.editor.settings")}
+          >
+            <Card className="article-editor-card">
+              <CardHeader className="article-editor-heading">
+                <span className="article-editor-heading-icon">
+                  <SlidersHorizontal className="size-4" aria-hidden />
+                </span>
+                <CardTitle>{t("cms.articles.editor.publish")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {!isReadOnly && (
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("cms.articles.field.status")}</FormLabel>
+                        <Select<Option>
+                          inputId="cms-article-status"
+                          aria-label={t("cms.articles.field.status")}
+                          options={statusOptions}
+                          isClearable={false}
+                          value={
+                            statusOptions.find(
+                              (o) => o.value === field.value,
+                            ) ?? null
+                          }
+                          onChange={(o) => o && field.onChange(o.value)}
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {t("cms.articles.editor.publish_hint")}
+                </p>
+                {!isReadOnly && status === "scheduled" && (
+                  <FormField
+                    control={form.control}
+                    name="publish_at"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>
+                          {t("cms.articles.field.publish_at")}
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="datetime-local" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                {!isReadOnly && status === "needs_revision" && (
+                  <FormField
+                    control={form.control}
+                    name="note"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>
+                          {t("cms.articles.field.note")}
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea rows={2} maxLength={1000} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                <FormField
+                  control={form.control}
+                  name="category_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required={categorize}>
+                        {t("cms.articles.field.category")}
+                      </FormLabel>
+                      <Select<Option>
+                        inputId="cms-article-category"
+                        aria-label={t("cms.articles.field.category")}
+                        options={categoryOptions}
+                        isDisabled={isReadOnly}
+                        value={
+                          categoryOptions.find(
+                            (o) => o.value === field.value,
+                          ) ?? null
+                        }
+                        placeholder={t("cms.articles.field.category_ph")}
+                        onChange={(o) => field.onChange(o?.value ?? "")}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+            <Card className="article-editor-card">
+              <CardHeader className="article-editor-heading">
+                <span className="article-editor-heading-icon">
+                  <ImageIcon className="size-4" aria-hidden />
+                </span>
+                <CardTitle>{t("cms.articles.field.featured")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <ImageUpload
+                  type="rounded"
+                  ratio={16 / 9}
+                  width={280}
+                  className="article-editor-image"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  showCamera={false}
+                  disabled={isReadOnly}
+                  value={featured}
+                  onChange={(value) => {
+                    setFeatured(value);
+                    setMediaDirty(true);
+                  }}
+                />
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {t("cms.articles.editor.featured_hint")}
+                </p>
+              </CardContent>
+            </Card>
+            {(allowSlugEdit || isEdit) && (
+              <Card className="article-editor-card">
+                <CardHeader className="article-editor-heading">
+                  <span className="article-editor-heading-icon">
+                    <Link2 className="size-4" aria-hidden />
+                  </span>
+                  <CardTitle>{t("cms.articles.editor.permalink")}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {allowSlugEdit ? (
+                    <FormField
+                      control={form.control}
+                      name="slug"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("cms.articles.field.slug")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              maxLength={300}
+                              placeholder={t("cms.articles.field.slug_ph")}
+                              disabled={isReadOnly}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <Checkbox
+                      id="cms-article-regenerate-slug"
+                      label={t("cms.articles.field.regenerate_slug")}
+                      checked={regenerate}
+                      disabled={isReadOnly}
+                      onChange={(e) => {
+                        setRegenerate(e.target.checked);
+                        setMediaDirty(true);
+                      }}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </aside>
+          <Card className="article-editor-seo article-editor-card" id="art-seo">
+            <CardHeader className="article-editor-heading">
+              <span className="article-editor-heading-icon">
+                <Search className="size-4" aria-hidden />
+              </span>
               <CardTitle>{t("cms.articles.editor.seo")}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="seo_title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("cms.articles.seo.title")}</FormLabel>
-                    <FormControl>
-                      <TextField
-                        maxLength={255}
-                        disabled={isReadOnly}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="seo_description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("cms.articles.seo.description")}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        maxLength={500}
-                        disabled={isReadOnly}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="seo_keywords"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("cms.articles.seo.keywords")}</FormLabel>
-                    <FormControl>
-                      <TextField
-                        maxLength={255}
-                        disabled={isReadOnly}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="canonical_url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("cms.articles.seo.canonical")}</FormLabel>
-                    <FormControl>
-                      <Input type="url" disabled={isReadOnly} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex flex-wrap items-center gap-5">
+            <CardContent className="space-y-6">
+              <div className="article-editor-search-preview">
+                <p className="mb-3 text-xs font-medium text-muted-foreground">
+                  {t("cms.articles.editor.search_preview")}
+                </p>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {"Zukatek"}
+                </span>
+                <p className="mt-1 break-words text-lg font-medium text-primary">
+                  {form.watch("seo_title") ||
+                    form.watch("title") ||
+                    t("cms.articles.editor.preview_title")}
+                </p>
+                <p className="mt-1 break-words text-sm leading-6 text-muted-foreground">
+                  {form.watch("seo_description") ||
+                    form.watch("excerpt") ||
+                    t("cms.articles.editor.preview_description")}
+                </p>
+              </div>
+              <div className="space-y-4">
+                {" "}
+                <FormField
+                  control={form.control}
+                  name="seo_title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("cms.articles.seo.title")}</FormLabel>
+                      <FormControl>
+                        <TextField
+                          maxLength={255}
+                          disabled={isReadOnly}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />{" "}
+                <FormField
+                  control={form.control}
+                  name="seo_description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("cms.articles.seo.description")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          maxLength={500}
+                          disabled={isReadOnly}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {" "}
+                <FormField
+                  control={form.control}
+                  name="seo_keywords"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("cms.articles.seo.keywords")}</FormLabel>
+                      <FormControl>
+                        <TextField
+                          maxLength={255}
+                          disabled={isReadOnly}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />{" "}
+                <FormField
+                  control={form.control}
+                  name="canonical_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("cms.articles.seo.canonical")}</FormLabel>
+                      <FormControl>
+                        <Input type="url" disabled={isReadOnly} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-5 rounded-lg border bg-muted/20 p-4">
                 <Checkbox
                   id="cms-article-noindex"
                   label={t("cms.articles.seo.noindex")}
                   checked={form.watch("seo_noindex")}
                   disabled={isReadOnly}
                   onChange={(e) =>
-                    form.setValue("seo_noindex", e.target.checked)
+                    form.setValue("seo_noindex", e.target.checked, {
+                      shouldDirty: true,
+                    })
                   }
                 />
                 <Checkbox
@@ -737,66 +881,97 @@ export default function ArticleEditor() {
                   checked={form.watch("seo_nofollow")}
                   disabled={isReadOnly}
                   onChange={(e) =>
-                    form.setValue("seo_nofollow", e.target.checked)
+                    form.setValue("seo_nofollow", e.target.checked, {
+                      shouldDirty: true,
+                    })
                   }
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="og_title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("cms.articles.seo.og_title")}</FormLabel>
-                    <FormControl>
-                      <TextField
-                        maxLength={255}
-                        disabled={isReadOnly}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="og_description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {t("cms.articles.seo.og_description")}
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        maxLength={500}
-                        disabled={isReadOnly}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="space-y-1.5">
-                <p className="text-sm font-medium">
-                  {t("cms.articles.seo.og_image")}
-                </p>
-                <ImageUpload
-                  type="rounded"
-                  ratio={16 / 9}
-                  width={280}
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  showCamera={false}
-                  disabled={isReadOnly}
-                  value={og}
-                  onChange={setOg}
-                />
+              <div className="border-t pt-5">
+                <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold">
+                  <Globe2 className="size-4 text-primary" aria-hidden />
+                  {t("cms.articles.editor.social")}
+                </h3>
+                <div className="article-editor-social">
+                  <div className="space-y-4">
+                    {" "}
+                    <FormField
+                      control={form.control}
+                      name="og_title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {t("cms.articles.seo.og_title")}
+                          </FormLabel>
+                          <FormControl>
+                            <TextField
+                              maxLength={255}
+                              disabled={isReadOnly}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />{" "}
+                    <FormField
+                      control={form.control}
+                      name="og_description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {t("cms.articles.seo.og_description")}
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              rows={2}
+                              maxLength={500}
+                              disabled={isReadOnly}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="min-w-0 space-y-2">
+                    <p className="text-sm font-medium">
+                      {t("cms.articles.seo.og_image")}
+                    </p>
+                    <ImageUpload
+                      type="rounded"
+                      ratio={16 / 9}
+                      width={280}
+                      className="article-editor-image"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      showCamera={false}
+                      disabled={isReadOnly}
+                      value={og}
+                      onChange={(value) => {
+                        setOg(value);
+                        setMediaDirty(true);
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
-        </SectionNavLayout>
+        </div>
       </form>
+      <ConfirmDialog
+        open={leaving}
+        onOpenChange={setLeaving}
+        title={t("cms.articles.editor.leave_title")}
+        description={t("cms.articles.editor.leave_hint")}
+        confirmLabel={t("cms.articles.editor.leave_confirm")}
+        confirmIcon={ArrowLeft}
+        onConfirm={() => {
+          setLeaving(false);
+          navigate("/cms/articles");
+        }}
+      />
     </Form>
   );
 }

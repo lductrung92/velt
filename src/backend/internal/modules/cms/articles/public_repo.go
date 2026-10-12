@@ -2,16 +2,17 @@ package articles
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/velt/backend/internal/modules/cms/shared"
+	"github.com/velt/backend/internal/platform/pubdocs"
 )
 
 // PublicCard is a published-article card for public widgets and the blog list.
@@ -35,10 +36,20 @@ type PublicFilter struct {
 // PublicRepo reads published articles for public consumption (no auth) — a
 // separate seam from the admin Repository so widget resolvers can fetch fresh
 // cards without touching the editorial surface.
-type PublicRepo struct{ pool *pgxpool.Pool }
+//
+// The blog list and detail read the shared public read model (published_docs),
+// which is where the published copy and its translations live. The widget query
+// below still reads cms_articles directly: widgets are Vietnamese-only for now,
+// and moving them is a separate change.
+type PublicRepo struct {
+	pool *pgxpool.Pool
+	docs *pubdocs.Store
+}
 
 // NewPublicRepository builds the public-read article repo.
-func NewPublicRepository(pool *pgxpool.Pool) *PublicRepo { return &PublicRepo{pool: pool} }
+func NewPublicRepository(pool *pgxpool.Pool, docs *pubdocs.Store) *PublicRepo {
+	return &PublicRepo{pool: pool, docs: docs}
+}
 
 // ListPublished returns up to Limit published articles (newest first), optionally
 // filtered by category id and/or tag slug.
@@ -83,6 +94,7 @@ func (r *PublicRepo) ListPublished(ctx context.Context, f PublicFilter) ([]Publi
 
 // PublicListFilter parameterizes the paginated public blog list.
 type PublicListFilter struct {
+	Locale string // caller pre-validates; "" is never passed
 	Query  string
 	Sort   string // newest | oldest | title (caller pre-validates)
 	Limit  int
@@ -91,89 +103,108 @@ type PublicListFilter struct {
 
 // PublicArticle is one published article for the public detail (blog post) page.
 type PublicArticle struct {
-	Slug           string
-	Title          string
-	Excerpt        *string
-	BodyHTML       *string
-	FeaturedPath   *string
-	PublishedAt    *time.Time
-	SEOTitle       *string
-	SEODescription *string
-	CanonicalURL   *string
-	OGTitle        *string
-	OGDescription  *string
+	Slug         string
+	Title        string
+	Excerpt      *string
+	BodyHTML     *string
+	FeaturedPath *string
+	PublishedAt  *time.Time
+	SEO          shared.PageSEO
+	// Alternates is every language this article is published in, including the
+	// one being viewed: hreflang is ignored unless each version points at the
+	// others AND at itself.
+	Alternates []pubdocs.Ref
 }
 
-// publicSortSQL maps a (pre-validated) sort key to an ORDER BY clause.
-func publicSortSQL(sort string) string {
-	switch sort {
-	case "oldest":
-		return "a.published_at ASC NULLS LAST, a.title ASC"
-	case "title":
-		return "a.title ASC"
-	default: // newest
-		return "a.published_at DESC NULLS LAST, a.title ASC"
-	}
-}
+// ErrMoved reports that the requested slug is no longer the article's address.
+// The caller answers 301 rather than 404, so links already handed out survive a
+// slug change and the ranking that URL earned is not thrown away.
+type ErrMoved struct{ Slug string }
+
+func (e ErrMoved) Error() string { return "article moved to " + e.Slug }
 
 // ListPublishedPage returns one page of published articles (with total match
-// count) for the blog, optionally narrowed by a free-text query over the title
-// and excerpt.
+// count) for the blog, optionally narrowed by a free-text query.
+//
+// The query runs against published_docs.search_text, which is indexed with
+// pg_trgm, so it matches the language being read and no longer scans the table.
 func (r *PublicRepo) ListPublishedPage(ctx context.Context, f PublicListFilter) ([]PublicCard, int, error) {
-	conds := []string{"a.status = 'published'"}
-	args := []any{}
-	if q := strings.TrimSpace(f.Query); q != "" {
-		args = append(args, "%"+q+"%")
-		conds = append(conds, fmt.Sprintf("(a.title ILIKE $%d OR a.excerpt ILIKE $%d)", len(args), len(args)))
-	}
-	where := strings.Join(conds, " AND ")
-
-	var total int
-	if err := r.pool.QueryRow(ctx, `SELECT count(*) FROM cms_articles a WHERE `+where, args...).Scan(&total); err != nil {
-		return nil, 0, fmt.Errorf("count published articles: %w", err)
-	}
-	if total == 0 {
-		return []PublicCard{}, 0, nil
-	}
-
-	args = append(args, f.Limit, f.Offset)
-	query := `SELECT a.slug, a.title, a.excerpt, a.published_at, a.featured_path
-	            FROM cms_articles a
-	           WHERE ` + where +
-		` ORDER BY ` + publicSortSQL(f.Sort) +
-		fmt.Sprintf(` LIMIT $%d OFFSET $%d`, len(args)-1, len(args))
-
-	rows, err := r.pool.Query(ctx, query, args...)
+	bodies, total, err := r.docs.List(ctx, pubdocs.ListParams{
+		Entity: EntityArticle, Locale: f.Locale, Query: f.Query, Sort: f.Sort,
+		TitleField: "title", Limit: f.Limit, Offset: f.Offset,
+	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("list published articles page: %w", err)
+		return nil, 0, err
 	}
-	defer rows.Close()
-	out := []PublicCard{}
-	for rows.Next() {
-		var c PublicCard
-		if err := rows.Scan(&c.Slug, &c.Title, &c.Excerpt, &c.PublishedAt, &c.FeaturedPath); err != nil {
-			return nil, 0, fmt.Errorf("scan published article card: %w", err)
+	out := make([]PublicCard, 0, len(bodies))
+	for _, raw := range bodies {
+		var d articleSnapshot
+		if err := json.Unmarshal(raw, &d); err != nil {
+			return nil, 0, fmt.Errorf("decode published article card: %w", err)
 		}
-		out = append(out, c)
+		out = append(out, PublicCard{
+			Slug: d.Slug, Title: d.Title, Excerpt: d.Excerpt,
+			PublishedAt: d.PublishedAt, FeaturedPath: d.FeaturedPath,
+		})
 	}
-	return out, total, rows.Err()
+	return out, total, nil
 }
 
-// GetPublishedBySlug returns one published article by slug, or shared.ErrNotFound.
-func (r *PublicRepo) GetPublishedBySlug(ctx context.Context, slug string) (*PublicArticle, error) {
-	var a PublicArticle
-	err := r.pool.QueryRow(ctx,
-		`SELECT a.slug, a.title, a.excerpt, a.body_html, a.featured_path, a.published_at,
-		        a.seo_title, a.seo_description, a.canonical_url, a.og_title, a.og_description
-		   FROM cms_articles a
-		  WHERE a.slug = $1 AND a.status = 'published'`, slug).
-		Scan(&a.Slug, &a.Title, &a.Excerpt, &a.BodyHTML, &a.FeaturedPath, &a.PublishedAt,
-			&a.SEOTitle, &a.SEODescription, &a.CanonicalURL, &a.OGTitle, &a.OGDescription)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, shared.ErrNotFound
+// GetPublishedBySlug returns one published article in the requested language.
+//
+// Three outcomes besides the article: shared.ErrNotFound, and ErrMoved either
+// because the slug was retired by a rename, or because it is another language's
+// address for the same article. Both get a 301 instead of a 404, which is what
+// keeps one piece of content from living at two indexable URLs.
+func (r *PublicRepo) GetPublishedBySlug(ctx context.Context, locale, slug string) (*PublicArticle, error) {
+	found, err := r.docs.Get(ctx, EntityArticle, locale, slug)
+	if errors.Is(err, pubdocs.ErrNotFound) {
+		return nil, r.crossLocaleRedirect(ctx, locale, slug)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get published article: %w", err)
+		return nil, err
 	}
-	return &a, nil
+	if !found.IsCurrent {
+		return nil, ErrMoved{Slug: found.CurrentSlug}
+	}
+	return r.decodeArticle(ctx, found)
+}
+
+// crossLocaleRedirect handles a slug that exists, but belongs to a different
+// language of the same article — the case where a visitor lands on /en/<the
+// Vietnamese slug> after a translated slug was set. It always returns an error.
+func (r *PublicRepo) crossLocaleRedirect(ctx context.Context, locale, slug string) error {
+	if locale == baseLocale {
+		return shared.ErrNotFound
+	}
+	base, err := r.docs.Get(ctx, EntityArticle, baseLocale, slug)
+	if err != nil || !base.IsCurrent {
+		return shared.ErrNotFound
+	}
+	alts, err := r.docs.Alternates(ctx, EntityArticle, base.EntityID)
+	if err != nil {
+		return err
+	}
+	for _, a := range alts {
+		if a.Locale == locale {
+			return ErrMoved{Slug: a.Slug}
+		}
+	}
+	return shared.ErrNotFound
+}
+
+func (r *PublicRepo) decodeArticle(ctx context.Context, found *pubdocs.Found) (*PublicArticle, error) {
+	var d articleSnapshot
+	if err := json.Unmarshal(found.Body, &d); err != nil {
+		return nil, fmt.Errorf("decode published article: %w", err)
+	}
+	alts, err := r.docs.Alternates(ctx, EntityArticle, found.EntityID)
+	if err != nil {
+		return nil, err
+	}
+	return &PublicArticle{
+		Slug: d.Slug, Title: d.Title, Excerpt: d.Excerpt, BodyHTML: d.BodyHTML,
+		FeaturedPath: d.FeaturedPath, PublishedAt: d.PublishedAt, SEO: d.SEO,
+		Alternates: alts,
+	}, nil
 }

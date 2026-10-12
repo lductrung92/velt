@@ -8,6 +8,7 @@ import { Toaster } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/i18n";
+import type { ImageUploadValue } from "@/components/common/ImageHandler";
 import { useAuthStore } from "@/store/auth.store";
 import { server } from "@/test/server";
 
@@ -33,7 +34,28 @@ vi.mock("@/components/common/RichTextEditor", () => ({
   ),
 }));
 vi.mock("@/components/common/ImageHandler", () => ({
-  ImageUpload: () => <div data-testid="image-upload" />,
+  ImageUpload: ({
+    value,
+    onChange,
+  }: {
+    value: ImageUploadValue;
+    onChange: (value: ImageUploadValue) => void;
+  }) => (
+    <button
+      type="button"
+      data-testid="image-upload"
+      data-value={value.kind}
+      onClick={() =>
+        onChange({
+          kind: "pending",
+          dataUrl: "data:image/png;base64,aGVsbG8=",
+          blob: new Blob(["fixture"], { type: "image/png" }),
+        })
+      }
+    >
+      {"Choose fixture image"}
+    </button>
+  ),
 }));
 
 const API = "http://localhost/api";
@@ -139,8 +161,14 @@ const MANAGER = [
 const BODY = () => i18n.t("cms.articles.field.body");
 const SAVE = () => i18n.t("common.save");
 
-beforeEach(() => useAuthStore.getState().clear());
-afterEach(() => useAuthStore.getState().clear());
+beforeEach(() => {
+  useAuthStore.getState().clear();
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+});
+afterEach(() => {
+  useAuthStore.getState().clear();
+  vi.restoreAllMocks();
+});
 
 describe("ArticleEditor", () => {
   it("create: POST with title, status and body", async () => {
@@ -294,5 +322,63 @@ describe("ArticleEditor", () => {
     expect(
       (await screen.findAllByText(i18n.t("errors.slug_already_exists"))).length,
     ).toBeGreaterThan(0);
+  });
+
+  it("Back asks before discarding content and cancel keeps the draft", async () => {
+    signIn(MANAGER);
+    server.use(...baseHandlers());
+    renderEditor("/cms/articles/new");
+    await screen.findByRole("textbox", { name: BODY() });
+    const user = userEvent.setup();
+    const title = screen.getByPlaceholderText(
+      i18n.t("cms.articles.editor.title_ph"),
+    );
+    await user.type(title, "Keep this draft");
+    await user.click(
+      screen.getByRole("button", { name: i18n.t("common.back") }),
+    );
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: i18n.t("common.cancel") }),
+    );
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(title).toHaveValue("Keep this draft");
+  });
+
+  it("SEO-only checkbox changes are protected by the unsaved Back prompt", async () => {
+    signIn(MANAGER);
+    server.use(...baseHandlers());
+    renderEditor("/cms/articles/new");
+    await screen.findByRole("textbox", { name: BODY() });
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: i18n.t("cms.articles.seo.noindex"),
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: i18n.t("common.back") }),
+    );
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+  });
+
+  it("cover-only changes are protected and cancel keeps the pending image", async () => {
+    signIn(MANAGER);
+    server.use(...baseHandlers());
+    renderEditor("/cms/articles/new");
+    await screen.findByRole("textbox", { name: BODY() });
+    const user = userEvent.setup();
+    await user.click(screen.getAllByTestId("image-upload")[0]);
+    await user.click(
+      screen.getByRole("button", { name: i18n.t("common.back") }),
+    );
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: i18n.t("common.cancel") }),
+    );
+    expect(screen.getAllByTestId("image-upload")[0]).toHaveAttribute(
+      "data-value",
+      "pending",
+    );
   });
 });

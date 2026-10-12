@@ -12,6 +12,10 @@ export interface AppConfig {
   primaryColor?: string;
   defaultLocale?: string;
   languageSwitcherEnabled?: boolean;
+  /** Content translation (translation.enabled) — drives the editor language tabs. */
+  translationEnabled?: boolean;
+  /** Languages besides Vietnamese, parsed from the comma-separated setting. */
+  translationLocales?: string[];
 }
 
 function asString(v: unknown): string | undefined {
@@ -30,6 +34,11 @@ function adapt(raw: Record<string, unknown>): AppConfig {
       typeof raw["app.language_switcher_enabled"] === "boolean"
         ? (raw["app.language_switcher_enabled"] as boolean)
         : undefined,
+    translationEnabled: raw["translation.enabled"] === true,
+    translationLocales: asString(raw["translation.locales"])
+      ?.split(",")
+      .map((l) => l.trim().toLowerCase())
+      .filter(Boolean),
   };
 }
 
@@ -39,9 +48,8 @@ export function useAppConfig() {
   return useQuery({
     queryKey: appConfigKey,
     queryFn: async () => {
-      const { data } = await api.get<Record<string, unknown>>(
-        "/public/settings",
-      );
+      const { data } =
+        await api.get<Record<string, unknown>>("/public/settings");
       return adapt(data);
     },
     staleTime: 5 * 60_000, // public config rarely changes; avoid refetch churn

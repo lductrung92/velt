@@ -23,6 +23,7 @@ import (
 	"github.com/velt/backend/internal/modules/cms/taxonomy"
 	"github.com/velt/backend/internal/modules/cms/widgets"
 	settingssvc "github.com/velt/backend/internal/modules/settings"
+	"github.com/velt/backend/internal/platform/pubdocs"
 	"github.com/velt/backend/internal/platform/ratelimit"
 	"github.com/velt/backend/internal/platform/revalidate"
 	"github.com/velt/backend/internal/platform/storage"
@@ -32,9 +33,10 @@ import (
 // per-endpoint permissions are enforced in each feature's service layer. It is the
 // single wiring entry point for the bounded context: each feature sub-package
 // registers its own routes on the shared group.
-func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, store storage.Storage, log *slog.Logger, authMW func(http.Handler) http.Handler, ports widgets.Ports, rev revalidate.Revalidator, limiter ratelimit.Limiter, trustProxy bool) {
+func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, store storage.Storage, log *slog.Logger, authMW func(http.Handler) http.Handler, ports widgets.Ports, rev revalidate.Revalidator, limiter ratelimit.Limiter, trustProxy bool, docs *pubdocs.Store) Wiring {
 	base := shared.NewBase(settings, log)
 	base.SetRevalidator(rev)
+	var w Wiring
 
 	// Public (no-auth) read surface — published content with widgets resolved.
 	resolver := widgets.NewResolver(ports)
@@ -42,7 +44,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 	landingPublic := landing.NewPublicService(landing.NewRepository(pool), resolver, store)
 	r.Route("/api/public/cms", func(r chi.Router) {
 		pages.RegisterPublic(r, pool, resolver, landingPublic)
-		articles.RegisterPublic(r, pool, store)
+		w.PublicArticles = articles.RegisterPublic(r, pool, store, docs)
 		newsletter.RegisterPublic(r, base, pool, limiter, trustProxy)
 	})
 
@@ -51,13 +53,24 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 		widgets.RegisterPreview(r, base, resolver)
 		taxonomy.Register(r, base, pool)
 		pages.Register(r, base, pool, landing.NewPagesPort(landing.NewRepository(pool), store))
-		articles.Register(r, base, pool, store)
+		w.Articles = articles.Register(r, base, pool, store)
 		menus.Register(r, base, pool)
 		landing.Register(r, base, pool, store)
 		comments.Register(r, base, pool)
 		newsletter.Register(r, base, pool)
 		cmssettings.Register(r, base, settings)
 	})
+
+	w.Articles.SetPublicDocs(docs)
+	return w
+}
+
+// Wiring is what the CMS hands back so the application can connect it to modules
+// it must not import itself — translation being the one that matters: the CMS
+// owns the author-only rule, and the translation module must defer to it.
+type Wiring struct {
+	Articles       *articles.Service
+	PublicArticles *articles.PublicService
 }
 
 // SettingDefs returns the CMS feature-flag definitions for the settings registry

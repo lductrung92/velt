@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
+	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/config"
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/account"
@@ -35,9 +36,11 @@ import (
 	"github.com/velt/backend/internal/modules/members"
 	"github.com/velt/backend/internal/modules/products"
 	"github.com/velt/backend/internal/modules/settings"
+	"github.com/velt/backend/internal/modules/translation"
 	"github.com/velt/backend/internal/platform/crypto"
 	"github.com/velt/backend/internal/platform/db"
 	"github.com/velt/backend/internal/platform/mail"
+	"github.com/velt/backend/internal/platform/pubdocs"
 	"github.com/velt/backend/internal/platform/ratelimit"
 	"github.com/velt/backend/internal/platform/revalidate"
 	"github.com/velt/backend/internal/platform/storage"
@@ -139,6 +142,7 @@ func run() error {
 	// registry is the foundation defs plus each business module's flags (cms.*).
 	settingsDefs := append(settings.FoundationDefs(), cms.SettingDefs()...)
 	settingsDefs = append(settingsDefs, ai.SettingDefs()...)
+	settingsDefs = append(settingsDefs, translation.SettingDefs()...)
 	settingsRegistry := settings.NewRegistry(settingsDefs...)
 	settingsSvc := settings.NewService(settings.NewRepository(pool), settingsCache, aead,
 		settingsRegistry, limiter, mail.NewSMTPTester(), settings.Options{Logger: logger})
@@ -257,10 +261,27 @@ func run() error {
 	// (articles_list / categories_showcase). Stateless over the pool. Games is left
 	// nil — there is no games catalog in this deployment, so a games_list widget
 	// resolves to nothing (the resolver is nil-safe by design).
-	cms.Register(r, pool, settingsSvc, store, logger, authMW, widgets.Ports{
-		Articles:   cmsArticlesPort{cmsarticles.NewPublicRepository(pool)},
+	// The public read model: one row per published URL, shared by every content
+	// type. It replaces the per-table published_snapshot column and is what makes
+	// a second language a row rather than a schema change.
+	publicDocs := pubdocs.New(pool)
+	cmsWiring := cms.Register(r, pool, settingsSvc, store, logger, authMW, widgets.Ports{
+		Articles:   cmsArticlesPort{cmsarticles.NewPublicRepository(pool, publicDocs)},
 		Categories: cmsCategoriesPort{cmstaxonomy.NewPublicRepository(pool)},
-	}, revalidate.NewHTTP(cfg.CustomerWebBaseURL, cfg.RevalidateSecret, logger), limiter, cfg.TrustProxyHeaders)
+	}, revalidate.NewHTTP(cfg.CustomerWebBaseURL, cfg.RevalidateSecret, logger), limiter, cfg.TrustProxyHeaders, publicDocs)
+
+	// Translation has no permissions of its own: every write defers to the gate of
+	// the module that owns the content, so the CMS author-only rule covers an
+	// article's translations exactly as it covers the article.
+	translationSvc := translation.Register(r, pool, settingsSvc, authMW,
+		func(ctx context.Context, id *httpx.Identity, entity string, entityID uuid.UUID) error {
+			if entity == cmsarticles.EntityArticle {
+				return cmsWiring.Articles.AuthorizeTranslate(ctx, id, entityID)
+			}
+			return apperr.NotFound("not_found")
+		})
+	cmsWiring.Articles.SetTranslator(translationSvc)
+	cmsWiring.PublicArticles.SetLocales(translationSvc)
 	// Public asset serving (avatars + CMS article media) when the storage driver
 	// is local; the S3 driver serves them straight from the bucket endpoint.
 	files.RegisterRoutes(r, filesHandler)

@@ -61,6 +61,18 @@ export default {
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
       },
+      fontSize: {
+        caption: ["var(--font-size-caption)", { lineHeight: "1rem" }],
+        xs: ["var(--font-size-xs)", { lineHeight: "1rem" }],
+        compact: ["var(--font-size-compact)", { lineHeight: "1.25rem" }],
+        sm: ["var(--font-size-sm)", { lineHeight: "1.25rem" }],
+        base: ["var(--font-size-base)", { lineHeight: "1.5rem" }],
+        lg: ["var(--font-size-lg)", { lineHeight: "1.75rem" }],
+        xl: ["var(--font-size-xl)", { lineHeight: "1.75rem" }],
+        "2xl": ["var(--font-size-2xl)", { lineHeight: "2rem" }],
+        "3xl": ["var(--font-size-3xl)", { lineHeight: "2.25rem" }],
+        "4xl": ["var(--font-size-4xl)", { lineHeight: "2.5rem" }],
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },

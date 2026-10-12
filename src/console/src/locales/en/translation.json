@@ -946,6 +946,22 @@
       "editor": {
         "new_title": "New article",
         "edit_title": "Edit article",
+        "subtitle": "Write content, set publication options and shape how your article is presented.",
+        "content": "Article content",
+        "settings": "Article settings",
+        "permalink": "Permalink",
+        "title_ph": "Enter an article title…",
+        "excerpt_hint": "A short introduction to the article in content lists.",
+        "featured_hint": "A 16:9 image used as the article's cover.",
+        "publish_hint": "The selected status takes effect when you click Save.",
+        "readonly_hint": "This article is read-only. Your current role cannot edit it in this state.",
+        "search_preview": "Search appearance preview",
+        "preview_title": "Your article title",
+        "preview_description": "The SEO description or excerpt will appear here.",
+        "social": "Social sharing",
+        "leave_title": "Leave without saving?",
+        "leave_hint": "Your unsaved changes will be lost. Cancel to continue writing.",
+        "leave_confirm": "Leave page",
         "publish": "Publish",
         "meta": "Details",
         "seo": "SEO & Open Graph",
@@ -1517,5 +1533,14 @@
     "no_results": "No matching customers",
     "no_results_hint": "Try another search or remove filters to find more customers.",
     "reset_filters": "Clear filters"
+  },
+  "tr": {
+    "tabs": "Content language",
+    "source": "Source",
+    "source_value": "Source:",
+    "source_empty": "(empty)",
+    "needs_republish": "Needs republishing",
+    "slug_hint": "Leave empty and this language reuses the Vietnamese URL.",
+    "shared_title": "Shared across languages"
   }
 }
