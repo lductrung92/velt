@@ -155,9 +155,13 @@ export function Select<Option extends SelectOption = SelectOption>({
           <ChevronsUpDown className="size-4 opacity-50" />
         </div>
       </div>
+      {/* The menu starts at the trigger's width and grows to fit the longest
+          option: pinning it to the trigger truncated every label whenever the
+          control was narrow, which is exactly where a reader needs the full
+          text. The cap keeps it inside the viewport. */}
       <PopoverContent
         align="start"
-        className="w-[var(--radix-popover-trigger-width)] p-0"
+        className="w-auto min-w-[var(--radix-popover-trigger-width)] max-w-[min(26rem,var(--radix-popover-content-available-width))] p-0"
       >
         <Command shouldFilter={!controlledSearch}>
           {isSearchable ? (

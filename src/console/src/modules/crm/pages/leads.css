@@ -340,7 +340,9 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   color: hsl(var(--muted-foreground));
-  font-size: var(--font-size-sm);
+  /* Secondary line under the name, same weight as the contact channels beside
+     it — at sm it read as loud as the name itself. */
+  font-size: var(--font-size-xs);
   margin-top: 7px;
 }
 .lead-products {
@@ -410,7 +412,9 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: var(--font-size-sm);
+  /* Matches the source label stacked right above it — one cell should not hold
+     two text sizes. */
+  font-size: var(--font-size-xs);
   color: hsl(var(--primary));
   white-space: nowrap;
 }
@@ -485,7 +489,9 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
-  font-size: var(--font-size-sm);
+  /* One size for every secondary value in the row. The contact name is the
+     only thing that gets to be bigger — it is what the row is about. */
+  font-size: var(--font-size-xs);
   white-space: nowrap;
   color: hsl(var(--muted-foreground));
 }
