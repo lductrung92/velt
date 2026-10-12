@@ -18,7 +18,9 @@ Stack: Go, chi, pgx/PostgreSQL, goose migrations. `cmd/api/main.go` chỉ wiring
 
 Luồng request: middleware → handler → service → repository → PostgreSQL. Handler decode/validate và trả HTTP; service kiểm permission và nghiệp vụ; repository thao tác persistence. `internal/httpx` thống nhất JSON/error envelope và identity. `internal/platform` cung cấp crypto, JWT, TOTP, rate limit, storage local/S3, mail, HTML sanitation, slug và revalidation. Redis dùng cho cache/limiter nếu cấu hình; có fallback khi không dùng Redis.
 
-Modules gồm `auth`, `account`, `admin`, `settings`, `files`, `cms`, `members`, `products`, `ai` và `crm`. Module `translation` đã có thiết kế nhưng **chưa viết code** — xem [docs/domains/translation/README.md](domains/translation/README.md). CMS có articles, pages, taxonomy, menus, landing builder, widgets, comments và newsletter; có các route đọc công khai dưới `/api/public/cms`.
+Modules gồm `auth`, `account`, `admin`, `settings`, `files`, `cms`, `members`, `products`, `ai` và `crm`. CMS có articles, pages, taxonomy, menus, landing builder, widgets, comments và newsletter; có các route đọc công khai dưới `/api/public/cms`.
+
+Đa ngôn ngữ **đã có thiết kế, chưa viết code** — xem [docs/domains/translation/README.md](domains/translation/README.md). Thiết kế chốt tách đường ghi khỏi đường đọc: một bảng dùng chung `published_docs` (hạ tầng ở `internal/platform`, một dòng cho mỗi URL) thay thế 4 cột `published_snapshot`, và một module `translation` (bật/tắt được) giữ bản dịch bên soạn thảo. Cột `slug` ở các bảng nội dung **giữ nguyên**.
 
 `members` là hồ sơ marketing, tách khỏi `users` là danh tính đăng nhập. API quản trị ở `/api/members`; roster công khai ở `/api/public/members`, chi tiết theo slug. Chỉ hồ sơ active xuất hiện ở public.
 

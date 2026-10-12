@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 764" width="1180" height="764" font-family="Inter, system-ui, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 812" width="1180" height="812" font-family="Inter, system-ui, sans-serif">
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
@@ -8,14 +8,14 @@
     </marker>
   </defs>
 
-  <rect width="1180" height="764" fill="#ffffff"/>
+  <rect width="1180" height="812" fill="#ffffff"/>
 
-  <text x="40" y="44" font-size="21" font-weight="600" fill="#0f172a">Bản dịch đi vào website bằng đường nào</text>
-  <text x="40" y="68" font-size="13" fill="#64748b">Tiếng Việt luôn ở cột gốc. Bảng translations chỉ giữ phần thêm vào. Xem docs/domains/translation/README.md §7.</text>
+  <text x="40" y="44" font-size="21" font-weight="600" fill="#0f172a">Đường ghi và đường đọc là hai đường khác nhau</text>
+  <text x="40" y="68" font-size="13" fill="#64748b">Tiếng Việt luôn ở cột gốc. Fallback xảy ra MỘT LẦN lúc Publish, không phải mỗi lượt xem. Xem docs/domains/translation/README.md §2.</text>
 
   <!-- ============ LANE 1: WRITE ============ -->
   <rect x="40" y="96" width="1100" height="232" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
-  <text x="60" y="124" font-size="13" font-weight="600" fill="#334155">1 · Biên tập viên ghi</text>
+  <text x="60" y="124" font-size="13" font-weight="600" fill="#334155">1 · Biên tập viên ghi — hai nơi, không nơi nào biết nơi kia</text>
 
   <rect x="60" y="142" width="200" height="74" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
   <text x="76" y="168" font-size="13" font-weight="600" fill="#0f172a">Console · tab VI</text>
@@ -31,78 +31,89 @@
   <line x1="260" y1="273" x2="372" y2="273" stroke="#64748b" stroke-width="1.6" marker-end="url(#a)"/>
 
   <rect x="376" y="142" width="214" height="74" rx="8" fill="#eef4ff" stroke="#9dbcff"/>
-  <text x="392" y="168" font-size="13" font-weight="600" fill="#1d4ed8">products.products</text>
-  <text x="392" y="188" font-size="11.5" fill="#475569">name, summary, body_html</text>
-  <text x="392" y="205" font-size="11.5" fill="#475569">ngôn ngữ gốc — luôn bắt buộc</text>
+  <text x="392" y="168" font-size="13" font-weight="600" fill="#1d4ed8">products</text>
+  <text x="392" y="188" font-size="11.5" fill="#475569">slug, name, summary, …</text>
+  <text x="392" y="205" font-size="11.5" fill="#475569">MỘT dòng — không nhân bản</text>
 
   <rect x="376" y="236" width="214" height="74" rx="8" fill="#f3eeff" stroke="#c4b1f0"/>
   <text x="392" y="262" font-size="13" font-weight="600" fill="#6d28d9">translations</text>
   <text x="392" y="282" font-size="11.5" fill="#475569">(product, id, en) → values</text>
-  <text x="392" y="299" font-size="11.5" fill="#475569">một dòng mỗi bản ghi × ngôn ngữ</text>
+  <text x="392" y="299" font-size="11.5" fill="#475569">chỉ console đọc bảng này</text>
 
-  <text x="612" y="172" font-size="11.5" fill="#b45309">trường ngoài danh sách</text>
-  <text x="612" y="189" font-size="11.5" fill="#b45309">khai báo → 422</text>
-  <text x="612" y="263" font-size="11.5" fill="#64748b">không có khoá ngoại:</text>
-  <text x="612" y="280" font-size="11.5" fill="#64748b">module sở hữu gọi Purge()</text>
-  <text x="612" y="297" font-size="11.5" fill="#64748b">khi xoá bản ghi gốc</text>
+  <text x="612" y="166" font-size="11.5" font-weight="600" fill="#1d4ed8">Vì sao không nhân dòng ở đây</text>
+  <text x="612" y="184" font-size="11.5" fill="#475569">Giá, ảnh, danh mục, trạng thái publish</text>
+  <text x="612" y="201" font-size="11.5" fill="#475569">là trường DÙNG CHUNG. Nhân ra là</text>
+  <text x="612" y="218" font-size="11.5" fill="#475569">sinh bài toán đồng bộ vĩnh viễn.</text>
+
+  <text x="612" y="263" font-size="11.5" fill="#b45309">trường ngoài danh sách khai báo → 422</text>
+  <text x="612" y="281" font-size="11.5" fill="#64748b">không có khoá ngoại: module sở hữu</text>
+  <text x="612" y="298" font-size="11.5" fill="#64748b">gọi Purge() khi xoá bản ghi gốc</text>
 
   <!-- ============ LANE 2: PUBLISH ============ -->
-  <rect x="40" y="344" width="1100" height="148" rx="10" fill="#f0fdf9" stroke="#b6e3d4"/>
-  <text x="60" y="372" font-size="13" font-weight="600" fill="#115e52">2 · Bấm Publish — đây là lúc bản dịch đông cứng</text>
+  <rect x="40" y="344" width="1100" height="196" rx="10" fill="#f0fdf9" stroke="#b6e3d4"/>
+  <text x="60" y="372" font-size="13" font-weight="600" fill="#115e52">2 · Bấm Publish — fallback chạy ở ĐÂY, một lần duy nhất</text>
 
-  <rect x="60" y="390" width="186" height="68" rx="8" fill="#ffffff" stroke="#8fd3c0"/>
+  <rect x="60" y="390" width="180" height="68" rx="8" fill="#ffffff" stroke="#8fd3c0"/>
   <text x="76" y="416" font-size="13" font-weight="600" fill="#0f172a">POST .../publish</text>
   <text x="76" y="436" font-size="11.5" fill="#64748b">quyền: products.publish</text>
 
-  <line x1="246" y1="424" x2="330" y2="424" stroke="#13896f" stroke-width="1.8" marker-end="url(#ag)"/>
+  <line x1="240" y1="424" x2="318" y2="424" stroke="#13896f" stroke-width="1.8" marker-end="url(#ag)"/>
 
-  <rect x="334" y="382" width="226" height="84" rx="8" fill="#ffffff" stroke="#8fd3c0"/>
-  <text x="350" y="406" font-size="12.5" font-weight="600" fill="#0f172a">detail() dựng bản đầy đủ</text>
-  <text x="350" y="426" font-size="11.5" fill="#475569">+ Bundle() nạp bản dịch</text>
-  <text x="350" y="444" font-size="11.5" fill="#475569">cho mọi locale đang bật</text>
+  <rect x="322" y="378" width="244" height="92" rx="8" fill="#ffffff" stroke="#8fd3c0"/>
+  <text x="338" y="402" font-size="12.5" font-weight="600" fill="#0f172a">Với mỗi ngôn ngữ:</text>
+  <text x="338" y="422" font-size="11.5" fill="#475569">slug := slug dịch, thiếu → slug gốc</text>
+  <text x="338" y="439" font-size="11.5" fill="#475569">body := gốc, phủ bản dịch lên</text>
+  <text x="338" y="456" font-size="11.5" font-weight="600" fill="#115e52">rỗng → GIỮ tiếng Việt</text>
 
-  <line x1="560" y1="424" x2="644" y2="424" stroke="#13896f" stroke-width="1.8" marker-end="url(#ag)"/>
+  <line x1="566" y1="424" x2="644" y2="424" stroke="#13896f" stroke-width="1.8" marker-end="url(#ag)"/>
 
-  <rect x="648" y="376" width="288" height="96" rx="8" fill="#ffffff" stroke="#8fd3c0"/>
-  <text x="664" y="400" font-size="12.5" font-weight="600" fill="#0f172a">published_snapshot (JSONB)</text>
-  <text x="664" y="420" font-size="11" font-family="ui-monospace, monospace" fill="#475569">{ "name": "Kho Gọn",</text>
-  <text x="664" y="436" font-size="11" font-family="ui-monospace, monospace" fill="#475569">  "i18n": { "en": { "name": "Lean Stock" } } }</text>
-  <text x="664" y="458" font-size="11.5" fill="#115e52">một bản sao đông cứng, đọc một truy vấn</text>
+  <rect x="648" y="370" width="300" height="108" rx="8" fill="#ffffff" stroke="#8fd3c0"/>
+  <text x="664" y="394" font-size="12.5" font-weight="600" fill="#0f172a">published_docs — một dòng = một URL</text>
+  <text x="664" y="416" font-size="11" font-family="ui-monospace, monospace" fill="#475569">(product, vi, kho-gon)    → body</text>
+  <text x="664" y="433" font-size="11" font-family="ui-monospace, monospace" fill="#475569">(product, en, lean-stock) → body</text>
+  <text x="664" y="455" font-size="11.5" fill="#115e52">khoá chính CHÍNH LÀ url → trùng slug</text>
+  <text x="664" y="470" font-size="11.5" fill="#115e52">không thể xảy ra, báo 409 ngay</text>
 
-  <text x="952" y="408" font-size="11.5" font-weight="600" fill="#b45309">Hệ quả</text>
-  <text x="952" y="428" font-size="11.5" fill="#b45309">sửa bản dịch xong</text>
-  <text x="952" y="445" font-size="11.5" fill="#b45309">phải Publish lại</text>
-  <text x="952" y="462" font-size="11.5" fill="#b45309">mới lên web</text>
+  <text x="964" y="398" font-size="11.5" font-weight="600" fill="#b45309">Hệ quả</text>
+  <text x="964" y="417" font-size="11.5" fill="#b45309">sửa bản dịch xong</text>
+  <text x="964" y="434" font-size="11.5" fill="#b45309">phải Publish lại</text>
+  <text x="964" y="451" font-size="11.5" fill="#b45309">mới lên web</text>
+
+  <rect x="60" y="486" width="888" height="38" rx="7" fill="#ffffff" stroke="#8fd3c0"/>
+  <text x="76" y="510" font-size="11.5" fill="#115e52">Đổi slug: dòng cũ Ở LẠI với is_current = false, body = NULL → khách vào URL cũ nhận 301. Không cần bảng slug_history.</text>
 
   <!-- ============ LANE 3: READ ============ -->
-  <rect x="40" y="508" width="1100" height="148" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
-  <text x="60" y="536" font-size="13" font-weight="600" fill="#334155">3 · Khách đọc</text>
+  <rect x="40" y="556" width="1100" height="160" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="60" y="584" font-size="13" font-weight="600" fill="#334155">3 · Khách đọc — một bảng, một truy vấn, không logic</text>
 
-  <rect x="60" y="554" width="236" height="68" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
-  <text x="76" y="580" font-size="12.5" font-weight="600" fill="#0f172a">GET /en/products/lean-stock</text>
-  <text x="76" y="600" font-size="11.5" fill="#64748b">slug tra trong phạm vi ngôn ngữ</text>
+  <rect x="60" y="602" width="238" height="76" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="76" y="628" font-size="12.5" font-weight="600" fill="#0f172a">GET /en/products/lean-stock</text>
+  <text x="76" y="648" font-size="11.5" fill="#64748b">entity=product, locale=en,</text>
+  <text x="76" y="665" font-size="11.5" fill="#64748b">slug=lean-stock</text>
 
-  <line x1="296" y1="588" x2="380" y2="588" stroke="#64748b" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="298" y1="640" x2="376" y2="640" stroke="#64748b" stroke-width="1.6" marker-end="url(#a)"/>
 
-  <rect x="384" y="546" width="238" height="84" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
-  <text x="400" y="570" font-size="12.5" font-weight="600" fill="#0f172a">Overlay trên snapshot</text>
-  <text x="400" y="590" font-size="11.5" fill="#475569">i18n.en phủ lên trường gốc</text>
-  <text x="400" y="608" font-size="11.5" fill="#475569">rỗng/thiếu → giữ tiếng Việt</text>
+  <rect x="380" y="594" width="252" height="92" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="396" y="618" font-size="12.5" font-weight="600" fill="#0f172a">Tra khoá chính, hết.</text>
+  <text x="396" y="638" font-size="11.5" fill="#475569">không join · không overlay</text>
+  <text x="396" y="655" font-size="11.5" fill="#475569">không rẽ nhánh theo loại</text>
+  <text x="396" y="674" font-size="11.5" font-weight="600" fill="#115e52">45,7 µs — bằng hôm nay</text>
 
-  <line x1="622" y1="588" x2="706" y2="588" stroke="#64748b" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="632" y1="640" x2="710" y2="640" stroke="#64748b" stroke-width="1.6" marker-end="url(#a)"/>
 
-  <rect x="710" y="546" width="238" height="84" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
-  <text x="726" y="570" font-size="12.5" font-weight="600" fill="#0f172a">Hình dạng y như cũ</text>
-  <text x="726" y="590" font-size="11.5" fill="#475569">+ alternates để dựng hreflang</text>
-  <text x="726" y="608" font-size="11.5" fill="#475569">fallback + hreflang ở backend</text>
+  <rect x="714" y="594" width="234" height="92" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="730" y="618" font-size="12.5" font-weight="600" fill="#0f172a">Hình dạng y như cũ</text>
+  <text x="730" y="638" font-size="11.5" fill="#475569">+ alternates để dựng hreflang</text>
+  <text x="730" y="655" font-size="11.5" fill="#475569">tìm kiếm: GIN trgm trên</text>
+  <text x="730" y="672" font-size="11.5" fill="#475569">search_text → 0,7 ms</text>
 
-  <text x="968" y="566" font-size="11.5" font-weight="600" fill="#b45309">Cache</text>
-  <text x="968" y="586" font-size="11.5" fill="#b45309">locale PHẢI ở URL.</text>
-  <text x="968" y="603" font-size="11.5" fill="#b45309">Cache-Control: public</text>
-  <text x="968" y="620" font-size="11.5" fill="#b45309">khoá theo URL.</text>
+  <text x="964" y="614" font-size="11.5" font-weight="600" fill="#b45309">Cache</text>
+  <text x="964" y="634" font-size="11.5" fill="#b45309">locale PHẢI ở URL.</text>
+  <text x="964" y="651" font-size="11.5" fill="#b45309">Cache-Control: public</text>
+  <text x="964" y="668" font-size="11.5" fill="#b45309">khoá theo URL.</text>
 
   <!-- ============ DISABLED ============ -->
-  <rect x="40" y="672" width="1100" height="64" rx="10" fill="#fffbeb" stroke="#fcd79a"/>
-  <text x="60" y="696" font-size="13" font-weight="600" fill="#92400e">Khi translation.enabled = false</text>
-  <text x="60" y="718" font-size="12" fill="#92400e">Bundle() trả rỗng · snapshot không có khối i18n · console ẩn tab ngôn ngữ · ?locale bị bỏ qua · DỮ LIỆU TRONG BẢNG GIỮ NGUYÊN, bật lại là có ngay.</text>
+  <rect x="40" y="732" width="1100" height="64" rx="10" fill="#fffbeb" stroke="#fcd79a"/>
+  <text x="60" y="756" font-size="13" font-weight="600" fill="#92400e">Khi translation.enabled = false</text>
+  <text x="60" y="778" font-size="12" fill="#92400e">Publish chỉ ghi dòng locale='vi' · console ẩn tab ngôn ngữ · ?locale bị bỏ qua · BẢNG translations GIỮ NGUYÊN, bật lại rồi publish lại là có ngay.</text>
 </svg>
