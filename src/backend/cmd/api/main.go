@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -59,6 +60,23 @@ func main() {
 	if err := run(); err != nil {
 		slog.Error("fatal", "err", err)
 		os.Exit(1)
+	}
+}
+
+// timeoutExceptStreams applies the request timeout to everything but SSE
+// endpoints. Those are long-lived on purpose, so a deadline there is not a
+// safety net — it is a guaranteed disconnect, and the visitor loses the answer
+// the assistant is still writing.
+func timeoutExceptStreams(d time.Duration) func(http.Handler) http.Handler {
+	timed := chimw.Timeout(d)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasSuffix(r.URL.Path, "/stream") {
+				next.ServeHTTP(w, r)
+				return
+			}
+			timed(next).ServeHTTP(w, r)
+		})
 	}
 }
 
@@ -186,7 +204,7 @@ func run() error {
 		httpx.CorrelationID,
 		httpx.RequestLogger,
 		httpx.Recoverer,
-		chimw.Timeout(requestTimeout),
+		timeoutExceptStreams(requestTimeout),
 	)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})

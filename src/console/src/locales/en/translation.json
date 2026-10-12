@@ -206,7 +206,9 @@
     "product_categories": "Categories",
     "catalog": "Catalog",
     "products": "Products",
-    "ai": "AI assistant"
+    "ai": "AI assistant",
+    "chat": "Inbox",
+    "leads": "Leads"
   },
   "auth": {
     "login": {
@@ -1213,5 +1215,73 @@
       "revoked_toast": "Token revoked.",
       "revoke_description": "Any agent using this token loses access immediately. This cannot be undone."
     }
+  },
+  "chat": {
+    "title": "Chat inbox",
+    "subtitle": "Conversations visitors are having with the assistant. Opening this screen puts you on duty.",
+    "empty": "No live conversations.",
+    "pick_one": "Pick a conversation to read it.",
+    "no_messages": "(no messages yet)",
+    "message_count_one": "{{count}} message",
+    "message_count_other": "{{count}} messages",
+    "has_lead": "lead captured",
+    "state": {
+      "bot": "Assistant answering",
+      "waiting": "Waiting for a person",
+      "human": "With a person",
+      "closed": "Closed"
+    },
+    "role": {
+      "visitor": "Visitor",
+      "assistant": "Assistant",
+      "staff": "You / a colleague",
+      "system": "System"
+    },
+    "claim": "Take over",
+    "claimed": "Taken over. The assistant is silent from now on.",
+    "release": "Hand back",
+    "released": "Handed back to the assistant.",
+    "close": "Close",
+    "closed_toast": "Conversation closed.",
+    "send": "Send",
+    "reply_ph": "Reply to the visitor…",
+    "bot_still_answering": "The assistant is still answering this one. Take over to silence it."
+  },
+  "leads": {
+    "title": "Leads",
+    "subtitle": "Contacts captured from chat and forms.",
+    "search_label": "Search leads",
+    "search_ph": "Name, email, phone or Zalo",
+    "no_name": "(no name)",
+    "unassigned": "Unassigned",
+    "open_chat": "Open conversation",
+    "status_saved": "Status updated.",
+    "deleted": "Lead deleted.",
+    "col": {
+      "contact": "Contact",
+      "products": "Interested in",
+      "assignee": "Owner",
+      "source": "Source",
+      "status": "Status",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "status": {
+      "new": "New",
+      "contacted": "Contacted",
+      "qualified": "Qualified",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "source": {
+      "chat": "Chat",
+      "form": "Form",
+      "manual": "Manual"
+    },
+    "delete": {
+      "title": "Delete lead",
+      "description": "This record is removed for good. If you simply stopped pursuing it, set the status to Lost instead."
+    },
+    "channel_zalo": "Zalo"
   }
 }

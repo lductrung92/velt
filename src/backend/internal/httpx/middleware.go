@@ -40,6 +40,13 @@ func (w *statusWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
+// Unwrap exposes the real writer to http.ResponseController, which an SSE
+// handler needs to clear the server's WriteTimeout. Without it the controller
+// cannot reach the connection and every stream dies at WriteTimeout, mid-answer.
+func (w *statusWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+
 // Flush forwards to the underlying writer so streaming handlers work through
 // this wrapper.
 //

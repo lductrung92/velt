@@ -158,6 +158,10 @@ func (h *Handler) Stream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	// Proxies that buffer would defeat the whole point of streaming.
 	w.Header().Set("X-Accel-Buffering", "no")
+	// The server's WriteTimeout applies to this connection too, and a stream is
+	// long-lived by definition: left alone it cuts the visitor off mid-answer.
+	// What ends this handler is the ping ticker failing or r.Context() closing.
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Time{})
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 

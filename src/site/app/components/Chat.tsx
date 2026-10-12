@@ -1,44 +1,119 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSite } from "../context";
 import { contactFor } from "../lib/links";
-import { normalizeSearch } from "../lib/catalog";
+import {
+  ChatError,
+  loadTranscript,
+  openStream,
+  requestHuman,
+  sendMessage,
+  startConversation,
+  type ChatMessage,
+  type ConversationState,
+} from "../lib/chatApi";
 import { Icon } from "./Icon";
 
-type Mode = "ai" | "staff";
-interface Message {
-  kind: "assistant" | "user";
-  text: string;
-  link?: { label: string; href: string };
+// The assistant, wired to the real backend.
+//
+// There is ONE conversation, not a bot channel and a staff channel: on the
+// server a member joins the visitor's existing thread, and the `state` field
+// says who is speaking. Two tabs over one thread would have been a lie about
+// the data model — and the old "no staff are here" copy becomes false the
+// moment handoff works.
+
+const SUGGESTIONS = [
+  "Tôi cần quản lý công việc nhóm",
+  "Có bản dùng thử không?",
+  "Cho tôi gặp người phụ trách",
+];
+
+/** What the label above a bubble says. `staff` is a real person answering, and
+ *  the visitor should be able to tell. */
+function speaker(role: ChatMessage["role"], degraded: boolean): string {
+  switch (role) {
+    case "visitor":
+      return "Bạn";
+    case "staff":
+      return "ZUKATEK · Người phụ trách";
+    case "system":
+      return "ZUKATEK";
+    default:
+      return degraded ? "ZUKATEK · Trả lời rút gọn" : "Trợ lý ZUKATEK";
+  }
 }
+
 export function Chat() {
-  const { data, referrer, isExample, href } = useSite();
-  const [open, setOpen] = useState(false),
-    [mode, setMode] = useState<Mode>("ai");
-  const [drafts, setDrafts] = useState({ ai: "", staff: "" }),
-    [copyStatus, setCopyStatus] = useState("");
-  const [conversations, setConversations] = useState<Record<Mode, Message[]>>({
-    ai: [
-      {
-        kind: "assistant",
-        text: "Chào bạn! 👋 Bạn đang tìm sản phẩm cho cá nhân, nhóm hay doanh nghiệp? Mình có thể hướng dẫn xem danh mục, trải nghiệm demo và cách mua sản phẩm.",
-      },
-    ],
-    staff: [
-      {
-        kind: "assistant",
-        text: `Chào bạn! 👋 Hãy để lại sản phẩm bạn quan tâm và nhu cầu sử dụng.${referrer ? ` Bạn đang xem ZUKATEK qua giới thiệu của ${referrer.name}.` : ""} Đây là bản xem thử; hiện chưa có nhân viên tham gia cuộc trò chuyện.`,
-      },
-    ],
-  });
-  const input = useRef<HTMLTextAreaElement>(null),
-    log = useRef<HTMLDivElement>(null),
-    launcher = useRef<HTMLButtonElement>(null),
-    closeButton = useRef<HTMLButtonElement>(null);
-  const target = contactFor(data, referrer?.id),
-    draft = drafts[mode];
+  const { data, referrer, url } = useSite();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [streaming, setStreaming] = useState("");
+  const [state, setState] = useState<ConversationState>("bot");
+  const [degraded, setDegraded] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const conversationId = useRef<string | null>(null);
+  const closeStream = useRef<(() => void) | null>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
+  const log = useRef<HTMLDivElement>(null);
+  const launcher = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+
+  const target = contactFor(data, referrer?.id);
   const contactLink =
-    target.zalo ||
-    (target.email ? `mailto:${target.email}` : href("/#contact"));
+    target.zalo || (target.email ? `mailto:${target.email}` : "#contact");
+
+  // Opening the widget is what starts a conversation — not page load. A visitor
+  // who never opens the chat costs nothing and leaves no row behind.
+  useEffect(() => {
+    if (!open || conversationId.current) return;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const started = await startConversation({
+          ref: referrer?.id ? url.searchParams.get("ref") ?? "" : "",
+          page: url.pathname,
+        });
+        if (cancelled) return;
+        conversationId.current = started.id;
+        setState(started.state);
+        setDegraded(started.degraded);
+        const { items } = await loadTranscript(started.id);
+        if (cancelled) return;
+        setMessages(items);
+
+        closeStream.current = openStream(started.id, {
+          onDelta: (text) => setStreaming((cur) => cur + text),
+          onMessage: (message) => {
+            // The finished message replaces whatever was streamed: the server's
+            // stored copy is the one that survives a reload.
+            setStreaming("");
+            setMessages((cur) =>
+              cur.some((m) => m.id === message.id) ? cur : [...cur, message],
+            );
+          },
+          onState: setState,
+        });
+      } catch {
+        if (!cancelled) {
+          setNotice(
+            "Chưa kết nối được trợ lý. Bạn có thể liên hệ trực tiếp bên dưới.",
+          );
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, referrer?.id, url]);
+
+  // Close the stream when the widget is unmounted, not when it is minimised:
+  // a visitor who reopens should still catch a reply that arrived meanwhile.
+  useEffect(() => () => closeStream.current?.(), []);
+
   useEffect(() => {
     if (!open) return;
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
@@ -46,8 +121,9 @@ export function Chat() {
       input.current.style.height = "auto";
       input.current.style.height = `${Math.min(input.current.scrollHeight, 96)}px`;
     }
-  }, [open, mode, draft, conversations]);
-  function toggle(value: boolean, restoreFocus = false) {
+  }, [open, draft, messages, streaming]);
+
+  const toggle = useCallback((value: boolean, restoreFocus = false) => {
     setOpen(value);
     requestAnimationFrame(() => {
       if (value) {
@@ -56,76 +132,52 @@ export function Chat() {
         else closeButton.current?.focus({ preventScroll: true });
       } else if (restoreFocus) launcher.current?.focus({ preventScroll: true });
     });
-  }
-  function reply(text: string): Message {
-    const query = normalizeSearch(text);
-    if (/gia|bao nhieu|mua|thanh toan|bao gia/.test(query))
-      return {
-        kind: "assistant",
-        text: "Giá và điều kiện sử dụng cần được xác nhận theo từng sản phẩm. Bạn có thể chuyển sang tab Nhân viên và ghi sản phẩm quan tâm, số người dùng cùng nhu cầu triển khai để chuẩn bị lời nhắn tư vấn.",
-        link: { label: "Xem cách mua sản phẩm", href: "/#collaboration" },
-      };
-    if (/demo|trai nghiem|dung thu/.test(query))
-      return {
-        kind: "assistant",
-        text: `Mở trang chi tiết sản phẩm rồi chọn liên kết trải nghiệm.${isExample ? " Danh mục hiện có các mẫu minh họa; nút “Mở link tạm” dẫn tới example.com, chưa phải demo của ZUKATEK." : " Sản phẩm có demo công khai sẽ có nút mở bản trải nghiệm."}`,
-        link: { label: "Mở danh mục sản phẩm", href: "/products" },
-      };
-    if (/nhan vien|lien he|tu van|nguoi that/.test(query))
-      return {
-        kind: "assistant",
-        text: "Bạn có thể chọn tab Nhân viên ở phía trên để soạn nội dung cần tư vấn. Khi ZUKATEK kết nối dịch vụ chat, đây sẽ là nơi trao đổi trực tiếp với người phụ trách sản phẩm.",
-      };
-    if (/san pham|ca nhan|nhom|doanh nghiep|kham pha/.test(query))
-      return {
-        kind: "assistant",
-        text: `Bạn có thể khám phá danh mục theo nhóm sản phẩm và tìm kiếm nhu cầu sử dụng.${isExample ? " Các mục hiện được gắn nhãn “Minh họa” để xem thử bố cục; thông tin sản phẩm thật sẽ được ZUKATEK bổ sung." : ""}`,
-        link: { label: "Khám phá sản phẩm ZUKATEK", href: "/products" },
-      };
-    return {
-      kind: "assistant",
-      text: "Cảm ơn bạn đã chia sẻ. Đây là bản xem thử với câu trả lời mẫu, nên mình chưa xử lý được mọi câu hỏi. Bạn có thể hỏi về sản phẩm, demo, cách mua hoặc chuyển sang tab Nhân viên để chuẩn bị lời nhắn.",
-    };
-  }
-  function submit(text: string) {
+  }, []);
+
+  async function submit(text: string) {
     const message = text.trim().slice(0, 2000);
-    if (!message) return;
-    setConversations((current) => {
-      const next: Message[] = [
-        ...current[mode],
-        { kind: "user", text: message },
-      ];
-      if (mode === "ai") next.push(reply(message));
-      else if (!current.staff.some((item) => item.kind === "user"))
-        next.push({
-          kind: "assistant",
-          text: "Lời nhắn đã được thêm vào bản xem thử và chưa gửi đến nhân viên. Bạn có thể bổ sung nhu cầu, sao chép nội dung rồi dùng kênh liên hệ khi được cung cấp.",
-        });
-      return { ...current, [mode]: next };
-    });
-    setDrafts((current) => ({ ...current, [mode]: "" }));
-    input.current?.focus({ preventScroll: true });
-  }
-  async function copy() {
-    const text = conversations.staff
-      .filter((item) => item.kind === "user")
-      .map((item) => item.text)
-      .join("\n\n");
-    if (!text) {
-      setCopyStatus("Hãy nhập lời nhắn trước khi sao chép.");
-      return;
-    }
+    const id = conversationId.current;
+    if (!message || !id || sending) return;
+
+    setDraft("");
+    setSending(true);
+    setNotice("");
     try {
-      await navigator.clipboard.writeText(
-        `Lời nhắn tư vấn sản phẩm ZUKATEK${referrer ? ` — qua ${referrer.name}` : ""}\n\n${text}`,
+      const res = await sendMessage(id, message);
+      setDegraded(res.degraded);
+    } catch (err) {
+      setNotice(
+        err instanceof ChatError && err.key === "turn_limit_reached"
+          ? "Cuộc trò chuyện đã dài. Bạn để lại liên hệ để bên mình chủ động gọi lại nhé."
+          : "Chưa gửi được tin nhắn. Bạn thử lại giúp mình.",
       );
-      setCopyStatus("Đã sao chép lời nhắn. Nội dung chưa được gửi.");
-    } catch {
-      setCopyStatus(
-        "Chưa sao chép được. Bạn có thể chọn nội dung lời nhắn và sao chép thủ công.",
+    } finally {
+      setSending(false);
+      input.current?.focus({ preventScroll: true });
+    }
+  }
+
+  async function askForHuman() {
+    const id = conversationId.current;
+    if (!id) return;
+    setNotice("");
+    try {
+      const res = await requestHuman(id);
+      setState(res.state);
+    } catch (err) {
+      // Nobody on duty is the expected case outside office hours, and saying so
+      // beats parking the visitor in a queue that will not move.
+      setNotice(
+        err instanceof ChatError && err.key === "no_staff_online"
+          ? "Hiện không có ai trực. Bạn để lại số điện thoại hoặc Zalo, bên mình liên hệ lại sớm."
+          : "Chưa chuyển được. Bạn thử lại hoặc liên hệ trực tiếp bên dưới.",
       );
     }
   }
+
+  const waiting = state === "waiting";
+  const withHuman = state === "human";
+
   return (
     <div
       className="chat-widget"
@@ -149,7 +201,13 @@ export function Chat() {
           </span>
           <div className="chat-header-copy">
             <h2 id="chat-title">Trò chuyện với ZUKATEK</h2>
-            <p>Tìm sản phẩm phù hợp với bạn</p>
+            <p>
+              {withHuman
+                ? "Bạn đang nói chuyện với người phụ trách"
+                : waiting
+                  ? "Đang chờ người phụ trách…"
+                  : "Tìm sản phẩm phù hợp với bạn"}
+            </p>
           </div>
           <button
             ref={closeButton}
@@ -161,62 +219,15 @@ export function Chat() {
             <Icon name="close" />
           </button>
         </header>
-        <div
-          className="chat-tabs"
-          role="tablist"
-          aria-label="Chọn người hỗ trợ"
-        >
-          {(["ai", "staff"] as Mode[]).map((value) => (
-            <button
-              key={value}
-              id={`chat-${value}-tab`}
-              type="button"
-              role="tab"
-              aria-selected={mode === value}
-              aria-controls="chat-conversation"
-              tabIndex={mode === value ? 0 : -1}
-              onClick={() => setMode(value)}
-              onKeyDown={(event) => {
-                if (
-                  !["ArrowRight", "ArrowLeft", "Home", "End"].includes(
-                    event.key,
-                  )
-                )
-                  return;
-                event.preventDefault();
-                const next =
-                  event.key === "Home"
-                    ? "ai"
-                    : event.key === "End"
-                      ? "staff"
-                      : mode === "ai"
-                        ? "staff"
-                        : "ai";
-                setMode(next);
-                document
-                  .querySelector<HTMLButtonElement>(`#chat-${next}-tab`)
-                  ?.focus();
-              }}
-            >
-              <Icon name={value === "ai" ? "spark" : "support"} />
-              {value === "ai" ? "AI hỗ trợ" : "Nhân viên"}
-            </button>
-          ))}
-        </div>
-        <div className="chat-preview-note">
-          <span>XEM THỬ</span>
-          <p>
-            {mode === "ai"
-              ? "Câu trả lời mẫu · Chưa kết nối AI trực tiếp"
-              : "Chưa kết nối nhân viên · Tin nhắn chưa được gửi"}
-          </p>
-        </div>
-        <div
-          className="chat-conversation"
-          id="chat-conversation"
-          role="tabpanel"
-          aria-labelledby={`chat-${mode}-tab`}
-        >
+
+        {degraded && (
+          <div className="chat-preview-note">
+            <span>RÚT GỌN</span>
+            <p>Trợ lý đang trả lời rút gọn · Người phụ trách vẫn hỗ trợ được</p>
+          </div>
+        )}
+
+        <div className="chat-conversation" id="chat-conversation">
           <div
             ref={log}
             className="chat-messages"
@@ -225,55 +236,73 @@ export function Chat() {
             aria-live="polite"
             aria-relevant="additions"
           >
-            {conversations[mode].map((message, index) => (
+            {messages.map((message) => (
               <div
-                className={`chat-message chat-message-${message.kind}`}
-                key={`${mode}-${index}`}
+                className={`chat-message chat-message-${
+                  message.role === "visitor" ? "user" : "assistant"
+                }`}
+                key={message.id}
               >
-                {message.kind === "assistant" && (
+                {message.role !== "visitor" && (
                   <span className="chat-message-avatar">
-                    <Icon name={mode === "ai" ? "spark" : "support"} />
+                    <Icon name={message.role === "staff" ? "support" : "spark"} />
                   </span>
                 )}
                 <div className="chat-message-body">
                   <span className="chat-message-label">
-                    {message.kind === "user"
-                      ? "Bạn"
-                      : mode === "ai"
-                        ? "ZUKATEK AI · Trả lời mẫu"
-                        : "ZUKATEK · Xem thử"}
+                    {speaker(message.role, degraded)}
                   </span>
-                  <div className="chat-bubble">{message.text}</div>
-                  {message.link && (
-                    <a
-                      className="chat-message-link"
-                      href={href(message.link.href)}
-                    >
-                      {message.link.label}
-                      <Icon name="arrow" />
-                    </a>
-                  )}
+                  <div className="chat-bubble">{message.content}</div>
                 </div>
               </div>
             ))}
+
+            {/* The answer as it arrives, before the server's stored copy lands. */}
+            {streaming && (
+              <div className="chat-message chat-message-assistant">
+                <span className="chat-message-avatar">
+                  <Icon name="spark" />
+                </span>
+                <div className="chat-message-body">
+                  <span className="chat-message-label">
+                    {speaker("assistant", degraded)}
+                  </span>
+                  <div className="chat-bubble">{streaming}</div>
+                </div>
+              </div>
+            )}
           </div>
+
           <div className="chat-suggestions" aria-label="Câu hỏi gợi ý">
-            {mode === "ai" &&
-              ["Khám phá sản phẩm", "Trải nghiệm demo", "Giá & cách mua"].map(
-                (text) => (
-                  <button key={text} type="button" onClick={() => submit(text)}>
-                    {text}
-                  </button>
-                ),
-              )}
+            {messages.length <= 1 &&
+              SUGGESTIONS.map((text) => (
+                <button
+                  key={text}
+                  type="button"
+                  disabled={sending || !conversationId.current}
+                  onClick={() => void submit(text)}
+                >
+                  {text}
+                </button>
+              ))}
           </div>
         </div>
-        <div className="chat-handoff" hidden={mode !== "staff"}>
-          <p>Lời nhắn được giữ trong phiên xem thử này.</p>
+
+        <div className="chat-handoff">
+          {notice && <p>{notice}</p>}
           <div>
-            <button type="button" className="chat-copy" onClick={copy}>
-              <Icon name="copy" />
-              Sao chép
+            <button
+              type="button"
+              className="chat-copy"
+              disabled={!conversationId.current || waiting || withHuman}
+              onClick={() => void askForHuman()}
+            >
+              <Icon name="support" />
+              {withHuman
+                ? "Đã có người phụ trách"
+                : waiting
+                  ? "Đang chờ…"
+                  : "Gặp người thật"}
             </button>
             <a
               className="chat-contact-link"
@@ -282,18 +311,16 @@ export function Chat() {
               rel={target.zalo ? "noopener noreferrer" : undefined}
               onClick={() => toggle(false)}
             >
-              Liên hệ ZUKATEK <Icon name="arrow" />
+              Liên hệ trực tiếp <Icon name="arrow" />
             </a>
           </div>
-          <span className="chat-copy-status" role="status">
-            {copyStatus}
-          </span>
         </div>
+
         <form
           className="chat-composer"
           onSubmit={(event) => {
             event.preventDefault();
-            submit(draft);
+            void submit(draft);
           }}
         >
           <label className="sr-only" htmlFor="chat-input">
@@ -305,17 +332,12 @@ export function Chat() {
             rows={1}
             maxLength={2000}
             placeholder={
-              mode === "ai"
-                ? "Hỏi ZUKATEK về sản phẩm…"
-                : "Bạn cần nhân viên tư vấn điều gì?"
+              withHuman
+                ? "Nhắn cho người phụ trách…"
+                : "Hỏi ZUKATEK về sản phẩm…"
             }
             value={draft}
-            onChange={(event) =>
-              setDrafts((current) => ({
-                ...current,
-                [mode]: event.target.value,
-              }))
-            }
+            onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
               if (
                 event.key === "Enter" &&
@@ -323,24 +345,26 @@ export function Chat() {
                 !event.nativeEvent.isComposing
               ) {
                 event.preventDefault();
-                submit(draft);
+                void submit(draft);
               }
             }}
           />
           <button
             className="chat-send"
             type="submit"
-            aria-label="Gửi tin nhắn trong bản xem thử"
-            disabled={!draft.trim()}
+            aria-label="Gửi tin nhắn"
+            disabled={!draft.trim() || sending || !conversationId.current}
           >
             <Icon name="send" />
           </button>
         </form>
+
         <div className="chat-footer">
           <Icon name="spark" />
           <span>Hỗ trợ sản phẩm từ ZUKATEK</span>
         </div>
       </section>
+
       <button
         ref={launcher}
         className="floating-contact chat-launcher"

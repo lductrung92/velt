@@ -14,6 +14,8 @@ import {
   UserManagement,
 } from "@/modules/admin";
 import { AiAssistant } from "@/modules/ai";
+import { ChatInbox } from "@/modules/chat";
+import { LeadList } from "@/modules/crm";
 import {
   ForgotPassword,
   Login,
@@ -119,6 +121,22 @@ export const router = createBrowserRouter([
         element: (
           <RequirePermission permission="sessions.read">
             <Sessions />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/chat",
+        element: (
+          <RequirePermission permission="ai.chat.handle">
+            <ChatInbox />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/leads",
+        element: (
+          <RequirePermission permission="crm.leads.view_all">
+            <LeadList />
           </RequirePermission>
         ),
       },

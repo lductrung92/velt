@@ -66,7 +66,7 @@ type Config struct {
 	// CORS: browser origins allowed to call the API with credentials. The
 	// console/web are separate origins (admin./api. subdomains), so cross-origin
 	// requests need this. Comma-separated; defaults cover local dev.
-	CORSAllowedOrigins []string `env:"CORS_ALLOWED_ORIGINS" envSeparator:"," envDefault:"http://localhost:5173,http://localhost:3000"`
+	CORSAllowedOrigins []string `env:"CORS_ALLOWED_ORIGINS" envSeparator:"," envDefault:"http://localhost:5273,http://localhost:5373"`
 }
 
 // CookiePath scopes the staff refresh cookie to the auth endpoints only.

@@ -206,7 +206,9 @@
     "product_categories": "Danh mục",
     "catalog": "Catalog",
     "products": "Sản phẩm",
-    "ai": "Trợ lý AI"
+    "ai": "Trợ lý AI",
+    "chat": "Hộp thư",
+    "leads": "Khách tiềm năng"
   },
   "auth": {
     "login": {
@@ -1213,5 +1215,73 @@
       "revoked_toast": "Đã thu hồi token.",
       "revoke_description": "Agent đang dùng token này sẽ mất quyền truy cập ngay lập tức. Không khôi phục được."
     }
+  },
+  "chat": {
+    "title": "Hộp thư trò chuyện",
+    "subtitle": "Hội thoại khách đang nói với trợ lý. Mở màn này là bạn đang trực.",
+    "empty": "Chưa có hội thoại nào.",
+    "pick_one": "Chọn một hội thoại để xem nội dung.",
+    "no_messages": "(chưa có tin nhắn)",
+    "message_count_one": "{{count}} tin nhắn",
+    "message_count_other": "{{count}} tin nhắn",
+    "has_lead": "đã có lead",
+    "state": {
+      "bot": "Trợ lý đang trả lời",
+      "waiting": "Chờ người phụ trách",
+      "human": "Đang có người",
+      "closed": "Đã đóng"
+    },
+    "role": {
+      "visitor": "Khách",
+      "assistant": "Trợ lý",
+      "staff": "Bạn / đồng nghiệp",
+      "system": "Hệ thống"
+    },
+    "claim": "Nhận hội thoại",
+    "claimed": "Đã nhận. Trợ lý sẽ im từ bây giờ.",
+    "release": "Trả cho trợ lý",
+    "released": "Đã trả lại cho trợ lý.",
+    "close": "Đóng",
+    "closed_toast": "Đã đóng hội thoại.",
+    "send": "Gửi",
+    "reply_ph": "Trả lời khách…",
+    "bot_still_answering": "Trợ lý vẫn đang trả lời hội thoại này. Bấm Nhận để nó dừng lại."
+  },
+  "leads": {
+    "title": "Khách tiềm năng",
+    "subtitle": "Liên hệ thu được từ trò chuyện và biểu mẫu.",
+    "search_label": "Tìm khách",
+    "search_ph": "Tên, email, số điện thoại hoặc Zalo",
+    "no_name": "(chưa có tên)",
+    "unassigned": "Chưa giao",
+    "open_chat": "Xem hội thoại",
+    "status_saved": "Đã đổi trạng thái.",
+    "deleted": "Đã xoá khách tiềm năng.",
+    "col": {
+      "contact": "Liên hệ",
+      "products": "Quan tâm",
+      "assignee": "Người phụ trách",
+      "source": "Nguồn",
+      "status": "Trạng thái",
+      "created": "Ngày tạo",
+      "actions": "Thao tác"
+    },
+    "status": {
+      "new": "Mới",
+      "contacted": "Đã liên hệ",
+      "qualified": "Tiềm năng",
+      "won": "Chốt",
+      "lost": "Mất"
+    },
+    "source": {
+      "chat": "Trò chuyện",
+      "form": "Biểu mẫu",
+      "manual": "Nhập tay"
+    },
+    "delete": {
+      "title": "Xoá khách tiềm năng",
+      "description": "Hồ sơ này sẽ bị xoá vĩnh viễn. Nếu chỉ là không theo tiếp, hãy đổi trạng thái sang Mất thay vì xoá."
+    },
+    "channel_zalo": "Zalo"
   }
 }

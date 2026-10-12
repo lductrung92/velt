@@ -14,6 +14,8 @@ describe("visibleNavSections", () => {
     expect(overview?.items.map((i) => i.key)).toEqual([
       "dashboard",
       "cms",
+      "chat",
+      "leads",
       "catalog",
     ]);
 
@@ -84,6 +86,17 @@ describe("visibleNavSections", () => {
       .find((s) => s.key === "system")
       ?.items.find((i) => i.key === "admin");
     expect(withoutIt?.children?.map((c) => c.path)).not.toContain("/admin/ai");
+  });
+
+  it("puts the inbox and leads under overview, not admin", () => {
+    // Both are day-to-day work. Quản trị is configuration, and a screen staff
+    // live in all day does not belong there.
+    const sections = sec(["ai.chat.handle", "crm.leads.view_all"]);
+    expect(
+      sections.find((s) => s.key === "overview")?.items.map((i) => i.key),
+      // dashboard carries no permission, so it is always there.
+    ).toEqual(["dashboard", "chat", "leads"]);
+    expect(sections.map((s) => s.key)).toEqual(["overview"]);
   });
 });
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -36,3 +37,29 @@ type nonFlusher struct{ *httptest.ResponseRecorder }
 func (n nonFlusher) Header() http.Header         { return n.ResponseRecorder.Header() }
 func (n nonFlusher) Write(b []byte) (int, error) { return n.ResponseRecorder.Write(b) }
 func (n nonFlusher) WriteHeader(c int)           { n.ResponseRecorder.WriteHeader(c) }
+
+// An SSE handler clears the server's WriteTimeout through
+// http.ResponseController, which walks the writer chain via Unwrap. Without that
+// method the controller cannot reach the connection, the deadline stands, and
+// every stream is cut mid-answer once WriteTimeout elapses — the kind of failure
+// that only shows up once a real model is slow enough to notice.
+func TestStatusWriterLetsAStreamClearItsWriteDeadline(t *testing.T) {
+	dw := &deadlineWriter{ResponseRecorder: httptest.NewRecorder()}
+	w := &statusWriter{ResponseWriter: dw}
+
+	err := http.NewResponseController(w).SetWriteDeadline(time.Time{})
+	require.NoError(t, err)
+	require.True(t, dw.called, "the controller must reach the real writer")
+	require.True(t, dw.deadline.IsZero())
+}
+
+type deadlineWriter struct {
+	*httptest.ResponseRecorder
+	called   bool
+	deadline time.Time
+}
+
+func (d *deadlineWriter) SetWriteDeadline(t time.Time) error {
+	d.called, d.deadline = true, t
+	return nil
+}
