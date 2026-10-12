@@ -124,6 +124,44 @@ Site **không phải biết** trường nào đã dịch, trường nào rơi v�
 một bản ghi đã sẵn sàng hiển thị. Đó là điểm mấu chốt: logic fallback nằm một chỗ,
 ở backend, không rải ra mọi component.
 
+### Tra theo slug đã dịch
+
+`{slug}` được tra **trong phạm vi ngôn ngữ đang hỏi**:
+
+```
+GET /api/public/products/lean-stock?locale=en   → tìm slug EN = "lean-stock"
+GET /api/public/products/kho-gon                → tìm slug gốc = "kho-gon"
+```
+
+Bản ghi chưa có slug dịch thì **vẫn tra được bằng slug gốc** ở mọi ngôn ngữ:
+`/api/public/products/kho-gon?locale=en` trả bản tiếng Anh của chính sản phẩm đó.
+Trang tiếng Anh không được biến mất chỉ vì chưa ai đặt slug cho nó (domain §4b).
+
+Slug cũ (đã bị thay) → `301` tới slug hiện tại của **cùng ngôn ngữ đó**, tra trong
+`slug_history`.
+
+### Khối `alternates`
+
+Response chi tiết kèm đủ đường dẫn mọi ngôn ngữ, để site dựng `hreflang` mà không
+phải gọi thêm vòng nào:
+
+```json
+{
+  "slug": "lean-stock",
+  "name": "Lean Stock",
+  "alternates": [
+    { "locale": "vi", "path": "/products/kho-gon",       "x_default": true },
+    { "locale": "en", "path": "/en/products/lean-stock", "x_default": false }
+  ]
+}
+```
+
+`hreflang` chỉ có hiệu lực khi mọi bản **trỏ lẫn nhau và tự trỏ vào mình**; thiếu
+một chiều là Google bỏ qua cả cặp. Vì vậy `alternates` luôn chứa **cả bản đang
+xem**, không chỉ các bản khác.
+
+`x_default` đánh dấu tiếng Việt — ngôn ngữ gốc và là bản luôn tồn tại.
+
 ### Quy tắc
 
 - Không có `locale`, hoặc `locale=vi` → bản gốc, y như hôm nay.
@@ -136,7 +174,11 @@ một bản ghi đã sẵn sàng hiển thị. Đó là điểm mấu chốt: lo
 
 API công khai đang đặt `Cache-Control: public, max-age=60`.
 
-Ngôn ngữ **phải nằm trong URL**, không được lấy từ `Accept-Language`. Cache dùng
+Ngôn ngữ **phải nằm trong URL**, không được lấy từ `Accept-Language`.
+
+Query param ở đây là của **API**, không phải URL công khai của website. Google
+đánh dấu `site.com?loc=de` là *"Not recommended"* cho URL trang; website dùng tiền
+tố `/en/…`. API không bị index nên query param là đúng chỗ. Cache dùng
 chung khoá theo URL; nếu ngôn ngữ đến từ header mà URL không đổi, proxy sẽ trả
 tiếng Anh cho người đọc tiếng Việt.
 
@@ -175,6 +217,7 @@ Dùng chung khuôn lỗi của toàn hệ thống:
 | `409 translation_disabled` | ghi khi module đang tắt |
 | `422 unknown_field` | `values` có trường ngoài danh sách |
 | `422 unknown_locale` | `locale` không nằm trong cấu hình |
+| `409 slug_taken` | slug đã thuộc bản ghi khác **trong cùng ngôn ngữ** |
 
 `404` khi `entity` lạ chứ không phải `400`: với người gọi, một thực thể không
 khai báo thì không tồn tại.

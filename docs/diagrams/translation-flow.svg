@@ -79,8 +79,8 @@
   <text x="60" y="536" font-size="13" font-weight="600" fill="#334155">3 · Khách đọc</text>
 
   <rect x="60" y="554" width="236" height="68" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
-  <text x="76" y="580" font-size="12.5" font-weight="600" fill="#0f172a">GET /api/public/products</text>
-  <text x="76" y="600" font-size="11.5" fill="#64748b">?locale=en — không cần đăng nhập</text>
+  <text x="76" y="580" font-size="12.5" font-weight="600" fill="#0f172a">GET /en/products/lean-stock</text>
+  <text x="76" y="600" font-size="11.5" fill="#64748b">slug tra trong phạm vi ngôn ngữ</text>
 
   <line x1="296" y1="588" x2="380" y2="588" stroke="#64748b" stroke-width="1.6" marker-end="url(#a)"/>
 
@@ -93,8 +93,8 @@
 
   <rect x="710" y="546" width="238" height="84" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
   <text x="726" y="570" font-size="12.5" font-weight="600" fill="#0f172a">Hình dạng y như cũ</text>
-  <text x="726" y="590" font-size="11.5" fill="#475569">site không cần biết trường nào</text>
-  <text x="726" y="608" font-size="11.5" fill="#475569">đã dịch — fallback nằm ở backend</text>
+  <text x="726" y="590" font-size="11.5" fill="#475569">+ alternates để dựng hreflang</text>
+  <text x="726" y="608" font-size="11.5" fill="#475569">fallback + hreflang ở backend</text>
 
   <text x="968" y="566" font-size="11.5" font-weight="600" fill="#b45309">Cache</text>
   <text x="968" y="586" font-size="11.5" fill="#b45309">locale PHẢI ở URL.</text>

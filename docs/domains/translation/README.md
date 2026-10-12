@@ -74,25 +74,126 @@ báo trong code, **không cần migration**.
 
 | entity             | trường dịch được                            |
 | ------------------ | ------------------------------------------- |
-| `product`          | `name`, `summary`, `body_html`, `highlights`, `seo` |
-| `product_category` | `name`, `description`, `seo`                |
-| `member`           | `full_name`, `role`, `bio`                  |
-| `article`          | `title`, `excerpt`, `body_html`, `seo`      |
-| `page`             | `title`, `seo`                              |
-| `cms_category`     | `name`, `description`, `seo`                |
-| `tag`              | `name`                                      |
+| `product`          | `slug`, `name`, `summary`, `body_html`, `highlights`, `seo` |
+| `product_category` | `slug`, `name`, `description`, `seo`        |
+| `member`           | `role`, `bio`                               |
+| `article`          | `slug`, `title`, `excerpt`, `body_html`, `seo` |
+| `page`             | `slug`, `title`, `seo`                      |
+| `cms_category`     | `slug`, `name`, `description`, `seo`        |
+| `tag`              | `slug`, `name`                              |
 
 Ghi vào một trường không có trong khai báo sẽ bị từ chối với `422`. Danh sách này
 là **hợp đồng, không phải gợi ý**: nó chặn việc một bản dịch lặng lẽ ghi đè lên
-trường mà không ai định cho dịch — `slug`, `status`, `sort_order`, giá, ngày.
+trường mà không ai định cho dịch — `status`, `sort_order`, giá, ngày.
 
 ### Trường nào KHÔNG dịch, và vì sao
 
-- `slug` — đường dẫn công khai giữ một dạng duy nhất cho mọi ngôn ngữ. Dịch slug
-  kéo theo chuyển hướng, canonical và trùng lặp SEO: một bài toán riêng (§12).
 - `status`, `lifecycle`, `sort_order`, ngày tháng — không phải chữ, là trạng thái.
 - Quan hệ (chuyên mục, thẻ, thành viên) — dịch ở chính bản ghi được trỏ tới, chứ
   không dịch lại ở nơi trỏ.
+- `id`, `created_at` — khoá và dấu thời gian.
+
+`slug` **có** dịch được. Xem §4b — nó là trường đặc biệt nhất của module này.
+
+## 4b. Slug — trường đặc biệt nhất
+
+Slug dịch được, nhưng **lý do thường bị hiểu sai**, nên viết rõ ở đây.
+
+### Google nói gì
+
+Nguồn: [Managing Multi-Regional and Multilingual Sites](https://developers.google.com/search/docs/specialty/international/managing-multi-regional-sites)
+và [Localized Versions of your Pages](https://developers.google.com/search/docs/specialty/international/localized-versions).
+
+| Điều | Google nói |
+| --- | --- |
+| URL có quyết định ngôn ngữ của trang không? | **Không.** *"We don't use any code-level language information such as lang attributes, or the URL."* |
+| Dùng từ bản địa trong URL được không? | Được. *"It's fine to use localized words in the URL."* Mã hoá UTF-8. |
+| Mỗi bản ngôn ngữ có cần URL riêng không? | **Có.** `hreflang` trỏ tới từng `href` cụ thể; mỗi bản phải có URL của riêng nó. |
+| Dùng query param để chọn ngôn ngữ? | **Không khuyến nghị** — `site.com?loc=de` bị đánh dấu *"Not recommended"*. |
+
+Nghĩa là: **dịch slug KHÔNG giúp Google nhận ra ngôn ngữ**. Việc đó do `hreflang`,
+`<html lang>` và chính nội dung làm.
+
+### Vậy vì sao vẫn dịch
+
+Vì **người đọc**, và lợi ích SEO đến gián tiếp qua họ:
+
+- URL hiện nguyên văn trong kết quả tìm kiếm. `/en/products/lean-stock` đọc được
+  với khách Anh; `/en/products/kho-gon` thì không.
+- Link được copy-paste, nhắn qua chat, đọc to trong cuộc họp.
+- Từ khoá trong URL là tín hiệu yếu nhưng khác không, và nó nằm trong snippet.
+
+Đây là lý do đủ mạnh. Nhưng nó là lý do **trải nghiệm**, không phải *"Google bắt
+buộc"* — và phân biệt được hai thứ đó mới quyết định đúng phần tiếp theo.
+
+### Ràng buộc: duy nhất theo từng ngôn ngữ
+
+Payload CMS đã chốt đúng luật này và nó hợp lý: slug chỉ cần **duy nhất trong
+phạm vi một ngôn ngữ**. Hai bản ghi khác nhau không được trùng slug tiếng Anh;
+nhưng một bản ghi được phép có slug tiếng Việt trùng slug tiếng Anh của chính nó.
+
+```sql
+CREATE UNIQUE INDEX idx_translations_slug
+    ON translations (entity, locale, (values ->> 'slug'))
+    WHERE values ->> 'slug' IS NOT NULL AND values ->> 'slug' <> '';
+```
+
+Slug tiếng Việt vẫn nằm ở cột gốc với `UNIQUE` sẵn có. Không có va chạm giữa hai
+ngôn ngữ vì tiền tố đường dẫn đã tách chúng ra: `/products/kho-gon` và
+`/en/products/lean-stock`.
+
+### Chưa dịch slug thì URL tiếng Anh là gì
+
+**Vẫn tồn tại, dùng slug gốc:** `/en/products/kho-gon`.
+
+Không được để trang tiếng Anh biến mất chỉ vì thiếu slug — nội dung đã có quy tắc
+rơi về bản gốc (§6), và `hreflang` cần hai bản trỏ về nhau mới có hiệu lực. Một
+URL xấu vẫn tốt hơn một URL 404.
+
+### Khối `alternates` cho hreflang
+
+`hreflang` chỉ có tác dụng khi **mọi bản trỏ lẫn nhau và tự trỏ vào mình**; thiếu
+một chiều là Google bỏ qua cả cặp. Để site không phải tự suy ra, API công khai trả
+sẵn danh sách:
+
+```json
+"alternates": [
+  { "locale": "vi", "path": "/products/kho-gon",        "x_default": true },
+  { "locale": "en", "path": "/en/products/lean-stock",  "x_default": false }
+]
+```
+
+`x-default` trỏ về tiếng Việt — ngôn ngữ gốc, và là bản luôn tồn tại.
+
+Dựng khối này ở backend chứ không ở site, vì chỉ backend biết đủ slug của mọi
+ngôn ngữ cho một bản ghi. Để site tự ghép sẽ cần thêm một vòng gọi API.
+
+### Hệ quả bắt buộc: lịch sử slug
+
+**Hiện tại codebase KHÔNG có cơ chế nào cho việc đổi slug.** Không bảng lịch sử,
+không chuyển hướng 301. Đổi slug một sản phẩm hôm nay là âm thầm làm hỏng mọi
+link đã phát ra và vứt đi thứ hạng mà URL đó đã kiếm được.
+
+Dịch slug **nhân đôi số URL có thể hỏng theo cách đó**. Nên lịch sử slug chuyển từ
+"nên có" thành **bắt buộc**:
+
+```sql
+CREATE TABLE slug_history (
+    entity      TEXT        NOT NULL,
+    locale      TEXT        NOT NULL,
+    slug        TEXT        NOT NULL,
+    entity_id   UUID        NOT NULL,
+    replaced_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (entity, locale, slug)
+);
+```
+
+Slug cũ → `301` tới slug hiện tại.
+
+**Đây không phải tính năng của module translation.** Nó là lỗ hổng có sẵn, áp cho
+cả slug tiếng Việt hôm nay, không liên quan gì tới dịch. Module translation chỉ
+làm nó trở nên cấp bách. Vì vậy nó phải là **một hạng mục riêng, làm trước hoặc
+cùng lúc** — không phải một mục con lặng lẽ nằm trong module dịch.
 
 ## 5. Cổng cho module khác
 
@@ -169,6 +270,10 @@ tiếp qua cổng ở §5 — không có độ trễ publish, vì cũng không c
 
 **Dùng query param `?locale=en`, không dùng header `Accept-Language`.**
 
+Lưu ý phân biệt: đây là **API**, không phải URL công khai của website. Google đánh
+dấu `site.com?loc=de` là *"Not recommended"* cho URL trang; website dùng tiền tố
+`/en/…` (§4b). API thì query param là đúng chỗ — nó không được index.
+
 API công khai đang đặt `Cache-Control: public, max-age=60`. Một cache dùng chung
 (CDN, proxy) khoá theo URL. Nếu ngôn ngữ đến từ header mà URL không đổi, cache sẽ
 trả tiếng Anh cho người đọc tiếng Việt. Query param làm URL khác nhau → khoá cache
@@ -214,8 +319,8 @@ Form soạn thảo có **tab ngôn ngữ**, hiện khi `translation.enabled` b�
 
 Ba nguyên tắc:
 
-- **Tab ngôn ngữ khác chỉ hiện trường dịch được.** Hiện cả `slug`, `status`,
-  ảnh bìa sẽ ngụ ý chúng dịch được — chúng không.
+- **Tab ngôn ngữ khác chỉ hiện trường dịch được** — gồm cả `slug` (§4b). Hiện
+  `status`, ảnh bìa, chuyên mục sẽ ngụ ý chúng dịch được — chúng không.
 - **Luôn hiện bản gốc bên cạnh ô nhập.** Người dịch cần nhìn thấy thứ mình đang
   dịch; bắt họ nhớ hoặc mở tab khác là thiết kế tồi.
 - **Nói rõ cần publish lại** khi bản ghi đã publish và bản dịch vừa đổi — xem §7.
@@ -261,7 +366,6 @@ sách chỉ ẩn nó đi, dữ liệu vẫn còn.
 - **Không dịch máy.** Người viết bản dịch, hệ thống chỉ lưu. Dịch tự động là một
   tính năng khác, cần quyết định riêng về chi phí và chất lượng.
 - **Không dịch giao diện.** Đó là i18next (§1).
-- **Không dịch slug.** §4.
 - **Không lọc/tìm kiếm theo trường đã dịch.** Console tìm trên bản gốc tiếng
   Việt. Tìm theo bản dịch cần index riêng trên JSONB; để khi nào thật sự cần.
 - **Không có quy trình duyệt riêng cho bản dịch.** Bản dịch đi theo vòng đời
@@ -269,6 +373,9 @@ sách chỉ ẩn nó đi, dữ liệu vẫn còn.
 
 ## 14. Thứ tự triển khai
 
+0. **Lịch sử slug + chuyển hướng 301** — hạng mục riêng, áp cho slug tiếng Việt
+   hôm nay. Phải xong trước hoặc cùng lúc, nếu không dịch slug sẽ nhân đôi số URL
+   âm thầm hỏng (§4b).
 1. **Migration + module backend** — bảng, service, cổng, `Purge`, settings. Test
    đơn vị cho fallback và cho việc từ chối trường không khai báo.
 2. **Nối một thực thể: `product`** — cổng vào `products`, gộp vào snapshot lúc
@@ -290,6 +397,10 @@ chạy thật rồi mới nhân ra, để nếu kiến trúc sai thì sửa khi 
 | Quyền riêng cho dịch? | **Không** | Dùng quyền của module sở hữu, tránh đường vòng phân quyền |
 | Phạm vi đợt này? | **Toàn bộ nội dung** | 7 thực thể ở §4 |
 | Tiếng Việt lưu ở đâu? | **Cột gốc, bảng gốc** | Ngôn ngữ gốc luôn bắt buộc, không phải một bản dịch |
+| Dịch slug? | **Có** | Vì người đọc và CTR, không phải vì Google cần — Google không dùng URL để đoán ngôn ngữ (§4b) |
+| Slug duy nhất theo gì? | **Theo từng ngôn ngữ** | Cùng luật Payload CMS dùng; tiền tố `/en` đã tách hai không gian |
+| Thiếu slug dịch thì sao? | **Dùng slug gốc** | `/en/products/kho-gon` xấu nhưng sống; hreflang cần hai chiều |
+| Ai dựng `hreflang`? | **Backend, qua `alternates`** | Chỉ backend biết đủ slug mọi ngôn ngữ của một bản ghi |
 
 ## 16. Câu còn mở
 
@@ -300,5 +411,7 @@ chạy thật rồi mới nhân ra, để nếu kiến trúc sai thì sửa khi 
 - **Site đọc bản dịch thế nào?** Site hiện **chưa đọc API** chút nào — nội dung
   là file tĩnh. Nối site vào API là một hạng mục riêng, chưa làm, và phải xong
   trước thì bản dịch mới có chỗ hiển thị.
+- **Đổi slug đã publish có nên cảnh báo không?** Lịch sử slug giữ link cũ sống,
+  nhưng đổi slug vẫn làm reset tín hiệu của URL. Console nên hỏi lại một lần.
 - **Dọn rác tự động?** Hiện là truy vấn chạy tay (§9). Dựng job định kỳ khi số
   lượng đủ lớn để đáng.
