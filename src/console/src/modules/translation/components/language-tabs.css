@@ -27,13 +27,6 @@
   background: transparent;
   gap: 0.5rem;
 }
-.tr-tabs[data-embedded]::before {
-  content: "";
-  align-self: stretch;
-  width: 1px;
-  margin: 0 0.25rem;
-  background: hsl(var(--border));
-}
 .tr-tabs[data-embedded] .tr-tabs-icon {
   width: 1.75rem;
   height: 1.75rem;

@@ -5,6 +5,11 @@ import { cn } from "@/lib/utils";
 interface Props {
   /** Left slot — e.g. a back button. Omit when there's nothing to show. */
   left?: ReactNode;
+  /**
+   * Middle slot, held in the centre of the bar — for a control that belongs to
+   * the whole document rather than to one side, such as a language switcher.
+   */
+  center?: ReactNode;
   /** Right slot — primary actions (Save …). */
   children: ReactNode;
   className?: string;
@@ -30,7 +35,7 @@ const RESTING_INSET_PX = 12;
 // window edge depends on the viewport and on whether the sidebar is collapsed.
 // Negative margins widen the bar by that distance and equal padding puts the
 // contents back where they were.
-export function EditorActionBar({ left, children, className }: Props) {
+export function EditorActionBar({ left, center, children, className }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [stuck, setStuck] = useState(false);
   const [bleed, setBleed] = useState({ left: 0, right: 0 });
@@ -98,8 +103,30 @@ export function EditorActionBar({ left, children, className }: Props) {
             : undefined
         }
       >
-        <div className="flex min-w-0 items-center gap-2">{left}</div>
-        <div className="flex flex-wrap items-center gap-2">{children}</div>
+        {/* The side groups share the leftover space equally (flex-1 basis-0),
+            which is what keeps the middle slot dead centre however wide the
+            back button or the action buttons happen to be. */}
+        <div
+          className={cn(
+            "flex min-w-0 items-center gap-2",
+            center && "flex-1 basis-0",
+          )}
+        >
+          {left}
+        </div>
+        {center && (
+          <div className="flex min-w-0 shrink-0 items-center gap-2">
+            {center}
+          </div>
+        )}
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-2",
+            center && "flex-1 basis-0 justify-end",
+          )}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

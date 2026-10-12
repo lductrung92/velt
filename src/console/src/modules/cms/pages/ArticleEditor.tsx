@@ -467,6 +467,7 @@ export default function ArticleEditor() {
           ]}
         />
         <EditorActionBar
+          center={<LanguageTabs tr={tr} disabled={!isEdit} embedded />}
           left={
             <>
               <Button
@@ -482,7 +483,6 @@ export default function ArticleEditor() {
                 <ArrowLeft className="size-4" aria-hidden />
                 {t("common.back")}
               </Button>
-              <LanguageTabs tr={tr} disabled={!isEdit} embedded />
             </>
           }
         >
