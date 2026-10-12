@@ -1,0 +1,159 @@
+/* Product-row content. The chrome around it is src/styles/list-page.css; only
+ * what is specific to a catalog product lives here.
+ *
+ * Every rule that touches a shared `list-*` class is scoped to this screen —
+ * stylesheets are bundled globally, so an unscoped override repaints the other
+ * list screens too. */
+
+/* --- Catalog accents, handed to the shared chrome --- */
+[data-list="products"] .list-metric[data-kind="draft"] {
+  --list-metric-accent: 220 9% 46%;
+}
+[data-list="products"] .list-metric[data-kind="published"] {
+  --list-metric-accent: 166 75% 30%;
+}
+[data-list="products"] .list-metric[data-kind="featured"] {
+  --list-metric-accent: 32 95% 44%;
+}
+.dark [data-list="products"] .list-metric[data-kind="draft"] {
+  --list-metric-accent: 220 13% 69%;
+}
+.dark [data-list="products"] .list-metric[data-kind="published"] {
+  --list-metric-accent: 166 55% 62%;
+}
+.dark [data-list="products"] .list-metric[data-kind="featured"] {
+  --list-metric-accent: 38 92% 65%;
+}
+[data-list="products"] .list-tabs button[data-status="draft"] i {
+  background: hsl(220 9% 46%);
+}
+[data-list="products"] .list-tabs button[data-status="published"] i {
+  background: #13896f;
+}
+[data-list="products"] .list-tabs button[data-status="archived"] i {
+  background: hsl(var(--muted-foreground));
+}
+
+/* The name column takes the slack; badges and dates keep their own width. */
+[data-list="products"] .list-desktop td:first-child,
+[data-list="products"] .list-desktop th:first-child {
+  width: 34%;
+  max-width: 0;
+}
+
+/* --- Row content --- */
+
+.product-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+/* The cover is how an editor recognises a product at a glance, so it keeps a
+   fixed box whether or not an image exists — a missing cover must not shift
+   every name in the column. */
+.product-cover {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  background: hsl(var(--muted) / 0.5);
+  color: hsl(var(--muted-foreground) / 0.7);
+}
+.product-cover > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.product-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.product-title-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.product-title-line > button {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.product-title-line > button:hover {
+  color: hsl(var(--primary));
+}
+.product-featured {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  color: hsl(32 95% 44%);
+}
+.dark .product-featured {
+  color: hsl(38 92% 65%);
+}
+.product-slug {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.product-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  white-space: nowrap;
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+}
+.product-dates strong {
+  font-weight: 400;
+  color: hsl(var(--foreground));
+}
+.product-muted {
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+}
+.product-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+@media (max-width: 767px) {
+  .product-mobile-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .product-mobile-card:last-child {
+    border-bottom: 0;
+  }
+  .product-mobile-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .product-mobile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+  }
+}

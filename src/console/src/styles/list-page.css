@@ -157,6 +157,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* Wraps because a screen may carry three filter selects beside the search
+     box; without this the row overflows the panel long before the phone
+     breakpoint takes over. */
+  flex-wrap: wrap;
   gap: 14px;
   padding: 0 20px 18px;
 }
@@ -196,6 +200,8 @@
 .list-filter-controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
   min-width: 0;
 }
@@ -203,7 +209,11 @@
    width belongs on the wrapper rather than on a `select` tag that no longer
    exists here. */
 .list-page .list-filter-select {
+  /* A basis, not a floor: three of these beside a search box have to be able to
+     give ground before the row wraps. */
+  flex: 0 1 180px;
   width: 180px;
+  min-width: 8rem;
 }
 .list-page .list-filter-select button {
   font-size: var(--font-size-sm);
@@ -400,8 +410,14 @@
   }
 
   .list-page .list-filter-select {
-    flex: 1;
-    min-width: 0;
+    /* Share the row, but never below a width where the placeholder is just an
+       ellipsis. Written for two selects; with three it is this floor that makes
+       them wrap onto a second line instead of each collapsing to ~60px. */
+    flex: 1 1 9rem;
+    min-width: 9rem;
+    /* A select left alone on a wrapped row would otherwise stretch to the full
+       width and sit twice as wide as its siblings. */
+    max-width: 18rem;
     width: auto;
   }
 }

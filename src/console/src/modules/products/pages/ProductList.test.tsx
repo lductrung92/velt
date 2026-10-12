@@ -89,7 +89,9 @@ describe("ProductList", () => {
 
     const row = await screen.findByTestId("product-row");
     expect(within(row).getByText("Bảng công việc")).toBeInTheDocument();
-    expect(within(row).getByText(i18n.t("products.status.draft"))).toBeInTheDocument();
+    expect(
+      within(row).getByText(i18n.t("products.status.draft")),
+    ).toBeInTheDocument();
     expect(
       within(row).getByText(i18n.t("products.lifecycle.building")),
     ).toBeInTheDocument();
@@ -99,14 +101,20 @@ describe("ProductList", () => {
     signIn(VIEWER);
     server.use(
       http.get(`${API}/products`, () =>
-        HttpResponse.json(page([product({ status: "published", lifecycle: "idea" })])),
+        HttpResponse.json(
+          page([product({ status: "published", lifecycle: "idea" })]),
+        ),
       ),
     );
     renderPage();
 
     const row = await screen.findByTestId("product-row");
-    expect(within(row).getByText(i18n.t("products.status.published"))).toBeInTheDocument();
-    expect(within(row).getByText(i18n.t("products.lifecycle.idea"))).toBeInTheDocument();
+    expect(
+      within(row).getByText(i18n.t("products.status.published")),
+    ).toBeInTheDocument();
+    expect(
+      within(row).getByText(i18n.t("products.lifecycle.idea")),
+    ).toBeInTheDocument();
   });
 
   it("hides create and delete from a viewer", async () => {
@@ -137,12 +145,12 @@ describe("ProductList", () => {
     renderPage();
     await screen.findByTestId("product-row");
 
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.filter") }));
-    await userEvent.click(screen.getByLabelText(i18n.t("products.col.status")));
+    // Status moved out of the popover and onto the tab row.
     await userEvent.click(
-      await screen.findByText(i18n.t("products.status.published")),
+      within(
+        screen.getByRole("group", { name: i18n.t("products.filter_status") }),
+      ).getByRole("button", { name: i18n.t("products.status.published") }),
     );
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.apply") }));
 
     await waitFor(() =>
       expect(seen.some((s) => s.includes("status=published"))).toBe(true),
@@ -158,12 +166,10 @@ describe("ProductList", () => {
     renderPage();
     await screen.findByTestId("product-row");
 
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.filter") }));
     await userEvent.type(
-      screen.getByLabelText(i18n.t("products.search_label")),
-      "bảng",
+      screen.getByRole("searchbox", { name: i18n.t("products.search_label") }),
+      "bảng{Enter}",
     );
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.apply") }));
 
     expect(await screen.findByText(/bảng/)).toBeInTheDocument();
   });
@@ -175,8 +181,11 @@ describe("ProductList", () => {
     );
     renderPage();
 
+    // Scoped to the table: the desktop rows and the mobile cards both render,
+    // so each row's delete button exists twice.
+    const table = await screen.findByTestId("products-table");
     await userEvent.click(
-      await screen.findByRole("button", { name: i18n.t("common.delete") }),
+      within(table).getByRole("button", { name: i18n.t("common.delete") }),
     );
     expect(
       await screen.findByText(
@@ -197,8 +206,11 @@ describe("ProductList", () => {
     );
     renderPage();
 
+    // Scoped to the table: the desktop rows and the mobile cards both render,
+    // so each row's delete button exists twice.
+    const table = await screen.findByTestId("products-table");
     await userEvent.click(
-      await screen.findByRole("button", { name: i18n.t("common.delete") }),
+      within(table).getByRole("button", { name: i18n.t("common.delete") }),
     );
     const dialog = await screen.findByRole("alertdialog");
     await userEvent.click(

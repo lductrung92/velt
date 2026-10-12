@@ -1,6 +1,7 @@
 import {
   keepPreviousData,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -19,6 +20,25 @@ export function useProducts(params: ProductListParams) {
     queryKey: productKeys.list(params),
     queryFn: () => productsService.list(params),
     placeholderData: keepPreviousData,
+  });
+}
+
+// Counts for the overview cards. Each one is a page_size=1 request read for its
+// `total`, so the figures come from the server rather than from whatever rows
+// the current page and filters happen to hold.
+export function useProductOverview(
+  filters: readonly ProductListParams[],
+  enabled: boolean,
+) {
+  return useQueries({
+    queries: filters.map((filter) => {
+      const params: ProductListParams = { ...filter, page: 1, page_size: 1 };
+      return {
+        queryKey: productKeys.list(params),
+        queryFn: () => productsService.list(params),
+        enabled,
+      };
+    }),
   });
 }
 
@@ -119,8 +139,15 @@ export function useSetProductMembers() {
 export function useAddGalleryImage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, file, caption }: { id: string; file: File | Blob; caption?: string }) =>
-      productsService.addGalleryImage(id, file, caption),
+    mutationFn: ({
+      id,
+      file,
+      caption,
+    }: {
+      id: string;
+      file: File | Blob;
+      caption?: string;
+    }) => productsService.addGalleryImage(id, file, caption),
     onSuccess: () => qc.invalidateQueries({ queryKey: productKeys.all }),
   });
 }
@@ -128,8 +155,15 @@ export function useAddGalleryImage() {
 export function useAddGalleryVideo() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, videoUrl, caption }: { id: string; videoUrl: string; caption?: string }) =>
-      productsService.addGalleryVideo(id, videoUrl, caption),
+    mutationFn: ({
+      id,
+      videoUrl,
+      caption,
+    }: {
+      id: string;
+      videoUrl: string;
+      caption?: string;
+    }) => productsService.addGalleryVideo(id, videoUrl, caption),
     onSuccess: () => qc.invalidateQueries({ queryKey: productKeys.all }),
   });
 }
@@ -137,8 +171,15 @@ export function useAddGalleryVideo() {
 export function useUpdateGalleryCaption() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, mediaId, caption }: { id: string; mediaId: string; caption: string }) =>
-      productsService.updateGalleryCaption(id, mediaId, caption),
+    mutationFn: ({
+      id,
+      mediaId,
+      caption,
+    }: {
+      id: string;
+      mediaId: string;
+      caption: string;
+    }) => productsService.updateGalleryCaption(id, mediaId, caption),
     onSuccess: () => qc.invalidateQueries({ queryKey: productKeys.all }),
   });
 }

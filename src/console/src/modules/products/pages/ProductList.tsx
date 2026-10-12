@@ -1,26 +1,35 @@
-import { Plus } from "lucide-react";
+import {
+  ArrowRight,
+  Image as ImageIcon,
+  Package,
+  PenLine,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Search,
+  Send,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+import i18n from "@/app/i18n";
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { FilterChips } from "@/components/common/FilterChips";
-import { FilterPopover } from "@/components/common/FilterPopover";
-import { ListToolbar } from "@/components/common/ListToolbar";
+import { FilterChips, type FilterChip } from "@/components/common/FilterChips";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Select } from "@/components/common/Select";
 import { SortableHead } from "@/components/common/SortableHead";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
   TableCell,
-  TableEmpty,
   TableHead,
   TableHeader,
   TableRow,
@@ -36,14 +45,38 @@ import {
   ProductLifecycleBadge,
   ProductStatusBadge,
 } from "../components/ProductStatusBadge";
-import { useDeleteProduct, useProducts } from "../hooks/useProducts";
 import {
+  useDeleteProduct,
+  useProductOverview,
+  useProducts,
+} from "../hooks/useProducts";
+import {
+  PRODUCT_AUDIENCES,
   PRODUCT_LIFECYCLES,
+  PRODUCT_PLATFORMS,
   PRODUCT_STATUSES,
   type ProductLifecycle,
   type ProductListItem,
+  type ProductListParams,
   type ProductStatus,
 } from "../services/products.service";
+
+import "@/styles/list-page.css";
+import "./products.css";
+
+// The overview cards and the filter each one applies. "Featured" reads a flag
+// rather than a status, which is why a card carries a whole params object.
+const OVERVIEW = [
+  { key: "total", Icon: Package, filter: {} as ProductListParams },
+  { key: "draft", Icon: PenLine, filter: { status: "draft" } },
+  { key: "published", Icon: Send, filter: { status: "published" } },
+  { key: "featured", Icon: Sparkles, filter: { featured: true } },
+] as const;
+
+interface Option {
+  value: string;
+  label: string;
+}
 
 export default function ProductList() {
   const { t } = useTranslation();
@@ -54,306 +87,568 @@ export default function ProductList() {
 
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<string | null>("-updated_at");
-
-  // Applied filters vs the popover's draft: the list only refetches on Apply.
   const [q, setQ] = useState("");
+  const [draftQ, setDraftQ] = useState("");
   const [status, setStatus] = useState<ProductStatus | "">("");
   const [lifecycle, setLifecycle] = useState<ProductLifecycle | "">("");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [draftQ, setDraftQ] = useState("");
-  const [draftStatus, setDraftStatus] = useState<ProductStatus | "">("");
-  const [draftLifecycle, setDraftLifecycle] = useState<ProductLifecycle | "">("");
-
-  const [deleteTarget, setDeleteTarget] = useState<ProductListItem | null>(null);
+  const [platform, setPlatform] = useState("");
+  const [audience, setAudience] = useState("");
+  const [featured, setFeatured] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ProductListItem | null>(
+    null,
+  );
 
   const params = useMemo(
     () => ({
       q: q || undefined,
       status: status || undefined,
       lifecycle: lifecycle || undefined,
+      platform: platform || undefined,
+      audience: audience || undefined,
+      featured: featured || undefined,
       sort: sort ?? undefined,
       page,
       page_size: DEFAULT_PAGE_SIZE,
     }),
-    [q, status, lifecycle, sort, page],
+    [q, status, lifecycle, platform, audience, featured, sort, page],
   );
   const products = useProducts(params);
   const del = useDeleteProduct();
+  const overview = useProductOverview(
+    OVERVIEW.map((o) => o.filter),
+    !products.isError,
+  );
 
-  const openFilter = (open: boolean) => {
-    setFilterOpen(open);
-    if (open) {
-      setDraftQ(q);
-      setDraftStatus(status);
-      setDraftLifecycle(lifecycle);
-    }
-  };
+  const rows = products.data?.items ?? [];
+  const total = products.data?.total ?? 0;
+  const hasFilters = !!(
+    q ||
+    status ||
+    lifecycle ||
+    platform ||
+    audience ||
+    featured
+  );
 
-  const applyFilters = () => {
-    setQ(draftQ.trim());
-    setStatus(draftStatus);
-    setLifecycle(draftLifecycle);
-    setPage(1); // a narrower result set makes the old page number meaningless
-    setFilterOpen(false);
-  };
-
-  const resetDraft = () => {
-    setDraftQ("");
-    setDraftStatus("");
-    setDraftLifecycle("");
-  };
-
-  const clearAll = () => {
+  function reset() {
     setQ("");
+    setDraftQ("");
     setStatus("");
     setLifecycle("");
+    setPlatform("");
+    setAudience("");
+    setFeatured(false);
     setPage(1);
-  };
+  }
+  // A narrower result set makes the old page number meaningless, so every
+  // filter change goes back to page 1.
+  function narrow(apply: () => void) {
+    apply();
+    setPage(1);
+  }
+  function pickCard(key: (typeof OVERVIEW)[number]["key"]) {
+    if (key === "total") return reset();
+    narrow(() => {
+      if (key === "featured") {
+        setStatus("");
+        setFeatured((on) => !on);
+        return;
+      }
+      setFeatured(false);
+      setStatus((cur) => (cur === key ? "" : (key as ProductStatus)));
+    });
+  }
 
-  const filterChips = [
-    q && {
+  const statusOptions: Option[] = PRODUCT_STATUSES.map((s) => ({
+    value: s,
+    label: t(`products.status.${s}`),
+  }));
+  const lifecycleOptions: Option[] = PRODUCT_LIFECYCLES.map((l) => ({
+    value: l,
+    label: t(`products.lifecycle.${l}`),
+  }));
+  const platformOptions: Option[] = PRODUCT_PLATFORMS.map((p) => ({
+    value: p,
+    label: t(`products.platform.${p}`),
+  }));
+  const audienceOptions: Option[] = PRODUCT_AUDIENCES.map((a) => ({
+    value: a,
+    label: t(`products.audience.${a}`),
+  }));
+
+  const filterChips: FilterChip[] = [];
+  if (q)
+    filterChips.push({
       key: "q",
       label: t("products.search_label"),
       value: q,
-      onRemove: () => setQ(""),
-    },
-    status && {
-      key: "status",
-      label: t("products.col.status"),
-      value: t(`products.status.${status}`),
-      onRemove: () => setStatus(""),
-    },
-    lifecycle && {
+      onRemove: () =>
+        narrow(() => {
+          setQ("");
+          setDraftQ("");
+        }),
+    });
+  if (lifecycle)
+    filterChips.push({
       key: "lifecycle",
       label: t("products.col.lifecycle"),
       value: t(`products.lifecycle.${lifecycle}`),
-      onRemove: () => setLifecycle(""),
-    },
-  ].filter(Boolean) as {
-    key: string;
-    label: string;
-    value: string;
-    onRemove: () => void;
-  }[];
+      onRemove: () => narrow(() => setLifecycle("")),
+    });
+  if (platform)
+    filterChips.push({
+      key: "platform",
+      label: t("products.field.platforms"),
+      value: t(`products.platform.${platform}`),
+      onRemove: () => narrow(() => setPlatform("")),
+    });
+  if (audience)
+    filterChips.push({
+      key: "audience",
+      label: t("products.field.audience"),
+      value: t(`products.audience.${audience}`),
+      onRemove: () => narrow(() => setAudience("")),
+    });
+  if (featured)
+    filterChips.push({
+      key: "featured",
+      label: t("products.field.featured"),
+      value: t("products.featured_badge"),
+      onRemove: () => narrow(() => setFeatured(false)),
+    });
 
-  const confirmDelete = () => {
+  function confirmDelete() {
     if (!deleteTarget) return;
-    const target = deleteTarget;
-    del.mutate(target.id, {
+    del.mutate(deleteTarget.id, {
       onSuccess: () => {
-        toast.success(t("products.deleted", { name: target.name }));
+        toast.success(t("products.delete.success"));
         setDeleteTarget(null);
       },
       onError: (err) => toast.error(parseApiError(err, t).message),
     });
-  };
+  }
 
-  const rows = products.data?.items ?? [];
+  const date = (iso: string) =>
+    new Intl.DateTimeFormat(i18n.language, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(new Date(iso));
+
+  const identity = (p: ProductListItem) => (
+    <div className="product-identity">
+      <span className="product-cover">
+        {p.cover_url ? (
+          <img src={p.cover_url} alt="" loading="lazy" />
+        ) : (
+          <ImageIcon className="size-4" aria-label={t("products.no_cover")} />
+        )}
+      </span>
+      <span className="product-title">
+        <span className="product-title-line">
+          <button type="button" onClick={() => navigate(`/products/${p.id}`)}>
+            {p.name}
+          </button>
+          {p.is_featured && (
+            <span
+              className="product-featured"
+              title={t("products.featured_badge")}
+            >
+              <Sparkles className="size-3.5" aria-hidden />
+            </span>
+          )}
+        </span>
+        <span className="product-slug">{p.slug}</span>
+      </span>
+    </div>
+  );
+
+  const actions = (p: ProductListItem) => (
+    <div className="product-row-actions">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label={t("common.edit")}
+        title={t("common.edit")}
+        onClick={() => navigate(`/products/${p.id}`)}
+      >
+        <Pencil className="size-4" />
+      </Button>
+      {canDelete && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={t("common.delete")}
+          title={t("common.delete")}
+          onClick={() => setDeleteTarget(p)}
+        >
+          <Trash2 className="size-4 text-destructive" />
+        </Button>
+      )}
+    </div>
+  );
+
+  const filterSelect = (
+    id: string,
+    label: string,
+    placeholder: string,
+    options: Option[],
+    value: string,
+    onPick: (next: string) => void,
+  ) => (
+    <div className="list-filter-select">
+      <Select<Option>
+        inputId={id}
+        aria-label={label}
+        isSearchable={false}
+        placeholder={placeholder}
+        options={options}
+        value={options.find((o) => o.value === value) ?? null}
+        onChange={(option) => narrow(() => onPick(option?.value ?? ""))}
+      />
+    </div>
+  );
 
   return (
-    <div className="space-y-3">
+    <div className="list-page" data-list="products">
       <PageHeader
         title={t("products.title")}
         subtitle={t("products.subtitle")}
-        breadcrumbs={[{ labelKey: "nav.products" }]}
       />
 
-      <ListToolbar
-        onRefresh={() => void products.refetch()}
-        refreshDisabled={products.isFetching}
-        filter={
-          <FilterPopover
-            open={filterOpen}
-            onOpenChange={openFilter}
-            onApply={applyFilters}
-            onReset={resetDraft}
-            filterActive={filterChips.length > 0}
+      <div className="list-overview" aria-label={t("products.overview.label")}>
+        {OVERVIEW.map(({ key, Icon }, index) => (
+          <button
+            type="button"
+            key={key}
+            className="list-metric"
+            data-kind={key}
+            aria-pressed={
+              key === "total"
+                ? !hasFilters
+                : key === "featured"
+                  ? featured
+                  : status === key
+            }
+            onClick={() => pickCard(key)}
           >
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="product-q">{t("products.search_label")}</Label>
-                <Input
-                  id="product-q"
-                  type="search"
-                  value={draftQ}
-                  placeholder={t("products.search_ph")}
-                  onChange={(e) => setDraftQ(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="product-status">
-                  {t("products.col.status")}
-                </Label>
-                <Select
-                  inputId="product-status"
-                  value={
-                    draftStatus
-                      ? {
-                          value: draftStatus,
-                          label: t(`products.status.${draftStatus}`),
-                        }
-                      : null
-                  }
-                  options={PRODUCT_STATUSES.map((s) => ({
-                    value: s,
-                    label: t(`products.status.${s}`),
-                  }))}
-                  isClearable
-                  placeholder={t("common.all")}
-                  onChange={(o) =>
-                    setDraftStatus((o?.value as ProductStatus) ?? "")
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="product-lifecycle">
-                  {t("products.col.lifecycle")}
-                </Label>
-                <Select
-                  inputId="product-lifecycle"
-                  value={
-                    draftLifecycle
-                      ? {
-                          value: draftLifecycle,
-                          label: t(`products.lifecycle.${draftLifecycle}`),
-                        }
-                      : null
-                  }
-                  options={PRODUCT_LIFECYCLES.map((l) => ({
-                    value: l,
-                    label: t(`products.lifecycle.${l}`),
-                  }))}
-                  isClearable
-                  placeholder={t("common.all")}
-                  onChange={(o) =>
-                    setDraftLifecycle((o?.value as ProductLifecycle) ?? "")
-                  }
-                />
-              </div>
-            </div>
-          </FilterPopover>
-        }
-      >
-        {canCreate && (
-          <Button type="button" onClick={() => navigate("/products/new")}>
-            <Plus className="size-4" />
-            {t("common.add_new")}
-          </Button>
-        )}
-      </ListToolbar>
+            <span className="list-metric-top">
+              <span>{t(`products.overview.${key}`)}</span>
+              <span className="list-metric-icon">
+                <Icon className="size-4" aria-hidden />
+              </span>
+            </span>
+            <strong>
+              {overview[index].isPending ? (
+                <Skeleton className="h-8 w-12" />
+              ) : overview[index].isError ? (
+                "—"
+              ) : (
+                new Intl.NumberFormat(i18n.language).format(
+                  overview[index].data?.total ?? 0,
+                )
+              )}
+            </strong>
+            <span className="list-metric-bottom">
+              {t(`products.overview.${key}_hint`)}
+              <ArrowRight className="size-3.5" aria-hidden />
+            </span>
+          </button>
+        ))}
+      </div>
 
-      <FilterChips
-        items={filterChips}
-        onClearAll={filterChips.length > 0 ? clearAll : undefined}
-      />
+      <section className="list-panel" aria-label={t("products.list_title")}>
+        <div className="list-panel-heading">
+          <div>
+            <h2>{t("products.list_title")}</h2>
+            <p>
+              {products.isPending || products.isError
+                ? t("products.list_hint")
+                : t("products.record_count", { count: total })}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={products.isFetching}
+              onClick={() => {
+                void products.refetch();
+                overview.forEach((query) => void query.refetch());
+              }}
+            >
+              <RotateCcw
+                className={
+                  products.isFetching
+                    ? "size-3.5 animate-spin motion-reduce:animate-none"
+                    : "size-3.5"
+                }
+                aria-hidden
+              />
+              {t("common.refresh")}
+            </Button>
+            {canCreate && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => navigate("/products/new")}
+              >
+                <Plus className="size-4" />
+                {t("common.add_new")}
+              </Button>
+            )}
+          </div>
+        </div>
 
-      {products.isError ? (
-        <Alert
-          variant="danger"
-          message={parseApiError(products.error, t).message}
-        />
-      ) : products.isLoading && !products.data ? (
-        <div className="space-y-2 p-3">
-          {Array.from({ length: 5 }, (_, i) => (
-            <Skeleton key={i} className="h-9 w-full" />
+        <div className="list-toolbar">
+          <form
+            className="list-search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              narrow(() => setQ(draftQ.trim()));
+            }}
+          >
+            <Search className="size-4" aria-hidden />
+            <Input
+              type="search"
+              value={draftQ}
+              aria-label={t("products.search_label")}
+              placeholder={t("products.search_ph")}
+              onChange={(event) => {
+                const value = event.target.value;
+                setDraftQ(value);
+                // Clearing the box clears the applied search too; making
+                // someone press Enter on an empty field to see everything again
+                // is a trap.
+                if (!value && q) narrow(() => setQ(""));
+              }}
+            />
+            <Button
+              type="submit"
+              variant="ghost"
+              size="icon"
+              aria-label={t("products.search_label")}
+            >
+              <ArrowRight className="size-4" aria-hidden />
+            </Button>
+          </form>
+          {/* Three axes beside the search box: the toolbar wraps rather than
+              overflowing once the panel is narrow. */}
+          <div className="list-filter-controls">
+            {filterSelect(
+              "product-lifecycle",
+              t("products.col.lifecycle"),
+              t("products.all_lifecycles"),
+              lifecycleOptions,
+              lifecycle,
+              (next) => setLifecycle(next as ProductLifecycle | ""),
+            )}
+            {filterSelect(
+              "product-platform",
+              t("products.field.platforms"),
+              t("products.all_platforms"),
+              platformOptions,
+              platform,
+              setPlatform,
+            )}
+            {filterSelect(
+              "product-audience",
+              t("products.field.audience"),
+              t("products.all_audiences"),
+              audienceOptions,
+              audience,
+              setAudience,
+            )}
+          </div>
+        </div>
+
+        <div
+          className="list-tabs"
+          role="group"
+          aria-label={t("products.filter_status")}
+        >
+          <button
+            type="button"
+            aria-pressed={!status}
+            onClick={() => narrow(() => setStatus(""))}
+          >
+            {t("products.all_statuses")}
+          </button>
+          {statusOptions.map(({ value, label }) => (
+            <button
+              type="button"
+              key={value}
+              data-status={value}
+              aria-pressed={status === value}
+              onClick={() =>
+                narrow(() =>
+                  setStatus(status === value ? "" : (value as ProductStatus)),
+                )
+              }
+            >
+              <i aria-hidden />
+              {label}
+            </button>
           ))}
         </div>
-      ) : (
-        <>
-          <Table scroll={false} data-testid="products-table">
-            <TableHeader>
-              <TableRow>
-                <SortableHead
-                  col="name"
-                  label={t("products.col.name")}
-                  sort={sort}
-                  onSort={setSort}
-                />
-                <TableHead>{t("products.col.status")}</TableHead>
-                <TableHead>{t("products.col.lifecycle")}</TableHead>
-                <SortableHead
-                  col="released_at"
-                  label={t("products.col.released_at")}
-                  sort={sort}
-                  onSort={setSort}
-                  className="text-right"
-                />
-                <SortableHead
-                  col="updated_at"
-                  label={t("products.col.updated_at")}
-                  sort={sort}
-                  onSort={setSort}
-                  className="text-right"
-                />
-                <TableHead className="text-right">
-                  {t("products.col.actions")}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 && <TableEmpty colSpan={6} />}
-              {rows.map((p) => (
-                <TableRow key={p.id} data-testid="product-row">
-                  <TableCell className="font-medium">
-                    <button
-                      type="button"
-                      className="text-left hover:underline"
-                      onClick={() => navigate(`/products/${p.id}`)}
-                    >
-                      {p.name}
-                    </button>
-                    <div className="font-mono text-xs text-muted-foreground">
-                      {p.slug}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <ProductStatusBadge status={p.status} />
-                  </TableCell>
-                  <TableCell>
-                    <ProductLifecycleBadge lifecycle={p.lifecycle} />
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {p.released_at ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {new Date(p.updated_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/products/${p.id}`)}
-                      >
-                        {t("common.edit")}
-                      </Button>
-                      {canDelete && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => setDeleteTarget(p)}
-                        >
-                          {t("common.delete")}
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
 
-          <TablePagination
-            page={products.data?.page ?? 1}
-            pageSize={products.data?.page_size ?? DEFAULT_PAGE_SIZE}
-            total={products.data?.total ?? 0}
-            onPageChange={setPage}
-          />
-        </>
-      )}
+        <FilterChips
+          className="list-filter-chips"
+          items={filterChips}
+          onClearAll={filterChips.length ? reset : undefined}
+        />
+
+        {products.isError ? (
+          <div className="list-error">
+            <Alert
+              variant="danger"
+              message={parseApiError(products.error, t).message}
+            />
+            <Button
+              className="mt-3"
+              variant="outline"
+              size="sm"
+              onClick={() => void products.refetch()}
+            >
+              {t("common.retry")}
+            </Button>
+          </div>
+        ) : products.isPending ? (
+          <div className="list-loading" aria-label={t("common.loading")}>
+            {Array.from({ length: 5 }, (_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        ) : !rows.length ? (
+          <div className="list-empty">
+            <div className="list-empty-art" aria-hidden>
+              <span className="list-empty-ring" />
+              <div className="list-empty-card">
+                <span>
+                  <Package className="size-5" />
+                </span>
+                <div>
+                  <i />
+                  <i />
+                  <i />
+                </div>
+                <Plus className="list-empty-plus" />
+              </div>
+            </div>
+            <h3>
+              {t(hasFilters ? "products.no_results" : "products.empty_title")}
+            </h3>
+            <p>
+              {t(
+                hasFilters ? "products.no_results_hint" : "products.empty_hint",
+              )}
+            </p>
+            {!hasFilters && canCreate && (
+              <Button size="sm" onClick={() => navigate("/products/new")}>
+                <Plus className="size-4" />
+                {t("common.add_new")}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="list-desktop">
+              <Table
+                scroll={false}
+                data-testid="products-table"
+                wrapperClassName="list-table-wrap"
+              >
+                <TableHeader>
+                  <TableRow>
+                    <SortableHead
+                      col="name"
+                      label={t("products.col.name")}
+                      sort={sort}
+                      onSort={setSort}
+                    />
+                    <TableHead>{t("products.col.status")}</TableHead>
+                    <TableHead>{t("products.col.lifecycle")}</TableHead>
+                    <SortableHead
+                      col="released_at"
+                      label={t("products.col.released_at")}
+                      sort={sort}
+                      onSort={setSort}
+                    />
+                    <SortableHead
+                      col="updated_at"
+                      label={t("products.col.updated_at")}
+                      sort={sort}
+                      onSort={setSort}
+                    />
+                    <TableHead className="text-right">
+                      {t("products.col.actions")}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((p) => (
+                    <TableRow key={p.id} data-testid="product-row">
+                      <TableCell>{identity(p)}</TableCell>
+                      <TableCell>
+                        <ProductStatusBadge status={p.status} />
+                      </TableCell>
+                      <TableCell>
+                        <ProductLifecycleBadge lifecycle={p.lifecycle} />
+                      </TableCell>
+                      <TableCell>
+                        {p.released_at ? (
+                          <span className="product-dates">
+                            <strong>{p.released_at}</strong>
+                          </span>
+                        ) : (
+                          <span className="product-muted">
+                            {t("products.not_released")}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="product-dates">
+                          <strong>{date(p.updated_at)}</strong>
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">{actions(p)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="list-mobile">
+              {rows.map((p) => (
+                <div className="product-mobile-card" key={p.id}>
+                  <div className="product-mobile-heading">
+                    {identity(p)}
+                    {actions(p)}
+                  </div>
+                  <div className="product-mobile-meta">
+                    <ProductStatusBadge status={p.status} />
+                    <ProductLifecycleBadge lifecycle={p.lifecycle} />
+                    <span className="product-muted">
+                      {p.released_at ?? t("products.not_released")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="list-pagination">
+              <TablePagination
+                page={products.data?.page ?? 1}
+                pageSize={products.data?.page_size ?? DEFAULT_PAGE_SIZE}
+                total={total}
+                onPageChange={setPage}
+              />
+            </div>
+          </>
+        )}
+      </section>
 
       <ConfirmDialog
         open={!!deleteTarget}
