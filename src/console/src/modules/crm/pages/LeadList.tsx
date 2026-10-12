@@ -648,7 +648,11 @@ export default function LeadList() {
       <ConfirmDialog
         open={!!pending}
         onOpenChange={(open) => !open && setPending(null)}
-        title={t("leads.delete.title")}
+        title={
+          pending?.name
+            ? t("leads.delete.named_title", { name: pending.name })
+            : t("leads.delete.title")
+        }
         description={t("leads.delete.description")}
         confirmLabel={t("common.delete")}
         destructive

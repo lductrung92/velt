@@ -118,12 +118,25 @@ describe("ProductEditor", () => {
     signIn(AUTHOR);
     renderAt("/products/new");
 
-    // Each label appears twice: the nav rail and the card title.
-    for (const key of ["basic", "content", "demo", "seo"]) {
+    // These labels appear twice: once in the nav rail, once as the card title.
+    for (const key of ["basic", "content", "demo"]) {
       expect(
         await screen.findAllByText(i18n.t(`products.editor.${key}`)),
       ).toHaveLength(2);
     }
+
+    // SEO is the exception, and deliberately so. The card is PageSeoSection —
+    // shared with the CMS editors and carrying its own heading — so the nav
+    // label and the card title differ. They used to match because the editor
+    // wrapped that card in a second one, which is the nesting this replaced.
+    expect(
+      await screen.findAllByText(i18n.t("products.editor.seo")),
+    ).toHaveLength(1);
+    expect(
+      await screen.findByText(i18n.t("cms.pages.seo.heading")),
+    ).toBeInTheDocument();
+    // The anchor the nav scrolls to has to live on the card itself.
+    expect(document.querySelector("#prod-seo")).not.toBeNull();
   });
 
   it("lets a brand-new product be filled in before it is saved", async () => {

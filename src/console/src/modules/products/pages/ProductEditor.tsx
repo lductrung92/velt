@@ -615,20 +615,23 @@ export default function ProductEditor() {
                   control={form.control}
                   name="is_featured"
                   render={({ field }) => (
-                    <FormItem className="flex items-center justify-between gap-3">
-                      <div>
+                    <FormItem className="space-y-1.5">
+                      {/* Label beside the switch, hint underneath — the same
+                          shape as the assistant's "Bật trợ lý" toggle, so a
+                          switch means the same thing wherever it appears. */}
+                      <div className="flex items-center gap-3 space-y-0">
                         <FormLabel>{t("products.field.featured")}</FormLabel>
-                        <p className="text-xs text-muted-foreground">
-                          {t("products.field.featured_help")}
-                        </p>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={!canEdit}
+                          />
+                        </FormControl>
                       </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={!canEdit}
-                        />
-                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        {t("products.field.featured_help")}
+                      </p>
                     </FormItem>
                   )}
                 />
@@ -799,20 +802,17 @@ export default function ProductEditor() {
             </CardContent>
           </Card>
 
-          <Card id="prod-seo">
-            <CardHeader>
-              <CardTitle>{t("products.editor.seo")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <PageSeoSection
-                value={seo}
-                onChange={(next) => {
-                  setSeo(next);
-                  setSeoDirty(true);
-                }}
-              />
-            </CardContent>
-          </Card>
+          {/* PageSeoSection IS the card — wrapping it in another one produced
+              an "SEO" card containing an "SEO & Open Graph" card. One card,
+              exactly like the article editor. */}
+          <PageSeoSection
+            id="prod-seo"
+            value={seo}
+            onChange={(next) => {
+              setSeo(next);
+              setSeoDirty(true);
+            }}
+          />
         </SectionNavLayout>
       </form>
     </Form>

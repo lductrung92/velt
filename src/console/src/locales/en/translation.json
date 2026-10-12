@@ -209,7 +209,7 @@
     "products": "Products",
     "ai": "AI assistant",
     "chat": "Inbox",
-    "leads": "Leads"
+    "leads": "Customers"
   },
   "auth": {
     "login": {
@@ -1229,7 +1229,7 @@
     "no_messages": "No messages yet",
     "message_count_one": "{{count}} message",
     "message_count_other": "{{count}} messages",
-    "has_lead": "Lead captured",
+    "has_lead": "Customer captured",
     "state": {
       "bot": "AI assisting",
       "waiting": "Awaiting support",
@@ -1285,15 +1285,15 @@
   },
 
   "leads": {
-    "title": "Leads",
+    "title": "Customers",
     "subtitle": "Understand customer needs, follow up and grow your sales opportunities.",
-    "search_label": "Search leads",
+    "search_label": "Search customers",
     "search_ph": "Name, email, phone or Zalo",
     "no_name": "(no name)",
     "unassigned": "Unassigned",
     "open_chat": "Open inbox",
     "status_saved": "Status updated.",
-    "deleted": "Lead deleted.",
+    "deleted": "Customer deleted.",
     "col": {
       "contact": "Contact",
       "products": "Interested in",
@@ -1316,15 +1316,16 @@
       "manual": "Manual"
     },
     "delete": {
-      "title": "Delete lead",
+      "title": "Delete customer",
+      "named_title": "Delete {{name}}?",
       "description": "This record is removed for good. If you simply stopped pursuing it, set the status to Lost instead."
     },
     "channel_zalo": "Zalo",
     "overview": {
-      "label": "Overview of all leads",
-      "total": "Total leads",
+      "label": "Overview of all customers",
+      "total": "Total customers",
       "total_hint": "All customer records",
-      "new": "New leads",
+      "new": "New customers",
       "new_hint": "Ready for first contact",
       "qualified": "Qualified",
       "qualified_hint": "Opportunities to follow up",
@@ -1332,21 +1333,21 @@
       "won_hint": "Successful outcomes"
     },
     "list_title": "Customer list",
-    "list_hint": "Find and follow up with your leads.",
-    "record_count_one": "{{count}} lead record",
-    "record_count_other": "{{count}} lead records",
+    "list_hint": "Find and follow up with your customers.",
+    "record_count_one": "{{count}} customer record",
+    "record_count_other": "{{count}} customer records",
     "change_status": "Change status for {{name}}",
     "no_products": "Not recorded",
     "actions_for": "Actions for {{name}}",
-    "apply_search": "Search leads",
+    "apply_search": "Search customers",
     "all_sources": "All sources",
     "all_owners": "All owners",
-    "filter_status": "Filter lead status",
+    "filter_status": "Filter customer status",
     "all_statuses": "All",
     "empty_title": "Your first connection starts here",
     "empty_description": "When a customer leaves contact information through chat or a form, their record will appear here for you to follow up.",
-    "no_results": "No matching leads",
-    "no_results_hint": "Try another search or remove filters to find more leads.",
+    "no_results": "No matching customers",
+    "no_results_hint": "Try another search or remove filters to find more customers.",
     "reset_filters": "Clear filters"
   }
 }

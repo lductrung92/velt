@@ -58,9 +58,12 @@ const OG_ROWS = [
 const FLAG_FIELDS = ["noindex", "nofollow"] as const;
 
 export function PageSeoSection({
+  id = "page-seo",
   value,
   onChange,
 }: {
+  /** Anchor the section nav scrolls to; each editor uses its own. */
+  id?: string;
   value: PageSEO;
   onChange: (next: PageSEO) => void;
 }) {
@@ -98,7 +101,7 @@ export function PageSeoSection({
   );
 
   return (
-    <Card id="page-seo">
+    <Card id={id}>
       <CardHeader>
         <CardTitle>{t("cms.pages.seo.heading")}</CardTitle>
       </CardHeader>

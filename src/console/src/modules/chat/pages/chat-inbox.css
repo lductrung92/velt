@@ -727,14 +727,14 @@
   }
   .chat-filters button {
     font-size: 12px;
-    padding: 6px 9px;
+    padding: 8px 9px;
   }
   .chat-thread-heading {
     padding: 14px;
   }
   .console-chat .chat-back {
     display: inline-flex;
-    width: 26px;
+    width: 32px;
     margin-left: -5px;
   }
   .chat-thread-identity {

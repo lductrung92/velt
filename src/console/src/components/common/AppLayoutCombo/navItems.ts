@@ -113,16 +113,16 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Headset,
         children: [
           {
-            path: "/chat",
-            labelKey: "nav.chat",
-            icon: MessagesSquare,
-            permission: "ai.chat.handle",
-          },
-          {
             path: "/leads",
             labelKey: "nav.leads",
             icon: UserPlus,
             permission: "crm.leads.view_all",
+          },
+          {
+            path: "/chat",
+            labelKey: "nav.chat",
+            icon: MessagesSquare,
+            permission: "ai.chat.handle",
           },
         ],
       },

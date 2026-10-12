@@ -209,7 +209,7 @@
     "products": "Sản phẩm",
     "ai": "Trợ lý AI",
     "chat": "Hộp thư",
-    "leads": "Khách tiềm năng"
+    "leads": "Khách hàng"
   },
   "auth": {
     "login": {
@@ -1229,7 +1229,7 @@
     "no_messages": "Chưa có tin nhắn",
     "message_count_one": "{{count}} tin nhắn",
     "message_count_other": "{{count}} tin nhắn",
-    "has_lead": "Đã ghi nhận khách tiềm năng",
+    "has_lead": "Đã ghi nhận khách hàng",
     "state": {
       "bot": "AI đang hỗ trợ",
       "waiting": "Chờ tiếp nhận",
@@ -1285,7 +1285,7 @@
   },
 
   "leads": {
-    "title": "Khách tiềm năng",
+    "title": "Khách hàng",
     "subtitle": "Theo dõi nhu cầu, chăm sóc khách hàng và phát triển cơ hội bán hàng.",
     "search_label": "Tìm khách",
     "search_ph": "Tên, email, số điện thoại hoặc Zalo",
@@ -1293,7 +1293,7 @@
     "unassigned": "Chưa giao",
     "open_chat": "Mở hộp thư",
     "status_saved": "Đã đổi trạng thái.",
-    "deleted": "Đã xoá khách tiềm năng.",
+    "deleted": "Đã xoá khách hàng.",
     "col": {
       "contact": "Liên hệ",
       "products": "Quan tâm",
@@ -1316,12 +1316,13 @@
       "manual": "Nhập tay"
     },
     "delete": {
-      "title": "Xoá khách tiềm năng",
+      "title": "Xoá khách hàng",
+      "named_title": "Xoá {{name}}?",
       "description": "Hồ sơ này sẽ bị xoá vĩnh viễn. Nếu chỉ là không theo tiếp, hãy đổi trạng thái sang Mất thay vì xoá."
     },
     "channel_zalo": "Zalo",
     "overview": {
-      "label": "Tổng quan toàn bộ khách tiềm năng",
+      "label": "Tổng quan toàn bộ khách hàng",
       "total": "Tổng số khách",
       "total_hint": "Toàn bộ hồ sơ",
       "new": "Khách mới",
@@ -1332,21 +1333,21 @@
       "won_hint": "Kết quả thành công"
     },
     "list_title": "Danh sách khách hàng",
-    "list_hint": "Tìm và theo dõi khách tiềm năng của bạn.",
-    "record_count_one": "{{count}} hồ sơ khách tiềm năng",
-    "record_count_other": "{{count}} hồ sơ khách tiềm năng",
+    "list_hint": "Tìm và theo dõi khách hàng của bạn.",
+    "record_count_one": "{{count}} hồ sơ khách hàng",
+    "record_count_other": "{{count}} hồ sơ khách hàng",
     "change_status": "Đổi trạng thái của {{name}}",
     "no_products": "Chưa ghi nhận",
     "actions_for": "Thao tác với {{name}}",
     "apply_search": "Tìm khách",
     "all_sources": "Tất cả nguồn",
-    "all_owners": "Tất cả người phụ trách",
+    "all_owners": "Phụ trách: Tất cả",
     "filter_status": "Lọc trạng thái khách",
     "all_statuses": "Tất cả",
     "empty_title": "Kết nối đầu tiên bắt đầu từ đây",
     "empty_description": "Khi khách để lại thông tin qua trò chuyện hoặc biểu mẫu, hồ sơ sẽ xuất hiện tại đây để bạn tiếp tục chăm sóc.",
     "no_results": "Chưa có khách phù hợp",
-    "no_results_hint": "Thử từ khóa khác hoặc bỏ bớt bộ lọc để xem thêm khách tiềm năng.",
+    "no_results_hint": "Thử từ khóa khác hoặc bỏ bớt bộ lọc để xem thêm khách hàng.",
     "reset_filters": "Xóa bộ lọc"
   }
 }
