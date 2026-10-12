@@ -84,6 +84,12 @@ function renderPage() {
 }
 
 const MANAGER = ["cms.article.view", "cms.taxonomy.manage"];
+// The desktop table and the mobile card list both render; CSS picks one. Row
+// queries are scoped to the table so a match is not counted twice.
+const table = () => screen.getByTestId("cms-tags-table");
+const inTable = () => within(table());
+const ready = () => screen.findByTestId("cms-tags-table");
+
 const ADD = () => i18n.t("common.add_new");
 const SAVE = () => i18n.t("common.save");
 
@@ -95,15 +101,17 @@ describe("CmsTags", () => {
     signIn(MANAGER);
     server.use(
       http.get(`${API}/cms/tags`, () => HttpResponse.json(tagsPage())),
-      http.get(`${API}/cms/tags/options`, () =>
-        HttpResponse.json(tagsList()),
-      ),
+      http.get(`${API}/cms/tags/options`, () => HttpResponse.json(tagsList())),
     );
     renderPage();
 
-    expect(await screen.findByText("Golang")).toBeInTheDocument();
-    expect(screen.getByText("rust")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
+    await ready();
+    expect(inTable().getByText("Golang")).toBeInTheDocument();
+    expect(inTable().getByText("rust")).toBeInTheDocument();
+    // Usage is a labelled pill now ("3 bài"), not a bare number.
+    expect(
+      inTable().getByText(i18n.t("cms.tags.usage_count", { count: 3 })),
+    ).toBeInTheDocument();
   });
 
   it("sort: clicking a header cycles asc → desc and sends the sort param", async () => {
@@ -118,7 +126,7 @@ describe("CmsTags", () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("Golang");
+    await ready();
 
     const nameLabel = i18n.t("cms.tags.col.name");
     // The sort header re-renders per click — re-query the button each time.
@@ -139,21 +147,19 @@ describe("CmsTags", () => {
     signIn(["cms.article.view"]);
     server.use(
       http.get(`${API}/cms/tags`, () => HttpResponse.json(tagsPage())),
-      http.get(`${API}/cms/tags/options`, () =>
-        HttpResponse.json(tagsList()),
-      ),
+      http.get(`${API}/cms/tags/options`, () => HttpResponse.json(tagsList())),
     );
     renderPage();
 
-    await screen.findByText("Golang");
+    await ready();
     expect(
       screen.queryByRole("button", { name: ADD() }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: i18n.t("common.edit") }),
+      inTable().queryByRole("button", { name: i18n.t("common.edit") }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: i18n.t("common.delete") }),
+      inTable().queryByRole("button", { name: i18n.t("common.delete") }),
     ).not.toBeInTheDocument();
   });
 
@@ -162,9 +168,7 @@ describe("CmsTags", () => {
     let postBody: unknown;
     server.use(
       http.get(`${API}/cms/tags`, () => HttpResponse.json(tagsPage())),
-      http.get(`${API}/cms/tags/options`, () =>
-        HttpResponse.json(tagsList()),
-      ),
+      http.get(`${API}/cms/tags/options`, () => HttpResponse.json(tagsList())),
       http.get(`${API}/cms/settings`, () =>
         HttpResponse.json(cmsSettingsView()),
       ),
@@ -184,7 +188,7 @@ describe("CmsTags", () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("Golang");
+    await ready();
 
     await user.click(screen.getByRole("button", { name: ADD() }));
     const dialog = await screen.findByRole("dialog");
@@ -200,9 +204,7 @@ describe("CmsTags", () => {
     let patchBody: unknown;
     server.use(
       http.get(`${API}/cms/tags`, () => HttpResponse.json(tagsPage())),
-      http.get(`${API}/cms/tags/options`, () =>
-        HttpResponse.json(tagsList()),
-      ),
+      http.get(`${API}/cms/tags/options`, () => HttpResponse.json(tagsList())),
       http.get(`${API}/cms/settings`, () =>
         HttpResponse.json(cmsSettingsView()),
       ),
@@ -219,11 +221,11 @@ describe("CmsTags", () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("Golang");
+    await ready();
 
     // First row's edit (Pencil) button.
     await user.click(
-      screen.getAllByRole("button", { name: i18n.t("common.edit") })[0],
+      inTable().getAllByRole("button", { name: i18n.t("common.edit") })[0],
     );
     const dialog = await screen.findByRole("dialog");
     const nameInput = within(dialog).getByDisplayValue("Golang");
@@ -240,9 +242,7 @@ describe("CmsTags", () => {
     signIn(MANAGER);
     server.use(
       http.get(`${API}/cms/tags`, () => HttpResponse.json(tagsPage())),
-      http.get(`${API}/cms/tags/options`, () =>
-        HttpResponse.json(tagsList()),
-      ),
+      http.get(`${API}/cms/tags/options`, () => HttpResponse.json(tagsList())),
       http.get(`${API}/cms/settings`, () =>
         HttpResponse.json(cmsSettingsView()),
       ),
@@ -255,7 +255,7 @@ describe("CmsTags", () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("Golang");
+    await ready();
 
     await user.click(screen.getByRole("button", { name: ADD() }));
     const dialog = await screen.findByRole("dialog");
@@ -276,9 +276,7 @@ describe("CmsTags", () => {
     let patchBody: unknown;
     server.use(
       http.get(`${API}/cms/tags`, () => HttpResponse.json(tagsPage())),
-      http.get(`${API}/cms/tags/options`, () =>
-        HttpResponse.json(tagsList()),
-      ),
+      http.get(`${API}/cms/tags/options`, () => HttpResponse.json(tagsList())),
       http.get(`${API}/cms/settings`, () =>
         HttpResponse.json(cmsSettingsView(false)),
       ),
@@ -295,10 +293,10 @@ describe("CmsTags", () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("Golang");
+    await ready();
 
     await user.click(
-      screen.getAllByRole("button", { name: i18n.t("common.edit") })[0],
+      inTable().getAllByRole("button", { name: i18n.t("common.edit") })[0],
     );
     const dialog = await screen.findByRole("dialog");
     const checkbox = await within(dialog).findByRole("checkbox");
@@ -314,16 +312,14 @@ describe("CmsTags", () => {
     signIn(MANAGER);
     server.use(
       http.get(`${API}/cms/tags`, () => HttpResponse.json(tagsPage())),
-      http.get(`${API}/cms/tags/options`, () =>
-        HttpResponse.json(tagsList()),
-      ),
+      http.get(`${API}/cms/tags/options`, () => HttpResponse.json(tagsList())),
       http.get(`${API}/cms/settings`, () =>
         HttpResponse.json(cmsSettingsView(false)),
       ),
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("Golang");
+    await ready();
 
     await user.click(screen.getByRole("button", { name: ADD() }));
     const dialog = await screen.findByRole("dialog");
@@ -338,9 +334,7 @@ describe("CmsTags", () => {
     let deleted = false;
     server.use(
       http.get(`${API}/cms/tags`, () => HttpResponse.json(tagsPage())),
-      http.get(`${API}/cms/tags/options`, () =>
-        HttpResponse.json(tagsList()),
-      ),
+      http.get(`${API}/cms/tags/options`, () => HttpResponse.json(tagsList())),
       http.delete(`${API}/cms/tags/t1`, () => {
         deleted = true;
         return new HttpResponse(null, { status: 204 });
@@ -348,10 +342,12 @@ describe("CmsTags", () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("Golang");
+    await ready();
 
     const deleteLabel = i18n.t("common.delete");
-    await user.click(screen.getAllByRole("button", { name: deleteLabel })[0]);
+    await user.click(
+      inTable().getAllByRole("button", { name: deleteLabel })[0],
+    );
     const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: deleteLabel }));
 
@@ -362,16 +358,16 @@ describe("CmsTags", () => {
     signIn(MANAGER);
     server.use(
       http.get(`${API}/cms/tags`, () => HttpResponse.json(tagsPage())),
-      http.get(`${API}/cms/tags/options`, () =>
-        HttpResponse.json(tagsList()),
-      ),
+      http.get(`${API}/cms/tags/options`, () => HttpResponse.json(tagsList())),
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("Golang");
+    await ready();
 
     await user.click(
-      screen.getAllByRole("button", { name: i18n.t("cms.tags.btn.merge") })[0],
+      inTable().getAllByRole("button", {
+        name: i18n.t("cms.tags.btn.merge"),
+      })[0],
     );
     const dialog = await screen.findByRole("dialog");
     expect(

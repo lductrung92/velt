@@ -652,7 +652,18 @@
           "title": "Delete tag",
           "description": "This tag is attached to {{count}} article(s); deleting it removes the tag from them. This cannot be undone."
         }
-      }
+      },
+      "list_title": "Tags",
+      "list_hint": "Tags used to label articles",
+      "record_count_one": "{{count}} tag",
+      "record_count_other": "{{count}} tags",
+      "usage_count_one": "{{count}} article",
+      "usage_count_other": "{{count}} articles",
+      "empty_title": "No tags yet",
+      "empty_hint": "Tags group articles by topic without moving them between categories.",
+      "no_results": "No tags found",
+      "no_results_hint": "Try another search term.",
+      "actions_for": "Actions for tag {{name}}"
     },
     "landings": {
       "field": {

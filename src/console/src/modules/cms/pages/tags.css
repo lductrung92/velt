@@ -1,0 +1,96 @@
+/* Tag-row content. The chrome around it is src/styles/list-page.css; only what
+ * is specific to a tag lives here.
+ *
+ * Every rule that touches a shared `list-*` class is scoped to this screen —
+ * stylesheets are bundled globally, so an unscoped override repaints the other
+ * list screens too. */
+
+/* The name column takes the slack; usage and actions keep their own width. */
+[data-list="tags"] .list-desktop td:first-child,
+[data-list="tags"] .list-desktop th:first-child {
+  width: 42%;
+  max-width: 0;
+}
+
+.tag-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+}
+.tag-name > strong {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tag-name > svg {
+  flex-shrink: 0;
+  color: hsl(var(--muted-foreground));
+}
+.tag-slug {
+  display: inline-block;
+  max-width: 100%;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* A usage count is a decision aid: a tag nobody uses is a candidate to merge or
+   delete, so zero is coloured rather than hidden among the others. */
+.tag-usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--muted) / 0.4);
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+.tag-usage[data-empty="true"] {
+  border-color: hsl(32 95% 44% / 0.22);
+  background: hsl(32 95% 44% / 0.07);
+  color: hsl(32 95% 36%);
+}
+.dark .tag-usage[data-empty="true"] {
+  color: hsl(38 92% 68%);
+}
+.tag-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+@media (max-width: 767px) {
+  .tag-mobile-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .tag-mobile-card:last-child {
+    border-bottom: 0;
+  }
+  .tag-mobile-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .tag-mobile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+  }
+}

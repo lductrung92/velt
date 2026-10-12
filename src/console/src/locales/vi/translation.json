@@ -700,7 +700,18 @@
           "title": "Xoá thẻ",
           "description": "Thẻ này đang gắn {{count}} bài; xoá sẽ gỡ thẻ khỏi các bài đó. Không thể hoàn tác."
         }
-      }
+      },
+      "list_title": "Danh sách thẻ",
+      "list_hint": "Thẻ dùng để gắn nhãn bài viết",
+      "record_count_one": "{{count}} thẻ",
+      "record_count_other": "{{count}} thẻ",
+      "usage_count_one": "{{count}} bài",
+      "usage_count_other": "{{count}} bài",
+      "empty_title": "Chưa có thẻ nào",
+      "empty_hint": "Thẻ giúp gom bài viết theo chủ đề mà không cần đổi chuyên mục.",
+      "no_results": "Không tìm thấy thẻ",
+      "no_results_hint": "Thử đổi từ khoá tìm kiếm.",
+      "actions_for": "Thao tác với thẻ {{name}}"
     },
     "landings": {
       "field": {
