@@ -100,7 +100,7 @@ function CalendarPanel({ today }: { today: string }) {
       aria-label={t("dashboard.daily.calendar_title")}
     >
       <div className="flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-sm font-semibold">
+        <h3 className="flex items-center gap-2 text-base font-semibold">
           <CalendarDays className="size-4 text-primary" aria-hidden />
           {t("dashboard.daily.calendar_title")}
         </h3>
@@ -291,7 +291,7 @@ function WeatherPanel({ today }: { today: string }) {
       aria-label={t("dashboard.daily.weather_title")}
     >
       <div className="dashboard-weather-heading flex flex-wrap items-center justify-between gap-3">
-        <h3 className="flex items-center gap-2 text-sm font-semibold">
+        <h3 className="flex items-center gap-2 text-base font-semibold">
           <CloudSun className="size-4 text-primary" aria-hidden />
           {t("dashboard.daily.weather_title")}
         </h3>

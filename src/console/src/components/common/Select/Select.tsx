@@ -1,5 +1,5 @@
 import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FocusEventHandler } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -40,6 +40,10 @@ export interface SelectProps<Option extends SelectOption = SelectOption> {
    *  say. A combobox without one is unusable by screen reader and unfindable by
    *  role in a test. */
   "aria-label"?: string;
+  /** Forwarded to the trigger. react-hook-form passes its own onBlur to mark a
+   *  field touched; without this the control can never leave `untouched` and
+   *  validation that waits for blur never fires. */
+  onBlur?: FocusEventHandler<HTMLButtonElement>;
   /** Controlled search term — provide with `onInputChange` for server-side
    *  filtering (internal filtering is then disabled). */
   inputValue?: string;
@@ -63,6 +67,7 @@ export function Select<Option extends SelectOption = SelectOption>({
   isSearchable = true,
   inputId,
   "aria-label": ariaLabel,
+  onBlur,
   inputValue,
   onInputChange,
   searchDebounceMs = 250,
@@ -118,6 +123,7 @@ export function Select<Option extends SelectOption = SelectOption>({
             id={inputId}
             role="combobox"
             aria-label={ariaLabel}
+            onBlur={onBlur}
             aria-expanded={open}
             aria-invalid={invalid || undefined}
             disabled={isDisabled}

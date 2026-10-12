@@ -145,7 +145,10 @@
   padding: 20px 20px 15px;
 }
 .list-panel-heading h2 {
-  font-size: var(--font-size-sm);
+  /* A panel heading is a card title, and the console already fixes that at
+     1rem (see the CardTitle primitive, which every editor screen uses). At
+     text-sm it was the same size as the rows underneath it. */
+  font-size: var(--font-size-base);
   font-weight: 600;
 }
 .list-panel-heading p {
