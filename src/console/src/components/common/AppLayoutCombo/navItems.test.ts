@@ -14,8 +14,7 @@ describe("visibleNavSections", () => {
     expect(overview?.items.map((i) => i.key)).toEqual([
       "dashboard",
       "cms",
-      "chat",
-      "leads",
+      "crm",
       "catalog",
     ]);
 
@@ -95,12 +94,41 @@ describe("visibleNavSections", () => {
     expect(
       sections.find((s) => s.key === "overview")?.items.map((i) => i.key),
       // dashboard carries no permission, so it is always there.
-    ).toEqual(["dashboard", "chat", "leads"]);
+    ).toEqual(["dashboard", "crm"]);
     expect(sections.map((s) => s.key)).toEqual(["overview"]);
+  });
+
+  it("shows only the crm children the user may open", () => {
+    // The two screens are held by different people: someone who answers chats
+    // is not necessarily allowed to read the whole lead pipeline. The branch
+    // must narrow to what each of them can actually use.
+    const onlyChat = sec(["ai.chat.handle"])
+      .find((s) => s.key === "overview")
+      ?.items.find((i) => i.key === "crm");
+    expect(onlyChat?.children?.map((c) => c.path)).toEqual(["/chat"]);
+
+    const onlyLeads = sec(["crm.leads.view_all"])
+      .find((s) => s.key === "overview")
+      ?.items.find((i) => i.key === "crm");
+    expect(onlyLeads?.children?.map((c) => c.path)).toEqual(["/leads"]);
+
+    // Neither permission: the branch disappears rather than opening onto
+    // nothing.
+    const neither = sec(["cms.menu.manage"])
+      .find((s) => s.key === "overview")
+      ?.items.map((i) => i.key);
+    expect(neither).not.toContain("crm");
   });
 });
 
 describe("activeBranchKey", () => {
+  it("opens the crm branch for its own screens", () => {
+    // Without this a deep link or a reload lands on /chat with the branch shut,
+    // so the sidebar does not show where you are.
+    expect(activeBranchKey("/chat")).toBe("crm");
+    expect(activeBranchKey("/leads")).toBe("crm");
+  });
+
   it("maps an admin child path to the admin branch", () => {
     expect(activeBranchKey("/admin/users")).toBe("admin");
     expect(activeBranchKey("/admin/roles/r1")).toBe("admin");

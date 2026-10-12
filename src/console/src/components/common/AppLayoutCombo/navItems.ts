@@ -3,6 +3,7 @@ import {
   FileStack,
   FileText,
   FolderTree,
+  Headset,
   LayoutDashboard,
   ListTree,
   MessagesSquare,
@@ -107,18 +108,23 @@ export const NAV_SECTIONS: NavSection[] = [
         ],
       },
       {
-        key: "chat",
-        path: "/chat",
-        labelKey: "nav.chat",
-        icon: MessagesSquare,
-        permission: "ai.chat.handle",
-      },
-      {
-        key: "leads",
-        path: "/leads",
-        labelKey: "nav.leads",
-        icon: UserPlus,
-        permission: "crm.leads.view_all",
+        key: "crm",
+        labelKey: "nav.crm",
+        icon: Headset,
+        children: [
+          {
+            path: "/chat",
+            labelKey: "nav.chat",
+            icon: MessagesSquare,
+            permission: "ai.chat.handle",
+          },
+          {
+            path: "/leads",
+            labelKey: "nav.leads",
+            icon: UserPlus,
+            permission: "crm.leads.view_all",
+          },
+        ],
       },
       {
         key: "catalog",
