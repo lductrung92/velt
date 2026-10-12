@@ -52,6 +52,7 @@ export function SlugField({
             variant="ghost"
             size="sm"
             className="slug-field-action"
+            data-action="edit"
             onClick={() => setEditing(true)}
           >
             <Pencil className="size-3.5" aria-hidden />
@@ -77,6 +78,7 @@ export function SlugField({
         variant="ghost"
         size="sm"
         className="slug-field-action"
+        data-action="cancel"
         onClick={() => {
           onChange(original);
           setEditing(false);

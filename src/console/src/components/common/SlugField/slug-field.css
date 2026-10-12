@@ -20,14 +20,31 @@
   overflow-wrap: anywhere;
   color: hsl(var(--foreground));
 }
+/*
+ * Both actions carry colour so they read as actions. Grey on a grey line is
+ * easy to miss, and the only way into this field is the button.
+ */
 .slug-field-action {
   flex-shrink: 0;
   height: 1.75rem;
   padding-inline: 0.5rem;
-  color: hsl(var(--muted-foreground));
+  font-weight: 500;
 }
-.slug-field-action:hover {
-  color: hsl(var(--foreground));
+/* Primary, like every other "do something to this record" link in the console. */
+.slug-field-action[data-action="edit"] {
+  color: hsl(var(--primary));
+}
+.slug-field-action[data-action="edit"]:hover {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.08);
+}
+/* Cancel discards what was typed, so it is warned about rather than inviting. */
+.slug-field-action[data-action="cancel"] {
+  color: hsl(var(--destructive));
+}
+.slug-field-action[data-action="cancel"]:hover {
+  color: hsl(var(--destructive));
+  background: hsl(var(--destructive) / 0.08);
 }
 .slug-field[data-editing] input {
   min-width: 0;
