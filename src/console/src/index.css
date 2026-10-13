@@ -6,6 +6,15 @@
    in tailwind.config.ts. Light + dark themes swap the variables only. */
 @layer base {
   :root {
+    --font-sans:
+      "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+    /* Monospace is a system stack on purpose: the only things set in it are a
+       slug, a recovery code and a permission key — strings read character by
+       character, where telling l from 1 matters and a downloaded webfont does
+       not. */
+    --font-mono:
+      ui-monospace, "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono",
+      monospace;
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -67,6 +76,6 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 }

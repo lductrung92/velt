@@ -59,7 +59,8 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)"],
+        mono: ["var(--font-mono)"],
       },
       fontSize: {
         caption: ["var(--font-size-caption)", { lineHeight: "1rem" }],

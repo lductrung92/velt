@@ -7,6 +7,18 @@
     <link rel="apple-touch-icon" href="/favicon.png" />
     <meta name="theme-color" content="#0061fd" />
     <link rel="manifest" href="/site.webmanifest" />
+    <!-- The three faces every page paints first, measured: weight 400 across the
+         vietnamese, latin-ext and latin subsets. Without this the browser has to
+         fetch fonts.css before it can even discover them, so the first paint is
+         always in a fallback. Only these three — preloading more would compete
+         for bandwidth with the ones the parser finds on its own. -->
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+          href="/assets/fonts/be-vietnam-pro-6.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+          href="/assets/fonts/be-vietnam-pro-7.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+          href="/assets/fonts/be-vietnam-pro-8.woff2" />
+    <link rel="stylesheet" href="/assets/fonts/fonts.css" />
     <title>Zukatek Console</title>
   </head>
   <body>
