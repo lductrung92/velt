@@ -32,6 +32,13 @@
 -- Every statement is idempotent: running this file twice changes nothing.
 --
 
+-- This file is UTF-8 and holds Vietnamese names. psql on Windows defaults its
+-- client encoding to the console code page (WIN1252), which has no byte for the
+-- Đ in "Lê Đức Trung" — the load fails on that line and stops. Saying so here
+-- means the file reads the same on every machine, which is the point of a file
+-- the whole team runs. ddl.sql carries the same line, put there by pg_dump.
+SET client_encoding = 'UTF8';
+
 BEGIN;
 
 -- Roles, permissions and the grants between them.
@@ -212,23 +219,26 @@ COMMIT;
 -- only thing that produces an encoding this build can verify. Four different
 -- hashes of the same password is correct: each carries its own salt.
 --
--- full_name is derived from the address and is a placeholder. Edit it here
--- before the first deploy, or in the console afterwards.
+-- full_name here is the SHORT form — what the console prints in the top bar,
+-- in an activity row and against a draft. Four people who work together read
+-- "Trung Lê" faster than "Lê Đức Trung", and the console is where they spend
+-- the day. The public roster below carries the full name instead; the two are
+-- different on purpose, not out of sync.
 --
 INSERT INTO public.users (email, password_hash, full_name, status, email_verified_at)
 VALUES
   ('trungld@zakutek.com',
    '$argon2id$v=19$m=65536,t=3,p=2$Iw5kdaQnxc1XWVB/+VEBIA$5eVwzsqeUzzoSR8U0/eETWJPNCycwQCvBkQo9gbl8n8',
-   'Trung', 'active', now()),
+   'Trung Lê', 'active', now()),
   ('nhat@zakutek.com',
    '$argon2id$v=19$m=65536,t=3,p=2$FpOFvo5XaRCHufaoN2b4SA$Z9GcOfDymm1lTgAHL/ZVBr9x1OOEdQkN6wYw4+vrPCs',
-   'Nhật', 'active', now()),
+   'Nhật Nguyễn', 'active', now()),
   ('linh@zakutek.com',
    '$argon2id$v=19$m=65536,t=3,p=2$Coo2RngINTiRzYocpj/fPA$j2iVQMu+Jd/H6uQA/l32YuLuAVT3/LKEFIJCRdJoenw',
-   'Linh', 'active', now()),
+   'Linh Nguyễn', 'active', now()),
   ('tiennv@zakutek.com',
    '$argon2id$v=19$m=65536,t=3,p=2$Rz0JEv8z+WaDLUCOcDINTA$F4XxhdLWbkTTq0xTXa+gNjZPnVefXCpplXmYlHPNE1s',
-   'Tiến', 'active', now())
+   'Tiến Nguyễn', 'active', now())
 ON CONFLICT (email) DO NOTHING;
 
 -- One role each. The grants themselves live in role_permissions above, so a
@@ -252,14 +262,18 @@ ON CONFLICT DO NOTHING;
 -- not have a login, and someone with a login need not be shown on the site. The
 -- two are kept in step by hand, which is why they are seeded together here.
 --
+-- full_name here is the FULL name, because this is the public profile: a
+-- visitor reading the team page has no idea who "Trung Lê" is, and a name is
+-- the one thing a profile cannot abbreviate.
+--
 -- Everything else — role, bio, photo, skills, links, order — is left empty for
 -- the console to fill. is_active defaults to true, so all four appear on the
 -- site's team section as soon as it reads them.
 --
 INSERT INTO public.members (slug, full_name, email, sort_order)
 VALUES
-  ('trungld', 'Trung', 'trungld@zakutek.com', 0),
-  ('nhat', 'Nhật', 'nhat@zakutek.com', 1),
-  ('linh', 'Linh', 'linh@zakutek.com', 2),
-  ('tiennv', 'Tiến', 'tiennv@zakutek.com', 3)
+  ('trungld', 'Lê Đức Trung', 'trungld@zakutek.com', 0),
+  ('nhat', 'Nhật Nguyễn', 'nhat@zakutek.com', 1),
+  ('linh', 'Nguyễn Phan Hoàng Linh', 'linh@zakutek.com', 2),
+  ('tiennv', 'Nguyễn Văn Tiến', 'tiennv@zakutek.com', 3)
 ON CONFLICT (slug) DO NOTHING;
