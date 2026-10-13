@@ -22,6 +22,10 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          // text-primary-ink: --primary is byte-identical in both themes
+          // because branding can override it at runtime, which left primary
+          // TEXT at 3.93:1 on the dark page. This one flips.
+          ink: "hsl(var(--primary-ink))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -30,6 +34,22 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+          // text-destructive-ink: the red for TEXT and ICONS. The DEFAULT above
+          // is a fill tuned against --destructive-foreground, so reading it as
+          // a text colour measured 3.76:1 in light and 2.03:1 in dark.
+          ink: "hsl(var(--destructive-ink))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          ink: "hsl(var(--success-ink))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          ink: "hsl(var(--warning-ink))",
+        },
+        purple: {
+          DEFAULT: "hsl(var(--purple))",
+          ink: "hsl(var(--purple-ink))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",

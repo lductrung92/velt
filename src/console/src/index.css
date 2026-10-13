@@ -28,11 +28,36 @@
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* 46.9% measured 4.34:1 against --muted, just under the AA floor; 45.8%
+       is the smallest move that clears it (4.51 on muted, 4.94 on white). */
+    --muted-foreground: 215.4 16.3% 45.8%;
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
+
+    /*
+     * INK TOKENS — for coloured TEXT and ICONS, never for a fill.
+     *
+     * The surface tokens above are built to sit behind --*-foreground, so they
+     * are tuned for contrast with white, not against the page. Used as a text
+     * colour --destructive measured 3.76:1 in light and 2.03:1 in dark, which
+     * is how the required-field asterisk and every form error ended up below
+     * the AA floor — in dark mode they were effectively invisible.
+     *
+     * Every value here clears 4.5:1 against BOTH the page background and the
+     * --muted fill the console tints its chips and table headers with.
+     */
+    --destructive-ink: 0 72% 49.5%;
+    --primary-ink: 217 100% 50.5%;
+    --success-ink: 160 75% 28.5%;
+    --warning-ink: 32 95% 34%;
+    --purple-ink: 265 65% 58.5%;
+    /* Tint bases. Only ever used with an alpha, e.g. hsl(var(--success) / 0.1),
+       which is why they may be lighter than the ink they sit behind. */
+    --success: 160 75% 36%;
+    --warning: 32 95% 44%;
+    --purple: 265 65% 58%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 217 100% 49.6%;
@@ -70,6 +95,17 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 217 100% 49.6%;
+
+    /* The ink tokens invert: on a near-black page a readable red is lighter,
+       not darker. --destructive above stays dark because it is a FILL. */
+    --destructive-ink: 0 84% 67%;
+    --primary-ink: 217 95% 68%;
+    --success-ink: 160 60% 55%;
+    --warning-ink: 38 92% 62%;
+    --purple-ink: 265 70% 72%;
+    --success: 160 60% 48%;
+    --warning: 38 92% 55%;
+    --purple: 265 70% 68%;
   }
 
   * {
