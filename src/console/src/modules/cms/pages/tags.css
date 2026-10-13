@@ -60,12 +60,6 @@
   background: hsl(var(--warning) / 0.07);
   color: hsl(var(--warning-ink));
 }
-.tag-row-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-}
 
 /*
  * Container query, not a media query: the card list is revealed by the panel's

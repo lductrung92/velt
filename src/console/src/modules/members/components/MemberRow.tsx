@@ -3,8 +3,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
@@ -94,30 +94,21 @@ export function MemberRow({
       </TableCell>
 
       <TableCell className="text-right">
-        <div className="flex justify-end gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-label={t("common.edit")}
-            title={t("common.edit")}
+        <RowActions>
+          <RowAction
+            icon={Pencil}
+            label={t("common.edit")}
             onClick={() => onEdit(member.id)}
-          >
-            <Pencil className="size-4" />
-          </Button>
+          />
           {canManage && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-label={t("common.delete")}
-              title={t("common.delete")}
+            <RowAction
+              destructive
+              icon={Trash2}
+              label={t("common.delete")}
               onClick={() => onDelete(member)}
-            >
-              <Trash2 className="size-4 text-destructive" />
-            </Button>
+            />
           )}
-        </div>
+        </RowActions>
       </TableCell>
     </TableRow>
   );

@@ -1586,7 +1586,6 @@
     "record_count_other": "{{count}} customer records",
     "change_status": "Change status for {{name}}",
     "no_products": "Not recorded",
-    "actions_for": "Actions for {{name}}",
     "apply_search": "Search customers",
     "all_sources": "All sources",
     "all_owners": "All owners",

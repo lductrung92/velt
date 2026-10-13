@@ -19,6 +19,7 @@ import i18n from "@/app/i18n";
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { PageHeader } from "@/components/common/PageHeader";
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -168,24 +169,21 @@ export default function PageList() {
   );
 
   const actions = (node: PageNode) => (
-    <div className="page-row-actions">
-      <Button asChild variant="ghost" size="icon">
-        <Link to={`/cms/pages/${node.id}`} aria-label={t("common.edit")}>
-          <Pencil className="size-4" />
-        </Link>
-      </Button>
+    <RowActions>
+      <RowAction
+        icon={Pencil}
+        label={t("common.edit")}
+        to={`/cms/pages/${node.id}`}
+      />
       {canDelete && (
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={t("common.delete")}
-          title={t("common.delete")}
+        <RowAction
+          destructive
+          icon={Trash2}
+          label={t("common.delete")}
           onClick={() => setToDelete(node)}
-        >
-          <Trash2 className="size-4 text-destructive-ink" />
-        </Button>
+        />
       )}
-    </div>
+    </RowActions>
   );
 
   return (

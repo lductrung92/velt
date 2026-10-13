@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { PageHeader } from "@/components/common/PageHeader";
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { UserAgentBadge } from "@/components/common/UserAgentBadge";
 import { Button } from "@/components/ui/button";
@@ -99,18 +100,17 @@ export default function Sessions() {
   );
 
   const revokeButton = (s: AdminSession) => (
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label={t("admin.sessions.revoke")}
-      title={t("admin.sessions.revoke")}
-      onClick={() => {
-        setConfirmError(null);
-        setTarget(s);
-      }}
-    >
-      <LogOut className="size-4 text-destructive" />
-    </Button>
+    <RowActions>
+      <RowAction
+        destructive
+        icon={LogOut}
+        label={t("admin.sessions.revoke")}
+        onClick={() => {
+          setConfirmError(null);
+          setTarget(s);
+        }}
+      />
+    </RowActions>
   );
 
   return (

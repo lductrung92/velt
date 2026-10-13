@@ -117,12 +117,6 @@
   font-size: var(--font-size-xs);
   color: hsl(var(--muted-foreground));
 }
-.product-row-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-}
 
 /*
  * Container query, not a media query: the card list is revealed by the panel's

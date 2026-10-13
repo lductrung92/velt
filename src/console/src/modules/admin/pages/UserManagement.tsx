@@ -1,6 +1,7 @@
 import {
   ArrowRight,
-  MoreHorizontal,
+  KeyRound,
+  Pencil,
   Plus,
   RotateCcw,
   Search,
@@ -13,6 +14,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { FilterChips, type FilterChip } from "@/components/common/FilterChips";
@@ -21,13 +23,6 @@ import { RoleBadge } from "@/components/common/RoleBadge";
 import { SortableHead } from "@/components/common/SortableHead";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -194,7 +189,7 @@ export default function UserManagement() {
   );
 
   const rowActions = (u: AdminUser) => (
-    <RowActions
+    <UserRowActions
       user={u}
       isSelf={u.id === currentUserId}
       canUpdate={canUpdate}
@@ -542,7 +537,7 @@ function RolesCell({ roles }: { roles: AdminUser["roles"] }) {
   );
 }
 
-function RowActions({
+function UserRowActions({
   user,
   isSelf,
   canUpdate,
@@ -563,40 +558,31 @@ function RowActions({
   // Nothing actionable → no menu.
   if (!canUpdate && !canDelete) return null;
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={t("admin.users.col.actions")}
-        >
-          <MoreHorizontal className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {canUpdate && (
-          <DropdownMenuItem onSelect={onEdit}>
-            {t("admin.users.action_edit")}
-          </DropdownMenuItem>
-        )}
-        {canUpdate && (
+    <RowActions>
+      {canUpdate && (
+        <RowAction
+          icon={Pencil}
+          label={t("admin.users.action_edit")}
+          onClick={onEdit}
+        />
+      )}
+      {canUpdate && (
+        <RowAction
+          icon={KeyRound}
+          label={t("admin.users.action_reset")}
           // Reset is meaningless on a non-active account (BE → 409).
-          <DropdownMenuItem
-            onSelect={onReset}
-            disabled={user.status !== "active"}
-          >
-            {t("admin.users.action_reset")}
-          </DropdownMenuItem>
-        )}
-        {canDelete && !isSelf && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem destructive onSelect={onDelete}>
-              {t("admin.users.action_delete")}
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          disabled={user.status !== "active"}
+          onClick={onReset}
+        />
+      )}
+      {canDelete && !isSelf && (
+        <RowAction
+          destructive
+          icon={Trash2}
+          label={t("admin.users.action_delete")}
+          onClick={onDelete}
+        />
+      )}
+    </RowActions>
   );
 }

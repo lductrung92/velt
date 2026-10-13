@@ -253,12 +253,7 @@ describe("CRM lead workspace", () => {
     mount();
     const table = await screen.findByTestId("leads-table");
     await user.click(
-      within(table).getByRole("button", {
-        name: i18n.t("leads.actions_for", { name: lead.name }),
-      }),
-    );
-    await user.click(
-      await screen.findByRole("menuitem", { name: t("common.delete") }),
+      within(table).getByRole("button", { name: t("common.delete") }),
     );
     const dialog = await screen.findByRole("alertdialog");
     expect(deletes).toBe(0);

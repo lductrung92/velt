@@ -3,7 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Package, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { Button } from "@/components/ui/button";
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { TableCell, TableRow } from "@/components/ui/table";
 
 import type { ProductCategory } from "../services/productCategories.service";
@@ -80,28 +80,19 @@ export function ProductCategoryRow({
       </TableCell>
       <TableCell className="text-right">
         {canManage && (
-          <div className="pcat-row-actions">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={t("common.edit")}
-              title={t("common.edit")}
+          <RowActions>
+            <RowAction
+              icon={Pencil}
+              label={t("common.edit")}
               onClick={() => onEdit(category.id)}
-            >
-              <Pencil className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={t("common.delete")}
-              title={t("common.delete")}
+            />
+            <RowAction
+              destructive
+              icon={Trash2}
+              label={t("common.delete")}
               onClick={() => onDelete(category.id)}
-            >
-              <Trash2 className="size-4 text-destructive" />
-            </Button>
-          </div>
+            />
+          </RowActions>
         )}
       </TableCell>
     </TableRow>

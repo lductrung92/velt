@@ -87,7 +87,7 @@ describe("UserManagement", () => {
     const cards = within(await screen.findByTestId("admin-users-cards"));
     expect(cards.getByText("Jane Doe")).toBeInTheDocument();
     expect(
-      cards.getByRole("button", { name: i18n.t("admin.users.col.actions") }),
+      cards.getByRole("button", { name: i18n.t("admin.users.action_edit") }),
     ).toBeInTheDocument();
   });
 

@@ -570,3 +570,12 @@
 .list-desktop th button:hover {
   color: hsl(var(--foreground));
 }
+
+/* The action cell every list table ends in. One rule, because five stylesheets
+   used to hold a byte-identical copy of it; see components/common/RowActions. */
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}

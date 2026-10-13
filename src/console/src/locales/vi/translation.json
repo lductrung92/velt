@@ -1634,7 +1634,6 @@
     "record_count_other": "{{count}} hồ sơ khách hàng",
     "change_status": "Đổi trạng thái của {{name}}",
     "no_products": "Chưa ghi nhận",
-    "actions_for": "Thao tác với {{name}}",
     "apply_search": "Tìm khách",
     "all_sources": "Tất cả nguồn",
     "all_owners": "Phụ trách: Tất cả",

@@ -40,6 +40,7 @@ import i18n from "@/app/i18n";
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { PageHeader } from "@/components/common/PageHeader";
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -511,28 +512,21 @@ export default function CategoryTree() {
                       <strong>{node.name}</strong>
                     </div>
                     {canManage && (
-                      <div className="category-row-actions">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={t("common.edit")}
+                      <RowActions>
+                        <RowAction
+                          icon={Pencil}
+                          label={t("common.edit")}
                           onClick={() => navigate(`/cms/categories/${node.id}`)}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={t("common.delete")}
+                        />
+                        <RowAction
+                          destructive
+                          icon={Trash2}
+                          label={t("common.delete")}
                           onClick={() =>
                             setDeleteTarget(findCategory(tree, node.id) ?? null)
                           }
-                        >
-                          <Trash2 className="size-4 text-destructive-ink" />
-                        </Button>
-                      </div>
+                        />
+                      </RowActions>
                     )}
                   </div>
                   <div className="category-mobile-meta">

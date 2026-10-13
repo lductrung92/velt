@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { PageHeader } from "@/components/common/PageHeader";
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { SortableHead } from "@/components/common/SortableHead";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,41 +107,27 @@ export default function CmsTags() {
 
   const actions = (tg: Tag) =>
     canManage && (
-      <div className="tag-row-actions">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={t("common.edit")}
-          title={t("common.edit")}
+      <RowActions>
+        <RowAction
+          icon={Pencil}
+          label={t("common.edit")}
           onClick={() => {
             setEditTarget(tg);
             setFormOpen(true);
           }}
-        >
-          <Pencil className="size-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={t("cms.tags.btn.merge")}
-          title={t("cms.tags.btn.merge")}
+        />
+        <RowAction
+          icon={GitMerge}
+          label={t("cms.tags.btn.merge")}
           onClick={() => setMergeSource(tg)}
-        >
-          <GitMerge className="size-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={t("common.delete")}
-          title={t("common.delete")}
+        />
+        <RowAction
+          destructive
+          icon={Trash2}
+          label={t("common.delete")}
           onClick={() => setDeleteTarget(tg)}
-        >
-          <Trash2 className="size-4 text-destructive-ink" />
-        </Button>
-      </div>
+        />
+      </RowActions>
     );
 
   const usage = (tg: Tag) => (

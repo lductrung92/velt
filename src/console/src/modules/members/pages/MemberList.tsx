@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { PageHeader } from "@/components/common/PageHeader";
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { SortableHead } from "@/components/common/SortableHead";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -341,28 +342,21 @@ export default function MemberList() {
                         <Badge variant="secondary">{t("members.hidden")}</Badge>
                       )}
                     </div>
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t("common.edit")}
+                    <RowActions className="shrink-0">
+                      <RowAction
+                        icon={Pencil}
+                        label={t("common.edit")}
                         onClick={() => navigate(`/members/${m.id}`)}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
+                      />
                       {canManage && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={t("common.delete")}
+                        <RowAction
+                          destructive
+                          icon={Trash2}
+                          label={t("common.delete")}
                           onClick={() => setPending(m)}
-                        >
-                          <Trash2 className="size-4 text-destructive" />
-                        </Button>
+                        />
                       )}
-                    </div>
+                    </RowActions>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 text-xs text-muted-foreground">
                     <span>{m.role || t("members.no_role")}</span>

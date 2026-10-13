@@ -32,6 +32,7 @@ import i18n from "@/app/i18n";
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { PageHeader } from "@/components/common/PageHeader";
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { SortableHead } from "@/components/common/SortableHead";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -424,28 +425,21 @@ export default function ProductCategoryList() {
                       <strong title={c.name}>{c.name}</strong>
                     </div>
                     {canManage && (
-                      <div className="pcat-row-actions">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={t("common.edit")}
+                      <RowActions>
+                        <RowAction
+                          icon={Pencil}
+                          label={t("common.edit")}
                           onClick={() =>
                             navigate(`/product-categories/${c.id}`)
                           }
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={t("common.delete")}
+                        />
+                        <RowAction
+                          destructive
+                          icon={Trash2}
+                          label={t("common.delete")}
                           onClick={() => setDeleteTarget(c)}
-                        >
-                          <Trash2 className="size-4 text-destructive-ink" />
-                        </Button>
-                      </div>
+                        />
+                      </RowActions>
                     )}
                   </div>
                   <div className="pcat-mobile-meta">

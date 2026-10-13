@@ -6,7 +6,6 @@ import {
   CalendarClock,
   FileText,
   FolderTree,
-  MoreHorizontal,
   Pencil,
   PenLine,
   Plus,
@@ -26,15 +25,9 @@ import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { FilterChips, type FilterChip } from "@/components/common/FilterChips";
 import { PageHeader } from "@/components/common/PageHeader";
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { Select } from "@/components/common/Select";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -286,35 +279,23 @@ export default function ArticleList() {
     const showDelete = canDelete && (isReviewer || a.status === "draft");
     if (!canEdit && !showDelete) return null;
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t("cms.articles.col.actions")}
-            title={t("cms.articles.col.actions")}
-          >
-            <MoreHorizontal className="size-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {canEdit && (
-            <DropdownMenuItem
-              onSelect={() => navigate(`/cms/articles/${a.id}`)}
-            >
-              <Pencil className="size-4" />
-              {t("common.edit")}
-            </DropdownMenuItem>
-          )}
-          {canEdit && showDelete && <DropdownMenuSeparator />}
-          {showDelete && (
-            <DropdownMenuItem destructive onSelect={() => setDeleteTarget(a)}>
-              <Trash2 className="size-4" />
-              {t("common.delete")}
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <RowActions>
+        {canEdit && (
+          <RowAction
+            icon={Pencil}
+            label={t("common.edit")}
+            to={`/cms/articles/${a.id}`}
+          />
+        )}
+        {showDelete && (
+          <RowAction
+            destructive
+            icon={Trash2}
+            label={t("common.delete")}
+            onClick={() => setDeleteTarget(a)}
+          />
+        )}
+      </RowActions>
     );
   };
 

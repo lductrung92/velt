@@ -3,7 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { FileText, GripVertical, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { Button } from "@/components/ui/button";
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { TableCell, TableRow } from "@/components/ui/table";
 
 import { INDENT_WIDTH, type FlatCategory } from "../utils/categoryTree";
@@ -85,28 +85,19 @@ export function CategoryTreeRow({
       </TableCell>
       <TableCell className="text-right">
         {canManage && (
-          <div className="category-row-actions">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={t("common.edit")}
-              title={t("common.edit")}
+          <RowActions>
+            <RowAction
+              icon={Pencil}
+              label={t("common.edit")}
               onClick={() => onEdit(node.id)}
-            >
-              <Pencil className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={t("common.delete")}
-              title={t("common.delete")}
+            />
+            <RowAction
+              destructive
+              icon={Trash2}
+              label={t("common.delete")}
               onClick={() => onDelete(node.id)}
-            >
-              <Trash2 className="size-4 text-destructive-ink" />
-            </Button>
-          </div>
+            />
+          </RowActions>
         )}
       </TableCell>
     </TableRow>

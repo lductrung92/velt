@@ -235,7 +235,7 @@ describe("ArticleList", () => {
     await waitFor(() => expect(sorts).toContain("updated_at"));
   });
 
-  it("delete: dropdown → ConfirmDialog → DELETE", async () => {
+  it("delete: row bin → ConfirmDialog → DELETE", async () => {
     signIn(MANAGER);
     let deleted = false;
     server.use(
@@ -254,11 +254,8 @@ describe("ArticleList", () => {
 
     await user.click(
       within(screen.getByTestId("cms-articles-table")).getByRole("button", {
-        name: ACTIONS(),
+        name: i18n.t("common.delete"),
       }),
-    );
-    await user.click(
-      await screen.findByRole("menuitem", { name: i18n.t("common.delete") }),
     );
     const dialog = await screen.findByRole("alertdialog");
     await user.click(
@@ -288,11 +285,8 @@ describe("ArticleList", () => {
 
     await user.click(
       within(screen.getByTestId("cms-articles-table")).getByRole("button", {
-        name: ACTIONS(),
+        name: i18n.t("common.delete"),
       }),
-    );
-    await user.click(
-      await screen.findByRole("menuitem", { name: i18n.t("common.delete") }),
     );
     const dialog = await screen.findByRole("alertdialog");
     await user.click(

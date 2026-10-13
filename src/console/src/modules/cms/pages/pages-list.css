@@ -103,12 +103,6 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.page-row-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-}
 /* A flat list is a deliberate state, not a glitch — say so once, above the
    table, rather than letting the missing hierarchy look like a bug. */
 .page-flat-notice {

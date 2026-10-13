@@ -21,6 +21,7 @@ import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { FilterChips, type FilterChip } from "@/components/common/FilterChips";
 import { PageHeader } from "@/components/common/PageHeader";
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { Select } from "@/components/common/Select";
 import { SortableHead } from "@/components/common/SortableHead";
 import { Button } from "@/components/ui/button";
@@ -270,30 +271,21 @@ export default function ProductList() {
   );
 
   const actions = (p: ProductListItem) => (
-    <div className="product-row-actions">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label={t("common.edit")}
-        title={t("common.edit")}
+    <RowActions>
+      <RowAction
+        icon={Pencil}
+        label={t("common.edit")}
         onClick={() => navigate(`/products/${p.id}`)}
-      >
-        <Pencil className="size-4" />
-      </Button>
+      />
       {canDelete && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={t("common.delete")}
-          title={t("common.delete")}
+        <RowAction
+          destructive
+          icon={Trash2}
+          label={t("common.delete")}
           onClick={() => setDeleteTarget(p)}
-        >
-          <Trash2 className="size-4 text-destructive" />
-        </Button>
+        />
       )}
-    </div>
+    </RowActions>
   );
 
   const filterSelect = (

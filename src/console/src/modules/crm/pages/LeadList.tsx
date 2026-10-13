@@ -7,7 +7,6 @@ import {
   FileText,
   Mail,
   MessageSquare,
-  MoreHorizontal,
   Phone,
   RotateCcw,
   Search,
@@ -26,15 +25,9 @@ import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { FilterChips, type FilterChip } from "@/components/common/FilterChips";
 import { PageHeader } from "@/components/common/PageHeader";
+import { RowAction, RowActions } from "@/components/common/RowActions";
 import { Select } from "@/components/common/Select";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -304,36 +297,23 @@ export default function LeadList() {
   };
   const actions = (lead: Lead) =>
     (canManage || (lead.conversation_id && canChat)) && (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t("leads.actions_for", {
-              name: lead.name || t("leads.no_name"),
-            })}
-          >
-            <MoreHorizontal className="size-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {lead.conversation_id && canChat && (
-            <DropdownMenuItem onSelect={() => navigate("/chat")}>
-              <MessageSquare />
-              {t("leads.open_chat")}
-            </DropdownMenuItem>
-          )}
-          {lead.conversation_id && canChat && canManage && (
-            <DropdownMenuSeparator />
-          )}
-          {canManage && (
-            <DropdownMenuItem destructive onSelect={() => setPending(lead)}>
-              <Trash2 />
-              {t("common.delete")}
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <RowActions>
+        {lead.conversation_id && canChat && (
+          <RowAction
+            icon={MessageSquare}
+            label={t("leads.open_chat")}
+            onClick={() => navigate("/chat")}
+          />
+        )}
+        {canManage && (
+          <RowAction
+            destructive
+            icon={Trash2}
+            label={t("common.delete")}
+            onClick={() => setPending(lead)}
+          />
+        )}
+      </RowActions>
     );
 
   return (

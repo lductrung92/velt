@@ -93,12 +93,6 @@ tr:hover > td .pcat-grip,
   color: hsl(var(--muted-foreground));
   font-variant-numeric: tabular-nums;
 }
-.pcat-row-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-}
 .pcat-flat-notice {
   padding: 10px 20px 0;
   font-size: var(--font-size-xs);
