@@ -140,6 +140,15 @@
       "pick_range": "Chọn khoảng ngày",
       "clear": "Xoá ngày đã chọn",
       "time": "Giờ"
+    },
+    "unsaved": {
+      "title": "Rời trang khi chưa lưu?",
+      "hint": "Những thay đổi chưa lưu sẽ bị mất. Bạn có thể huỷ để tiếp tục chỉnh sửa.",
+      "hint_named": "Những thay đổi chưa lưu ở {{what}} sẽ bị mất. Bạn có thể huỷ để tiếp tục chỉnh sửa.",
+      "confirm": "Rời trang",
+      "close_title": "Đóng khi chưa lưu?",
+      "close_hint": "Những gì bạn vừa nhập sẽ bị mất.",
+      "close_confirm": "Đóng"
     }
   },
   "image": {
@@ -657,7 +666,8 @@
         "published_hint": "Đang hiển thị công khai",
         "landing": "Trang landing",
         "landing_hint": "Dựng bằng trình kéo thả"
-      }
+      },
+      "one": "trang"
     },
     "settings": {
       "title": "Cài đặt CMS",
@@ -921,7 +931,8 @@
           "description": "Bạn có thay đổi chưa lưu ở menu này. Chuyển sang menu khác sẽ bỏ các thay đổi đó.",
           "confirm": "Bỏ thay đổi"
         }
-      }
+      },
+      "one": "menu"
     },
     "categories": {
       "title": "Chuyên mục",
@@ -1102,7 +1113,8 @@
         "pending_review_hint": "Cần người duyệt",
         "published": "Đã xuất bản",
         "published_hint": "Đang hiển thị công khai"
-      }
+      },
+      "one": "bài viết"
     }
   },
   "errors": {
@@ -1228,7 +1240,8 @@
     "empty_title": "Chưa có thành viên nào",
     "empty_hint": "Thêm thành viên đầu tiên để giới thiệu đội ngũ trên trang công khai.",
     "no_results": "Không tìm thấy thành viên",
-    "no_results_hint": "Thử đổi từ khoá tìm kiếm."
+    "no_results_hint": "Thử đổi từ khoá tìm kiếm.",
+    "one": "thành viên"
   },
   "products": {
     "title": "Sản phẩm",
@@ -1422,7 +1435,8 @@
       "published_hint": "Đang hiện trên website",
       "featured": "Nổi bật",
       "featured_hint": "Đưa lên đầu danh sách"
-    }
+    },
+    "one": "sản phẩm"
   },
   "ai": {
     "title": "Trợ lý AI",
@@ -1673,7 +1687,13 @@
       "category": "Chuyên mục",
       "tag": "Thẻ",
       "lead": "Khách hàng",
-      "setting": "Cấu hình"
+      "setting": "Cấu hình",
+      "landing": "Trang đích",
+      "cms_category": "Chuyên mục",
+      "product_category": "Danh mục sản phẩm",
+      "comment": "Bình luận",
+      "newsletter_subscriber": "Người đăng ký bản tin",
+      "session": "Phiên đăng nhập"
     },
     "action": {
       "account": {

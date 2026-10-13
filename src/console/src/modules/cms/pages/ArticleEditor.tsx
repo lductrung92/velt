@@ -32,7 +32,6 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { SlugField } from "@/components/common/SlugField";
 import { ImageNode } from "@/components/common/RichTextEditor/ImageExtension";
 import { Select } from "@/components/common/Select";
-import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -49,11 +48,11 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
-import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
 import { LanguageTabs } from "@/modules/translation/components/LanguageTabs";
+import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import { useEntityTranslation } from "@/modules/translation/hooks/useEntityTranslation";
 
 import { ArticleImageButton } from "../components/ArticleImageButton";
@@ -170,20 +169,25 @@ export default function ArticleEditor() {
   });
   const status = form.watch("status");
   const [mediaDirty, setMediaDirty] = useState(false);
-  const [leaving, setLeaving] = useState(false);
   // Translations live outside this form: their shape is locale x declared
   // field, which a static zod schema cannot describe (same reason the SEO and
   // image state sit outside it).
   const tr = useEntityTranslation("article", article?.id);
   const dirty = form.formState.isDirty || mediaDirty || tr.dirty;
-  useUnsavedGuard(dirty);
-
   // Editor is read-only for an editor (non-reviewer) once the article is out for
   // publishing (workflow-states §4).
   const isReadOnly =
     !isReviewer &&
     !!article &&
     (article.status === "published" || article.status === "scheduled");
+
+  // The guard lives at the router — one blocker per router — so this only
+  // declares what is pending. It covers the Back button, the sidebar, the
+  // breadcrumb and the browser's own back button alike.
+  useUnsavedChanges({
+    when: dirty && !isReadOnly,
+    what: t("cms.articles.one"),
+  });
 
   useEffect(() => {
     if (!article) return;
@@ -482,11 +486,7 @@ export default function ArticleEditor() {
                 type="button"
                 variant="outline"
                 disabled={saving}
-                onClick={() =>
-                  dirty && !isReadOnly
-                    ? setLeaving(true)
-                    : navigate("/cms/articles")
-                }
+                onClick={() => navigate("/cms/articles")}
               >
                 <ArrowLeft className="size-4" aria-hidden />
                 {t("common.back")}
@@ -964,18 +964,6 @@ export default function ArticleEditor() {
           </Card>
         </div>
       </form>
-      <ConfirmDialog
-        open={leaving}
-        onOpenChange={setLeaving}
-        title={t("cms.articles.editor.leave_title")}
-        description={t("cms.articles.editor.leave_hint")}
-        confirmLabel={t("cms.articles.editor.leave_confirm")}
-        confirmIcon={ArrowLeft}
-        onConfirm={() => {
-          setLeaving(false);
-          navigate("/cms/articles");
-        }}
-      />
     </Form>
   );
 }

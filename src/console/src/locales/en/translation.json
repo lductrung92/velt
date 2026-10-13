@@ -140,6 +140,15 @@
       "pick_range": "Pick a date range",
       "clear": "Clear the selected date",
       "time": "Time"
+    },
+    "unsaved": {
+      "title": "Leave with unsaved changes?",
+      "hint": "Unsaved changes will be lost. Cancel to keep editing.",
+      "hint_named": "Unsaved changes to the {{what}} will be lost. Cancel to keep editing.",
+      "confirm": "Leave",
+      "close_title": "Close with unsaved changes?",
+      "close_hint": "What you just entered will be lost.",
+      "close_confirm": "Close"
     }
   },
   "image": {
@@ -609,7 +618,8 @@
         "published_hint": "Live on the site",
         "landing": "Landing pages",
         "landing_hint": "Built with the page builder"
-      }
+      },
+      "one": "page"
     },
     "settings": {
       "title": "CMS settings",
@@ -873,7 +883,8 @@
           "description": "You have unsaved changes to this menu. Switching menus will discard them.",
           "confirm": "Discard"
         }
-      }
+      },
+      "one": "menu"
     },
     "categories": {
       "title": "Categories",
@@ -1054,7 +1065,8 @@
         "pending_review_hint": "Needs a reviewer",
         "published": "Published",
         "published_hint": "Live on the site"
-      }
+      },
+      "one": "article"
     }
   },
   "errors": {
@@ -1180,7 +1192,8 @@
     "empty_title": "No members yet",
     "empty_hint": "Add the first member to introduce the team on the public site.",
     "no_results": "No members found",
-    "no_results_hint": "Try a different search term."
+    "no_results_hint": "Try a different search term.",
+    "one": "member"
   },
   "products": {
     "title": "Products",
@@ -1374,7 +1387,8 @@
       "published_hint": "Live on the site",
       "featured": "Featured",
       "featured_hint": "Pinned to the top"
-    }
+    },
+    "one": "product"
   },
   "ai": {
     "title": "AI assistant",
@@ -1625,7 +1639,13 @@
       "category": "Category",
       "tag": "Tag",
       "lead": "Customer",
-      "setting": "Setting"
+      "setting": "Setting",
+      "landing": "Landing page",
+      "cms_category": "Category",
+      "product_category": "Product category",
+      "comment": "Comment",
+      "newsletter_subscriber": "Newsletter subscriber",
+      "session": "Session"
     },
     "action": {
       "account": {

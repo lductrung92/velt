@@ -1,5 +1,5 @@
 import { Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -21,6 +21,7 @@ import {
   useMenus,
   useReplaceMenuItems,
 } from "../hooks/useCmsMenus";
+import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import { useMenuDraft } from "../hooks/useMenuDraft";
 import type { MenuSlot } from "../services/menus.service";
 import { toItemsInput } from "../utils/menuTree";
@@ -45,13 +46,10 @@ export default function MenuBuilder() {
   const [deleteItemKey, setDeleteItemKey] = useState<string | null>(null);
   const [pendingSelect, setPendingSelect] = useState<string | null>(null);
 
-  // Warn on tab close / reload while the tree has unsaved edits.
-  useEffect(() => {
-    if (!draft.dirty) return;
-    const handler = (e: BeforeUnloadEvent) => e.preventDefault();
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [draft.dirty]);
+  // One declaration covers tab close, reload, the sidebar, the breadcrumb and
+  // the browser's back button. The in-page slot switch below stays local: it
+  // is not a navigation, so the router's blocker never sees it.
+  useUnsavedChanges({ when: draft.dirty, what: t("cms.menus.one") });
 
   function selectSlot(id: string) {
     if (id === selectedId) return;

@@ -3,9 +3,12 @@ import { Save, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+
+import { useDialogDismissGuard } from "@/hooks/useDialogDismissGuard";
 import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Select } from "@/components/common/Select";
 import { Button } from "@/components/ui/button";
 import {
@@ -136,6 +139,7 @@ function CreateUserForm({ onClose }: { onClose: () => void }) {
       title={t("admin.users.create_title")}
       description={t("admin.users.create_desc")}
       topError={topError}
+      dirty={form.formState.isDirty}
       onClose={onClose}
     >
       <Form {...form}>
@@ -284,6 +288,7 @@ function EditUserForm({
       title={t("admin.users.edit_title")}
       description={t("admin.users.edit_desc")}
       topError={topError}
+      dirty={form.formState.isDirty}
       onClose={onClose}
     >
       <Form {...form}>
@@ -373,18 +378,27 @@ function FormDialogShell({
   title,
   description,
   topError,
+  dirty,
   onClose,
   children,
 }: {
   title: string;
   description: string;
   topError: string | null;
+  /** True once the user has typed something worth losing. */
+  dirty: boolean;
   onClose: () => void;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
+  // Closing a dialog is not a navigation, so the router's blocker never sees
+  // it; the ✕, Escape and a click on the overlay all arrive here instead.
+  const { dialogProps, confirmProps } = useDialogDismissGuard({
+    when: dirty,
+    onClose,
+  });
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
+    <Dialog open {...dialogProps}>
       <DialogContent closeLabel={t("common.close")}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -393,6 +407,13 @@ function FormDialogShell({
         {topError && <Alert variant="danger" message={topError} />}
         {children}
       </DialogContent>
+      <ConfirmDialog
+        {...confirmProps}
+        title={t("common.unsaved.close_title")}
+        description={t("common.unsaved.close_hint")}
+        confirmLabel={t("common.unsaved.close_confirm")}
+        confirmIcon={X}
+      />
     </Dialog>
   );
 }

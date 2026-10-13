@@ -52,7 +52,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
-import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import type { PageSEO } from "@/modules/cms/services/pages.service";
 import { usePermission } from "@/modules/auth";
 import { LanguageTabs } from "@/modules/translation/components/LanguageTabs";
@@ -180,14 +180,16 @@ export default function ProductEditor() {
   // and cover state sit outside it.
   const tr = useEntityTranslation("product", product?.id);
 
-  useUnsavedGuard(
-    form.formState.isDirty ||
+  useUnsavedChanges({
+    when:
+      form.formState.isDirty ||
       seoDirty ||
       relationsDirty ||
       coverDirty ||
       tr.dirty ||
       galleryDraft.length > 0,
-  );
+    what: t("products.one"),
+  });
 
   useEffect(() => {
     if (!product) return;

@@ -109,6 +109,25 @@ describe("Activity log", () => {
     expect(within(row).getByText(exact(base.occurred_at))).toBeVisible();
   });
 
+  it("labels the action and the target in Vietnamese, not as codes", async () => {
+    // Asserting through t() would pass even with the key deleted, because the
+    // fallback returns the code and the expectation would move with it. The
+    // Vietnamese strings are pinned here instead, so a missing or renamed key
+    // fails the test rather than shipping auth.sign_in to a reader.
+    serve([{ ...base, id: 4, action: "auth.sign_in", entity: "session" }]);
+    mount();
+
+    const row = within(await screen.findByTestId("activity-table")).getByTestId(
+      "activity-row",
+    );
+    // The heading of the cell, not the cell: the raw code is deliberately kept
+    // underneath it for anyone quoting the row in a ticket.
+    expect(row.querySelector(".activity-action strong")).toHaveTextContent(
+      "Đăng nhập",
+    );
+    expect(within(row).getByText("Phiên đăng nhập")).toBeVisible();
+  });
+
   it("shows the raw code when nobody has written a label for it", async () => {
     // Codes ship with the module that writes them; labels follow later. An
     // unlabelled action must still name itself rather than leave a blank cell.

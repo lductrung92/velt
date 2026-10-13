@@ -39,7 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
-import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import { usePermission } from "@/modules/auth";
 import { LanguageTabs } from "@/modules/translation/components/LanguageTabs";
 import { useEntityTranslation } from "@/modules/translation/hooks/useEntityTranslation";
@@ -99,7 +99,10 @@ export default function MemberEditor() {
   // which a static zod schema cannot describe.
   const tr = useEntityTranslation("member", member?.id);
 
-  useUnsavedGuard(form.formState.isDirty || avatarDirty || tr.dirty);
+  useUnsavedChanges({
+    when: form.formState.isDirty || avatarDirty || tr.dirty,
+    what: t("members.one"),
+  });
 
   useEffect(() => {
     if (!member) return;

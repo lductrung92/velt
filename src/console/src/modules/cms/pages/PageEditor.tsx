@@ -38,7 +38,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
-import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import { usePermission } from "@/modules/auth";
 import { LanguageTabs } from "@/modules/translation/components/LanguageTabs";
 import { TranslatedField } from "@/modules/translation/components/TranslatedField";
@@ -184,9 +184,10 @@ export default function PageEditor() {
   const tr = useEntityTranslation("page", page?.id);
   // seo lives outside the form, so fold its changes into the guard.
   const seoDirty = isEdit && !!page && !seoEquals(seo, page.seo);
-  useUnsavedGuard(
-    form.formState.isDirty || seoDirty || designDirty || tr.dirty,
-  );
+  useUnsavedChanges({
+    when: form.formState.isDirty || seoDirty || designDirty || tr.dirty,
+    what: t("cms.pages.one"),
+  });
 
   useEffect(() => {
     if (!page || seededId.current === page.id) return;

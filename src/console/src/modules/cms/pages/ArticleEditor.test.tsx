@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { I18nextProvider } from "react-i18next";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { createMemoryRouter, Outlet, RouterProvider } from "react-router-dom";
 import { Toaster } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,6 +11,8 @@ import i18n from "@/app/i18n";
 import type { ImageUploadValue } from "@/components/common/ImageHandler";
 import { useAuthStore } from "@/store/auth.store";
 import { server } from "@/test/server";
+
+import { UnsavedChangesProvider } from "@/app/UnsavedChangesProvider";
 
 import ArticleEditor from "./ArticleEditor";
 
@@ -134,18 +136,36 @@ function signIn(permissions: string[]) {
   useAuthStore.getState().setAuthz(["admin"], permissions);
 }
 
+/**
+ * A DATA router, not <MemoryRouter>. The unsaved-changes prompt is driven by
+ * `useBlocker`, which only exists on a data router — on a plain MemoryRouter
+ * every navigation sails through and the guard silently tests nothing. The
+ * list route is real so Back has somewhere to go.
+ */
 function renderEditor(path: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const router = createMemoryRouter(
+    [
+      {
+        element: (
+          <UnsavedChangesProvider>
+            <Outlet />
+          </UnsavedChangesProvider>
+        ),
+        children: [
+          { path: "/cms/articles", element: <div>danh sách</div> },
+          { path: "/cms/articles/new", element: <ArticleEditor /> },
+          { path: "/cms/articles/:id", element: <ArticleEditor /> },
+        ],
+      },
+    ],
+    { initialEntries: [path] },
+  );
   return render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={qc}>
-        <MemoryRouter initialEntries={[path]}>
-          <Routes>
-            <Route path="/cms/articles/new" element={<ArticleEditor />} />
-            <Route path="/cms/articles/:id" element={<ArticleEditor />} />
-          </Routes>
-          <Toaster />
-        </MemoryRouter>
+        <RouterProvider router={router} />
+        <Toaster />
       </QueryClientProvider>
     </I18nextProvider>,
   );

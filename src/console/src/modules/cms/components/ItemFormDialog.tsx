@@ -4,8 +4,10 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Select } from "@/components/common/Select/Select";
 import { Button } from "@/components/ui/button";
+import { useDialogDismissGuard } from "@/hooks/useDialogDismissGuard";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -90,8 +92,15 @@ export function ItemFormDialog({
     label: t(`cms.menus.link_type.${type}`),
   }));
 
+  // The ✕, Escape and an overlay click all arrive at onOpenChange(false);
+  // none of them is a navigation, so the router's blocker cannot see them.
+  const { dialogProps, confirmProps } = useDialogDismissGuard({
+    when: form.formState.isDirty,
+    onClose: onCancel,
+  });
+
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
+    <Dialog open={open} {...dialogProps}>
       <DialogContent closeLabel={t("common.close")}>
         <DialogHeader>
           <DialogTitle>
@@ -215,6 +224,13 @@ export function ItemFormDialog({
           </form>
         </Form>
       </DialogContent>
+      <ConfirmDialog
+        {...confirmProps}
+        title={t("common.unsaved.close_title")}
+        description={t("common.unsaved.close_hint")}
+        confirmLabel={t("common.unsaved.close_confirm")}
+        confirmIcon={X}
+      />
     </Dialog>
   );
 }

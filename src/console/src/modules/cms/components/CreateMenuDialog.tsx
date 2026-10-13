@@ -6,7 +6,9 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Select } from "@/components/common/Select";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
+import { useDialogDismissGuard } from "@/hooks/useDialogDismissGuard";
 import {
   Dialog,
   DialogContent,
@@ -109,8 +111,13 @@ export function CreateMenuDialog({
 
   const saving = create.isPending || update.isPending;
 
+  const { dialogProps, confirmProps } = useDialogDismissGuard({
+    when: form.formState.isDirty,
+    onClose: () => onOpenChange(false),
+  });
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} {...dialogProps}>
       <DialogContent closeLabel={t("common.close")}>
         <DialogHeader>
           <DialogTitle>
@@ -176,6 +183,13 @@ export function CreateMenuDialog({
           </form>
         </Form>
       </DialogContent>
+      <ConfirmDialog
+        {...confirmProps}
+        title={t("common.unsaved.close_title")}
+        description={t("common.unsaved.close_hint")}
+        confirmLabel={t("common.unsaved.close_confirm")}
+        confirmIcon={X}
+      />
     </Dialog>
   );
 }

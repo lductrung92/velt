@@ -31,7 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
-import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
@@ -95,7 +95,10 @@ export default function ProductCategoryEditor() {
   // field, which a static zod schema cannot describe.
   const tr = useEntityTranslation("product_category", category?.id);
 
-  useUnsavedGuard(form.formState.isDirty || tr.dirty);
+  useUnsavedChanges({
+    when: form.formState.isDirty || tr.dirty,
+    what: t("products.one"),
+  });
 
   useEffect(() => {
     if (!category) return;
