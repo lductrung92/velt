@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Alert } from "@/components/common/Alert";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -55,7 +56,24 @@ export function ConfirmDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
+          {/* The icon states the consequence before the words do, and it is the
+              same glyph as the confirm button so the two read as one action.
+              Tinted rather than solid: a filled red disc competes with the
+              button that actually does the deleting. */}
+          <span
+            className={cn(
+              "mx-auto grid size-12 place-items-center rounded-full",
+              destructive
+                ? "bg-destructive/10 text-destructive"
+                : "bg-primary/10 text-primary",
+            )}
+            aria-hidden
+          >
+            <Icon className="size-6" />
+          </span>
+          <AlertDialogTitle className="sm:text-center">
+            {title}
+          </AlertDialogTitle>
           {description && (
             <AlertDialogDescription>{description}</AlertDialogDescription>
           )}
