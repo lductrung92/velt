@@ -45,6 +45,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { DateField } from "@/components/common/DateField";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -900,7 +901,7 @@ export default function ProductEditor() {
                     <FormItem>
                       <FormLabel>{t("products.col.released_at")}</FormLabel>
                       <FormControl>
-                        <Input type="date" disabled={!canEdit} {...field} />
+                        <DateField disabled={!canEdit} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

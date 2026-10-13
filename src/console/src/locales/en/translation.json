@@ -134,7 +134,13 @@
     "string_list": {
       "placeholder": "Type and press Enter"
     },
-    "all": "All"
+    "all": "All",
+    "date": {
+      "pick": "Pick a date",
+      "pick_range": "Pick a date range",
+      "clear": "Clear the selected date",
+      "time": "Time"
+    }
   },
   "image": {
     "upload": {
@@ -1579,8 +1585,6 @@
     "apply_search": "Search the log",
     "search_window": "Searching activity since {{since}}. Pick a date range to look further back.",
     "all_actions": "All actions",
-    "from": "From date",
-    "to": "To date",
     "filter_by_actor": "Show only what {{name}} did",
     "filter_by_target": "Show only what happened to {{name}}",
     "no_target": "No particular record",
@@ -1721,7 +1725,8 @@
         "role_removed": "Removed a role",
         "updated": "Updated user"
       }
-    }
+    },
+    "range": "Date range"
   },
   "tr": {
     "tabs": "Content language",

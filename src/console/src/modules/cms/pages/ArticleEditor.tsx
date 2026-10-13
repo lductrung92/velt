@@ -44,6 +44,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { DateField } from "@/components/common/DateField";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TextField } from "@/components/ui/text-field";
@@ -687,7 +688,7 @@ export default function ArticleEditor() {
                           {t("cms.articles.field.publish_at")}
                         </FormLabel>
                         <FormControl>
-                          <Input type="datetime-local" {...field} />
+                          <DateField withTime {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

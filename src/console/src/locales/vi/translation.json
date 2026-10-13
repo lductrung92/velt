@@ -134,7 +134,13 @@
     "string_list": {
       "placeholder": "Nhập rồi nhấn Enter"
     },
-    "all": "Tất cả"
+    "all": "Tất cả",
+    "date": {
+      "pick": "Chọn ngày",
+      "pick_range": "Chọn khoảng ngày",
+      "clear": "Xoá ngày đã chọn",
+      "time": "Giờ"
+    }
   },
   "image": {
     "upload": {
@@ -1627,8 +1633,6 @@
     "apply_search": "Tìm trong nhật ký",
     "search_window": "Đang tìm hoạt động từ {{since}}. Chọn khoảng ngày để xem xa hơn.",
     "all_actions": "Mọi hành động",
-    "from": "Từ ngày",
-    "to": "Đến ngày",
     "filter_by_actor": "Chỉ xem những gì {{name}} đã làm",
     "filter_by_target": "Chỉ xem những gì đã xảy ra với {{name}}",
     "no_target": "Không gắn bản ghi nào",
@@ -1769,7 +1773,8 @@
         "role_removed": "Gỡ vai trò",
         "updated": "Sửa người dùng"
       }
-    }
+    },
+    "range": "Khoảng thời gian"
   },
   "tr": {
     "tabs": "Ngôn ngữ nội dung",

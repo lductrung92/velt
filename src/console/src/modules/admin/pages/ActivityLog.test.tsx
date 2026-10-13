@@ -195,6 +195,47 @@ describe("Activity log", () => {
     });
   });
 
+  it("narrows to a date range picked from the calendar", async () => {
+    // The range used to be two native date boxes guarding each other with
+    // min/max; what reaches the API has to stay exactly the same pair.
+    const user = userEvent.setup();
+    serve([base]);
+    mount();
+    await screen.findByTestId("activity-table");
+
+    await user.click(
+      screen.getByRole("button", { name: new RegExp(t("activity.range")) }),
+    );
+    const day = async (n: string) => {
+      const cells = await screen.findAllByRole("gridcell");
+      const cell = cells.find((c) => c.textContent?.trim() === n);
+      if (!cell) throw new Error(`no day ${n} on screen`);
+      await user.click(cell.querySelector("button") ?? cell);
+    };
+    await day("5");
+    await day("9");
+
+    // The screen still widens the pair to instants covering whole local days,
+    // exactly as it did when these were two native date boxes.
+    await waitFor(() => {
+      expect(captured?.get("from")).toBe(
+        new Date("2026-10-05T00:00:00").toISOString(),
+      );
+      expect(captured?.get("to")).toBe(
+        new Date("2026-10-09T23:59:59.999").toISOString(),
+      );
+      expect(captured?.get("page")).toBe("1");
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: t("common.date.clear") }),
+    );
+    await waitFor(() => {
+      expect(captured?.get("from")).toBeNull();
+      expect(captured?.get("to")).toBeNull();
+    });
+  });
+
   it("offers the action codes the log actually holds", async () => {
     const user = userEvent.setup();
     serve([base]);

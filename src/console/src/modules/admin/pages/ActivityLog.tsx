@@ -16,6 +16,7 @@ import { FilterChips, type FilterChip } from "@/components/common/FilterChips";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Select } from "@/components/common/Select";
 import { Button } from "@/components/ui/button";
+import { DateRangeField } from "@/components/common/DateField";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -345,24 +346,13 @@ export default function ActivityLog() {
               />
             </div>
             <div className="activity-range">
-              <Input
-                type="date"
-                value={from}
-                max={to || undefined}
-                aria-label={t("activity.from")}
-                onChange={(event) => {
-                  setFrom(event.target.value);
-                  setPage(1);
-                }}
-              />
-              <span aria-hidden>→</span>
-              <Input
-                type="date"
-                value={to}
-                min={from || undefined}
-                aria-label={t("activity.to")}
-                onChange={(event) => {
-                  setTo(event.target.value);
+              <DateRangeField
+                from={from}
+                to={to}
+                aria-label={t("activity.range")}
+                onChange={(nextFrom, nextTo) => {
+                  setFrom(nextFrom);
+                  setTo(nextTo);
                   setPage(1);
                 }}
               />
