@@ -5,6 +5,7 @@ import { SiteContext } from "../app/context";
 import { content } from "../app/data/content";
 import { getCatalog } from "../app/lib/catalog";
 import { emptyBlog } from "../app/lib/blog";
+import { BASE_LOCALE } from "../app/lib/locales";
 import { DEFAULT_LAYOUT } from "../app/lib/layout";
 import { withReferral } from "../app/lib/links";
 import { SectionRenderer } from "../app/components/SectionRenderer";
@@ -21,6 +22,9 @@ function render(sections: PublicSection[]) {
         isExample,
         blog: emptyBlog(),
         layout: DEFAULT_LAYOUT,
+        locale: BASE_LOCALE,
+        locales: [],
+        localeHref: (code: string) => `/${code}`,
         href: (path: string) => withReferral(path),
       }}
     >

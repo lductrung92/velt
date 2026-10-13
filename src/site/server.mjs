@@ -203,8 +203,20 @@ async function serve(req, res) {
       result.image
         ? `<meta property="og:image" content="${escape(result.image)}">`
         : "",
+      // One <link> per language, this page included, plus the fallback for a
+      // reader whose language is not among them. Search engines ignore a set
+      // that does not reference itself, so this is emitted whole or not at all.
+      ...(result.alternates || []).flatMap((alternate) => {
+        const href = escape(new URL(alternate.href, url.origin).href);
+        const tags = [
+          `<link rel="alternate" hreflang="${escape(alternate.locale)}" href="${href}">`,
+        ];
+        if (alternate.xDefault)
+          tags.push(`<link rel="alternate" hreflang="x-default" href="${href}">`);
+        return tags;
+      }),
     ].join("");
-    let html = `<!doctype html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0061fd"><title>${escape(result.title)}</title><meta name="description" content="${escape(result.description)}"><meta property="og:title" content="${escape(result.ogTitle || result.title)}"><meta property="og:description" content="${escape(result.ogDescription || result.description)}"><meta property="og:type" content="${escape(result.ogType || "website")}">${metadata}<link rel="icon" href="/assets/favicon.png"><link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/be-vietnam-pro-6.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/be-vietnam-pro-7.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/be-vietnam-pro-8.woff2"><link rel="stylesheet" href="/assets/fonts/fonts.css">${styles.map((file) => `<link rel="stylesheet" href="${file}">`).join("")}</head><body><div id="root">${result.html}</div><script id="site-data" type="application/json">${serialized}</script><script type="module" src="${production ? "/" + entry.file : "/app/entry-client.tsx"}"></script><noscript><p class="noscript-note">Vui lòng bật JavaScript để sử dụng bộ lọc, hồ sơ thành viên, biểu mẫu và chatbox.</p></noscript></body></html>`;
+    let html = `<!doctype html><html lang="${escape(result.lang || "vi")}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0061fd"><title>${escape(result.title)}</title><meta name="description" content="${escape(result.description)}"><meta property="og:title" content="${escape(result.ogTitle || result.title)}"><meta property="og:description" content="${escape(result.ogDescription || result.description)}"><meta property="og:type" content="${escape(result.ogType || "website")}">${metadata}<link rel="icon" href="/assets/favicon.png"><link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/be-vietnam-pro-6.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/be-vietnam-pro-7.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/be-vietnam-pro-8.woff2"><link rel="stylesheet" href="/assets/fonts/fonts.css">${styles.map((file) => `<link rel="stylesheet" href="${file}">`).join("")}</head><body><div id="root">${result.html}</div><script id="site-data" type="application/json">${serialized}</script><script type="module" src="${production ? "/" + entry.file : "/app/entry-client.tsx"}"></script><noscript><p class="noscript-note">Vui lòng bật JavaScript để sử dụng bộ lọc, hồ sơ thành viên, biểu mẫu và chatbox.</p></noscript></body></html>`;
     if (vite) html = await vite.transformIndexHtml(url.pathname, html);
     // A published page is the same bytes for everyone, so it is worth caching
     // in front of us. `stale-while-revalidate` lets a CDN keep answering from

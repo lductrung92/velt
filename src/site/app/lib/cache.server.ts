@@ -15,6 +15,8 @@
  * A cold miss is the only request that blocks.
  */
 
+import { BASE_LOCALE, type LocaleConfig } from "./locales";
+
 const API_BASE =
   process.env.SITE_API_BASE_URL ||
   process.env.VITE_API_BASE_URL ||
@@ -30,6 +32,8 @@ interface Entry<T> {
 
 const store = new Map<string, Entry<unknown>>();
 let ttlCache: { value: number; expires: number } | null = null;
+let settingsCache: { value: Record<string, unknown>; expires: number } | null =
+  null;
 let seenVersion: string | null = null;
 
 /**
@@ -40,6 +44,7 @@ let seenVersion: string | null = null;
 export function purge(): void {
   store.clear();
   ttlCache = null;
+  settingsCache = null;
   seenVersion = null;
 }
 
@@ -131,11 +136,8 @@ export async function ttlSeconds(request: typeof fetch = fetch): Promise<number>
     // a poll, and polling it on every page view would undo the cache it
     // protects.
     await checkVersion(request);
-    const res = await request(`${API_BASE}/public/settings`, {
-      headers: { Accept: "application/json" },
-    });
-    if (res.ok) {
-      const settings = (await res.json()) as Record<string, unknown>;
+    const settings = await publicSettings(request);
+    if (settings) {
       const raw = Number(settings["site.cache_ttl_seconds"]);
       if (Number.isFinite(raw) && raw >= 0) value = raw;
     }
@@ -146,4 +148,56 @@ export async function ttlSeconds(request: typeof fetch = fetch): Promise<number>
   }
   ttlCache = { value, expires: now + 10_000 };
   return value;
+}
+
+/**
+ * The public settings, held for a few seconds.
+ *
+ * Both the cache TTL and the language list live in this one response, and both
+ * are read on the way into every render — fetching it twice would double a
+ * request that exists to save requests. Returns null when the API cannot be
+ * read, so each caller decides what "unknown" means for its own value.
+ */
+async function publicSettings(
+  request: typeof fetch,
+): Promise<Record<string, unknown> | null> {
+  const now = Date.now();
+  if (settingsCache && settingsCache.expires > now) return settingsCache.value;
+  try {
+    const res = await request(`${API_BASE}/public/settings`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return settingsCache?.value ?? null;
+    const value = (await res.json()) as Record<string, unknown>;
+    settingsCache = { value, expires: now + 10_000 };
+    return value;
+  } catch {
+    return settingsCache?.value ?? null;
+  }
+}
+
+/**
+ * The languages the console configured, besides Vietnamese.
+ *
+ * `translation.enabled` off means one language, whatever the list says — the
+ * same switch the console hides its language tabs behind. An unreachable API
+ * means Vietnamese only, which is the site every visitor can read rather than a
+ * half-translated one.
+ */
+export async function localeConfig(
+  request: typeof fetch = fetch,
+): Promise<LocaleConfig> {
+  const settings = await publicSettings(request);
+  if (!settings || settings["translation.enabled"] !== true) {
+    return { extras: [] };
+  }
+  const raw = settings["translation.locales"];
+  const extras =
+    typeof raw === "string"
+      ? raw
+          .split(",")
+          .map((code) => code.trim().toLowerCase())
+          .filter((code) => code && code !== BASE_LOCALE)
+      : [];
+  return { extras: [...new Set(extras)] };
 }

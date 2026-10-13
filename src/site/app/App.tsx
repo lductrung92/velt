@@ -12,8 +12,9 @@ import { Catalog } from "./pages/Catalog";
 import { ProductDetail, NotFound } from "./pages/ProductDetail";
 import { Blog } from "./pages/Blog";
 import { BlogArticle } from "./pages/BlogArticle";
-import { emptyBlog, type BlogState } from "./lib/blog";
+import { blogPath, emptyBlog, type BlogState } from "./lib/blog";
 import { DEFAULT_LAYOUT } from "./lib/layout";
+import { BASE_LOCALE, withLocale } from "./lib/locales";
 
 export function resolveRoute(
   url: URL,
@@ -64,6 +65,8 @@ export function App({
   blog,
   sections,
   layout = DEFAULT_LAYOUT,
+  locale = BASE_LOCALE,
+  locales = [],
 }: AppProps & { data?: SiteContent }) {
   const url = useMemo(() => new URL(path, "http://site.local"), [path]);
   const context = useMemo(() => {
@@ -80,9 +83,25 @@ export function App({
       blog: blog || emptyBlog(),
       sections,
       layout,
-      href: (path: string) => withReferral(path, referrer),
+      locale,
+      locales,
+      // One place puts the language into an address, so every link on the page
+      // stays in the language the reader is reading — including the ones built
+      // from console data.
+      href: (path: string) => withLocale(withReferral(path, referrer), locale),
+      localeHref: (target: string) => {
+        // An article has its own slug per language; anything else is the same
+        // path under a different prefix.
+        const alternate = blog?.article?.alternates?.find(
+          (alt) => alt.locale === target,
+        );
+        const path = alternate
+          ? blogPath(alternate.slug)
+          : url.pathname + url.search;
+        return withLocale(withReferral(path, referrer), target);
+      },
     };
-  }, [data, url, blog, sections, layout]);
+  }, [data, url, blog, sections, layout, locale, locales]);
   const route = resolveRoute(url, data, blog);
   return (
     <SiteContext value={context}>

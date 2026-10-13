@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useSite } from "../context";
 import { navHref, navIcon, type NavItem } from "../lib/layout";
+import { allLocales, localeLabel } from "../lib/locales";
 import { Icon } from "./Icon";
 
 export function Header() {
-  const { href, url, layout } = useSite();
+  const { href, url, layout, locale, locales, localeHref } = useSite();
   const [menuOpen, setMenuOpen] = useState(false),
-    // Which dropdown is open, by position — the menu may define several.
-    [openDropdown, setOpenDropdown] = useState<number | null>(null);
+    // Which dropdown is open — a position in the menu, or the language one.
+    [openDropdown, setOpenDropdown] = useState<number | "lang" | null>(null);
   const header = useRef<HTMLElement>(null),
     menuToggle = useRef<HTMLButtonElement>(null),
     // The toggle that opened the current dropdown, so Escape returns focus to
@@ -155,6 +156,40 @@ export function Header() {
           )}
         </nav>
         <div className="nav-right">
+          {locales.length > 0 && (
+            <div className="nav-dropdown lang-switch">
+              <button
+                className="nav-link dropdown-toggle lang-toggle"
+                aria-expanded={openDropdown === "lang"}
+                aria-controls="lang-menu"
+                aria-label={`${localeLabel(locale)} — chọn ngôn ngữ`}
+                onClick={(event) => {
+                  dropdownToggle.current = event.currentTarget;
+                  setOpenDropdown(openDropdown === "lang" ? null : "lang");
+                }}
+              >
+                {locale.toUpperCase()} <Icon name="down" />
+              </button>
+              <div
+                className="dropdown-panel lang-panel"
+                id="lang-menu"
+                hidden={openDropdown !== "lang"}
+              >
+                {allLocales(locales).map((code) => (
+                  <a
+                    key={code}
+                    href={localeHref(code)}
+                    hrefLang={code}
+                    lang={code}
+                    aria-current={code === locale ? "true" : undefined}
+                    onClick={() => setOpenDropdown(null)}
+                  >
+                    {localeLabel(code)}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
           <a className="button button-small contact-nav" href={ctaHref}>
             <Icon name="support" />
             {layout.chrome.ctaLabel}
@@ -188,6 +223,21 @@ export function Header() {
             {item.label} <Icon name="arrow" />
           </a>
         ))}
+        {locales.length > 0 && (
+          <div className="mobile-lang">
+            {allLocales(locales).map((code) => (
+              <a
+                key={code}
+                href={localeHref(code)}
+                hrefLang={code}
+                lang={code}
+                aria-current={code === locale ? "true" : undefined}
+              >
+                {localeLabel(code)}
+              </a>
+            ))}
+          </div>
+        )}
         <a className="button contact-nav" href={ctaHref}>
           <Icon name="support" />
           {layout.chrome.ctaLabel}

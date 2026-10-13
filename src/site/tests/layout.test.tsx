@@ -5,6 +5,7 @@ import { SiteContext } from "../app/context";
 import { content } from "../app/data/content";
 import { getCatalog } from "../app/lib/catalog";
 import { emptyBlog } from "../app/lib/blog";
+import { BASE_LOCALE } from "../app/lib/locales";
 import { withReferral } from "../app/lib/links";
 import {
   DEFAULT_LAYOUT,
@@ -29,6 +30,9 @@ function render(layout: SiteLayout, path = "/") {
         blog: emptyBlog(),
         layout,
         href,
+        locale: BASE_LOCALE,
+        locales: [],
+        localeHref: (code: string) => `/${code}`,
       }}
     >
       <Header />

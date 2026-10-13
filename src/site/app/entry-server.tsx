@@ -1,12 +1,19 @@
 import { renderToString } from "react-dom/server";
 import { App, resolveRoute } from "./App";
 import type { AppProps, PublicSection, SiteContent } from "./types";
-import { emptyBlog, type BlogState } from "./lib/blog";
+import { blogPath, emptyBlog, type BlogState } from "./lib/blog";
 import { loadBlog, articleRedirect } from "./lib/blog.server";
 import { loadSiteContent } from "./lib/site.server";
 import { loadHomeSections } from "./lib/landing.server";
 import { loadLayout } from "./lib/layout.server";
 import type { SiteLayout } from "./lib/layout";
+import { localeConfig } from "./lib/cache.server";
+import {
+  alternatesFor,
+  BASE_LOCALE,
+  splitLocale,
+  withLocale,
+} from "./lib/locales";
 
 export function render(
   path: string,
@@ -14,7 +21,12 @@ export function render(
   data?: SiteContent,
   sections?: PublicSection[],
   layout?: SiteLayout,
+  locale: string = BASE_LOCALE,
+  locales: string[] = [],
 ) {
+  // `path` is already stripped of its language prefix: the router matches the
+  // same routes in every language, and the prefix is put back by every link
+  // the page writes (see App's href).
   const url = new URL(path, "http://site.local"),
     route = resolveRoute(url, data, blog);
   const props: AppProps = {
@@ -24,6 +36,8 @@ export function render(
     data,
     sections,
     layout,
+    locale,
+    locales,
   };
   const title = route.home
     ? "ZUKATEK — Đội ngũ phát triển & sản phẩm số"
@@ -53,13 +67,34 @@ export function render(
     ogTitle: blog.article?.seo?.og_title || title,
     ogDescription: blog.article?.seo?.og_description || description,
     ogType: route.blogDetail && blog.article ? "article" : "website",
-    canonical:
+    lang: locale,
+    // Every page says which languages it exists in, itself included, and which
+    // one answers for a reader whose language is not among them. A set that
+    // does not reference back is ignored, so this is built from one list.
+    //
+    // An article's address differs per language, so its own alternates (from
+    // the published read model) win over the plain prefix mapping.
+    alternates: alternatesFor(
+      url.pathname,
+      locales,
+      route.blogDetail && blog.article?.alternates
+        ? Object.fromEntries(
+            blog.article.alternates.map((alt) => [
+              alt.locale,
+              blogPath(alt.slug),
+            ]),
+          )
+        : undefined,
+    ),
+    canonical: withLocale(
       blog.article?.seo?.canonical_url ||
-      (route.blogList
-        ? "/blog"
-        : route.blogDetail && blog.article
-          ? `/blog/${encodeURIComponent(blog.article.slug)}`
-          : undefined),
+        (route.blogList
+          ? "/blog"
+          : route.blogDetail && blog.article
+            ? blogPath(blog.article.slug)
+            : url.pathname),
+      locale,
+    ),
     noindex:
       !!blog.article?.seo?.noindex ||
       route.status !== 200 ||
@@ -71,7 +106,13 @@ export function render(
 
 // Fetch published content on the server; serialize the same snapshot for hydration.
 export async function renderRequest(path: string) {
-  const url = new URL(path, "http://site.local");
+  // Which language this address is in has to be known before anything is
+  // loaded: it picks the content, and it keys every cache behind it.
+  const { extras } = await localeConfig();
+  const requested = new URL(path, "http://site.local");
+  const { locale, path: routePath } = splitLocale(requested.pathname, extras);
+  const inner = routePath + requested.search;
+  const url = new URL(inner, "http://site.local");
   const needsBlog =
     url.pathname === "/" ||
     url.pathname === "/index.html" ||
@@ -82,16 +123,22 @@ export async function renderRequest(path: string) {
   // so they do not pay for the lookup.
   const isHome = url.pathname === "/" || url.pathname === "/index.html";
   const [blog, site, sections, layout] = await Promise.all([
-    needsBlog ? loadBlog(path) : Promise.resolve(emptyBlog()),
-    loadSiteContent(),
-    isHome ? loadHomeSections() : Promise.resolve([]),
+    needsBlog
+      ? loadBlog(inner, fetch, undefined, locale)
+      : Promise.resolve(emptyBlog()),
+    loadSiteContent(fetch, locale),
+    isHome ? loadHomeSections(fetch, locale) : Promise.resolve([]),
     // The header and footer are on every route, home or not.
-    loadLayout(),
+    loadLayout(fetch, locale),
   ]);
+  const redirect = url.pathname.startsWith("/blog/")
+    ? articleRedirect(inner, blog)
+    : undefined;
   return {
-    ...render(path, blog, site.content, sections, layout),
-    redirect: url.pathname.startsWith("/blog/")
-      ? articleRedirect(path, blog)
-      : undefined,
+    ...render(inner, blog, site.content, sections, layout, locale, extras),
+    // A redirect is computed on the un-prefixed path, so it has to go back
+    // into the language it came from or the reader changes language by
+    // following a renamed link.
+    redirect: redirect ? withLocale(redirect, locale) : undefined,
   };
 }

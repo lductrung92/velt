@@ -1,5 +1,6 @@
 import type { PublicSection } from "../types";
 import { cached, ttlSeconds } from "./cache.server";
+import { BASE_LOCALE } from "./locales";
 
 /**
  * Loads the sections the console published for the home page.
@@ -26,6 +27,7 @@ interface PublicPage {
 
 async function fetchHomeSections(
   request: typeof fetch,
+  locale: string,
 ): Promise<PublicSection[]> {
   try {
     const settingsRes = await request(`${API_BASE}/public/settings`, {
@@ -37,7 +39,7 @@ async function fetchHomeSections(
     if (!slug) return [];
 
     const pageRes = await request(
-      `${API_BASE}/public/cms/pages/${encodeURIComponent(slug)}`,
+      `${API_BASE}/public/cms/pages/${encodeURIComponent(slug)}?locale=${encodeURIComponent(locale)}`,
       { headers: { Accept: "application/json" } },
     );
     if (!pageRes.ok) return [];
@@ -50,7 +52,10 @@ async function fetchHomeSections(
 
 export async function loadHomeSections(
   request: typeof fetch = fetch,
+  locale: string = BASE_LOCALE,
 ): Promise<PublicSection[]> {
   const ttl = (await ttlSeconds(request)) * 1000;
-  return cached("home-sections", ttl, () => fetchHomeSections(request));
+  return cached(`home-sections:${locale}`, ttl, () =>
+    fetchHomeSections(request, locale),
+  );
 }

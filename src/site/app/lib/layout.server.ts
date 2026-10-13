@@ -1,5 +1,6 @@
 import { cached, ttlSeconds } from "./cache.server";
 import { DEFAULT_LAYOUT, resolveLayout, type SiteLayout } from "./layout";
+import { BASE_LOCALE } from "./locales";
 
 /**
  * Loads the header and the footer the console publishes.
@@ -25,10 +26,16 @@ async function readJSON(request: typeof fetch, path: string): Promise<unknown> {
   return res.ok ? await res.json() : null;
 }
 
-async function fetchLayout(request: typeof fetch): Promise<SiteLayout> {
+async function fetchLayout(
+  request: typeof fetch,
+  locale: string,
+): Promise<SiteLayout> {
   try {
     const [menus, settings] = await Promise.all([
-      readJSON(request, "/public/cms/menus"),
+      readJSON(
+        request,
+        `/public/cms/menus?locale=${encodeURIComponent(locale)}`,
+      ),
       readJSON(request, "/public/settings"),
     ]);
     return resolveLayout(menus, settings);
@@ -39,7 +46,10 @@ async function fetchLayout(request: typeof fetch): Promise<SiteLayout> {
 
 export async function loadLayout(
   request: typeof fetch = fetch,
+  locale: string = BASE_LOCALE,
 ): Promise<SiteLayout> {
   const ttl = (await ttlSeconds(request)) * 1000;
-  return cached("site-layout", ttl, () => fetchLayout(request));
+  return cached(`site-layout:${locale}`, ttl, () =>
+    fetchLayout(request, locale),
+  );
 }

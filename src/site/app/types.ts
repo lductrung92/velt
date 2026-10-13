@@ -53,6 +53,10 @@ export interface AppProps {
   sections?: PublicSection[];
   /** Header and footer as the console publishes them; absent = the defaults. */
   layout?: SiteLayout;
+  /** The language this page is in ("vi" unless the address said otherwise). */
+  locale?: string;
+  /** The other languages the console configured, for the switcher + hreflang. */
+  locales?: string[];
 }
 /** One navigation entry, as the backend's menus.PublicItem sends it. The
  *  values come from the console, so every field is treated as untrusted. */

@@ -1,5 +1,6 @@
 import { content as fallbackContent } from "../data/content";
 import { cached, ttlSeconds } from "./cache.server";
+import { BASE_LOCALE } from "./locales";
 import type { Member, Product, SiteContent } from "../types";
 
 /**
@@ -148,16 +149,30 @@ export interface LoadResult {
 
 export async function loadSiteContent(
   request: typeof fetch = fetch,
+  locale: string = BASE_LOCALE,
 ): Promise<LoadResult> {
   const ttl = (await ttlSeconds(request)) * 1000;
-  return cached("site-content", ttl, () => fetchSiteContent(request));
+  // One entry per language: the same key for both would serve whichever
+  // language asked first to everyone until the TTL ran out.
+  return cached(`site-content:${locale}`, ttl, () =>
+    fetchSiteContent(request, locale),
+  );
 }
 
-async function fetchSiteContent(request: typeof fetch): Promise<LoadResult> {
+async function fetchSiteContent(
+  request: typeof fetch,
+  locale: string,
+): Promise<LoadResult> {
   try {
     const [products, members, settings] = await Promise.all([
-      getJSON<ApiList<ApiProduct>>("/public/products?page=1&page_size=60", request),
-      getJSON<ApiList<ApiMember>>("/public/members?page=1&page_size=60", request),
+      getJSON<ApiList<ApiProduct>>(
+        `/public/products?page=1&page_size=60&locale=${encodeURIComponent(locale)}`,
+        request,
+      ),
+      getJSON<ApiList<ApiMember>>(
+        `/public/members?page=1&page_size=60&locale=${encodeURIComponent(locale)}`,
+        request,
+      ),
       getJSON<Record<string, unknown>>("/public/settings", request),
     ]);
     const loaded: SiteContent = {
