@@ -36,6 +36,7 @@ import (
 	"github.com/velt/backend/internal/modules/files"
 	"github.com/velt/backend/internal/modules/members"
 	"github.com/velt/backend/internal/modules/products"
+	"github.com/velt/backend/internal/modules/products/catalog"
 	"github.com/velt/backend/internal/modules/settings"
 	"github.com/velt/backend/internal/modules/translation"
 	"github.com/velt/backend/internal/platform/activity"
@@ -274,6 +275,11 @@ func run() error {
 	cmsWiring := cms.Register(r, pool, settingsSvc, store, logger, authMW, widgets.Ports{
 		Articles:   cmsArticlesPort{cmsarticles.NewPublicRepository(pool, publicDocs)},
 		Categories: cmsCategoriesPort{cmstaxonomy.NewPublicRepository(pool)},
+		// A landing's product grid and team roster read the SAME published
+		// services the public site reads directly, so a section and the page it
+		// sits next to can never disagree about what is published.
+		Products: cmsProductsPort{productsWiring.PublicCatalog},
+		Members:  cmsMembersPort{membersSvc},
 	}, revalidate.NewHTTP(cfg.CustomerWebBaseURL, cfg.RevalidateSecret, logger), limiter, cfg.TrustProxyHeaders, publicDocs)
 
 	// Translation has no permissions of its own: every write defers to the gate of
@@ -407,6 +413,50 @@ func buildSettingsCache(rdb *redis.Client, logger *slog.Logger) settings.Cache {
 }
 
 // cmsArticlesPort adapts the articles public repo to widgets.ArticlesPort.
+// cmsProductsPort adapts the published catalogue to the widget resolver. The
+// service already hides unpublished products and resolves the locale, so this
+// is a shape change and nothing more.
+type cmsProductsPort struct{ svc *catalog.PublicService }
+
+func (p cmsProductsPort) ListProducts(ctx context.Context, q widgets.ProductsQuery) ([]widgets.ProductItem, error) {
+	res, err := p.svc.List(ctx, catalog.PublicListParams{Category: q.Category, PageSize: q.Limit, Page: 1})
+	if err != nil {
+		return nil, err
+	}
+	items := make([]widgets.ProductItem, 0, len(res.Items))
+	for _, it := range res.Items {
+		cats := make([]string, 0, len(it.Categories))
+		for _, c := range it.Categories {
+			cats = append(cats, c.Name)
+		}
+		items = append(items, widgets.ProductItem{
+			Slug: it.Slug, Name: it.Name, Summary: it.Summary, CoverURL: it.CoverURL,
+			Lifecycle: it.Lifecycle, IsFeatured: it.IsFeatured,
+			Audience: it.Audience, Platforms: it.Platforms, Categories: cats,
+		})
+	}
+	return items, nil
+}
+
+// cmsMembersPort adapts the public roster. ListPublic forces ActiveOnly, so a
+// hidden member cannot reach a landing page through this door either.
+type cmsMembersPort struct{ svc *members.Service }
+
+func (p cmsMembersPort) ListMembers(ctx context.Context, q widgets.MembersQuery) ([]widgets.MemberItem, error) {
+	res, err := p.svc.ListPublic(ctx, members.ListParams{PageSize: q.Limit, Page: 1})
+	if err != nil {
+		return nil, err
+	}
+	items := make([]widgets.MemberItem, 0, len(res.Items))
+	for _, m := range res.Items {
+		items = append(items, widgets.MemberItem{
+			Slug: m.Slug, FullName: m.FullName, Role: m.Role,
+			Bio: m.Bio, AvatarURL: m.AvatarURL, Skills: m.Skills,
+		})
+	}
+	return items, nil
+}
+
 type cmsArticlesPort struct{ repo *cmsarticles.PublicRepo }
 
 func (p cmsArticlesPort) ListArticles(ctx context.Context, q widgets.ArticlesQuery) ([]widgets.ArticleItem, error) {

@@ -67,7 +67,18 @@ func (s *PublicService) resolveSectionData(ctx context.Context, typ string, conf
 		widgetType = widgets.TypeArticlesList
 	case SectionCategoriesShowcase:
 		widgetType = widgets.TypeCategoriesShowcase
+	case SectionProductGrid:
+		widgetType = widgets.TypeProductGrid
+	case SectionTeam:
+		widgetType = widgets.TypeTeam
 	default:
+		return nil
+	}
+	// A snapshot can predate the current sanitizer, or be hand-edited in the DB,
+	// so its config is not guaranteed to be a JSON object. The resolver would read
+	// zero-value filters out of such a config and answer with a list nobody asked
+	// for; null is the honest answer and still renders the section.
+	if !isConfigObject(config) {
 		return nil
 	}
 	data, err := s.resolver.Resolve(ctx, widgetType, config)
@@ -75,4 +86,10 @@ func (s *PublicService) resolveSectionData(ctx context.Context, typ string, conf
 		return nil
 	}
 	return data
+}
+
+// isConfigObject reports whether a frozen section config is a JSON object.
+func isConfigObject(config json.RawMessage) bool {
+	var m map[string]json.RawMessage
+	return json.Unmarshal(config, &m) == nil && m != nil
 }

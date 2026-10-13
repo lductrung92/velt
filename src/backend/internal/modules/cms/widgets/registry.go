@@ -21,6 +21,11 @@ const (
 	TypeCategoriesShowcase = "categories_showcase"
 	TypeRichText           = "rich_text"
 	TypeCTABanner          = "cta_banner"
+	// The public home page's catalogue grid and team roster. Both read the
+	// same published surfaces the site already serves, through ports, so a
+	// landing section and the site's own list can never disagree.
+	TypeProductGrid = "product_grid"
+	TypeTeam        = "team"
 )
 
 const maxConfigBytes = 64 * 1024
@@ -31,6 +36,8 @@ var known = map[string]bool{
 	TypeCategoriesShowcase: true,
 	TypeRichText:           true,
 	TypeCTABanner:          true,
+	TypeProductGrid:        true,
+	TypeTeam:               true,
 }
 
 // IsKnownType reports whether t is a registered widget type.

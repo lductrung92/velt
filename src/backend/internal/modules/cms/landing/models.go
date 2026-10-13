@@ -23,7 +23,7 @@ const (
 	LandingStatusPublished = "published"
 )
 
-// Section types (cms_landing_sections.type CHECK) — 14 kinds.
+// Section types (cms_landing_sections.type CHECK) — 19 kinds.
 const (
 	SectionHero               = "hero"
 	SectionSlider             = "slider"
@@ -39,6 +39,16 @@ const (
 	SectionFAQ                = "faq"
 	SectionGallery            = "gallery"
 	SectionHTMLEmbed          = "html_embed"
+
+	// The five sections the Zukatek home page was hand-built from, lifted into the
+	// builder so the console can order, toggle and fill them. product_grid/team are
+	// dynamic (data resolved fresh at read time); the rest carry their content in
+	// config.
+	SectionAudiencePicker = "audience_picker"
+	SectionProductGrid    = "product_grid"
+	SectionTeam           = "team"
+	SectionBuyingSteps    = "buying_steps"
+	SectionContactForm    = "contact_form"
 )
 
 // Page is a cms_landing_pages row (SEO columns mirror page/article).
@@ -111,7 +121,7 @@ type UpdateLandingRequest struct {
 
 // CreateSectionRequest adds a section. config is validated/sanitized per type.
 type CreateSectionRequest struct {
-	Type      string          `json:"type" validate:"required,oneof=hero slider featured_articles categories_showcase rich_text cta_banner testimonials logos stats media_text newsletter faq gallery html_embed"`
+	Type      string          `json:"type" validate:"required,oneof=hero slider featured_articles categories_showcase rich_text cta_banner testimonials logos stats media_text newsletter faq gallery html_embed audience_picker product_grid team buying_steps contact_form"`
 	Config    json.RawMessage `json:"config"`
 	IsVisible *bool           `json:"is_visible"`
 }

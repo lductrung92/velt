@@ -91,3 +91,48 @@ func TestResolve_NilPortsEmpty(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, data) // empty items map, never nil
 }
+
+type fakeProducts struct {
+	items []ProductItem
+	got   ProductsQuery
+}
+
+func (f *fakeProducts) ListProducts(_ context.Context, q ProductsQuery) ([]ProductItem, error) {
+	f.got = q
+	return f.items, nil
+}
+
+type fakeMembers struct {
+	items []MemberItem
+	got   MembersQuery
+}
+
+func (f *fakeMembers) ListMembers(_ context.Context, q MembersQuery) ([]MemberItem, error) {
+	f.got = q
+	return f.items, nil
+}
+
+// The home page's catalogue grid and team roster are the two sections that read
+// live data rather than carrying it in their config, so what reaches the port
+// has to be the filter the editor actually chose.
+func TestResolve_ProductGridAndTeam(t *testing.T) {
+	products := &fakeProducts{items: []ProductItem{{Slug: "kho-gon", Name: "Kho Gọn"}}}
+	members := &fakeMembers{items: []MemberItem{{Slug: "an", FullName: "An Nguyễn"}}}
+	r := NewResolver(Ports{Products: products, Members: members})
+	ctx := context.Background()
+
+	data, err := r.Resolve(ctx, TypeProductGrid, json.RawMessage(`{"category":"van-hanh","limit":3}`))
+	require.NoError(t, err)
+	require.Equal(t, map[string]any{"items": products.items}, data)
+	require.Equal(t, ProductsQuery{Category: "van-hanh", Limit: 3}, products.got)
+
+	data, err = r.Resolve(ctx, TypeTeam, json.RawMessage(`{"limit":4}`))
+	require.NoError(t, err)
+	require.Equal(t, map[string]any{"items": members.items}, data)
+	require.Equal(t, MembersQuery{Limit: 4}, members.got)
+
+	// A missing limit must not mean "no rows": it means the default.
+	_, err = r.Resolve(ctx, TypeProductGrid, json.RawMessage(`{}`))
+	require.NoError(t, err)
+	require.Equal(t, 6, products.got.Limit)
+}

@@ -83,6 +83,58 @@ type Ports struct {
 	Games      GamesPort
 	Articles   ArticlesPort
 	Categories CategoriesPort
+	Products   ProductsPort
+	Members    MembersPort
+}
+
+// --- product_grid ---
+
+// ProductItem is a published-product card, the same fields the public catalogue
+// list serves — a landing grid and /products must not describe one product two
+// different ways.
+type ProductItem struct {
+	Slug       string   `json:"slug"`
+	Name       string   `json:"name"`
+	Summary    *string  `json:"summary"`
+	CoverURL   *string  `json:"cover_url"`
+	Lifecycle  string   `json:"lifecycle"`
+	IsFeatured bool     `json:"is_featured"`
+	Audience   []string `json:"audience"`
+	Platforms  []string `json:"platforms"`
+	Categories []string `json:"categories"`
+}
+
+// ProductsQuery is the resolved filter a product_grid config maps to.
+type ProductsQuery struct {
+	Category string
+	Limit    int
+}
+
+// ProductsPort is the published-catalogue data the resolver needs.
+type ProductsPort interface {
+	ListProducts(ctx context.Context, q ProductsQuery) ([]ProductItem, error)
+}
+
+// --- team ---
+
+// MemberItem is an active team member as the public roster serves them.
+type MemberItem struct {
+	Slug      string   `json:"slug"`
+	FullName  string   `json:"full_name"`
+	Role      *string  `json:"role"`
+	Bio       *string  `json:"bio"`
+	AvatarURL *string  `json:"avatar_url"`
+	Skills    []string `json:"skills"`
+}
+
+// MembersQuery is the resolved filter a team config maps to.
+type MembersQuery struct {
+	Limit int
+}
+
+// MembersPort is the active-roster data the resolver needs.
+type MembersPort interface {
+	ListMembers(ctx context.Context, q MembersQuery) ([]MemberItem, error)
 }
 
 // Resolver turns a widget's stored config into fresh public data. Static widgets
@@ -105,6 +157,10 @@ func (r *Resolver) Resolve(ctx context.Context, typ string, config json.RawMessa
 		return r.resolveArticlesList(ctx, config)
 	case TypeCategoriesShowcase:
 		return r.resolveCategoriesShowcase(ctx, config)
+	case TypeProductGrid:
+		return r.resolveProductGrid(ctx, config)
+	case TypeTeam:
+		return r.resolveTeam(ctx, config)
 	default:
 		return nil, nil
 	}
@@ -153,6 +209,49 @@ type articlesListConfig struct {
 		Tag        string `json:"tag"`
 	} `json:"filters"`
 	Limit int `json:"limit"`
+}
+
+type productGridConfig struct {
+	Category string `json:"category"`
+	Limit    int    `json:"limit"`
+}
+
+func (r *Resolver) resolveProductGrid(ctx context.Context, config json.RawMessage) (any, error) {
+	if r.ports.Products == nil {
+		return map[string]any{"items": []ProductItem{}}, nil
+	}
+	var c productGridConfig
+	_ = json.Unmarshal(config, &c) // see resolveArticlesList: a shape mismatch falls back to defaults
+	items, err := r.ports.Products.ListProducts(ctx, ProductsQuery{
+		Category: c.Category, Limit: clampLimit(c.Limit, 6),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []ProductItem{}
+	}
+	return map[string]any{"items": items}, nil
+}
+
+type teamConfig struct {
+	Limit int `json:"limit"`
+}
+
+func (r *Resolver) resolveTeam(ctx context.Context, config json.RawMessage) (any, error) {
+	if r.ports.Members == nil {
+		return map[string]any{"items": []MemberItem{}}, nil
+	}
+	var c teamConfig
+	_ = json.Unmarshal(config, &c)
+	items, err := r.ports.Members.ListMembers(ctx, MembersQuery{Limit: clampLimit(c.Limit, 12)})
+	if err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []MemberItem{}
+	}
+	return map[string]any{"items": items}, nil
 }
 
 func (r *Resolver) resolveArticlesList(ctx context.Context, config json.RawMessage) (any, error) {
