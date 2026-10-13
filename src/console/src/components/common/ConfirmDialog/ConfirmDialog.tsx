@@ -62,7 +62,10 @@ export function ConfirmDialog({
               solid disc would compete with the button that does the deleting. */}
           <span
             className={cn(
-              "grid size-12 place-items-center rounded-full ring-8",
+              // mb-3 on top of the header's own space-y-3: the ring is a
+              // box-shadow, so it paints 8px OUTSIDE the layout box and the
+              // measured 12px gap is only 4px of actual air under the badge.
+              "mb-3 grid size-12 place-items-center rounded-full ring-8",
               destructive
                 ? "bg-destructive/10 text-destructive ring-destructive/5"
                 : "bg-primary/10 text-primary ring-primary/5",
