@@ -1,0 +1,223 @@
+--
+-- master_data.sql — the rows a brand-new Zukatek database cannot work without.
+--
+-- GENERATED, not hand-written: produced by applying src/backend/migrations to an
+-- empty database and dumping what the migrations seeded. Regenerate it with
+-- deploy/sql/regenerate.sh after adding a migration; do not edit it by hand, or
+-- it will quietly disagree with the migrations.
+--
+-- WHAT IS IN HERE
+--   roles / permissions / role_permissions  the access model. Without these every
+--                                           request is denied, including the first
+--                                           login.
+--   goose_db_version                        tells the API which migrations are
+--                                           already applied. Without it the API
+--                                           re-runs all of them on boot and fails
+--                                           on the first CREATE TABLE.
+--
+-- WHAT IS NOT
+--   system_settings  the API writes these lazily from its own registry defaults;
+--                    a fresh install needs none of them.
+--   the first user   see the block at the end — it needs a password hash that
+--                    only the application can produce.
+--
+-- HOW TO USE IT
+--   Pick ONE of these, never both:
+--     a) psql -f ddl.sql -f master_data.sql     schema and data, no app needed
+--     b) api migrate                            the app does both itself
+--   Running (a) and then (b) is safe — every statement here is ON CONFLICT DO
+--   NOTHING and goose will see version 40 and skip — but (b) alone is simpler
+--   unless you need the database to exist before the app does.
+--
+-- Every statement is idempotent: running this file twice changes nothing.
+--
+
+BEGIN;
+
+-- Roles, permissions and the grants between them.
+INSERT INTO public.roles (id, code, name, description, is_system, created_at, updated_at) VALUES
+	('ed5d8701-4bc1-47f5-a51d-26a3b5c3f6cf', 'super_admin', 'Super Admin', 'Full access (wildcard)', true, '2026-10-13 15:59:56.123828+07', '2026-10-13 15:59:56.123828+07'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'admin', 'Admin', 'Platform administration', true, '2026-10-13 15:59:56.123828+07', '2026-10-13 15:59:56.123828+07'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', 'editor', 'Editor', 'Self-service baseline', true, '2026-10-13 15:59:56.123828+07', '2026-10-13 15:59:56.123828+07')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.permissions (id, code, description, created_at) VALUES
+	('5bcf56d7-001f-4c94-95e6-d59eb020313b', '*', 'Wildcard — all permissions', '2026-10-13 15:59:56.123828+07'),
+	('97b0cdb9-be35-4c50-a2e0-280af3289b4e', 'users.read', 'View users', '2026-10-13 15:59:56.123828+07'),
+	('7b862e6a-0252-46bb-bee2-9ed175d0c69a', 'users.create', 'Create users', '2026-10-13 15:59:56.123828+07'),
+	('2b155955-6002-44f8-b565-71ad2ed7441a', 'users.update', 'Update users', '2026-10-13 15:59:56.123828+07'),
+	('f9d1c109-c296-4b01-94f4-39316fa3d383', 'users.delete', 'Delete/disable users', '2026-10-13 15:59:56.123828+07'),
+	('92b1fecd-4633-413b-a067-224497dac5e4', 'users.assign_role', 'Assign/remove roles', '2026-10-13 15:59:56.123828+07'),
+	('ee9ed43d-d7fa-4092-b484-76c1a4bc5053', 'roles.read', 'View roles and their permissions', '2026-10-13 15:59:56.123828+07'),
+	('55a99309-1abd-4dd3-959a-f86446cfecfe', 'roles.manage', 'Create/update/delete roles, assign permissions', '2026-10-13 15:59:56.123828+07'),
+	('51b5dded-bc08-4aff-8a62-9402125a85a4', 'permissions.read', 'View permission catalog', '2026-10-13 15:59:56.123828+07'),
+	('0a57cd83-9cad-43ef-99d4-fd121a910268', 'sessions.read', 'View other users'' sessions', '2026-10-13 15:59:56.123828+07'),
+	('97f19070-e893-4315-a8c5-be5889b931ae', 'sessions.revoke', 'Revoke other users'' sessions', '2026-10-13 15:59:56.123828+07'),
+	('29121c60-a322-4c99-b419-1b88c74bbcd0', 'settings.read', 'Read system settings', '2026-10-13 15:59:56.123828+07'),
+	('727d20bd-4dd6-460d-ba9b-189e58514b91', 'settings.manage', 'Update system settings', '2026-10-13 15:59:56.123828+07'),
+	('6f021fb0-c042-4504-b7d8-eaaec8fce987', 'impersonation.start', 'Impersonate another user', '2026-10-13 15:59:56.123828+07'),
+	('a326b5d1-c570-4da1-8ded-8173e01ebcdc', 'cms.article.view', 'View articles (editor: own only)', '2026-10-13 15:59:56.457109+07'),
+	('10780841-b62d-4f0c-97c5-2fcd673b2c0a', 'cms.article.create', 'Create articles', '2026-10-13 15:59:56.457109+07'),
+	('6ecbcca9-2a3a-4900-8a81-9ca9589ef081', 'cms.article.edit', 'Edit articles', '2026-10-13 15:59:56.457109+07'),
+	('7484ae94-a81f-45ec-a42a-cb867fc30c01', 'cms.article.delete', 'Delete articles', '2026-10-13 15:59:56.457109+07'),
+	('63f301bd-3d99-47bc-bfc9-cacc878f56b1', 'cms.article.submit', 'Submit articles for review', '2026-10-13 15:59:56.457109+07'),
+	('17326241-70e1-4863-93b5-3f4ee29ef0a3', 'cms.article.review', 'Approve/reject articles pending review', '2026-10-13 15:59:56.457109+07'),
+	('7c12b53b-6c0e-4c65-a7d1-3e83c9ce92d6', 'cms.article.publish', 'Publish / schedule / unpublish / re-publish articles', '2026-10-13 15:59:56.457109+07'),
+	('1143858a-4f7a-4aeb-afde-08981f4e4b46', 'cms.page.view', 'View static pages', '2026-10-13 15:59:56.457109+07'),
+	('9ad8a4ac-fe71-4f83-a527-de031be730f0', 'cms.page.create', 'Create static pages', '2026-10-13 15:59:56.457109+07'),
+	('9b697e28-7cb0-4713-a453-37bb8138a9ec', 'cms.page.edit', 'Edit static pages', '2026-10-13 15:59:56.457109+07'),
+	('50bf40b4-e641-49be-81fc-21287e80360a', 'cms.page.delete', 'Delete static pages', '2026-10-13 15:59:56.457109+07'),
+	('e28b233d-cccc-4f88-b8a1-f105d0f001e2', 'cms.page.publish', 'Publish/unpublish static pages', '2026-10-13 15:59:56.457109+07'),
+	('b4d08f37-eeeb-4834-9cd3-8c4c1c493197', 'cms.taxonomy.manage', 'Create/update/delete categories and tags', '2026-10-13 15:59:56.457109+07'),
+	('340d0a72-c41a-4966-845c-6cb19a83a08e', 'cms.menu.manage', 'Manage navigation menus', '2026-10-13 15:59:56.457109+07'),
+	('75f4407e-953b-4a08-81b0-4c8890e43175', 'cms.comment.moderate', 'Moderate comments', '2026-10-13 15:59:56.457109+07'),
+	('48338bb9-4216-4534-a8f1-2a7e3b8ba408', 'cms.landing.manage', 'Manage landing pages', '2026-10-13 15:59:56.457109+07'),
+	('59d7d58c-b96b-45ff-8d0c-c576ebe550ba', 'cms.settings.read', 'Read CMS feature flags', '2026-10-13 15:59:56.457109+07'),
+	('d128ec91-4126-471a-839f-0577af60f8d1', 'cms.settings.manage', 'Update CMS feature flags', '2026-10-13 15:59:56.457109+07'),
+	('7766ccff-ff6e-475a-a475-1718fd9e31d3', 'cms.newsletter.manage', 'Manage newsletter subscribers', '2026-10-13 15:59:56.615081+07'),
+	('31616395-1701-41be-960b-269d32eb9ad3', 'members.view', 'View team member profiles', '2026-10-13 15:59:56.618432+07'),
+	('ebcd91b4-a908-436f-9a7e-4fda12dbc71f', 'members.manage', 'Create/update/delete team member profiles', '2026-10-13 15:59:56.618432+07'),
+	('9854973a-1185-4d7f-80fd-a89401592715', 'products.view', 'View products and product categories', '2026-10-13 15:59:56.630187+07'),
+	('01bffe73-6026-4b60-9bb6-7c182e4ddb69', 'products.category.manage', 'Create/update/delete product categories', '2026-10-13 15:59:56.630187+07'),
+	('e3ba7647-7fe9-4f0b-818b-7dd9f599228b', 'products.create', 'Create products', '2026-10-13 15:59:56.64574+07'),
+	('e219fd2c-b6e2-41a7-8769-39a2cb14c0a2', 'products.edit', 'Edit products', '2026-10-13 15:59:56.64574+07'),
+	('ac401418-23f2-4067-bbff-2b3d131082d7', 'products.delete', 'Delete products', '2026-10-13 15:59:56.64574+07'),
+	('65eef7f4-43bd-4828-9933-b614e2b9a36f', 'products.publish', 'Publish / unpublish / archive products', '2026-10-13 15:59:56.64574+07'),
+	('c8833b7c-a983-4820-bc70-a987c31f8993', 'crm.leads.view', 'View leads assigned to you and the shared queue', '2026-10-13 15:59:56.692191+07'),
+	('bd73a29f-ef5d-4bd9-b6a0-c566b2138f4d', 'crm.leads.view_all', 'View every lead, including other people''s', '2026-10-13 15:59:56.692191+07'),
+	('855e8c13-7a1e-4138-a2c8-2d46f4bcd35a', 'crm.leads.manage', 'Create, edit, assign and move leads', '2026-10-13 15:59:56.692191+07'),
+	('f71d5cf1-26ec-4e50-a236-df26495c4612', 'ai.chat.handle', 'Read the assistant inbox and take over conversations', '2026-10-13 15:59:56.713479+07'),
+	('c7ceeb02-96db-4ea3-a03f-11e82c9f052f', 'ai.mcp.use', 'Issue and use MCP tokens for agent access', '2026-10-13 15:59:56.74717+07'),
+	('72933350-2e5b-4a1c-875d-c037ec8e1ee0', 'activity.read', 'Read the activity log', '2026-10-13 15:59:56.894851+07')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.role_permissions (role_id, permission_id) VALUES
+	('ed5d8701-4bc1-47f5-a51d-26a3b5c3f6cf', '5bcf56d7-001f-4c94-95e6-d59eb020313b'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '97b0cdb9-be35-4c50-a2e0-280af3289b4e'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '7b862e6a-0252-46bb-bee2-9ed175d0c69a'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '2b155955-6002-44f8-b565-71ad2ed7441a'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'f9d1c109-c296-4b01-94f4-39316fa3d383'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '92b1fecd-4633-413b-a067-224497dac5e4'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'ee9ed43d-d7fa-4092-b484-76c1a4bc5053'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '55a99309-1abd-4dd3-959a-f86446cfecfe'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '51b5dded-bc08-4aff-8a62-9402125a85a4'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '0a57cd83-9cad-43ef-99d4-fd121a910268'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '97f19070-e893-4315-a8c5-be5889b931ae'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'a326b5d1-c570-4da1-8ded-8173e01ebcdc'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '10780841-b62d-4f0c-97c5-2fcd673b2c0a'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '6ecbcca9-2a3a-4900-8a81-9ca9589ef081'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '7484ae94-a81f-45ec-a42a-cb867fc30c01'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '63f301bd-3d99-47bc-bfc9-cacc878f56b1'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '17326241-70e1-4863-93b5-3f4ee29ef0a3'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '7c12b53b-6c0e-4c65-a7d1-3e83c9ce92d6'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '1143858a-4f7a-4aeb-afde-08981f4e4b46'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '9ad8a4ac-fe71-4f83-a527-de031be730f0'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '9b697e28-7cb0-4713-a453-37bb8138a9ec'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '50bf40b4-e641-49be-81fc-21287e80360a'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'e28b233d-cccc-4f88-b8a1-f105d0f001e2'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'b4d08f37-eeeb-4834-9cd3-8c4c1c493197'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '340d0a72-c41a-4966-845c-6cb19a83a08e'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '75f4407e-953b-4a08-81b0-4c8890e43175'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '48338bb9-4216-4534-a8f1-2a7e3b8ba408'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '59d7d58c-b96b-45ff-8d0c-c576ebe550ba'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'd128ec91-4126-471a-839f-0577af60f8d1'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', 'a326b5d1-c570-4da1-8ded-8173e01ebcdc'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '10780841-b62d-4f0c-97c5-2fcd673b2c0a'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '6ecbcca9-2a3a-4900-8a81-9ca9589ef081'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '7484ae94-a81f-45ec-a42a-cb867fc30c01'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '63f301bd-3d99-47bc-bfc9-cacc878f56b1'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '75f4407e-953b-4a08-81b0-4c8890e43175'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '59d7d58c-b96b-45ff-8d0c-c576ebe550ba'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '7766ccff-ff6e-475a-a475-1718fd9e31d3'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '31616395-1701-41be-960b-269d32eb9ad3'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'ebcd91b4-a908-436f-9a7e-4fda12dbc71f'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '31616395-1701-41be-960b-269d32eb9ad3'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '9854973a-1185-4d7f-80fd-a89401592715'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '01bffe73-6026-4b60-9bb6-7c182e4ddb69'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '9854973a-1185-4d7f-80fd-a89401592715'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'e3ba7647-7fe9-4f0b-818b-7dd9f599228b'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'e219fd2c-b6e2-41a7-8769-39a2cb14c0a2'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'ac401418-23f2-4067-bbff-2b3d131082d7'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '65eef7f4-43bd-4828-9933-b614e2b9a36f'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', 'e3ba7647-7fe9-4f0b-818b-7dd9f599228b'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', 'e219fd2c-b6e2-41a7-8769-39a2cb14c0a2'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'c8833b7c-a983-4820-bc70-a987c31f8993'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'bd73a29f-ef5d-4bd9-b6a0-c566b2138f4d'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '855e8c13-7a1e-4138-a2c8-2d46f4bcd35a'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', 'c8833b7c-a983-4820-bc70-a987c31f8993'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '855e8c13-7a1e-4138-a2c8-2d46f4bcd35a'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'f71d5cf1-26ec-4e50-a236-df26495c4612'),
+	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', 'f71d5cf1-26ec-4e50-a236-df26495c4612'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'c7ceeb02-96db-4ea3-a03f-11e82c9f052f'),
+	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '72933350-2e5b-4a1c-875d-c037ec8e1ee0')
+ON CONFLICT DO NOTHING;
+
+--
+-- Migration bookkeeping. The timestamps are deliberately now(): they record when
+-- THIS database was created, which is what they mean, rather than when the dump
+-- was taken on someone else's machine.
+--
+INSERT INTO public.goose_db_version (version_id, is_applied, tstamp)
+SELECT v, true, now()
+  FROM (VALUES
+          (0),
+          (1),
+          (2),
+          (3),
+          (4),
+          (5),
+          (6),
+          (7),
+          (24),
+          (25),
+          (26),
+          (27),
+          (28),
+          (29),
+          (30),
+          (31),
+          (32),
+          (33),
+          (34),
+          (35),
+          (36),
+          (37),
+          (38),
+          (39),
+          (40)
+       ) AS t(v)
+ WHERE NOT EXISTS (SELECT 1 FROM public.goose_db_version g WHERE g.version_id = t.v)
+ -- ORDER BY is not decoration: goose reports the CURRENT version by reading the
+ -- highest id, not the highest version_id. Without this Postgres hands out ids in
+ -- whatever order it pleases and goose announces some arbitrary middle migration
+ -- as current. It still runs nothing, but the number it prints is a lie.
+ ORDER BY t.v;
+
+SELECT setval(
+         pg_get_serial_sequence('public.goose_db_version', 'id'),
+         GREATEST((SELECT COALESCE(MAX(id), 1) FROM public.goose_db_version), 1));
+
+COMMIT;
+
+--
+-- THE FIRST ADMINISTRATOR — you must do this yourself.
+--
+-- There is no public sign-up and no CLI that creates a user, and creating one
+-- through the API needs the users.create permission that only an existing user
+-- can hold. So a fresh install has no way in until a row is inserted here.
+--
+-- password_hash is argon2id in the application's own encoding
+-- (src/backend/internal/platform/crypto/password.go). A hash from an online
+-- generator will NOT work. Produce one on the server with:
+--
+--   cd src/backend && go run ./cmd/hashpw          # see deploy/README.md
+--
+-- Then uncomment and fill in. Use an address you control and a password you
+-- generated randomly — this account can do everything.
+--
+-- INSERT INTO public.users (email, password_hash, full_name, status, email_verified_at)
+-- VALUES ('you@example.com', '$argon2id$v=19$m=...', 'Tên của bạn', 'active', now());
+--
+-- INSERT INTO public.user_roles (user_id, role_id)
+-- SELECT u.id, r.id FROM public.users u, public.roles r
+--  WHERE u.email = 'you@example.com' AND r.code = 'super_admin';
