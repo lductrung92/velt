@@ -87,10 +87,10 @@ export function ConfirmDialog({
         </AlertDialogHeader>
         {children}
         {error && <Alert variant="danger" message={error} />}
-        {/* One pair, centred under a centred prompt. The shared footer pushes
-            the first button to the far edge, which reads as two unrelated
-            controls once the heading above them is on a centre axis. */}
-        <AlertDialogFooter className="sm:justify-center sm:[&>*:first-child]:mr-0">
+        {/* The shared footer's own layout: the way out on the far left, the
+            action on the far right, as far apart as the box allows. Nobody
+            reaches for Xoa while aiming for Huy. */}
+        <AlertDialogFooter>
           <Button
             variant="outline"
             className="sm:min-w-28"
