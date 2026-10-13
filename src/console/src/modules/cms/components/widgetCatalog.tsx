@@ -57,15 +57,45 @@ export function renderWidgetForm(
   const ch = (v: unknown) => onChange(v as WidgetConfig);
   switch (type) {
     case "games_list":
-      return <GamesListForm value={value as GamesListConfig} onChange={ch} disabled={disabled} />;
+      return (
+        <GamesListForm
+          value={value as GamesListConfig}
+          onChange={ch}
+          disabled={disabled}
+        />
+      );
     case "articles_list":
-      return <ArticlesListForm value={value as ArticlesListConfig} onChange={ch} disabled={disabled} />;
+      return (
+        <ArticlesListForm
+          value={value as ArticlesListConfig}
+          onChange={ch}
+          disabled={disabled}
+        />
+      );
     case "categories_showcase":
-      return <CategoriesShowcaseForm value={value as CategoriesShowcaseConfig} onChange={ch} disabled={disabled} />;
+      return (
+        <CategoriesShowcaseForm
+          value={value as CategoriesShowcaseConfig}
+          onChange={ch}
+          disabled={disabled}
+        />
+      );
     case "rich_text":
-      return <RichTextForm value={value as RichTextConfig} onChange={ch} disabled={disabled} />;
+      return (
+        <RichTextForm
+          value={value as RichTextConfig}
+          onChange={ch}
+          disabled={disabled}
+        />
+      );
     case "cta_banner":
-      return <CtaBannerForm value={value as CtaBannerConfig} onChange={ch} disabled={disabled} />;
+      return (
+        <CtaBannerForm
+          value={value as CtaBannerConfig}
+          onChange={ch}
+          disabled={disabled}
+        />
+      );
     default:
       return null;
   }

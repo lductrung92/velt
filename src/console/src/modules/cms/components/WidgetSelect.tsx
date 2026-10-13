@@ -36,7 +36,9 @@ export function WidgetSelect({
       options={options}
       value={options.find((o) => o.value === value) ?? null}
       onChange={(opt) => onChange(opt?.value ?? "")}
-      menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+      menuPortalTarget={
+        typeof document !== "undefined" ? document.body : undefined
+      }
       classNames={{
         control: ({ isFocused }) =>
           cn(
@@ -62,7 +64,11 @@ export function WidgetSelect({
         // react-select keeps a default control min-height (38px) even when
         // unstyled; pin it to 36px (h-9) so the control lines up exactly with the
         // Input / Button height in shared form rows.
-        control: (base) => ({ ...base, minHeight: "2.25rem", height: "2.25rem" }),
+        control: (base) => ({
+          ...base,
+          minHeight: "2.25rem",
+          height: "2.25rem",
+        }),
         menuPortal: (base) => ({ ...base, zIndex: 9999 }),
       }}
     />

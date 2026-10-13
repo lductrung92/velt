@@ -88,6 +88,8 @@ không cần trang thống kê. Thứ cần là mỗi thành viên có kênh li�
 
 ### Ai vận hành
 
+**Quy mô đội ngũ hiện tại: 4 thành viên** (cập nhật 2026-10-12).
+
 **Cả team.** Mỗi thành viên tự cập nhật hồ sơ và kỹ năng của mình; một người quản
 phần còn lại (sản phẩm, bài viết, danh mục).
 

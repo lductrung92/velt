@@ -90,7 +90,12 @@ describe("MemberPicker", () => {
     server.use(
       http.get(`${API}/members`, ({ request }) => {
         query = new URL(request.url).search;
-        return HttpResponse.json({ items: [], total: 0, page: 1, page_size: 100 });
+        return HttpResponse.json({
+          items: [],
+          total: 0,
+          page: 1,
+          page_size: 100,
+        });
       }),
     );
     render(<Host />);
@@ -155,7 +160,9 @@ describe("MemberPicker", () => {
     );
     render(<Host initial={[draft("m1", "An Nguyen")]} />);
 
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.remove") }));
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.remove") }),
+    );
     expect(screen.queryByTestId("product-member-row")).not.toBeInTheDocument();
   });
 
@@ -174,7 +181,9 @@ describe("MemberPicker", () => {
       screen.queryByRole("button", { name: i18n.t("common.remove") }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: i18n.t("products.members.reorder") }),
+      screen.queryByRole("button", {
+        name: i18n.t("products.members.reorder"),
+      }),
     ).not.toBeInTheDocument();
   });
 });

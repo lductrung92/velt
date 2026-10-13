@@ -70,13 +70,12 @@ export function makeProductSchema(t: TFunction) {
     lifecycle: z.enum(["idea", "building", "launched"]),
     version: z.string().trim().max(40, t("errors.validation.too_long")),
     // A calendar date, or empty to clear it.
-    released_at: z
-      .union([
-        z.literal(""),
-        z
-          .string()
-          .regex(/^\d{4}-\d{2}-\d{2}$/, t("errors.validation.invalid_value")),
-      ]),
+    released_at: z.union([
+      z.literal(""),
+      z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, t("errors.validation.invalid_value")),
+    ]),
     audience: z.array(z.string()).max(20),
     platforms: z.array(z.string()).max(20),
     tech_stack: z.array(z.string().max(60)).max(50),

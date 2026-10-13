@@ -19,16 +19,23 @@ export function useCreateProductCategory() {
   return useMutation({
     mutationFn: (body: CreateProductCategoryBody) =>
       productCategoriesService.create(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: productKeys.categories() }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: productKeys.categories() }),
   });
 }
 
 export function useUpdateProductCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, body }: { id: string; body: UpdateProductCategoryBody }) =>
-      productCategoriesService.update(id, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: productKeys.categories() }),
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: UpdateProductCategoryBody;
+    }) => productCategoriesService.update(id, body),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: productKeys.categories() }),
   });
 }
 
@@ -36,7 +43,8 @@ export function useDeleteProductCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => productCategoriesService.remove(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: productKeys.categories() }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: productKeys.categories() }),
   });
 }
 
@@ -44,6 +52,7 @@ export function useReorderProductCategories() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (ids: string[]) => productCategoriesService.reorder(ids),
-    onSuccess: () => qc.invalidateQueries({ queryKey: productKeys.categories() }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: productKeys.categories() }),
   });
 }

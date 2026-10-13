@@ -94,7 +94,9 @@ describe("ProductCategoryEditor", () => {
     // The whole point of this screen vs the CMS one: the taxonomy is flat.
     signIn(MANAGER);
     server.use(
-      http.get(`${API}/product-categories`, () => HttpResponse.json({ items: [] })),
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({ items: [] }),
+      ),
     );
     renderAt("/product-categories/new");
 
@@ -108,13 +110,17 @@ describe("ProductCategoryEditor", () => {
     expect(
       screen.getByText(i18n.t("products.categories.seo.heading")),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Chuyên mục cha|Danh mục cha/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Chuyên mục cha|Danh mục cha/),
+    ).not.toBeInTheDocument();
   });
 
   it("create: no slug field at all — the server derives it from the name", async () => {
     signIn(MANAGER);
     server.use(
-      http.get(`${API}/product-categories`, () => HttpResponse.json({ items: [] })),
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({ items: [] }),
+      ),
     );
     renderAt("/product-categories/new");
 
@@ -128,7 +134,9 @@ describe("ProductCategoryEditor", () => {
     signIn(MANAGER);
     const posted = vi.fn();
     server.use(
-      http.get(`${API}/product-categories`, () => HttpResponse.json({ items: [] })),
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({ items: [] }),
+      ),
       http.post(`${API}/product-categories`, async ({ request }) => {
         posted(await request.json());
         return HttpResponse.json(category(), { status: 201 });
@@ -149,7 +157,9 @@ describe("ProductCategoryEditor", () => {
     signIn(MANAGER);
     const posted = vi.fn();
     server.use(
-      http.get(`${API}/product-categories`, () => HttpResponse.json({ items: [] })),
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({ items: [] }),
+      ),
       http.post(`${API}/product-categories`, async ({ request }) => {
         posted(await request.json());
         return HttpResponse.json(category(), { status: 201 });
@@ -189,7 +199,9 @@ describe("ProductCategoryEditor", () => {
     renderAt("/product-categories/c1");
 
     await waitFor(async () =>
-      expect(await screen.findByLabelText(/Tên danh mục/)).toHaveValue("Cộng tác"),
+      expect(await screen.findByLabelText(/Tên danh mục/)).toHaveValue(
+        "Cộng tác",
+      ),
     );
     // The permalink is a locked row, not an input — it is an address people
     // already hold.
@@ -254,7 +266,9 @@ describe("ProductCategoryEditor", () => {
   it("reports an id that is not in the taxonomy", async () => {
     signIn(MANAGER);
     server.use(
-      http.get(`${API}/product-categories`, () => HttpResponse.json({ items: [] })),
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({ items: [] }),
+      ),
     );
     renderAt("/product-categories/missing");
 

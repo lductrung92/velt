@@ -1,9 +1,9 @@
-import { ChevronRight } from "lucide-react";
-import { Fragment } from "react";
+import { ChevronRight, LayoutDashboard } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
+import "./breadcrumb.css";
 
 export interface BreadcrumbItem {
   /** i18n key. Preferred over `label`. */
@@ -14,8 +14,7 @@ export interface BreadcrumbItem {
   to?: string;
 }
 
-// Compact breadcrumb trail. Last item is aria-current="page" and rendered as
-// plain text even if `to` is set; intermediate items render as <Link>.
+// Every trail starts at Overview. The current page never links to itself.
 export function Breadcrumb({
   items,
   className,
@@ -25,44 +24,52 @@ export function Breadcrumb({
 }) {
   const { t } = useTranslation();
   if (items.length === 0) return null;
+  const root: BreadcrumbItem = {
+    labelKey: "dashboard.title",
+    to: "/dashboard",
+  };
+  const hasRoot =
+    items[0].to === root.to || items[0].labelKey === root.labelKey;
+  const trail = hasRoot ? [root, ...items.slice(1)] : [root, ...items];
 
   return (
     <nav
       aria-label={t("common.breadcrumbs")}
-      className={cn("text-sm", className)}
+      className={cn("breadcrumb", className)}
     >
-      <ol className="flex flex-wrap items-center gap-1.5 text-muted-foreground">
-        {items.map((item, i) => {
-          const isLast = i === items.length - 1;
+      <ol className="breadcrumb-trail">
+        {trail.map((item, i) => {
+          const isLast = i === trail.length - 1;
           const text = item.labelKey ? t(item.labelKey) : (item.label ?? "");
           return (
-            <Fragment key={i}>
+            <li className="breadcrumb-item" key={i}>
               {i > 0 && (
                 <ChevronRight
-                  className="size-3.5 shrink-0 text-muted-foreground/60"
+                  className="breadcrumb-separator"
                   aria-hidden="true"
                 />
               )}
-              <li
-                className={cn(
-                  "block max-w-xs truncate",
-                  isLast && "font-medium text-foreground",
-                )}
-                aria-current={isLast ? "page" : undefined}
-                title={text}
-              >
-                {item.to && !isLast ? (
-                  <Link
-                    to={item.to}
-                    className="transition-colors hover:text-foreground"
-                  >
-                    {text}
-                  </Link>
-                ) : (
-                  text
-                )}
-              </li>
-            </Fragment>
+              {item.to && !isLast ? (
+                <Link to={item.to} className="breadcrumb-link" title={text}>
+                  {i === 0 && (
+                    <span className="breadcrumb-root-icon" aria-hidden="true">
+                      <LayoutDashboard />
+                    </span>
+                  )}
+                  <span className="breadcrumb-text">{text}</span>
+                </Link>
+              ) : (
+                <span
+                  className={
+                    isLast ? "breadcrumb-current" : "breadcrumb-parent"
+                  }
+                  aria-current={isLast ? "page" : undefined}
+                  title={text}
+                >
+                  {text}
+                </span>
+              )}
+            </li>
           );
         })}
       </ol>

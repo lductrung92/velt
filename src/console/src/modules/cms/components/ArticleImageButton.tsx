@@ -42,7 +42,11 @@ export function ArticleImageButton({
       return;
     }
     try {
-      const res = await upload.mutateAsync({ id: articleId, file, purpose: "inline" });
+      const res = await upload.mutateAsync({
+        id: articleId,
+        file,
+        purpose: "inline",
+      });
       editor.chain().focus().setImage({ src: res.url, alt: file.name }).run();
     } catch (err) {
       toast.error(parseApiError(err, t).message);

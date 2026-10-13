@@ -58,15 +58,23 @@ describe("WidgetPreview", () => {
   });
 
   it("shows the empty state when the list resolves to no items", () => {
-    setHook({ isLoading: false, isError: false, data: { type: "games_list", data: { items: [] } } });
+    setHook({
+      isLoading: false,
+      isError: false,
+      data: { type: "games_list", data: { items: [] } },
+    });
     renderPreview("games_list", {});
-    expect(screen.getByText(i18n.t("cms.pages.inline.preview_empty"))).toBeInTheDocument();
+    expect(
+      screen.getByText(i18n.t("cms.pages.inline.preview_empty")),
+    ).toBeInTheDocument();
   });
 
   it("shows the error state when the preview fails", () => {
     setHook({ isLoading: false, isError: true, data: undefined });
     renderPreview("games_list", {});
-    expect(screen.getByText(i18n.t("cms.pages.inline.preview_error"))).toBeInTheDocument();
+    expect(
+      screen.getByText(i18n.t("cms.pages.inline.preview_error")),
+    ).toBeInTheDocument();
   });
 
   it("renders rich_text HTML without fetching", () => {
@@ -76,7 +84,10 @@ describe("WidgetPreview", () => {
   });
 
   it("renders cta_banner heading + button without fetching", () => {
-    renderPreview("cta_banner", { heading: "Tham gia", buttons: [{ label: "Bắt đầu" }] });
+    renderPreview("cta_banner", {
+      heading: "Tham gia",
+      buttons: [{ label: "Bắt đầu" }],
+    });
     expect(screen.getByText("Tham gia")).toBeInTheDocument();
     expect(screen.getByText("Bắt đầu")).toBeInTheDocument();
     expect(mockHook).not.toHaveBeenCalled();

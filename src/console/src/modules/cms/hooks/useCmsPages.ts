@@ -8,7 +8,10 @@ import {
 import { cmsKeys } from "./cmsKeys";
 
 export function usePages() {
-  return useQuery({ queryKey: cmsKeys.pageList(), queryFn: () => pagesService.list() });
+  return useQuery({
+    queryKey: cmsKeys.pageList(),
+    queryFn: () => pagesService.list(),
+  });
 }
 
 export function usePage(id: string | undefined) {

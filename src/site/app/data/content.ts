@@ -6,7 +6,7 @@ export const content: SiteContent = {
   email: "",
   zalo: "", // URL liên hệ Zalo, nếu có.
   showProductExamples: true, // Chỉ dùng mẫu minh họa khi products trống. Đặt false để ẩn mẫu.
-  members: Array.from({ length: 5 }, (_, i) => ({
+  members: Array.from({ length: 4 }, (_, i) => ({
     id: `member-${i + 1}`,
     name: `Thành viên ${String(i + 1).padStart(2, "0")}`,
     role: "",
@@ -16,7 +16,7 @@ export const content: SiteContent = {
     links: [], // { label: 'GitHub', url: 'https://...' }
     email: "", // Kênh công khai để khách liên hệ với người giới thiệu.
     zalo: "",
-    color: ["blue", "purple", "orange", "green", "pink"][i],
+    color: ["blue", "purple", "orange", "green"][i],
   })),
   // Ví dụ cấu trúc khi đã có sản phẩm:
   // { id: '...', name: '...', summary: '...', description: '...',

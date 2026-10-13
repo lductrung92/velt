@@ -8,9 +8,9 @@
  * and read only by Puck, so putting them on :root is safe (nothing else uses them).
  * Layout tweaks that DO target Puck's DOM stay scoped to .kd-puck. */
 :root {
-  /* Type — app font + 14px base (text-sm), like the rest of the console. */
-  --puck-font-family: "Inter", system-ui, sans-serif;
-  --puck-font-size-base: 14px;
+  /* Type — app font + shared text-sm token, like the rest of the console. */
+  --puck-font-family: var(--font-sans);
+  --puck-font-size-base: var(--font-size-sm);
 
   /* Accent = Zukatek blue. Puck uses its "azure" 12-step scale for every accent
    * (selection outline, focus ring, active states); remap the whole ramp to a
@@ -139,7 +139,9 @@
   margin-top: 0;
 }
 
-.kd-puck [class*="Layer"]:not([class*="Layer--isSelected"]) > [class*="Layer-inner"] {
+.kd-puck
+  [class*="Layer"]:not([class*="Layer--isSelected"])
+  > [class*="Layer-inner"] {
   border: 1px solid var(--puck-color-border);
 }
 
@@ -148,8 +150,14 @@
 }
 
 .kd-puck [class*="Layer--isSelected"] [class*="Layer-inner"] {
-  background-color: var(--puck-drawer-item-color-bg-hover, var(--puck-color-interactive-soft-hover));
-  color: var(--puck-drawer-item-color-text-hover, var(--puck-color-interactive));
+  background-color: var(
+    --puck-drawer-item-color-bg-hover,
+    var(--puck-color-interactive-soft-hover)
+  );
+  color: var(
+    --puck-drawer-item-color-text-hover,
+    var(--puck-color-interactive)
+  );
 }
 
 .kd-puck [class*="Layer-icon"] {
@@ -157,9 +165,17 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .kd-puck [class*="Layer"]:not([class*="Layer--isSelected"]) >  [class*="Layer-inner"]:hover {
-    background-color: var(--puck-drawer-item-color-bg-hover, var(--puck-color-interactive-soft-hover));
-    color: var(--puck-drawer-item-color-text-hover, var(--puck-color-interactive));
+  .kd-puck
+    [class*="Layer"]:not([class*="Layer--isSelected"])
+    > [class*="Layer-inner"]:hover {
+    background-color: var(
+      --puck-drawer-item-color-bg-hover,
+      var(--puck-color-interactive-soft-hover)
+    );
+    color: var(
+      --puck-drawer-item-color-text-hover,
+      var(--puck-color-interactive)
+    );
     border-color: var(--puck-color-border);
   }
 }

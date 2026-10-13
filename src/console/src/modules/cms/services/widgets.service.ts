@@ -32,7 +32,10 @@ export interface PreviewCategoryItem {
   count: number;
 }
 
-export type PreviewItem = PreviewGameItem | PreviewArticleItem | PreviewCategoryItem;
+export type PreviewItem =
+  | PreviewGameItem
+  | PreviewArticleItem
+  | PreviewCategoryItem;
 
 // data is {items} for the list widgets, or null for static widgets.
 export interface WidgetPreviewResponse {
@@ -44,9 +47,12 @@ export const previewWidget = async (
   type: string,
   config: WidgetConfig,
 ): Promise<WidgetPreviewResponse> => {
-  const { data } = await api.post<WidgetPreviewResponse>("/cms/widgets/preview", {
-    type,
-    config,
-  });
+  const { data } = await api.post<WidgetPreviewResponse>(
+    "/cms/widgets/preview",
+    {
+      type,
+      config,
+    },
+  );
   return data;
 };

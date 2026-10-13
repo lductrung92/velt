@@ -47,7 +47,11 @@ function ItemCard({ type, item }: { type: string; item: PreviewItem }) {
     return (
       <div className="rounded-md border bg-background p-3">
         <p className="font-medium">{a.title}</p>
-        {a.excerpt && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{a.excerpt}</p>}
+        {a.excerpt && (
+          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+            {a.excerpt}
+          </p>
+        )}
       </div>
     );
   }
@@ -55,7 +59,11 @@ function ItemCard({ type, item }: { type: string; item: PreviewItem }) {
   return (
     <div className="overflow-hidden rounded-md border bg-background">
       {g.cover_url ? (
-        <img src={g.cover_url} alt="" className="aspect-video w-full object-cover" />
+        <img
+          src={g.cover_url}
+          alt=""
+          className="aspect-video w-full object-cover"
+        />
       ) : (
         <div className="aspect-video w-full bg-muted" />
       )}
@@ -70,19 +78,26 @@ function ListPreview({ type, config }: { type: string; config: WidgetConfig }) {
   const { t } = useTranslation();
   const c = config as Record<string, unknown>;
   const title = typeof c.title === "string" ? c.title : "";
-  const columns = typeof c.columns === "number" && c.columns >= 1 ? Math.min(c.columns, 4) : 3;
+  const columns =
+    typeof c.columns === "number" && c.columns >= 1
+      ? Math.min(c.columns, 4)
+      : 3;
   const { data, isLoading, isError } = useWidgetPreview(type, config);
   const items = data?.data?.items ?? [];
 
   return (
     <div className="space-y-2">
-      {title && <p className="text-base font-semibold">{title}</p>}
+      {title && <p className="text-base font-medium">{title}</p>}
       {isLoading ? (
         <SkeletonGrid columns={columns} count={columns} />
       ) : isError ? (
-        <p className="text-sm text-muted-foreground">{t("cms.pages.inline.preview_error")}</p>
+        <p className="text-sm text-muted-foreground">
+          {t("cms.pages.inline.preview_error")}
+        </p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("cms.pages.inline.preview_empty")}</p>
+        <p className="text-sm text-muted-foreground">
+          {t("cms.pages.inline.preview_empty")}
+        </p>
       ) : (
         <div
           className="grid gap-2"
@@ -100,14 +115,24 @@ function ListPreview({ type, config }: { type: string; config: WidgetConfig }) {
 // WidgetPreview renders a faithful preview of a widget from its config: rich_text
 // and cta_banner render for real (config IS the content); the data-backed list
 // widgets resolve live data through ListPreview.
-export function WidgetPreview({ type, config }: { type: string; config: WidgetConfig }) {
+export function WidgetPreview({
+  type,
+  config,
+}: {
+  type: string;
+  config: WidgetConfig;
+}) {
   const { t } = useTranslation();
   const c = config as Record<string, unknown>;
 
   if (type === "rich_text") {
     const html = typeof c.html === "string" ? c.html : "";
     if (!html) {
-      return <p className="text-sm text-muted-foreground">{t("cms.pages.inline.preview_empty")}</p>;
+      return (
+        <p className="text-sm text-muted-foreground">
+          {t("cms.pages.inline.preview_empty")}
+        </p>
+      );
     }
     return (
       <div
@@ -131,7 +156,9 @@ export function WidgetPreview({ type, config }: { type: string; config: WidgetCo
       <div
         className={cn(
           "flex flex-col gap-2 rounded-lg border bg-background p-4",
-          c.align === "left" ? "items-start text-left" : "items-center text-center",
+          c.align === "left"
+            ? "items-start text-left"
+            : "items-center text-center",
         )}
       >
         {heading && <p className="text-lg font-bold">{heading}</p>}
@@ -142,7 +169,9 @@ export function WidgetPreview({ type, config }: { type: string; config: WidgetCo
           </span>
         )}
         {empty && (
-          <p className="text-sm text-muted-foreground">{t("cms.pages.inline.preview_empty")}</p>
+          <p className="text-sm text-muted-foreground">
+            {t("cms.pages.inline.preview_empty")}
+          </p>
         )}
       </div>
     );

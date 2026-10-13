@@ -49,7 +49,12 @@ function detailOf(sections: LandingSection[]): LandingDetail {
 }
 
 function puckData(
-  items: { type: string; id: string; cfg?: Record<string, unknown>; visible?: boolean }[],
+  items: {
+    type: string;
+    id: string;
+    cfg?: Record<string, unknown>;
+    visible?: boolean;
+  }[],
 ): Data {
   return {
     content: items.map((i) => ({
@@ -67,7 +72,12 @@ beforeEach(() => {
   let n = 0;
   svc.createSection.mockImplementation(async (_landingId, body) => {
     n += 1;
-    const created = section(`created-${n}`, body.type, body.config ?? {}, body.is_visible ?? true);
+    const created = section(
+      `created-${n}`,
+      body.type,
+      body.config ?? {},
+      body.is_visible ?? true,
+    );
     return detailOf([created]);
   });
   svc.updateSection.mockResolvedValue(detailOf([]));
@@ -85,11 +95,21 @@ describe("sectionsToPuckData", () => {
     expect(data.content).toEqual([
       {
         type: "hero",
-        props: { cfg: { heading: "Hi" }, visible: true, fullWidth: false, id: "a" },
+        props: {
+          cfg: { heading: "Hi" },
+          visible: true,
+          fullWidth: false,
+          id: "a",
+        },
       },
       {
         type: "cta_banner",
-        props: { cfg: { heading: "Buy" }, visible: false, fullWidth: false, id: "b" },
+        props: {
+          cfg: { heading: "Buy" },
+          visible: false,
+          fullWidth: false,
+          id: "b",
+        },
       },
     ]);
   });
@@ -106,7 +126,8 @@ describe("sectionsToPuckData", () => {
   it("clones config (mutating the Puck copy must not touch the source)", () => {
     const src = section("a", "hero", { heading: "Hi" });
     const data = sectionsToPuckData([src]);
-    (data.content[0].props as { cfg: Record<string, unknown> }).cfg.heading = "X";
+    (data.content[0].props as { cfg: Record<string, unknown> }).cfg.heading =
+      "X";
     expect(src.config.heading).toBe("Hi");
   });
 });
@@ -116,7 +137,9 @@ describe("syncSections", () => {
     const detail = detailOf([section("a", "hero", { heading: "old" }, true)]);
     await syncSections(
       detail,
-      puckData([{ type: "hero", id: "a", cfg: { heading: "new" }, visible: false }]),
+      puckData([
+        { type: "hero", id: "a", cfg: { heading: "new" }, visible: false },
+      ]),
     );
     expect(svc.updateSection).toHaveBeenCalledWith("a", {
       config: { heading: "new" },
@@ -140,10 +163,7 @@ describe("syncSections", () => {
   });
 
   it("deletes sections removed in the editor", async () => {
-    const detail = detailOf([
-      section("a", "hero"),
-      section("b", "cta_banner"),
-    ]);
+    const detail = detailOf([section("a", "hero"), section("b", "cta_banner")]);
     await syncSections(detail, puckData([{ type: "hero", id: "a" }]));
     expect(svc.deleteSection).toHaveBeenCalledWith("b");
     expect(svc.deleteSection).toHaveBeenCalledTimes(1);
@@ -177,7 +197,10 @@ describe("syncSections", () => {
 
   it("returns the refreshed detail from landingService.get", async () => {
     const detail = detailOf([section("a", "hero")]);
-    const out = await syncSections(detail, puckData([{ type: "hero", id: "a" }]));
+    const out = await syncSections(
+      detail,
+      puckData([{ type: "hero", id: "a" }]),
+    );
     expect(svc.get).toHaveBeenCalledWith("lp-1");
     expect(out.sections[0].id).toBe("final");
   });
@@ -192,7 +215,10 @@ describe("resolvePendingImages", () => {
         blob: async () => new Blob(["x"], { type: "image/png" }),
       }),
     );
-    svc.uploadMedia.mockResolvedValue({ path: "cms/x.png", url: "https://cdn/x.png" });
+    svc.uploadMedia.mockResolvedValue({
+      path: "cms/x.png",
+      url: "https://cdn/x.png",
+    });
   });
 
   it("uploads a top-level pending image and rewrites it to *_path/*_url", async () => {
@@ -200,7 +226,13 @@ describe("resolvePendingImages", () => {
       content: [
         {
           type: "hero",
-          props: { id: "a", cfg: { heading: "H", image_path__pending: { dataUrl: "data:image/png;base64,AAA" } } },
+          props: {
+            id: "a",
+            cfg: {
+              heading: "H",
+              image_path__pending: { dataUrl: "data:image/png;base64,AAA" },
+            },
+          },
         },
       ],
       root: { props: {} },
@@ -226,7 +258,10 @@ describe("resolvePendingImages", () => {
             id: "a",
             cfg: {
               slides: [
-                { heading: "s1", image_path__pending: { dataUrl: "data:image/png;base64,AAA" } },
+                {
+                  heading: "s1",
+                  image_path__pending: { dataUrl: "data:image/png;base64,AAA" },
+                },
                 { heading: "s2" },
               ],
             },
@@ -248,7 +283,9 @@ describe("resolvePendingImages", () => {
 
   it("does not touch data without pending markers", async () => {
     const data = {
-      content: [{ type: "hero", props: { id: "a", cfg: { image_path: "kept.png" } } }],
+      content: [
+        { type: "hero", props: { id: "a", cfg: { image_path: "kept.png" } } },
+      ],
       root: { props: {} },
     } as unknown as Data;
     const out = (await resolvePendingImages("lp-1", data)) as unknown as {

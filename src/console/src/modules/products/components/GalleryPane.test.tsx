@@ -67,7 +67,9 @@ describe("GalleryPane", () => {
       "/api/files/products/p1/gallery-1.png",
     );
     expect(cards[1].querySelector("img")).toBeNull();
-    expect(within(cards[1]).getByText("https://youtu.be/abc")).toBeInTheDocument();
+    expect(
+      within(cards[1]).getByText("https://youtu.be/abc"),
+    ).toBeInTheDocument();
   });
 
   it("commits a caption on blur, not on every keystroke", async () => {
@@ -100,7 +102,9 @@ describe("GalleryPane", () => {
     );
     renderPane([image()]);
 
-    await userEvent.click(screen.getByLabelText(i18n.t("products.gallery.caption")));
+    await userEvent.click(
+      screen.getByLabelText(i18n.t("products.gallery.caption")),
+    );
     await userEvent.tab();
     expect(patched).not.toHaveBeenCalled();
   });
@@ -132,7 +136,9 @@ describe("GalleryPane", () => {
     renderPane([]);
 
     await userEvent.click(
-      screen.getByRole("button", { name: i18n.t("products.gallery.add_video") }),
+      screen.getByRole("button", {
+        name: i18n.t("products.gallery.add_video"),
+      }),
     );
     expect(
       await screen.findByText(i18n.t("products.gallery.video_hosts")),
@@ -142,22 +148,30 @@ describe("GalleryPane", () => {
       screen.getByLabelText(i18n.t("products.gallery.video_url")),
       "https://youtu.be/abc",
     );
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.add") }));
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.add") }),
+    );
 
     await waitFor(() => expect(posted).toHaveBeenCalled());
-    expect(posted.mock.calls[0][0]).toMatchObject({ video_url: "https://youtu.be/abc" });
+    expect(posted.mock.calls[0][0]).toMatchObject({
+      video_url: "https://youtu.be/abc",
+    });
   });
 
   it("hides every write affordance when read-only", () => {
     renderPane([image()], true);
     expect(
-      screen.queryByRole("button", { name: i18n.t("products.gallery.add_image") }),
+      screen.queryByRole("button", {
+        name: i18n.t("products.gallery.add_image"),
+      }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: i18n.t("common.remove") }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: i18n.t("products.gallery.reorder") }),
+      screen.queryByRole("button", {
+        name: i18n.t("products.gallery.reorder"),
+      }),
     ).not.toBeInTheDocument();
   });
 });

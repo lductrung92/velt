@@ -40,12 +40,16 @@ describe("ArticleImageButton", () => {
     render(<ArticleImageButton editor={f.editor} onDeferred={onDeferred} />);
 
     const file = new File(["x"], "pic.png", { type: "image/png" });
-    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const input =
+      document.querySelector<HTMLInputElement>('input[type="file"]')!;
     await userEvent.upload(input, file);
 
     expect(mutateAsync).not.toHaveBeenCalled();
     expect(onDeferred).toHaveBeenCalledWith({ url: "blob:local-1", file });
-    expect(f.setImage).toHaveBeenCalledWith({ src: "blob:local-1", alt: "pic.png" });
+    expect(f.setImage).toHaveBeenCalledWith({
+      src: "blob:local-1",
+      alt: "pic.png",
+    });
     vi.unstubAllGlobals();
   });
 
@@ -58,7 +62,8 @@ describe("ArticleImageButton", () => {
     render(<ArticleImageButton editor={f.editor} articleId="a1" />);
 
     const file = new File(["x"], "pic.png", { type: "image/png" });
-    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const input =
+      document.querySelector<HTMLInputElement>('input[type="file"]')!;
     await userEvent.upload(input, file);
 
     expect(mutateAsync).toHaveBeenCalledWith({

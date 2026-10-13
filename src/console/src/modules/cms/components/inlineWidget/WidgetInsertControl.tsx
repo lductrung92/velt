@@ -15,7 +15,8 @@ import { WIDGET_TYPES, defaultConfig } from "../widgetCatalog";
 // newWid generates a stable placeholder id for an inserted inline widget. Falls
 // back when crypto.randomUUID is unavailable (older/insecure contexts).
 function newWid(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    return crypto.randomUUID();
   return `w-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
 }
 
@@ -29,7 +30,10 @@ export function WidgetInsertControl({ editor }: { editor: Editor | null }) {
     editor
       .chain()
       .focus()
-      .insertContent({ type: "widget", attrs: { wid: newWid(), wtype: type, config: defaultConfig(type) } })
+      .insertContent({
+        type: "widget",
+        attrs: { wid: newWid(), wtype: type, config: defaultConfig(type) },
+      })
       .run();
   }
 

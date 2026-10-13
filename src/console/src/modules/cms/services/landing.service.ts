@@ -101,18 +101,25 @@ export const landingService = {
     return data;
   },
   async update(id: string, body: UpdateLandingBody): Promise<LandingListItem> {
-    const { data } = await api.patch<LandingListItem>(`/cms/landing/${id}`, body);
+    const { data } = await api.patch<LandingListItem>(
+      `/cms/landing/${id}`,
+      body,
+    );
     return data;
   },
   async remove(id: string): Promise<void> {
     await api.delete(`/cms/landing/${id}`);
   },
   async publish(id: string): Promise<LandingDetail> {
-    const { data } = await api.post<LandingDetail>(`/cms/landing/${id}/publish`);
+    const { data } = await api.post<LandingDetail>(
+      `/cms/landing/${id}/publish`,
+    );
     return data;
   },
   async unpublish(id: string): Promise<LandingDetail> {
-    const { data } = await api.post<LandingDetail>(`/cms/landing/${id}/unpublish`);
+    const { data } = await api.post<LandingDetail>(
+      `/cms/landing/${id}/unpublish`,
+    );
     return data;
   },
   async createSection(

@@ -38,7 +38,10 @@ export function makeProductCategorySchema(t: TFunction) {
       .min(0, t("errors.validation.out_of_range"))
       .max(100000, t("errors.validation.out_of_range")),
     seo_title: z.string().trim().max(255, t("errors.validation.too_long")),
-    seo_description: z.string().trim().max(500, t("errors.validation.too_long")),
+    seo_description: z
+      .string()
+      .trim()
+      .max(500, t("errors.validation.too_long")),
     seo_keywords: z.string().trim().max(255, t("errors.validation.too_long")),
   });
 }

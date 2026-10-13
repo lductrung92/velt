@@ -10,8 +10,16 @@ export type ProductStatus = "draft" | "published" | "archived";
  *  status: a published product can still be an idea (docs §3). */
 export type ProductLifecycle = "idea" | "building" | "launched";
 
-export const PRODUCT_STATUSES: ProductStatus[] = ["draft", "published", "archived"];
-export const PRODUCT_LIFECYCLES: ProductLifecycle[] = ["idea", "building", "launched"];
+export const PRODUCT_STATUSES: ProductStatus[] = [
+  "draft",
+  "published",
+  "archived",
+];
+export const PRODUCT_LIFECYCLES: ProductLifecycle[] = [
+  "idea",
+  "building",
+  "launched",
+];
 export const PRODUCT_AUDIENCES = ["individual", "team", "business"] as const;
 export const PRODUCT_PLATFORMS = ["web", "ios", "android", "desktop"] as const;
 
@@ -186,7 +194,10 @@ export const productsService = {
 
   // Each of these replaces the whole set; the server rewrites sort_order from
   // the array order, so the client never computes it.
-  async setCategories(id: string, categoryIds: string[]): Promise<ProductCategoryRef[]> {
+  async setCategories(
+    id: string,
+    categoryIds: string[],
+  ): Promise<ProductCategoryRef[]> {
     const { data } = await api.put<{ categories: ProductCategoryRef[] }>(
       `/products/${id}/categories`,
       { category_ids: categoryIds },
@@ -205,7 +216,11 @@ export const productsService = {
     return data.members;
   },
 
-  async addGalleryImage(id: string, file: File | Blob, caption?: string): Promise<ProductMedia> {
+  async addGalleryImage(
+    id: string,
+    file: File | Blob,
+    caption?: string,
+  ): Promise<ProductMedia> {
     const form = new FormData();
     form.append("file", file);
     if (caption) form.append("caption", caption);
@@ -219,15 +234,26 @@ export const productsService = {
 
   // Only YouTube and Vimeo are accepted — the URL goes into an <iframe> on the
   // public site, so the backend keeps a host allowlist.
-  async addGalleryVideo(id: string, videoUrl: string, caption?: string): Promise<ProductMedia> {
-    const { data } = await api.post<ProductMedia>(`/products/${id}/media/video`, {
-      video_url: videoUrl,
-      caption,
-    });
+  async addGalleryVideo(
+    id: string,
+    videoUrl: string,
+    caption?: string,
+  ): Promise<ProductMedia> {
+    const { data } = await api.post<ProductMedia>(
+      `/products/${id}/media/video`,
+      {
+        video_url: videoUrl,
+        caption,
+      },
+    );
     return data;
   },
 
-  async updateGalleryCaption(id: string, mediaId: string, caption: string): Promise<ProductMedia> {
+  async updateGalleryCaption(
+    id: string,
+    mediaId: string,
+    caption: string,
+  ): Promise<ProductMedia> {
     const { data } = await api.patch<ProductMedia>(
       `/products/${id}/media/${mediaId}`,
       { caption },

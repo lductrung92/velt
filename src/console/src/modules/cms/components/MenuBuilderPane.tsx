@@ -47,36 +47,36 @@ export function MenuBuilderPane({
       )}
 
       <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle>{t("cms.menus.structure")}</CardTitle>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={draft.startAdd}
-              >
-                <Plus className="size-4" />
-                {t("common.add_new")}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {draft.draft.length === 0 ? (
-              <EmptyState className="py-6" />
-            ) : (
-              <MenuItemTree
-                draft={draft.draft}
-                selectedKey={
-                  draft.editing?.mode === "edit" ? draft.editing.key : null
-                }
-                onSelect={draft.selectItem}
-                onEdit={draft.selectItem}
-                onDelete={onDeleteItem}
-                onMove={draft.moveItem}
-              />
-            )}
-          </CardContent>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle>{t("cms.menus.structure")}</CardTitle>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={draft.startAdd}
+            >
+              <Plus className="size-4" />
+              {t("common.add_new")}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {draft.draft.length === 0 ? (
+            <EmptyState className="py-6" />
+          ) : (
+            <MenuItemTree
+              draft={draft.draft}
+              selectedKey={
+                draft.editing?.mode === "edit" ? draft.editing.key : null
+              }
+              onSelect={draft.selectItem}
+              onEdit={draft.selectItem}
+              onDelete={onDeleteItem}
+              onMove={draft.moveItem}
+            />
+          )}
+        </CardContent>
       </Card>
 
       {/* Item add/edit form in a modal (modal.md §3). Apply also closes — the

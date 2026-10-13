@@ -11,7 +11,7 @@ interface PageHeaderProps {
   /** Already-translated heading. */
   title: string;
   subtitle?: string;
-  /** Breadcrumb trail (the scope root is auto-prepended from the URL). Omit
+  /** Breadcrumb trail (Overview and the URL's admin scope are auto-prepended). Omit
    *  on top-level routes. */
   breadcrumbs?: BreadcrumbItem[];
   /** Right-column actions (detail/edit pages). List screens put their "+ New"
@@ -20,7 +20,8 @@ interface PageHeaderProps {
   className?: string;
 }
 
-// Auto-prepend the scope root so pages only declare their own crumb:
+// Add the admin ancestor so pages only declare their own crumb.
+// Breadcrumb itself supplies the universal Overview → /dashboard root:
 //   /admin            → no root (the page IS the admin root)
 //   /admin/*          → "Quản trị" → /admin
 //   everything else   → no root; module breadcrumbs are explicitly declared
@@ -56,7 +57,7 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0 space-y-1">
-        <h1 className="max-w-3xl break-words text-2xl font-semibold tracking-tight">
+        <h1 className="max-w-3xl break-words text-2xl font-medium tracking-tight">
           {title}
         </h1>
         {subtitle && (
@@ -64,7 +65,7 @@ export function PageHeader({
         )}
       </div>
       {(trail || actions) && (
-        <div className="flex shrink-0 flex-col gap-2 md:items-end">
+        <div className="flex min-w-0 max-w-full flex-col gap-2 md:max-w-[55%] md:items-end">
           {trail && <Breadcrumb items={trail} />}
           {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>

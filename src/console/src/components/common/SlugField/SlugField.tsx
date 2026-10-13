@@ -1,5 +1,5 @@
-import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { Link2, Pencil, X } from "lucide-react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -55,21 +55,28 @@ export function SlugField({
   const { t } = useTranslation();
   const tl = (key: string) => (locale ? t(key, { lng: locale }) : t(key));
   const [editing, setEditing] = useState(false);
+  const inputId = useId();
 
   if (!editing) {
     return (
       <div className="slug-field">
-        <span className="slug-field-label">{label}</span>
-        <span
-          className="slug-field-value"
-          data-inherited={!value && emptyValue ? "" : undefined}
-        >
-          {value || emptyValue || "—"}
+        <span className="slug-field-icon" aria-hidden="true">
+          <Link2 />
         </span>
+        <div className="slug-field-body">
+          <span className="slug-field-label">{label}</span>
+          <span
+            className="slug-field-value"
+            data-inherited={!value && emptyValue ? "" : undefined}
+            title={value || emptyValue || undefined}
+          >
+            {value || emptyValue || "—"}
+          </span>
+        </div>
         {canEdit && !disabled && (
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
             className="slug-field-action"
             data-action="edit"
@@ -85,17 +92,28 @@ export function SlugField({
 
   return (
     <div className="slug-field" data-editing>
-      <span className="slug-field-label">{label}</span>
-      <Input
-        autoFocus
-        maxLength={300}
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      <span className="slug-field-icon" aria-hidden="true">
+        <Link2 />
+      </span>
+      <div className="slug-field-body">
+        <label className="slug-field-label" htmlFor={inputId}>
+          {label}
+        </label>
+        <Input
+          id={inputId}
+          autoFocus
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          maxLength={300}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </div>
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="sm"
         className="slug-field-action"
         data-action="cancel"
@@ -104,6 +122,7 @@ export function SlugField({
           setEditing(false);
         }}
       >
+        <X className="size-3.5" aria-hidden />
         {tl("common.cancel")}
       </Button>
     </div>

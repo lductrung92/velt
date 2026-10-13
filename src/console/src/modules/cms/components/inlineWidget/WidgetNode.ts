@@ -30,13 +30,20 @@ export const WidgetNode = Node.create({
     return [
       {
         tag: "div[data-kd-widget]",
-        getAttrs: (el) => ({ wid: (el as HTMLElement).getAttribute("data-kd-widget") }),
+        getAttrs: (el) => ({
+          wid: (el as HTMLElement).getAttribute("data-kd-widget"),
+        }),
       },
     ];
   },
 
   renderHTML({ node, HTMLAttributes }) {
-    return ["div", mergeAttributes(HTMLAttributes, { "data-kd-widget": node.attrs.wid ?? "" })];
+    return [
+      "div",
+      mergeAttributes(HTMLAttributes, {
+        "data-kd-widget": node.attrs.wid ?? "",
+      }),
+    ];
   },
 
   addNodeView() {
