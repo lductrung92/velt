@@ -49,3 +49,11 @@ export interface AppProps {
   /** Content the server loaded, serialised so hydration sees the same page. */
   data?: SiteContent;
 }
+/** One section of a landing page, as the backend's shared.PublicSection sends
+ *  it. config is console input, so it may be missing, partial or malformed. */
+export interface PublicSection {
+  type: string;
+  sort_order: number;
+  config?: unknown;
+  data?: unknown;
+}

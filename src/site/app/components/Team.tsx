@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import type { Member, Product } from "../types";
 import { useSite } from "../context";
 import { demoLink, safeUrl, withReferral } from "../lib/links";
+import { teamConfig } from "../lib/sections";
 import { Icon } from "./Icon";
 import { Modal } from "./Modal";
+import { TeamGlobe } from "./team/TeamGlobe";
 
 export function Portrait({
   member,
@@ -35,6 +37,11 @@ export function Portrait({
           <span className="portrait-number">
             {String(data.members.indexOf(member) + 1).padStart(2, "0")}
           </span>
+          {!detail && (
+            <span className="portrait-emblem">
+              <img src="/assets/favicon.png" alt="" />
+            </span>
+          )}
         </>
       )}
     </div>
@@ -51,26 +58,38 @@ export function Skills({ skills }: { skills: string[] }) {
     </>
   );
 }
-export function Team() {
+export function Team({
+  config,
+  members: sectionMembers,
+}: {
+  config?: unknown;
+  members?: Member[];
+}) {
   const { data, url, referrer } = useSite();
+  const { title, subtitle, limit } = teamConfig(config);
+  const members = sectionMembers ?? data.members;
   const [skill, setSkill] = useState(""),
     [member, setMember] = useState<Member | null>(null),
     [product, setProduct] = useState<Product | null>(null),
     [copyStatus, setCopyStatus] = useState("");
-  const allSkills = [
-    ...new Set(data.members.flatMap((person) => person.skills)),
-  ];
-  const visible = data.members.filter(
+  const allSkills = [...new Set(members.flatMap((person) => person.skills))];
+  const filtered = members.filter(
     (person) => !skill || person.skills.includes(skill),
   );
-  const missingPortrait = data.members.some((person) => !safeUrl(person.image));
+  const visible = limit ? filtered.slice(0, limit) : filtered;
+  const missingPortrait = members.some((person) => !safeUrl(person.image));
+  const [activeId, setActiveId] = useState(members[0]?.id);
+  const openMember = (person: Member) => {
+    setActiveId(person.id);
+    setMember(person);
+    setCopyStatus("");
+  };
   useEffect(() => {
     setMember(
-      data.members.find(
-        (person) => person.id === url.searchParams.get("member"),
-      ) || null,
+      members.find((person) => person.id === url.searchParams.get("member")) ||
+        null,
     );
-  }, [data.members, url]);
+  }, [members, url]);
   const close = () => {
     setMember(null);
     setProduct(null);
@@ -89,7 +108,7 @@ export function Team() {
   return (
     <>
       <section
-        className="section team-section"
+        className="section team-section team-world-section"
         id="team"
         aria-labelledby="team-title"
       >
@@ -100,123 +119,142 @@ export function Team() {
                 <i aria-hidden="true" />
                 ĐỘI NGŨ ZUKATEK
               </span>
-              <h2 id="team-title">Đội ngũ phát triển</h2>
+              <h2 id="team-title">{title}</h2>
             </div>
             <div className="team-intro">
-              <p>
-                Mỗi sản phẩm gắn với những người trực tiếp phát triển. Tìm hiểu
-                chuyên môn và sản phẩm từng thành viên tham gia.
-              </p>
+              <p>{subtitle}</p>
               <div className="team-count">
                 <span className="team-count-line" aria-hidden="true" />
                 <span>
-                  <strong id="team-member-count">{data.members.length}</strong>{" "}
-                  thành viên · Cùng phát triển sản phẩm ZUKATEK
+                  <strong id="team-member-count">{members.length}</strong> thành
+                  viên
                 </span>
               </div>
             </div>
           </header>
-          <div className="team-tools" hidden={!allSkills.length}>
-            <div
-              className="skill-filter"
-              id="skill-filter"
-              aria-label="Lọc thành viên theo kỹ năng"
-            >
-              {["", ...allSkills].map((value) => (
-                <button
-                  className="filter-button"
-                  type="button"
-                  key={value}
-                  data-skill={value}
-                  aria-pressed={value === skill}
-                  onClick={() => setSkill(value)}
+          <div className="team-world-layout">
+            <TeamGlobe
+              members={members}
+              activeId={activeId}
+              onSelect={openMember}
+            />
+            <div className="team-profiles">
+              <header className="team-profile-heading">
+                <h3>Gặp gỡ đội ngũ</h3>
+                <p>
+                  Khám phá hồ sơ, kỹ năng và sản phẩm từng thành viên tham gia.
+                </p>
+              </header>
+              <div className="team-tools" hidden={!allSkills.length}>
+                <div
+                  className="skill-filter"
+                  id="skill-filter"
+                  aria-label="Lọc thành viên theo kỹ năng"
                 >
-                  {value || "Tất cả thành viên"}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div
-            className="team-grid"
-            id="team-list"
-            role="region"
-            aria-label="Danh sách thành viên ZUKATEK"
-          >
-            {visible.map((person) => {
-              const count = data.products.filter((item) =>
-                item.memberIds?.includes(person.id),
-              ).length;
-              return (
-                <article className="member-card" key={person.id}>
-                  <div className="member-media">
-                    <Portrait member={person} />
-                    <span className="member-index">
-                      {String(data.members.indexOf(person) + 1).padStart(
-                        2,
-                        "0",
-                      )}
-                    </span>
-                    {!safeUrl(person.image) && (
-                      <span className="portrait-placeholder-label">
-                        Ảnh minh họa
+                  {["", ...allSkills].map((value) => (
+                    <button
+                      className="filter-button"
+                      type="button"
+                      key={value}
+                      data-skill={value}
+                      aria-pressed={value === skill}
+                      onClick={() => setSkill(value)}
+                    >
+                      {value || "Tất cả thành viên"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div
+                className="team-grid"
+                id="team-list"
+                role="region"
+                aria-label="Danh sách thành viên ZUKATEK"
+              >
+                {visible.map((person) => {
+                  const count = data.products.filter((item) =>
+                    item.memberIds?.includes(person.id),
+                  ).length;
+                  return (
+                    <article
+                      className="member-card"
+                      key={person.id}
+                      data-active={activeId === person.id}
+                      onMouseEnter={() => setActiveId(person.id)}
+                      onFocus={() => setActiveId(person.id)}
+                    >
+                      <span className="member-order" aria-hidden="true">
+                        {safeUrl(person.image) ? (
+                          <img
+                            src={safeUrl(person.image)}
+                            alt=""
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span>
+                            {String(members.indexOf(person) + 1).padStart(
+                              2,
+                              "0",
+                            )}
+                          </span>
+                        )}
                       </span>
-                    )}
-                  </div>
-                  <div className="member-card-info">
-                    <div className="member-title-row">
-                      <h3>{person.name}</h3>
+                      <div className="member-card-info">
+                        <div className="member-title-row">
+                          <h3>{person.name}</h3>
+                        </div>
+                        <p className="member-role">
+                          {person.role || "Chuyên môn đang cập nhật"}
+                        </p>
+                        {person.bio && (
+                          <p className="member-bio">{person.bio}</p>
+                        )}
+                        {!!person.skills.length && (
+                          <div className="member-skills">
+                            <Skills skills={person.skills.slice(0, 3)} />
+                            {person.skills.length > 3 && (
+                              <span className="skill-chip">
+                                +{person.skills.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {!!count && (
+                          <span className="member-project-count">
+                            {count} sản phẩm tham gia
+                          </span>
+                        )}
+                      </div>
                       <button
                         className="profile-button"
                         type="button"
                         data-member={person.id}
                         aria-label={`Xem hồ sơ ${person.name}`}
-                        title="Xem hồ sơ"
-                        onClick={() => {
-                          setMember(person);
-                          setCopyStatus("");
-                        }}
+                        onClick={() => openMember(person)}
                       >
+                        <span>Xem hồ sơ</span>
                         <Icon name="arrow" />
                       </button>
-                    </div>
-                    <p className="member-role">
-                      {person.role || "Thành viên ZUKATEK"}
-                    </p>
-                    {person.bio && <p className="member-bio">{person.bio}</p>}
-                    {!!person.skills.length && (
-                      <div className="member-skills">
-                        <Skills skills={person.skills.slice(0, 3)} />
-                        {person.skills.length > 3 && (
-                          <span className="skill-chip">
-                            +{person.skills.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {!!count && (
-                      <span className="member-project-count">
-                        {count} sản phẩm tham gia
-                      </span>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
-            {!visible.length && (
-              <p className="empty-filter">Chưa có thành viên phù hợp.</p>
-            )}
+                    </article>
+                  );
+                })}
+                {!visible.length && (
+                  <p className="empty-filter">Chưa có thành viên phù hợp.</p>
+                )}
+              </div>
+            </div>
           </div>
           <p
             className="team-footnote"
             hidden={
               !missingPortrait &&
-              data.members.every((person) => person.bio && person.skills.length)
+              members.every((person) => person.bio && person.skills.length)
             }
           >
             <Icon name="user" />
             <span>
               {missingPortrait
-                ? "Chân dung đang dùng hình minh họa. Tên, ảnh và chuyên môn sẽ được cập nhật trong hồ sơ thành viên."
+                ? "Tên, chân dung và chuyên môn của từng thành viên đang được cập nhật."
                 : "Thông tin giới thiệu và chuyên môn sẽ được bổ sung trong hồ sơ thành viên."}
             </span>
           </p>

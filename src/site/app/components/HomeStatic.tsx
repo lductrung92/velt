@@ -1,5 +1,12 @@
 // Presentation migrated from the approved mockup. All interaction is owned by React.
+import { HeroVisual } from "./hero/HeroVisual";
+import { safeUrl } from "../lib/links";
+import { audienceConfig, buyingStepsConfig } from "../lib/sections";
 type LinksProps = { href: (path: string) => string };
+
+// href() only knows in-site paths; a link typed in the console may be absolute.
+const sectionHref = (href: (path: string) => string, value: string) =>
+  value.startsWith("/") ? href(value) : safeUrl(value);
 
 export function Icons() {
   return (
@@ -74,7 +81,9 @@ export function Hero({ href }: LinksProps) {
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-inner">
           <div className="hero-copy">
-            <span className="hero-eyebrow">{"HỆ SINH THÁI SẢN PHẨM ZUKATEK"}</span>
+            <span className="hero-eyebrow">
+              {"HỆ SINH THÁI SẢN PHẨM ZUKATEK"}
+            </span>
             <h1 id="hero-title">
               {"Sản phẩm số"}
               <br />
@@ -82,7 +91,7 @@ export function Hero({ href }: LinksProps) {
             </h1>
             <p className="hero-subtitle">
               {
-                "ZUKATEK phát triển và cung cấp sản phẩm số cho cá nhân, nhóm và doanh nghiệp. Xem tính năng, trải nghiệm sản phẩm và nhận tư vấn để chọn giải pháp phù hợp."
+                "ZUKATEK phát triển và cung cấp sản phẩm số cho cá nhân, nhóm, hộ kinh doanh và doanh nghiệp. Xem tính năng, trải nghiệm sản phẩm và nhận tư vấn để chọn giải pháp phù hợp."
               }
             </p>
             <div className="hero-actions">
@@ -103,114 +112,7 @@ export function Hero({ href }: LinksProps) {
               </svg>
             </a>
           </div>
-          <div
-            className="hero-visual"
-            role="img"
-            aria-label="Minh họa hệ sinh thái sản phẩm ZUKATEK dành cho cá nhân, nhóm và doanh nghiệp"
-          >
-            <div className="visual-backdrop">
-              <div className="backdrop-ring"></div>
-              <div className="visual-wordmark">
-                {"ZUKATEK"}
-                <span>{"Digital products."}</span>
-              </div>
-              <div className="orb orb-one"></div>
-              <div className="orb orb-two"></div>
-            </div>
-            <div className="studio-window">
-              <div className="window-top">
-                <div className="window-dots">
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                </div>
-                <span>{"Hệ sinh thái ZUKATEK"}</span>
-                <svg className="icon">
-                  <use href="#i-grid"></use>
-                </svg>
-              </div>
-              <div className="window-content">
-                <div className="window-sidebar">
-                  <img
-                    src="/assets/favicon.png"
-                    alt=""
-                    width="28"
-                    height="28"
-                  />
-                  <span className="side-square active"></span>
-                  <span className="side-square"></span>
-                  <span className="side-square"></span>
-                  <span className="side-square"></span>
-                </div>
-                <div className="window-main">
-                  <span className="mini-label">
-                    {"SẢN PHẨM SỐ CHO CÔNG VIỆC"}
-                  </span>
-                  <strong>{"Giải pháp cho từng nhu cầu."}</strong>
-                  <div className="mini-cards">
-                    <div className="mini-card">
-                      <span className="mini-icon blue">
-                        <svg className="icon">
-                          <use href="#i-bulb"></use>
-                        </svg>
-                      </span>
-                      <b>{"Cá nhân"}</b>
-                      <span className="mini-line"></span>
-                      <span className="mini-line short"></span>
-                    </div>
-                    <div className="mini-card">
-                      <span className="mini-icon purple">
-                        <svg className="icon">
-                          <use href="#i-users"></use>
-                        </svg>
-                      </span>
-                      <b>{"Nhóm"}</b>
-                      <span className="mini-line"></span>
-                      <span className="mini-line short"></span>
-                    </div>
-                    <div className="mini-card">
-                      <span className="mini-icon orange">
-                        <svg className="icon">
-                          <use href="#i-grid"></use>
-                        </svg>
-                      </span>
-                      <b>{"Doanh nghiệp"}</b>
-                      <span className="mini-line"></span>
-                      <span className="mini-line short"></span>
-                    </div>
-                  </div>
-                  <div className="mini-team">
-                    <span>{"Đội ngũ phát triển sản phẩm"}</span>
-                    <div className="avatar-stack">
-                      <i>{"01"}</i>
-                      <i>{"02"}</i>
-                      <i>{"03"}</i>
-                      <i>{"04"}</i>
-                      <i>{"05"}</i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="floating-note">
-              <span className="floating-icon">
-                <svg className="icon">
-                  <use href="#i-spark"></use>
-                </svg>
-              </span>
-              <span>
-                <strong>{"Khám phá sản phẩm ZUKATEK"}</strong>
-                <small>{"Cá nhân · Nhóm · Doanh nghiệp"}</small>
-              </span>
-            </div>
-            <div className="floating-pill">
-              <span className="status-dot"></span>
-              {"Phát triển bởi đội ngũ ZUKATEK"}
-            </div>
-            <span className="visual-caption">
-              {"Minh họa hệ sinh thái ZUKATEK"}
-            </span>
-          </div>
+          <HeroVisual />
         </div>
       </section>
       <div className="benefits-wrap">
@@ -260,10 +162,80 @@ export function Hero({ href }: LinksProps) {
   );
 }
 
+function AudienceArt({ kind }: { kind: string }) {
+  if (kind === "group")
+    return (
+      <div className="card-art art-group" aria-hidden="true">
+        <div className="art-circle"></div>
+        <div className="art-person person-left">
+          <span className="person-head"></span>
+          <span className="person-body"></span>
+        </div>
+        <div className="art-person person-right">
+          <span className="person-head"></span>
+          <span className="person-body"></span>
+        </div>
+        <div className="group-link">
+          <svg className="icon">
+            <use href="#i-users"></use>
+          </svg>
+        </div>
+      </div>
+    );
+  if (kind === "business")
+    return (
+      <div className="card-art art-business" aria-hidden="true">
+        <div className="art-circle"></div>
+        <div className="art-building">
+          <div className="building-top"></div>
+          <div className="building-windows">
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+          </div>
+          <span></span>
+        </div>
+        <div className="business-bubble">
+          <svg className="icon">
+            <use href="#i-spark"></use>
+          </svg>
+        </div>
+        <div className="business-leaf"></div>
+      </div>
+    );
+  return (
+    <div className="card-art art-individual" aria-hidden="true">
+      <div className="art-circle"></div>
+      <div className="art-person">
+        <span className="person-head"></span>
+        <span className="person-body"></span>
+      </div>
+      <div className="idea-bubble">
+        <svg className="icon">
+          <use href="#i-bulb"></use>
+        </svg>
+      </div>
+      <div className="art-note">
+        <i></i>
+        <i></i>
+        <i></i>
+      </div>
+    </div>
+  );
+}
+
 export function Audience({
   href,
   onAudience,
-}: LinksProps & { onAudience: (audience: string) => void }) {
+  config,
+}: LinksProps & {
+  onAudience: (audience: string) => void;
+  config?: unknown;
+}) {
+  const { title, subtitle, items } = audienceConfig(config);
   return (
     <section
       className="section audience-section"
@@ -272,138 +244,38 @@ export function Audience({
     >
       <div className="container">
         <header className="section-heading">
-          <h2 id="about-title">{"Sản phẩm phù hợp với nhu cầu của bạn"}</h2>
-          <p>
-            {
-              "Sản phẩm số cho công việc cá nhân, phối hợp trong nhóm và vận hành doanh nghiệp."
-            }
-          </p>
+          <h2 id="about-title">{title}</h2>
+          <p>{subtitle}</p>
         </header>
         <div className="audience-grid">
-          <article className="feature-card">
-            <div className="card-art art-individual" aria-hidden="true">
-              <div className="art-circle"></div>
-              <div className="art-person">
-                <span className="person-head"></span>
-                <span className="person-body"></span>
+          {items.map((item, index) => (
+            <article className="feature-card" key={index}>
+              <AudienceArt kind={item.key} />
+              <div className="feature-body">
+                <h3>{item.headline}</h3>
+                <p>{item.body}</p>
+                <a
+                  className="text-link"
+                  href={sectionHref(href, item.cta_href)}
+                  onClick={() => onAudience(item.label)}
+                  data-audience={item.label}
+                >
+                  {item.cta_label}
+                  <svg className="icon">
+                    <use href="#i-arrow"></use>
+                  </svg>
+                </a>
               </div>
-              <div className="idea-bubble">
-                <svg className="icon">
-                  <use href="#i-bulb"></use>
-                </svg>
-              </div>
-              <div className="art-note">
-                <i></i>
-                <i></i>
-                <i></i>
-              </div>
-            </div>
-            <div className="feature-body">
-              <h3>{"Dành cho cá nhân"}</h3>
-              <p>
-                {
-                  "Khám phá các công cụ phục vụ công việc hằng ngày: ghi chú, sắp xếp thông tin và quản lý công việc cá nhân."
-                }
-              </p>
-              <a
-                className="text-link"
-                href={href("/#contact")}
-                onClick={() => onAudience("Cá nhân")}
-                data-audience="Cá nhân"
-              >
-                {"Tư vấn cho cá nhân "}
-                <svg className="icon">
-                  <use href="#i-arrow"></use>
-                </svg>
-              </a>
-            </div>
-          </article>
-          <article className="feature-card">
-            <div className="card-art art-group" aria-hidden="true">
-              <div className="art-circle"></div>
-              <div className="art-person person-left">
-                <span className="person-head"></span>
-                <span className="person-body"></span>
-              </div>
-              <div className="art-person person-right">
-                <span className="person-head"></span>
-                <span className="person-body"></span>
-              </div>
-              <div className="group-link">
-                <svg className="icon">
-                  <use href="#i-users"></use>
-                </svg>
-              </div>
-            </div>
-            <div className="feature-body">
-              <h3>{"Dành cho nhóm"}</h3>
-              <p>
-                {
-                  "Tìm sản phẩm giúp nhóm tổ chức công việc, chia sẻ tài liệu và theo dõi tiến độ trong cùng một không gian."
-                }
-              </p>
-              <a
-                className="text-link"
-                href={href("/#contact")}
-                onClick={() => onAudience("Nhóm")}
-                data-audience="Nhóm"
-              >
-                {"Tư vấn cho nhóm "}
-                <svg className="icon">
-                  <use href="#i-arrow"></use>
-                </svg>
-              </a>
-            </div>
-          </article>
-          <article className="feature-card">
-            <div className="card-art art-business" aria-hidden="true">
-              <div className="art-circle"></div>
-              <div className="art-building">
-                <div className="building-top"></div>
-                <div className="building-windows">
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                </div>
-                <span></span>
-              </div>
-              <div className="business-bubble">
-                <svg className="icon">
-                  <use href="#i-spark"></use>
-                </svg>
-              </div>
-              <div className="business-leaf"></div>
-            </div>
-            <div className="feature-body">
-              <h3>{"Dành cho doanh nghiệp"}</h3>
-              <p>
-                {
-                  "Xem các sản phẩm phục vụ quản lý và vận hành. Tìm hiểu tính năng, phạm vi sử dụng và chi phí trước khi mua."
-                }
-              </p>
-              <a
-                className="text-link"
-                href={href("/#contact")}
-                onClick={() => onAudience("Doanh nghiệp")}
-                data-audience="Doanh nghiệp"
-              >
-                {"Tư vấn cho doanh nghiệp "}
-                <svg className="icon">
-                  <use href="#i-arrow"></use>
-                </svg>
-              </a>
-            </div>
-          </article>
+            </article>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-export function BuyingSteps() {
+export function BuyingSteps({ config }: { config?: unknown }) {
+  const { title, subtitle, steps } = buyingStepsConfig(config);
   return (
     <section
       className="section collaboration-section"
@@ -412,37 +284,19 @@ export function BuyingSteps() {
     >
       <div className="container">
         <header className="section-heading">
-          <h2 id="collaboration-title">{"Chọn mua sản phẩm ZUKATEK"}</h2>
-          <p>{"Ba bước để chọn mua sản phẩm phù hợp với nhu cầu của bạn."}</p>
+          <h2 id="collaboration-title">{title}</h2>
+          <p>{subtitle}</p>
         </header>
         <div className="steps-grid">
-          <article className="step">
-            <span className="step-number">{"01"}</span>
-            <h3>{"Chọn sản phẩm"}</h3>
-            <p>
-              {
-                "Xem danh mục, tính năng và đối tượng sử dụng để tìm sản phẩm phù hợp."
-              }
-            </p>
-          </article>
-          <article className="step">
-            <span className="step-number">{"02"}</span>
-            <h3>{"Trải nghiệm bản demo"}</h3>
-            <p>
-              {
-                "Mở bản trải nghiệm riêng của sản phẩm và kiểm tra các tính năng bạn cần."
-              }
-            </p>
-          </article>
-          <article className="step">
-            <span className="step-number">{"03"}</span>
-            <h3>{"Liên hệ mua sản phẩm"}</h3>
-            <p>
-              {
-                "Nhận tư vấn về giá, phạm vi sử dụng và cách triển khai từ người giới thiệu hoặc ZUKATEK."
-              }
-            </p>
-          </article>
+          {steps.map((step, index) => (
+            <article className="step" key={index}>
+              <span className="step-number">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <h3>{step.title}</h3>
+              <p>{step.body}</p>
+            </article>
+          ))}
         </div>
       </div>
     </section>
@@ -573,7 +427,8 @@ export function Footer({ href, year }: LinksProps & { year: number }) {
               <img
                 src="/assets/logo.png"
                 alt="ZUKATEK"
-                width="1222" height="249"
+                width="1222"
+                height="249"
                 loading="lazy"
               />
             </a>
@@ -588,6 +443,7 @@ export function Footer({ href, year }: LinksProps & { year: number }) {
             <a href={href("/#about")}>{"Về ZUKATEK"}</a>
             <a href={href("/#products")}>{"Sản phẩm"}</a>
             <a href={href("/#team")}>{"Đội ngũ & kỹ năng"}</a>
+            <a href={href("/blog")}>Blog</a>
           </div>
           <div>
             <h3>{"Mua & sử dụng sản phẩm"}</h3>

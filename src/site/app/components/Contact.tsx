@@ -1,22 +1,43 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { FormEvent } from "react";
 import { useSite } from "../context";
-import { contactFor } from "../lib/links";
+import { contactFor, safeExternalUrl } from "../lib/links";
+import { contactConfig } from "../lib/sections";
 import { Icon } from "./Icon";
 import { Modal } from "./Modal";
+
+// Headings here break across two lines; a newline in the config does the same.
+function Lines({ text }: { text: string }) {
+  const parts = text.split("\n");
+  return (
+    <>
+      {parts.map((line, index) => (
+        <Fragment key={index}>
+          {index > 0 && <br />}
+          {line}
+        </Fragment>
+      ))}
+    </>
+  );
+}
 
 export function Contact({
   audience,
   onAudience,
+  config,
 }: {
   audience: string;
   onAudience: (value: string) => void;
+  config?: unknown;
 }) {
   const { data, products, referrer, url } = useSite();
+  const section = contactConfig(config);
   const [person, setPerson] = useState(referrer?.id || ""),
     [brief, setBrief] = useState(""),
     [copyStatus, setCopyStatus] = useState("");
   const target = contactFor(data, person);
+  const email = section.email || target.email;
+  const zalo = safeExternalUrl(section.zalo) || target.zalo;
   const selectedId = url.searchParams.get("product") || "";
   function prepare(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -70,14 +91,10 @@ export function Contact({
           <div className="contact-copy">
             <span className="eyebrow">TƯ VẤN & MUA SẢN PHẨM</span>
             <h2 id="contact-title">
-              Cần tư vấn sản phẩm?
-              <br />
-              Liên hệ ZUKATEK.
+              <Lines text={section.title} />
             </h2>
             <p>
-              Nhận tư vấn về tính năng, giá và cách triển khai
-              <br />
-              từ người giới thiệu hoặc đội ngũ ZUKATEK.
+              <Lines text={section.subtitle} />
             </p>
             <div className="contact-channel" id="contact-channel">
               <span className="contact-mail-icon">
@@ -89,19 +106,13 @@ export function Contact({
                     ? `Tư vấn cùng ${target.member?.name}`
                     : "Tư vấn sản phẩm ZUKATEK"}
                 </strong>
-                {target.email && (
-                  <a href={`mailto:${target.email}`}>{target.email}</a>
-                )}
-                {target.zalo && (
-                  <a
-                    href={target.zalo}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                {email && <a href={`mailto:${email}`}>{email}</a>}
+                {zalo && (
+                  <a href={zalo} target="_blank" rel="noopener noreferrer">
                     Liên hệ qua Zalo ↗
                   </a>
                 )}
-                {!target.email && !target.zalo && (
+                {!email && !zalo && (
                   <span>
                     Kênh liên hệ sẽ sớm được cập nhật. Bạn có thể gửi lời nhắn
                     cho người đã giới thiệu ZUKATEK.
@@ -121,7 +132,7 @@ export function Contact({
           <form className="contact-form" id="contact-form" onSubmit={prepare}>
             <h3>Nhận tư vấn sản phẩm</h3>
             <p className="form-intro" id="form-intro">
-              {target.email || target.zalo
+              {email || zalo
                 ? "Cho biết sản phẩm bạn quan tâm và câu hỏi cần tư vấn."
                 : "Chuẩn bị nội dung hỏi mua sản phẩm để gửi cho người đã giới thiệu ZUKATEK."}
             </p>
@@ -227,9 +238,10 @@ export function Contact({
               <Icon name="arrow" />
             </button>
             <p className="form-note" id="form-note">
-              {target.email
-                ? "Xem lại lời nhắn rồi gửi qua ứng dụng email. Biểu mẫu không tự gửi."
-                : "Lời nhắn được tạo trên thiết bị để bạn sao chép hoặc tải về; chưa được gửi đến ZUKATEK."}
+              {section.note ||
+                (email
+                  ? "Xem lại lời nhắn rồi gửi qua ứng dụng email. Biểu mẫu không tự gửi."
+                  : "Lời nhắn được tạo trên thiết bị để bạn sao chép hoặc tải về; chưa được gửi đến ZUKATEK.")}
             </p>
           </form>
         </div>
@@ -245,7 +257,7 @@ export function Contact({
             Lời nhắn của bạn đã sẵn sàng
           </h2>
           <p id="brief-description">
-            {target.email
+            {email
               ? "Xem lại nội dung, sau đó chọn gửi qua email. Ứng dụng email sẽ mở để bạn hoàn tất việc gửi."
               : "Bạn có thể sao chép hoặc tải về. Lời nhắn chưa được gửi đến ZUKATEK."}
           </p>
@@ -270,11 +282,11 @@ export function Contact({
             >
               Tải lời nhắn
             </button>
-            {target.email && (
+            {email && (
               <a
                 className="button"
                 id="email-brief"
-                href={`mailto:${target.email}?subject=${encodeURIComponent("Tư vấn mua sản phẩm ZUKATEK")}&body=${encodeURIComponent(brief)}`}
+                href={`mailto:${email}?subject=${encodeURIComponent("Tư vấn mua sản phẩm ZUKATEK")}&body=${encodeURIComponent(brief)}`}
               >
                 Gửi qua email
               </a>
