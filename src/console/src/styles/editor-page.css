@@ -22,7 +22,7 @@
  *         .editor-social
  *
  * The heading band is deliberately identical to the dashboard panels: a 16px
- * muted glyph inside the h2, 16px/600 text, 10px apart, in a 57px row. The
+ * muted glyph inside the h2, 16px/500 text, 10px apart, in a 57px row. The
  * tinted background is the one thing the editor keeps for itself.
  *
  * SCOPING: every stylesheet in this app is bundled globally, so a screen that
@@ -31,6 +31,8 @@
  */
 
 .editor-grid {
+  container-type: inline-size;
+  container-name: editorgrid;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 20rem;
   grid-template-areas: "main side" "wide side";
@@ -151,7 +153,7 @@
   align-items: start;
 }
 
-@media (max-width: 1279px) {
+@container editorgrid (max-width: 1040px) {
   .editor-grid {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "main" "side" "wide";
@@ -161,11 +163,19 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
   }
+  /*
+   * An editor whose side column holds a single card must not take the two-up
+   * rule: it would sit at half width with the other half empty, under and over
+   * full-width cards. Measured at 454px of dead space on the category editor.
+   */
+  .editor-side:has(> :last-child:nth-child(1)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .editor-side > * {
     margin-top: 0 !important;
   }
 }
-@media (max-width: 767px) {
+@container editorgrid (max-width: 640px) {
   .editor-side,
   .editor-social {
     grid-template-columns: minmax(0, 1fr);

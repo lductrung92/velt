@@ -11,16 +11,10 @@
  * stylesheets are bundled globally. */
 
 [data-list="product-categories"] .list-metric[data-kind="used"] {
-  --list-metric-accent: 166 75% 30%;
+  --list-metric-accent: var(--success-ink);
 }
 [data-list="product-categories"] .list-metric[data-kind="unused"] {
-  --list-metric-accent: 32 95% 44%;
-}
-.dark [data-list="product-categories"] .list-metric[data-kind="used"] {
-  --list-metric-accent: 166 55% 62%;
-}
-.dark [data-list="product-categories"] .list-metric[data-kind="unused"] {
-  --list-metric-accent: 38 92% 65%;
+  --list-metric-accent: var(--warning-ink);
 }
 
 /* The name column takes the slack; counts and actions keep their own width. */
@@ -90,12 +84,9 @@ tr:hover > td .pcat-grip,
   white-space: nowrap;
 }
 .pcat-count[data-empty="true"] {
-  border-color: hsl(32 95% 44% / 0.22);
-  background: hsl(32 95% 44% / 0.07);
-  color: hsl(32 95% 36%);
-}
-.dark .pcat-count[data-empty="true"] {
-  color: hsl(38 92% 68%);
+  border-color: hsl(var(--warning) / 0.22);
+  background: hsl(var(--warning) / 0.07);
+  color: hsl(var(--warning-ink));
 }
 .pcat-order {
   font-size: var(--font-size-xs);
@@ -114,7 +105,13 @@ tr:hover > td .pcat-grip,
   color: hsl(var(--muted-foreground));
 }
 
-@media (max-width: 767px) {
+/*
+ * Container query, not a media query: the card list is revealed by the panel's
+ * own width (see list-page.css), so styling it off the VIEWPORT left the cards
+ * unstyled — no padding, no dividers — on every tablet, where the panel is
+ * narrow but the window is not.
+ */
+@container listpage (max-width: 880px) {
   .pcat-mobile-card {
     display: flex;
     flex-direction: column;

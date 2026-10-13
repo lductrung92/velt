@@ -36,7 +36,19 @@
  * Without that, one screen's status palette silently repaints another's.
  */
 
+/*
+ * The list page measures ITSELF, not the window.
+ *
+ * Every responsive rule below used to key off the viewport, but the sidebar
+ * takes 240px of it and the table declares a 930px floor. On an 820px tablet
+ * that left a 930px table inside a 530px column — scrolling sideways with no
+ * scrollbar, no fade and no hint, with the row actions off-screen — while the
+ * swap to cards waited for a 767px VIEWPORT that a tablet never reaches.
+ * Asking the container how much room it actually has is the whole fix.
+ */
 .list-page {
+  container-type: inline-size;
+  container-name: listpage;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -243,7 +255,7 @@
   font-weight: 500;
 }
 .list-tabs button[aria-pressed="true"] {
-  color: hsl(var(--primary));
+  color: hsl(var(--primary-ink));
   border-bottom-color: hsl(var(--primary));
 }
 .list-tabs button i {
@@ -270,13 +282,33 @@
 .list-page .list-table-wrap {
   border: 0;
   border-radius: 0;
+  /*
+   * A table that still overflows after the card swap — one whose own column
+   * minimums add up past the floor — must SAY so. The original complaint was
+   * not that the panel scrolled sideways, it was that nothing on screen
+   * admitted it: no scrollbar, no fade, and a sticky first column that made
+   * every row look complete while its actions sat off the edge.
+   */
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+}
+.list-page .list-table-wrap::-webkit-scrollbar {
+  height: 8px;
+}
+.list-page .list-table-wrap::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: hsl(var(--muted-foreground) / 0.35);
 }
 .list-desktop table {
   /* Fill the panel. Without width the table sizes to its content, which only
      looked right on a screen whose columns happened to be wide enough; a
      narrower list left a gap and let long cells crowd their neighbours. */
   width: 100%;
-  min-width: 930px;
+  /* The floor below which columns start crowding. The card swap below is keyed
+     to this number, so the two can never drift apart. A landscape tablet gives
+     the panel ~892px, which is why this sits under 900: stretching phone cards
+     across that much width wastes it, while the table still scans well. */
+  min-width: 860px;
   table-layout: auto;
 }
 .list-desktop th {
@@ -364,7 +396,7 @@
   box-shadow: 0 8px 15px hsl(var(--primary) / 0.05);
 }
 .list-empty-card > span {
-  color: hsl(var(--primary));
+  color: hsl(var(--primary-ink));
   background: hsl(var(--primary) / 0.06);
   padding: 5px;
   border-radius: calc(var(--radius) - 2px);
@@ -390,7 +422,7 @@
   padding: 4px;
   background: hsl(var(--background));
   border: 1px solid hsl(var(--primary) / 0.18);
-  color: hsl(var(--primary));
+  color: hsl(var(--primary-ink));
   border-radius: calc(var(--radius) - 2px);
   bottom: 3px;
   right: -11px;
@@ -399,7 +431,7 @@
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
 }
-@media (max-width: 1100px) {
+@container listpage (max-width: 860px) {
   .list-toolbar {
     flex-wrap: wrap;
   }
@@ -424,14 +456,33 @@
     width: auto;
   }
 }
-@media (max-width: 767px) {
-  .list-page {
-    gap: 16px;
+/*
+ * The table is shown only while it fits. Its own min-width is the threshold,
+ * so this rule cannot drift away from it.
+ */
+@container listpage (max-width: 880px) {
+  .list-desktop {
+    display: none;
   }
 
+  .list-mobile {
+    display: block;
+  }
+}
+
+/* Four metric cards stop being readable long before the phone breakpoint: at
+   an 820px tablet they were 121px wide with their titles broken over four
+   lines. Two-up as soon as the column cannot afford four. */
+@container listpage (max-width: 860px) {
   .list-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
+  }
+}
+
+@container listpage (max-width: 700px) {
+  .list-page {
+    gap: 16px;
   }
 
   .list-metric {
@@ -447,7 +498,16 @@
 
   .list-panel-heading {
     padding: 16px 14px;
-    align-items: flex-start;
+    align-items: stretch;
+    /* Two buttons on the same line left the Vietnamese title 82px to live in,
+       so "Danh sách sản phẩm" came out as three stacked fragments. The title
+       gets the row to itself and the actions sit under it. */
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .list-panel-heading > :last-child {
+    justify-content: flex-start;
   }
 
   .list-toolbar {
@@ -479,14 +539,6 @@
 
   .list-tabs button {
     font-size: var(--font-size-sm);
-  }
-
-  .list-desktop {
-    display: none;
-  }
-
-  .list-mobile {
-    display: block;
   }
 
   .list-page .list-filter-chips {

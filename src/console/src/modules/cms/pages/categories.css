@@ -7,22 +7,13 @@
 
 /* --- Overview accents, handed to the shared chrome --- */
 [data-list="categories"] .list-metric[data-kind="roots"] {
-  --list-metric-accent: 265 65% 55%;
+  --list-metric-accent: var(--purple-ink);
 }
 [data-list="categories"] .list-metric[data-kind="used"] {
-  --list-metric-accent: 166 75% 30%;
+  --list-metric-accent: var(--success-ink);
 }
 [data-list="categories"] .list-metric[data-kind="unused"] {
-  --list-metric-accent: 32 95% 44%;
-}
-.dark [data-list="categories"] .list-metric[data-kind="roots"] {
-  --list-metric-accent: 265 70% 75%;
-}
-.dark [data-list="categories"] .list-metric[data-kind="used"] {
-  --list-metric-accent: 166 55% 62%;
-}
-.dark [data-list="categories"] .list-metric[data-kind="unused"] {
-  --list-metric-accent: 38 92% 65%;
+  --list-metric-accent: var(--warning-ink);
 }
 
 /* The name column takes the slack; counts and actions keep their own width. */
@@ -105,12 +96,9 @@ tr:hover > td .category-grip,
   white-space: nowrap;
 }
 .category-count[data-empty="true"] {
-  border-color: hsl(32 95% 44% / 0.22);
-  background: hsl(32 95% 44% / 0.07);
-  color: hsl(32 95% 36%);
-}
-.dark .category-count[data-empty="true"] {
-  color: hsl(38 92% 68%);
+  border-color: hsl(var(--warning) / 0.22);
+  background: hsl(var(--warning) / 0.07);
+  color: hsl(var(--warning-ink));
 }
 .category-order {
   font-size: var(--font-size-xs);
@@ -132,7 +120,13 @@ tr:hover > td .category-grip,
   color: hsl(var(--muted-foreground));
 }
 
-@media (max-width: 767px) {
+/*
+ * Container query, not a media query: the card list is revealed by the panel's
+ * own width (see list-page.css), so styling it off the VIEWPORT left the cards
+ * unstyled — no padding, no dividers — on every tablet, where the panel is
+ * narrow but the window is not.
+ */
+@container listpage (max-width: 880px) {
   .category-mobile-card {
     display: flex;
     flex-direction: column;

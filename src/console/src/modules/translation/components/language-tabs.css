@@ -79,6 +79,13 @@
 .tr-tab:disabled {
   opacity: 0.5;
 }
+/* The app's focus ring, written the way the list pages write theirs: an
+ * outline, not a box-shadow, because [data-active] and the embedded variant
+ * both claim box-shadow and would cancel the ring on the open tab. */
+.tr-tab:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
 /*
  * The chip follows the tab's STATE, not the tab's kind: both tabs are muted
  * when inactive and tinted when active. Styling them by kind made the pair read

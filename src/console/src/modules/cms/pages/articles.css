@@ -6,34 +6,28 @@
   --list-metric-accent: 220 9% 46%;
 }
 [data-list="articles"] .list-metric[data-kind="pending_review"] {
-  --list-metric-accent: 32 95% 44%;
+  --list-metric-accent: var(--warning-ink);
 }
 [data-list="articles"] .list-metric[data-kind="published"] {
-  --list-metric-accent: 166 75% 30%;
+  --list-metric-accent: var(--success-ink);
 }
 .dark [data-list="articles"] .list-metric[data-kind="draft"] {
   --list-metric-accent: 220 13% 69%;
-}
-.dark [data-list="articles"] .list-metric[data-kind="pending_review"] {
-  --list-metric-accent: 38 92% 65%;
-}
-.dark [data-list="articles"] .list-metric[data-kind="published"] {
-  --list-metric-accent: 166 55% 62%;
 }
 [data-list="articles"] .list-tabs button[data-status="draft"] i {
   background: hsl(220 9% 46%);
 }
 [data-list="articles"] .list-tabs button[data-status="pending_review"] i {
-  background: #d97706;
+  background: hsl(var(--warning-ink));
 }
 [data-list="articles"] .list-tabs button[data-status="needs_revision"] i {
-  background: #dc2626;
+  background: hsl(var(--destructive-ink));
 }
 [data-list="articles"] .list-tabs button[data-status="scheduled"] i {
-  background: #8952d4;
+  background: hsl(var(--purple-ink));
 }
 [data-list="articles"] .list-tabs button[data-status="published"] i {
-  background: #13896f;
+  background: hsl(var(--success-ink));
 }
 [data-list="articles"] .list-tabs button[data-status="archived"] i {
   background: hsl(var(--muted-foreground));
@@ -121,7 +115,13 @@
   color: hsl(var(--foreground));
 }
 
-@media (max-width: 767px) {
+/*
+ * Container query, not a media query: the card list is revealed by the panel's
+ * own width (see list-page.css), so styling it off the VIEWPORT left the cards
+ * unstyled — no padding, no dividers — on every tablet, where the panel is
+ * narrow but the window is not.
+ */
+@container listpage (max-width: 880px) {
   .article-mobile-card {
     display: flex;
     flex-direction: column;

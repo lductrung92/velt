@@ -116,7 +116,13 @@
   color: hsl(var(--muted-foreground));
 }
 
-@media (max-width: 767px) {
+/*
+ * Container query, not a media query: the card list is revealed by the panel's
+ * own width (see list-page.css), so styling it off the VIEWPORT left the cards
+ * unstyled — no padding, no dividers — on every tablet, where the panel is
+ * narrow but the window is not.
+ */
+@container listpage (max-width: 880px) {
   [data-list="activity"] .activity-mobile-card {
     padding: 16px 14px;
     border-bottom: 1px solid hsl(var(--border));

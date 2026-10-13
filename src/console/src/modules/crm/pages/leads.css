@@ -6,19 +6,13 @@
   --list-metric-accent: 195 72% 37%;
 }
 [data-list="leads"] .list-metric[data-kind="qualified"] {
-  --list-metric-accent: 265 65% 55%;
+  --list-metric-accent: var(--purple-ink);
 }
 [data-list="leads"] .list-metric[data-kind="won"] {
-  --list-metric-accent: 166 75% 30%;
+  --list-metric-accent: var(--success-ink);
 }
 .dark [data-list="leads"] .list-metric[data-kind="new"] {
   --list-metric-accent: 195 65% 65%;
-}
-.dark [data-list="leads"] .list-metric[data-kind="qualified"] {
-  --list-metric-accent: 265 70% 75%;
-}
-.dark [data-list="leads"] .list-metric[data-kind="won"] {
-  --list-metric-accent: 166 55% 62%;
 }
 [data-list="leads"] .list-tabs button[data-status="new"] i {
   background: hsl(var(--primary));
@@ -27,10 +21,10 @@
   background: #1684a6;
 }
 [data-list="leads"] .list-tabs button[data-status="qualified"] i {
-  background: #8952d4;
+  background: hsl(var(--purple-ink));
 }
 [data-list="leads"] .list-tabs button[data-status="won"] i {
-  background: #13896f;
+  background: hsl(var(--success-ink));
 }
 
 /* --- Row content --- */
@@ -55,20 +49,14 @@
   font-weight: 500;
 }
 .lead-avatar[data-status="qualified"] {
-  color: #8952d4;
-  background: rgb(137 82 212/0.075);
-  border-color: rgb(137 82 212/0.12);
+  color: hsl(var(--purple-ink));
+  background: hsl(var(--purple) / 0.075);
+  border-color: hsl(var(--purple) / 0.12);
 }
 .lead-avatar[data-status="won"] {
-  color: #13896f;
-  background: rgb(19 137 111/0.075);
-  border-color: rgb(19 137 111/0.12);
-}
-.dark .lead-avatar[data-status="qualified"] {
-  color: #ba94ed;
-}
-.dark .lead-avatar[data-status="won"] {
-  color: #6bd3b3;
+  color: hsl(var(--success-ink));
+  background: hsl(var(--success) / 0.075);
+  border-color: hsl(var(--success) / 0.12);
 }
 .lead-contact-info {
   min-width: 0;
@@ -212,23 +200,17 @@
   border-color: rgb(20 120 147/0.18);
 }
 .lead-stage[data-status="qualified"] {
-  color: #8049c7;
-  background: rgb(128 73 199/0.05);
-  border-color: rgb(128 73 199/0.18);
+  color: hsl(var(--purple-ink));
+  background: hsl(var(--purple) / 0.05);
+  border-color: hsl(var(--purple) / 0.18);
 }
 .lead-stage[data-status="won"] {
-  color: #11856d;
-  background: rgb(17 133 109/0.05);
-  border-color: rgb(17 133 109/0.18);
+  color: hsl(var(--success-ink));
+  background: hsl(var(--success) / 0.05);
+  border-color: hsl(var(--success) / 0.18);
 }
 .dark .lead-stage[data-status="contacted"] {
   color: #70c7df;
-}
-.dark .lead-stage[data-status="qualified"] {
-  color: #ba94ed;
-}
-.dark .lead-stage[data-status="won"] {
-  color: #6bd3b3;
 }
 /* The stage pill carries the colour and the border; the select inside it is
    just the control, so it stays transparent and inherits. */
@@ -268,7 +250,13 @@
   font-weight: 400;
   color: hsl(var(--foreground));
 }
-@media (max-width: 767px) {
+/*
+ * Container query, not a media query: the card list is revealed by the panel's
+ * own width (see list-page.css), so styling it off the VIEWPORT left the cards
+ * unstyled — no padding, no dividers — on every tablet, where the panel is
+ * narrow but the window is not.
+ */
+@container listpage (max-width: 880px) {
   .lead-mobile-card {
     padding: 18px 14px;
     border-bottom: 1px solid hsl(var(--border));

@@ -1,0 +1,32 @@
+/* Account-row content. The chrome around it is src/styles/list-page.css; only
+ * what is specific to the user roster lives here.
+ *
+ * Every rule that touches a shared `list-*` class is scoped to this screen —
+ * stylesheets are bundled globally, so an unscoped override repaints the other
+ * list screens too. */
+
+/* The status tabs carry the same three tones as the row badges; an all-grey
+   row of dots would read as decoration instead of as the status axis. */
+[data-list="admin-users"] .list-tabs button[data-status="active"] i {
+  background: hsl(166 75% 30%);
+}
+[data-list="admin-users"] .list-tabs button[data-status="disabled"] i {
+  background: hsl(var(--muted-foreground));
+}
+[data-list="admin-users"] .list-tabs button[data-status="locked"] i {
+  background: hsl(32 95% 44%);
+}
+.dark [data-list="admin-users"] .list-tabs button[data-status="active"] i {
+  background: hsl(166 55% 62%);
+}
+.dark [data-list="admin-users"] .list-tabs button[data-status="locked"] i {
+  background: hsl(38 92% 65%);
+}
+
+/* The account column takes the slack so the name/email pair can ellipsise
+   instead of pushing the dates and the actions menu out of the panel. */
+[data-list="admin-users"] .list-desktop td:first-child,
+[data-list="admin-users"] .list-desktop th:first-child {
+  width: 30%;
+  max-width: 0;
+}
