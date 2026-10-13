@@ -277,3 +277,61 @@ VALUES
   ('linh', 'Nguyễn Phan Hoàng Linh', 'linh@zakutek.com', 2),
   ('tiennv', 'Nguyễn Văn Tiến', 'tiennv@zakutek.com', 3)
 ON CONFLICT (slug) DO NOTHING;
+
+--
+-- THE HOME PAGE.
+--
+-- The public site's "/" is a CMS page whose landing owns eight sections, and
+-- the console edits every one of them. Without these rows a fresh install still
+-- serves a home page — the site falls back to the same eight sections built
+-- into its code — but nobody can change a word of it without a deploy, which
+-- is the whole point of putting it here.
+--
+-- The three pieces have to arrive together:
+--   cms_landing_pages / _sections   what the page is made of
+--   cms_pages                       the page that hosts the landing
+--   system_settings                 cms.home_page_slug, which points "/" at it
+--
+-- The section configs below are the copy the site shipped with, lifted out of
+-- the components so an editor can change it. Rendered with these values the
+-- page is pixel-identical to the built-in fallback — that is how they were
+-- checked.
+--
+
+INSERT INTO public.cms_landing_pages (id, key, name, status, published_snapshot)
+VALUES ('7e586b2f-3d33-4478-82bd-c16613d5275a', 'trang-chu', 'Trang chủ', 'published', E'{"key": "trang-chu", "seo": {"title": null, "noindex": false, "keywords": null, "nofollow": false, "og_title": null, "description": null, "canonical_url": null, "og_description": null}, "name": "Trang chủ", "og_path": null, "sections": [{"type": "hero", "config": {"eyebrow": "HỆ SINH THÁI SẢN PHẨM ZUKATEK", "heading": "Sản phẩm số\\ncho công việc của bạn.", "subheading": "ZUKATEK phát triển và cung cấp sản phẩm số cho cá nhân, nhóm, hộ kinh doanh và doanh nghiệp. Xem tính năng, trải nghiệm sản phẩm và nhận tư vấn để chọn giải pháp phù hợp."}, "sort_order": 0}, {"type": "audience_picker", "config": {"items": [{"key": "individual", "body": "Khám phá các công cụ phục vụ công việc hằng ngày: ghi chú, sắp xếp thông tin và quản lý công việc cá nhân.", "label": "Cá nhân", "cta_href": "/#contact", "headline": "Dành cho cá nhân", "cta_label": "Tư vấn cho cá nhân "}, {"key": "group", "body": "Tìm sản phẩm giúp nhóm tổ chức công việc, chia sẻ tài liệu và theo dõi tiến độ trong cùng một không gian.", "label": "Nhóm", "cta_href": "/#contact", "headline": "Dành cho nhóm", "cta_label": "Tư vấn cho nhóm "}, {"key": "business", "body": "Xem các sản phẩm phục vụ quản lý và vận hành. Tìm hiểu tính năng, phạm vi sử dụng và chi phí trước khi mua.", "label": "Doanh nghiệp", "cta_href": "/#contact", "headline": "Dành cho doanh nghiệp", "cta_label": "Tư vấn cho doanh nghiệp "}], "title": "Sản phẩm phù hợp với nhu cầu của bạn", "subtitle": "Sản phẩm số cho công việc cá nhân, phối hợp trong nhóm và vận hành doanh nghiệp."}, "sort_order": 1}, {"type": "product_grid", "config": {"limit": 6, "title": "Sản phẩm của ZUKATEK", "category": "", "subtitle": "Khám phá tính năng, mở bản demo và nhận tư vấn về sản phẩm bạn quan tâm.", "show_all_href": "/products", "show_all_label": "Xem tất cả sản phẩm "}, "sort_order": 2}, {"type": "team", "config": {"limit": 0, "title": "Đội ngũ phát triển", "subtitle": "Những người trực tiếp xây dựng và phát triển sản phẩm Zukatek."}, "sort_order": 3}, {"type": "buying_steps", "config": {"steps": [{"body": "Xem danh mục, tính năng và đối tượng sử dụng để tìm sản phẩm phù hợp.", "title": "Chọn sản phẩm"}, {"body": "Mở bản trải nghiệm riêng của sản phẩm và kiểm tra các tính năng bạn cần.", "title": "Trải nghiệm bản demo"}, {"body": "Nhận tư vấn về giá, phạm vi sử dụng và cách triển khai từ người giới thiệu hoặc ZUKATEK.", "title": "Liên hệ mua sản phẩm"}], "title": "Chọn mua sản phẩm ZUKATEK", "subtitle": "Ba bước để chọn mua sản phẩm phù hợp với nhu cầu của bạn."}, "sort_order": 4}, {"type": "featured_articles", "config": {"limit": 3, "filters": {}}, "sort_order": 5}, {"type": "faq", "config": {"items": [{"question": "Sản phẩm của ZUKATEK dành cho ai?", "answer_html": "ZUKATEK cung cấp sản phẩm số cho cá nhân, nhóm và doanh nghiệp. Mỗi sản phẩm có đối tượng sử dụng, tính năng và phạm vi riêng để bạn lựa chọn."}, {"question": "Tôi có thể trải nghiệm trước khi mua không?", "answer_html": "Sản phẩm có bản demo sẽ có nút “Trải nghiệm” mở trang riêng. Hướng dẫn dùng thử được ghi trong trang chi tiết. Hiện danh mục dùng dữ liệu mẫu và link tạm để xem bố cục."}, {"question": "Làm thế nào để tìm hiểu kỹ năng của team?", "answer_html": "Mỗi thành viên có một hồ sơ riêng trong mục “Đội ngũ &amp; kỹ năng”. Thông tin về vai trò, kỹ năng và sản phẩm đã tham gia sẽ được bổ sung tại đó."}, {"question": "Tôi liên hệ ai để hỏi giá hoặc mua sản phẩm?", "answer_html": "Bạn có thể liên hệ người đã gửi hồ sơ ZUKATEK cho bạn hoặc kênh chung của ZUKATEK. Hãy cho biết sản phẩm quan tâm, số người sử dụng và nhu cầu triển khai để được tư vấn."}], "title": "Câu hỏi thường gặp", "eyebrow": "TÌM HIỂU THÊM", "subtitle": "Những thông tin cần biết trước khi chọn mua sản phẩm."}, "sort_order": 6}, {"type": "contact_form", "config": {"note": "", "zalo": "", "email": "", "title": "Cần tư vấn sản phẩm?\\nLiên hệ ZUKATEK.", "subtitle": "Nhận tư vấn về tính năng, giá và cách triển khai\\ntừ người giới thiệu hoặc đội ngũ ZUKATEK."}, "sort_order": 7}]}'::jsonb)
+ON CONFLICT (key) DO NOTHING;
+
+
+-- The eight sections, in the order the page shows them.
+INSERT INTO public.cms_landing_sections (id, landing_page_id, type, sort_order, is_visible, config) VALUES
+
+  ('4c1dd11a-dd98-411a-a4ff-db711648a8c9', '7e586b2f-3d33-4478-82bd-c16613d5275a', 'hero', 0, 't', E'{"eyebrow": "HỆ SINH THÁI SẢN PHẨM ZUKATEK", "heading": "Sản phẩm số\\ncho công việc của bạn.", "subheading": "ZUKATEK phát triển và cung cấp sản phẩm số cho cá nhân, nhóm, hộ kinh doanh và doanh nghiệp. Xem tính năng, trải nghiệm sản phẩm và nhận tư vấn để chọn giải pháp phù hợp."}'::jsonb),
+  ('d87c6149-d803-4589-a738-31f22c7a5e46', '7e586b2f-3d33-4478-82bd-c16613d5275a', 'audience_picker', 1, 't', '{"items": [{"key": "individual", "body": "Khám phá các công cụ phục vụ công việc hằng ngày: ghi chú, sắp xếp thông tin và quản lý công việc cá nhân.", "label": "Cá nhân", "cta_href": "/#contact", "headline": "Dành cho cá nhân", "cta_label": "Tư vấn cho cá nhân "}, {"key": "group", "body": "Tìm sản phẩm giúp nhóm tổ chức công việc, chia sẻ tài liệu và theo dõi tiến độ trong cùng một không gian.", "label": "Nhóm", "cta_href": "/#contact", "headline": "Dành cho nhóm", "cta_label": "Tư vấn cho nhóm "}, {"key": "business", "body": "Xem các sản phẩm phục vụ quản lý và vận hành. Tìm hiểu tính năng, phạm vi sử dụng và chi phí trước khi mua.", "label": "Doanh nghiệp", "cta_href": "/#contact", "headline": "Dành cho doanh nghiệp", "cta_label": "Tư vấn cho doanh nghiệp "}], "title": "Sản phẩm phù hợp với nhu cầu của bạn", "subtitle": "Sản phẩm số cho công việc cá nhân, phối hợp trong nhóm và vận hành doanh nghiệp."}'::jsonb),
+  ('eff1940f-2e77-45d2-9588-61c890ef01ee', '7e586b2f-3d33-4478-82bd-c16613d5275a', 'product_grid', 2, 't', '{"limit": 6, "title": "Sản phẩm của ZUKATEK", "category": "", "subtitle": "Khám phá tính năng, mở bản demo và nhận tư vấn về sản phẩm bạn quan tâm.", "show_all_href": "/products", "show_all_label": "Xem tất cả sản phẩm "}'::jsonb),
+  ('ee788422-eca8-441e-86be-201dbd07397b', '7e586b2f-3d33-4478-82bd-c16613d5275a', 'team', 3, 't', '{"limit": 0, "title": "Đội ngũ phát triển", "subtitle": "Những người trực tiếp xây dựng và phát triển sản phẩm Zukatek."}'::jsonb),
+  ('b208a676-2c13-4d07-bedb-b3d6a1803911', '7e586b2f-3d33-4478-82bd-c16613d5275a', 'buying_steps', 4, 't', '{"steps": [{"body": "Xem danh mục, tính năng và đối tượng sử dụng để tìm sản phẩm phù hợp.", "title": "Chọn sản phẩm"}, {"body": "Mở bản trải nghiệm riêng của sản phẩm và kiểm tra các tính năng bạn cần.", "title": "Trải nghiệm bản demo"}, {"body": "Nhận tư vấn về giá, phạm vi sử dụng và cách triển khai từ người giới thiệu hoặc ZUKATEK.", "title": "Liên hệ mua sản phẩm"}], "title": "Chọn mua sản phẩm ZUKATEK", "subtitle": "Ba bước để chọn mua sản phẩm phù hợp với nhu cầu của bạn."}'::jsonb),
+  ('6fd9afba-1161-4626-b3ed-bba424027a53', '7e586b2f-3d33-4478-82bd-c16613d5275a', 'featured_articles', 5, 't', '{"limit": 3, "filters": {}}'::jsonb),
+  ('77f50406-e967-4c5c-a466-83923c0f249a', '7e586b2f-3d33-4478-82bd-c16613d5275a', 'faq', 6, 't', '{"items": [{"question": "Sản phẩm của ZUKATEK dành cho ai?", "answer_html": "ZUKATEK cung cấp sản phẩm số cho cá nhân, nhóm và doanh nghiệp. Mỗi sản phẩm có đối tượng sử dụng, tính năng và phạm vi riêng để bạn lựa chọn."}, {"question": "Tôi có thể trải nghiệm trước khi mua không?", "answer_html": "Sản phẩm có bản demo sẽ có nút “Trải nghiệm” mở trang riêng. Hướng dẫn dùng thử được ghi trong trang chi tiết. Hiện danh mục dùng dữ liệu mẫu và link tạm để xem bố cục."}, {"question": "Làm thế nào để tìm hiểu kỹ năng của team?", "answer_html": "Mỗi thành viên có một hồ sơ riêng trong mục “Đội ngũ &amp; kỹ năng”. Thông tin về vai trò, kỹ năng và sản phẩm đã tham gia sẽ được bổ sung tại đó."}, {"question": "Tôi liên hệ ai để hỏi giá hoặc mua sản phẩm?", "answer_html": "Bạn có thể liên hệ người đã gửi hồ sơ ZUKATEK cho bạn hoặc kênh chung của ZUKATEK. Hãy cho biết sản phẩm quan tâm, số người sử dụng và nhu cầu triển khai để được tư vấn."}], "title": "Câu hỏi thường gặp", "eyebrow": "TÌM HIỂU THÊM", "subtitle": "Những thông tin cần biết trước khi chọn mua sản phẩm."}'::jsonb),
+  ('9aca499b-d1f8-474e-8b99-58f42ab35364', '7e586b2f-3d33-4478-82bd-c16613d5275a', 'contact_form', 7, 't', E'{"note": "", "zalo": "", "email": "", "title": "Cần tư vấn sản phẩm?\\nLiên hệ ZUKATEK.", "subtitle": "Nhận tư vấn về tính năng, giá và cách triển khai\\ntừ người giới thiệu hoặc đội ngũ ZUKATEK."}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
+
+
+-- The CMS page that hosts it, and the setting that makes it the site root.
+INSERT INTO public.cms_pages (id, title, slug, status, landing_id, published_at, published_snapshot)
+SELECT '6f6ac11c-85b9-4443-82c5-9e9f84eaf398', 'Trang chủ', 'trang-chu', 'published', '7e586b2f-3d33-4478-82bd-c16613d5275a', now(), '{"seo": {"title": null, "noindex": false, "keywords": null, "nofollow": false, "og_title": null, "description": null, "canonical_url": null, "og_description": null}, "slug": "trang-chu", "title": "Trang chủ", "og_path": null, "template": null, "body_html": null, "landing_id": "7e586b2f-3d33-4478-82bd-c16613d5275a", "inline_widgets": null}'::jsonb
+ WHERE NOT EXISTS (SELECT 1 FROM public.cms_pages WHERE slug = 'trang-chu');
+
+
+INSERT INTO public.system_settings (key, value) VALUES ('cms.home_page_slug', '"trang-chu"'::jsonb)
+ON CONFLICT (key) DO NOTHING;
+
+
+-- The published read model the public page endpoint serves from.
+
+INSERT INTO public.published_docs (entity, locale, slug, entity_id, is_current, search_text, body, published_at, written_at)
+VALUES ('page', 'en', 'trang-chu', '6f6ac11c-85b9-4443-82c5-9e9f84eaf398', 't', 'Trang chủ', '{"seo": {"title": null, "noindex": false, "keywords": null, "nofollow": false, "og_title": null, "description": null, "canonical_url": null, "og_description": null}, "slug": "trang-chu", "title": "Trang chủ", "og_path": null, "template": null, "body_html": null, "landing_id": "7e586b2f-3d33-4478-82bd-c16613d5275a", "inline_widgets": null}'::jsonb, now(), now())
+ON CONFLICT (entity, locale, slug) DO NOTHING;
+INSERT INTO public.published_docs (entity, locale, slug, entity_id, is_current, search_text, body, published_at, written_at)
+VALUES ('page', 'vi', 'trang-chu', '6f6ac11c-85b9-4443-82c5-9e9f84eaf398', 't', 'Trang chủ', '{"seo": {"title": null, "noindex": false, "keywords": null, "nofollow": false, "og_title": null, "description": null, "canonical_url": null, "og_description": null}, "slug": "trang-chu", "title": "Trang chủ", "og_path": null, "template": null, "body_html": null, "landing_id": "7e586b2f-3d33-4478-82bd-c16613d5275a", "inline_widgets": null}'::jsonb, now(), now())
+ON CONFLICT (entity, locale, slug) DO NOTHING;
