@@ -1,4 +1,5 @@
 import { content as fallbackContent } from "../data/content";
+import { cached, ttlSeconds } from "./cache.server";
 import type { Member, Product, SiteContent } from "../types";
 
 /**
@@ -148,6 +149,11 @@ export interface LoadResult {
 export async function loadSiteContent(
   request: typeof fetch = fetch,
 ): Promise<LoadResult> {
+  const ttl = (await ttlSeconds(request)) * 1000;
+  return cached("site-content", ttl, () => fetchSiteContent(request));
+}
+
+async function fetchSiteContent(request: typeof fetch): Promise<LoadResult> {
   try {
     const [products, members, settings] = await Promise.all([
       getJSON<ApiList<ApiProduct>>("/public/products?page=1&page_size=60", request),

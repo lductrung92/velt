@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { loadSiteContent } from "../app/lib/site.server";
+import { purge } from "../app/lib/cache.server";
 
 const product = {
   slug: "kho-gon",
@@ -40,7 +41,9 @@ function stub(payloads: Record<string, unknown>, fail = false): typeof fetch {
 const payloads = {
   "/public/products": { items: [product], total: 1 },
   "/public/members": { items: [member], total: 1 },
-  "/public/settings": { "app.name": "Zukatek" },
+  // TTL 0 turns caching off, so each test sees the stub it set up rather
+  // than a value another test warmed. Caching has its own test below.
+  "/public/settings": { "app.name": "Zukatek", "site.cache_ttl_seconds": 0 },
 };
 
 test("API codes become the words the console shows", async () => {
@@ -54,7 +57,7 @@ test("API codes become the words the console shows", async () => {
   assert.equal(p.status, "Đã ra mắt");
   assert.deepEqual(p.skills, ["Web", "Android"]);
   assert.equal(p.category, "Vận hành");
-  assert.match(p.image, /^https?:\/\/.*\/api\/files\/cover\.png$/);
+  assert.match(p.image ?? "", /^https?:\/\/.*\/api\/files\/cover\.png$/);
   assert.equal(content.members[0].name, "An Nguyễn");
 });
 
@@ -76,4 +79,23 @@ test("a dead API serves the last good content, not the design mock", async () =>
   assert.equal(after.fresh, false);
   assert.equal(after.content.products[0].name, "Kho Gọn");
   assert.equal(after.content.showProductExamples, false);
+});
+
+test("a cached page is served without touching the API again", async () => {
+  purge();
+  let calls = 0;
+  const counting = ((...args: Parameters<typeof fetch>) => {
+    const url = String(args[0]);
+    if (!url.includes("/public/settings")) calls += 1;
+    return stub({ ...payloads, "/public/settings": { "app.name": "Zukatek", "site.cache_ttl_seconds": 60 } })(...args);
+  }) as unknown as typeof fetch;
+
+  await loadSiteContent(counting);
+  const first = calls;
+  await loadSiteContent(counting);
+  await loadSiteContent(counting);
+
+  // Two further page views must cost nothing: the whole point of the cache.
+  assert.equal(calls, first);
+  purge();
 });

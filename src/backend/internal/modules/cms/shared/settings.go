@@ -27,6 +27,11 @@ const (
 	// homepage ("/"). Empty → the web falls back to its built-in home. Public so
 	// the web tier can read it from /api/public/settings without auth.
 	HomePageSlug = "cms.home_page_slug"
+
+	// SiteCacheTTL — how long the public site may serve a rendered page from
+	// its own cache before asking again. Public so the web tier reads it
+	// without auth; 0 disables caching, which is what you want while editing.
+	SiteCacheTTL = "site.cache_ttl_seconds"
 )
 
 // SettingsPort is the scoped reader/writer for the cms.* feature flags. It is
@@ -53,5 +58,10 @@ func SettingDefs() []settings.SettingDef {
 		{Key: FlagNewsletterNotify, Group: GroupCMS, Type: settings.TypeBool, Default: false, Description: "Email newsletter subscribers when an article is published"},
 		{Key: FlagPublishAllowNow, Group: GroupCMS, Type: settings.TypeBool, Default: true, Description: "ON: only immediate publish (hide scheduling); OFF: also offer scheduled publish"},
 		{Key: HomePageSlug, Group: GroupCMS, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Slug of the published CMS page served as the public homepage; empty → built-in home"},
+		{Key: SiteCacheTTL, Group: GroupCMS, Type: settings.TypeInt, Default: 60, Min: ptr(0), Max: ptr(86400), IsPublic: true, Description: "Seconds the public site may serve a cached page; 0 disables caching"},
 	}
 }
+
+// ptr is the local spelling of the settings package's unexported int pointer
+// helper; a bounded int setting needs Min/Max as pointers.
+func ptr(v int) *int { return &v }
