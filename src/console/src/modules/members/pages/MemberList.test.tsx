@@ -210,6 +210,49 @@ describe("MemberList", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("sorts by a column in both directions, not just ascending", async () => {
+    // The header speaks the API convention ("role" asc, "-role" desc). Parsing
+    // it as "col:dir" left every second click sorting ascending again, and sent
+    // "-role" down the name branch — so descending silently did nothing and the
+    // role column silently sorted by name.
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/members`, () =>
+        HttpResponse.json(
+          page([
+            member({ id: "m1", full_name: "Bình Trần", role: "Designer" }),
+            member({ id: "m2", full_name: "An Nguyễn", role: "QA Engineer" }),
+            member({ id: "m3", full_name: "Cường Lê", role: "Backend" }),
+          ]),
+        ),
+      ),
+    );
+    renderPage();
+    await screen.findAllByTestId("member-row");
+
+    // Row text leads with the avatar initials, so match on the name itself.
+    const order = (names: string[]) =>
+      screen
+        .getAllByTestId("member-row")
+        .map((r) => names.find((n) => (r.textContent ?? "").includes(n)) ?? "?");
+    const byName = () => order(["An Nguyễn", "Bình Trần", "Cường Lê"]);
+    const byRole = () => order(["Backend", "Designer", "QA Engineer"]);
+    const nameHead = screen.getByRole("button", { name: /Thành viên/ });
+    const roleHead = screen.getByRole("button", { name: /Vai trò/ });
+
+    await userEvent.click(nameHead);
+    expect(byName()).toEqual(["An Nguyễn", "Bình Trần", "Cường Lê"]);
+
+    await userEvent.click(nameHead); // second click must reverse it
+    expect(byName()).toEqual(["Cường Lê", "Bình Trần", "An Nguyễn"]);
+
+    await userEvent.click(roleHead);
+    expect(byRole()).toEqual(["Backend", "Designer", "QA Engineer"]);
+
+    await userEvent.click(roleHead); // descending BY ROLE, not by name
+    expect(byRole()).toEqual(["QA Engineer", "Designer", "Backend"]);
+  });
+
   it("warns that deleting unlinks the member from every product", async () => {
     signIn(MANAGER);
     server.use(

@@ -98,8 +98,12 @@ export default function MemberList() {
       );
     }
     if (sort) {
-      const [col, dir] = sort.split(":");
-      const sign = dir === "desc" ? -1 : 1;
+      // SortableHead speaks the API convention ("role" asc, "-role" desc), not
+      // "col:dir" — splitting on ":" left dir undefined, so descending never
+      // reversed and "-role" missed the role branch and sorted by name instead.
+      const desc = sort.startsWith("-");
+      const col = desc ? sort.slice(1) : sort;
+      const sign = desc ? -1 : 1;
       out = [...out].sort((a, b) => {
         const av = col === "role" ? (a.role ?? "") : a.full_name;
         const bv = col === "role" ? (b.role ?? "") : b.full_name;
