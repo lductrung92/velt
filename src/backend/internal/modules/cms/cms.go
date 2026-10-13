@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/cms/articles"
 	"github.com/velt/backend/internal/modules/cms/comments"
 	"github.com/velt/backend/internal/modules/cms/landing"
@@ -44,6 +45,18 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 	// A page may attach a landing; its published sections resolve in-process.
 	landingPublic := landing.NewPublicService(landing.NewRepository(pool), resolver, store)
 	r.Route("/api/public/cms", func(r chi.Router) {
+		// A token that moves on every publish. The public site polls it and
+		// drops its cache when it changes, so an edit is visible immediately
+		// instead of after the cache TTL — without the backend having to know
+		// that a cache exists, or where.
+		r.Get("/version", func(w http.ResponseWriter, r *http.Request) {
+			token, err := docs.Version(r.Context())
+			if err != nil {
+				httpx.WriteError(w, err)
+				return
+			}
+			httpx.WriteJSON(w, http.StatusOK, map[string]string{"version": token})
+		})
 		w.PublicPages = pages.RegisterPublic(r, resolver, landingPublic, docs)
 		w.PublicArticles = articles.RegisterPublic(r, pool, store, docs)
 		newsletter.RegisterPublic(r, base, pool, limiter, trustProxy)

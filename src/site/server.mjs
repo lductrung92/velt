@@ -49,6 +49,21 @@ const control = (ttl) =>
 // The console owns the TTL (site.cache_ttl_seconds). Read it rarely: it is a
 // knob, not a hot path.
 let ttlMemo = { value: 60, expires: 0 };
+let seenVersion = null;
+// The same derived token the content cache watches. Checking it here is what
+// lets a publish clear the rendered HTML too, not just the data behind it.
+async function checkVersion(base) {
+  try {
+    const res = await fetch(`${base}/public/cms/version`);
+    if (!res.ok) return;
+    const { version } = await res.json();
+    if (!version) return;
+    if (seenVersion !== null && seenVersion !== version) pageCache.clear();
+    seenVersion = version;
+  } catch {
+    // Keep what we have: a hiccup must not cost us a warm cache.
+  }
+}
 async function cacheTtl() {
   if (Date.now() < ttlMemo.expires) return ttlMemo.value;
   try {
@@ -56,9 +71,12 @@ async function cacheTtl() {
       process.env.SITE_API_BASE_URL ||
       process.env.VITE_API_BASE_URL ||
       "http://127.0.0.1:8081/api";
-    const res = await fetch(`${base}/public/settings`);
-    if (res.ok) {
-      const raw = Number((await res.json())["site.cache_ttl_seconds"]);
+    const [settings] = await Promise.all([
+      fetch(`${base}/public/settings`),
+      checkVersion(base),
+    ]);
+    if (settings.ok) {
+      const raw = Number((await settings.json())["site.cache_ttl_seconds"]);
       if (Number.isFinite(raw) && raw >= 0) ttlMemo.value = raw;
     }
   } catch {

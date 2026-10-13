@@ -30,6 +30,7 @@ interface Entry<T> {
 
 const store = new Map<string, Entry<unknown>>();
 let ttlCache: { value: number; expires: number } | null = null;
+let seenVersion: string | null = null;
 
 /**
  * Clears everything, including the remembered TTL. Called when the content
@@ -39,6 +40,7 @@ let ttlCache: { value: number; expires: number } | null = null;
 export function purge(): void {
   store.clear();
   ttlCache = null;
+  seenVersion = null;
 }
 
 export function size(): number {
@@ -90,11 +92,45 @@ export async function cached<T>(
  * on every request and must not cost a round trip each time, but turning
  * caching off while editing should take effect within seconds, not minutes.
  */
+
+/**
+ * Drops the whole cache when the published content changes.
+ *
+ * The token is derived from `published_docs`, so it moves on every publish,
+ * unpublish and slug change and on nothing else. Checking it is one cheap
+ * request; it rides along with the TTL poll, so an edit goes live within
+ * seconds instead of waiting out the TTL — which is what makes a long TTL
+ * safe to use in the first place.
+ *
+ * A failed check changes nothing: serving slightly stale content beats
+ * dropping a warm cache because the API hiccuped.
+ */
+async function checkVersion(request: typeof fetch): Promise<void> {
+  try {
+    const res = await request(`${API_BASE}/public/cms/version`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return;
+    const { version } = (await res.json()) as { version?: string };
+    if (!version) return;
+    if (seenVersion !== null && seenVersion !== version) {
+      store.clear();
+    }
+    seenVersion = version;
+  } catch {
+    // Keep what we have.
+  }
+}
+
 export async function ttlSeconds(request: typeof fetch = fetch): Promise<number> {
   const now = Date.now();
   if (ttlCache && ttlCache.expires > now) return ttlCache.value;
   let value = 60;
   try {
+    // Rides along with the TTL refresh rather than running per request: it is
+    // a poll, and polling it on every page view would undo the cache it
+    // protects.
+    await checkVersion(request);
     const res = await request(`${API_BASE}/public/settings`, {
       headers: { Accept: "application/json" },
     });

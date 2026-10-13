@@ -214,3 +214,28 @@ func (s *Store) Purge(ctx context.Context, entity string, id uuid.UUID) error {
 	}
 	return nil
 }
+
+// Version is a token that changes whenever any published content changes.
+//
+// It is DERIVED, not maintained: the newest written_at across published_docs
+// already moves on every publish, unpublish and slug change, so nothing has to
+// remember to bump a counter. A caching reader (the public site) polls this and
+// drops its cache when the token moves, which turns "wait for the TTL" into
+// "visible as soon as you publish" without coupling the backend to who is
+// caching or where they are.
+//
+// An empty table yields "0" rather than an error: no published content is a
+// perfectly good state, and it is stable, which is all a cache key needs.
+func (s *Store) Version(ctx context.Context) (string, error) {
+	var token string
+	err := s.pool.QueryRow(ctx, `
+		SELECT COALESCE(
+		         to_char(MAX(written_at) AT TIME ZONE 'UTC', 'YYYYMMDD"T"HH24MISS.US')
+		         || '-' || COUNT(*)::text,
+		       '0')
+		  FROM published_docs`).Scan(&token)
+	if err != nil {
+		return "", fmt.Errorf("published version: %w", err)
+	}
+	return token, nil
+}
