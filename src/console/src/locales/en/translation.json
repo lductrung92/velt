@@ -1569,8 +1569,6 @@
   "tr": {
     "tabs": "Content language",
     "source": "Source",
-    "source_value": "Source:",
-    "source_empty": "(empty)",
     "needs_republish": "Needs republishing",
     "slug_hint": "Leave empty and this language reuses the Vietnamese URL.",
     "shared_title": "Shared across languages"

@@ -515,7 +515,6 @@ export default function ArticleEditor() {
               title: form.watch("title"),
               slug: form.watch("slug"),
               excerpt: form.watch("excerpt"),
-              bodyHtml: form.watch("body_html"),
               seoTitle: form.watch("seo_title"),
               seoDescription: form.watch("seo_description"),
             }}

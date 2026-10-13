@@ -500,7 +500,6 @@ export default function ProductEditor() {
               name: form.watch("name"),
               slug: form.watch("slug"),
               summary: form.watch("summary"),
-              bodyHtml: form.watch("body_html"),
               seoTitle: seo.title ?? "",
               seoDescription: seo.description ?? "",
             }}

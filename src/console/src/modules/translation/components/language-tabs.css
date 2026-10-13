@@ -114,42 +114,6 @@
   color: hsl(38 92% 38%);
 }
 
-/* The original body, shown beside its translation rather than under it: an
- * article body is too long to hold in your head while scrolling past it. */
-.tr-body-heads {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-}
-.tr-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1rem;
-  /* stretch, not start: the reference column reads as a column beside the
-     editor rather than a note floating at the top of a tall empty gap. */
-  align-items: stretch;
-}
-.tr-body-source {
-  max-height: 26rem;
-  overflow-y: auto;
-  padding: 1rem;
-  border: 1px dashed hsl(var(--border));
-  border-radius: var(--radius);
-  font-size: var(--font-size-sm);
-  line-height: 1.8;
-  color: hsl(var(--muted-foreground));
-  background: hsl(var(--muted) / 0.15);
-  overflow-wrap: anywhere;
-}
-.tr-body-source :where(h2, h3) {
-  font-weight: 600;
-  color: hsl(var(--foreground) / 0.8);
-}
-.tr-body-source img {
-  max-width: 100%;
-  height: auto;
-}
 .tr-caption {
   font-size: var(--font-size-caption);
   font-weight: 600;
@@ -179,14 +143,4 @@
   flex-shrink: 0;
   border-radius: 999px;
   background: hsl(var(--muted-foreground) / 0.5);
-}
-
-@media (max-width: 1023px) {
-  .tr-body,
-  .tr-body-heads {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .tr-body-source {
-    max-height: 14rem;
-  }
 }

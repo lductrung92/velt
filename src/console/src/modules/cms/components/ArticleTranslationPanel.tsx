@@ -28,7 +28,6 @@ export interface ArticleSource {
   title: string;
   slug: string;
   excerpt: string;
-  bodyHtml: string;
   seoTitle: string;
   seoDescription: string;
 }
@@ -124,34 +123,21 @@ export function ArticleTranslationPanel({ tr, source, readOnly }: Props) {
           </TranslatedField>
 
           <div>
-            {/* Two headings on one row so each column is labelled: the editor on
-                the left, the Vietnamese it is being translated from on the
-                right. */}
-            <div className="tr-body-heads">
-              <p className="text-sm font-medium leading-none">
-                {tl("cms.articles.field.body")}
-              </p>
-              <span className="tr-caption">{tl("tr.source")}</span>
-            </div>
-            <div className="tr-body">
-              <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-                <RichTextEditor
-                  value={str(tr.values.body_html)}
-                  editable={!readOnly}
-                  ariaLabel={tl("cms.articles.field.body")}
-                  className="editor-body"
-                  onChange={(html) => tr.setField("body_html", html)}
-                />
-              </Suspense>
-              <div
-                className="tr-body-source"
-                // The source body is the editor's own sanitised output, read
-                // back for reference only.
-                dangerouslySetInnerHTML={{
-                  __html: source.bodyHtml || `<p>${tl("tr.source_empty")}</p>`,
-                }}
+            {/* Full width, exactly like the source-language form. The side-by-side
+                reference column halved the writing area for the longest field on
+                the screen. */}
+            <p className="mb-2 text-sm font-medium leading-none">
+              {tl("cms.articles.field.body")}
+            </p>
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+              <RichTextEditor
+                value={str(tr.values.body_html)}
+                editable={!readOnly}
+                ariaLabel={tl("cms.articles.field.body")}
+                className="editor-body"
+                onChange={(html) => tr.setField("body_html", html)}
               />
-            </div>
+            </Suspense>
           </div>
         </CardContent>
       </Card>

@@ -1617,8 +1617,6 @@
   "tr": {
     "tabs": "Ngôn ngữ nội dung",
     "source": "Bản gốc",
-    "source_value": "Bản gốc:",
-    "source_empty": "(chưa có)",
     "needs_republish": "Cần xuất bản lại",
     "slug_hint": "Để trống thì bản dịch dùng chung đường dẫn tiếng Việt.",
     "shared_title": "Dùng chung mọi ngôn ngữ"
