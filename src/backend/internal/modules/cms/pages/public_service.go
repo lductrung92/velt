@@ -17,7 +17,7 @@ import (
 // satisfied in-process by landing.PublicService; declared here so pages does not
 // import the landing package. A nil port (or nil landing) yields no sections.
 type LandingPort interface {
-	ResolvePublishedSections(ctx context.Context, id uuid.UUID) ([]shared.PublicSection, error)
+	ResolvePublishedSectionsIn(ctx context.Context, id uuid.UUID, locale string) ([]shared.PublicSection, error)
 }
 
 // publicReader is the read seam the public page service needs (PublicRepo
@@ -134,7 +134,7 @@ func (s *PublicService) GetPublishedPage(ctx context.Context, locale, slug strin
 			PublicAlternate{Locale: r.Locale, Slug: r.Slug, XDefault: r.Locale == baseLocale})
 	}
 	for _, iw := range snap.InlineWidgets {
-		data, derr := s.resolver.Resolve(ctx, iw.Type, iw.Config)
+		data, derr := s.resolver.ResolveIn(ctx, iw.Type, iw.Config, want)
 		if derr != nil {
 			data = nil
 		}
@@ -143,7 +143,7 @@ func (s *PublicService) GetPublishedPage(ctx context.Context, locale, slug strin
 	// A page may attach a published landing; its builder sections render inline.
 	// Resolve failures never break the page — it just renders without sections.
 	if snap.LandingID != nil && s.landing != nil {
-		if secs, derr := s.landing.ResolvePublishedSections(ctx, *snap.LandingID); derr == nil && secs != nil {
+		if secs, derr := s.landing.ResolvePublishedSectionsIn(ctx, *snap.LandingID, want); derr == nil && secs != nil {
 			out.Sections = secs
 		}
 	}

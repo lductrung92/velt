@@ -285,7 +285,9 @@ func buildLandingSnapshot(p Page, sections []Section) ([]byte, error) {
 		if len(cfg) == 0 {
 			cfg = json.RawMessage(`{}`)
 		}
-		snap.Sections = append(snap.Sections, sectionSnapshot{Type: sec.Type, SortOrder: sec.SortOrder, Config: cfg})
+		snap.Sections = append(snap.Sections, sectionSnapshot{
+			ID: sec.ID, Type: sec.Type, SortOrder: sec.SortOrder, Config: cfg,
+		})
 	}
 	return json.Marshal(snap)
 }

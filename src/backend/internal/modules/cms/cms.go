@@ -44,6 +44,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 	resolver := widgets.NewResolver(ports)
 	// A page may attach a landing; its published sections resolve in-process.
 	landingPublic := landing.NewPublicService(landing.NewRepository(pool), resolver, store)
+	w.PublicLanding = landingPublic
 	r.Route("/api/public/cms", func(r chi.Router) {
 		// A token that moves on every publish. The public site polls it and
 		// drops its cache when it changes, so an edit is visible immediately
@@ -70,7 +71,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 		w.Pages = pages.Register(r, base, pool, landing.NewPagesPort(landing.NewRepository(pool), store))
 		w.Articles = articles.Register(r, base, pool, store)
 		w.Menus = menus.Register(r, base, pool)
-		landing.Register(r, base, pool, store)
+		w.Landing = landing.Register(r, base, pool, store)
 		comments.Register(r, base, pool)
 		newsletter.Register(r, base, pool)
 		w.Settings = cmssettings.Register(r, base, settings)
@@ -97,6 +98,10 @@ type Wiring struct {
 	// translation route (a menu item's label, the site chrome's copy).
 	Menus    *menus.Service
 	Settings *cmssettings.Service
+	// Landing is handed back for the same reason: it gates the translation of a
+	// section, and the public half of it needs the translation port wired.
+	Landing       *landing.Service
+	PublicLanding *landing.PublicService
 }
 
 // SettingDefs returns the CMS feature-flag definitions for the settings registry

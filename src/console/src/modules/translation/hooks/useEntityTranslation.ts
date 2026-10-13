@@ -38,10 +38,21 @@ function filled(value: unknown): boolean {
 }
 
 function same(a: unknown, b: unknown): boolean {
-  if (typeof a === "string" || typeof b === "string") {
-    return (
-      (typeof a === "string" ? a : "") === (typeof b === "string" ? b : "")
-    );
+  const aText = typeof a === "string";
+  const bText = typeof b === "string";
+  if (aText && bText) return a === b;
+  // A text field that was never stored arrives here as "", so comparing it to
+  // an empty draft must still say "unchanged". But a STRUCTURE against that
+  // same "" is a new value, not an empty one — reading it as empty is how a
+  // whole object (a section's config, a grouped seo) could be typed in and
+  // never written.
+  if ((aText && a === "" && b == null) || (bText && b === "" && a == null)) {
+    return true;
+  }
+  if (aText || bText) {
+    const other = aText ? b : a;
+    if (other == null) return (aText ? a : (b as string)) === "";
+    return false;
   }
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }

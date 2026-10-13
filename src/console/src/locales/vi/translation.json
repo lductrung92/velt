@@ -799,6 +799,13 @@
       }
     },
     "landings": {
+      "translate": {
+        "title": "Dịch khối: {{section}}",
+        "open": "Dịch khối này",
+        "hint": "Mỗi ô là một đoạn chữ trong khối. Để trống thì site giữ nguyên bản tiếng Việt.",
+        "empty": "Khối này không có chữ để dịch.",
+        "saved": "Đã lưu bản dịch của khối"
+      },
       "field": {
         "name": "Tên",
         "key": "Khóa (key)"

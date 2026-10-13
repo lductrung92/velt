@@ -73,6 +73,14 @@ var declarations = []Declaration{
 		Entity: EntityMenuItem,
 		Fields: []string{"label", "description"},
 	},
+	// A landing section's text. Its shape depends on the section type — a hero
+	// has a heading, an FAQ has a list of questions — so the unit is the config
+	// object itself: the translated copy holds the strings somebody wrote, and
+	// the public read overlays them field by field onto what was published.
+	{
+		Entity: EntityLandingSection,
+		Fields: []string{"config"},
+	},
 	// The words around that navigation — the footer blurb, the last column, the
 	// copyright line, the header button. They are settings rather than a record,
 	// so they translate as ONE singleton whose id is fixed (see SiteChromeID):
@@ -101,6 +109,7 @@ const (
 	EntityCMSCategory     = "cms_category"
 	EntityMember          = "member"
 	EntityMenuItem        = "menu_item"
+	EntityLandingSection  = "landing_section"
 	EntitySiteChrome      = "site_chrome"
 )
 

@@ -38,9 +38,15 @@ func TestPublishPage_Revalidates(t *testing.T) {
 type fakeLandingPort struct {
 	secs []shared.PublicSection
 	err  error
+	// locale records what the page asked for, so a test can assert the page's
+	// language reaches the sections it renders.
+	locale *string
 }
 
-func (f fakeLandingPort) ResolvePublishedSections(context.Context, uuid.UUID) ([]shared.PublicSection, error) {
+func (f fakeLandingPort) ResolvePublishedSectionsIn(_ context.Context, _ uuid.UUID, locale string) ([]shared.PublicSection, error) {
+	if f.locale != nil {
+		*f.locale = locale
+	}
 	return f.secs, f.err
 }
 

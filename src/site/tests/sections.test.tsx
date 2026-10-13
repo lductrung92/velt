@@ -160,6 +160,20 @@ test("a partial config overrides only the fields it names", () => {
   assert.ok(contact.includes("Cần tư vấn sản phẩm?<br/>Liên hệ ZUKATEK."));
 });
 
+test("a landing published with the old audience code still works", () => {
+  // "group" is what the builder wrote before these became codes shared with the
+  // contact form. A page published then must keep its artwork and keep handing
+  // the form a value it recognises.
+  const html = render([
+    section("audience_picker", {
+      items: [{ key: "individual" }, { key: "group" }, { key: "business" }],
+    }),
+  ]);
+  assert.ok(html.includes('class="card-art art-group"'));
+  assert.ok(html.includes('data-audience="team"'));
+  assert.ok(!html.includes('data-audience="group"'));
+});
+
 test("a malformed config falls back instead of blanking or throwing", () => {
   const junk: unknown[] = [
     undefined,

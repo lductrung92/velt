@@ -194,6 +194,13 @@ type landingSnapshot struct {
 }
 
 type sectionSnapshot struct {
+	// ID is the row the section was frozen from. It is in the snapshot because
+	// a section's translated copy is stored against it, and matching a frozen
+	// section back to its row by position would break the first time somebody
+	// reordered the page. Zero on a landing published before this field
+	// existed — such a section simply has no other language until it is
+	// published again.
+	ID        uuid.UUID       `json:"id"`
 	Type      string          `json:"type"`
 	SortOrder int             `json:"sort_order"`
 	Config    json.RawMessage `json:"config"`

@@ -132,6 +132,18 @@ function entries<T>(
   );
 }
 
+/**
+ * The audience codes, as one vocabulary.
+ *
+ * "group" is what the builder wrote before these became codes shared with the
+ * contact form and with the API's own audience values. Landings published then
+ * still say it, so it is read as what it always meant — otherwise the middle
+ * card loses its artwork and the contact form stops recognising the choice.
+ */
+function audienceCode(key: string): string {
+  return key === "group" ? "team" : key;
+}
+
 export function audienceConfig(config: unknown, t: T): AudienceConfig {
   const raw = fields(config);
   const d = audienceDefaults(t);
@@ -139,7 +151,7 @@ export function audienceConfig(config: unknown, t: T): AudienceConfig {
     title: text(raw.title, d.title),
     subtitle: text(raw.subtitle, d.subtitle),
     items: entries(raw.items, d.items, (item, base) => ({
-      key: text(item.key, base.key),
+      key: audienceCode(text(item.key, base.key)),
       label: text(item.label, base.label),
       headline: text(item.headline, base.headline),
       body: text(item.body, base.body),

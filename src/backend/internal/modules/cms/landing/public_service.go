@@ -19,6 +19,7 @@ type PublicService struct {
 	repo     Repository
 	resolver *widgets.Resolver
 	files    storage.Storage
+	tr       Translator
 }
 
 // NewPublicService wires the public landing service.
@@ -32,6 +33,15 @@ func NewPublicService(repo Repository, resolver *widgets.Resolver, files storage
 // missing or not published yields nil (the hosting page renders without sections);
 // a single dynamic section failing to resolve yields data:null, never an error.
 func (s *PublicService) ResolvePublishedSections(ctx context.Context, id uuid.UUID) ([]shared.PublicSection, error) {
+	return s.ResolvePublishedSectionsIn(ctx, id, "")
+}
+
+// ResolvePublishedSectionsIn is the same read in one language: each section's
+// frozen config is overlaid with whatever of it somebody has translated. An
+// empty locale, a language with no copy, or a field left blank all keep the
+// published text — a half-translated page reads as the original rather than as
+// a gap.
+func (s *PublicService) ResolvePublishedSectionsIn(ctx context.Context, id uuid.UUID, locale string) ([]shared.PublicSection, error) {
 	p, err := s.repo.GetLanding(ctx, id)
 	if err != nil {
 		if errors.Is(err, shared.ErrNotFound) {
@@ -46,13 +56,21 @@ func (s *PublicService) ResolvePublishedSections(ctx context.Context, id uuid.UU
 	if err := json.Unmarshal(p.PublishedSnapshot, &snap); err != nil {
 		return nil, nil
 	}
+	byID := s.sectionTranslations(ctx, snap.Sections, locale)
 	out := make([]shared.PublicSection, 0, len(snap.Sections))
 	for _, sec := range snap.Sections {
+		config := sec.Config
+		if values, ok := byID[sec.ID]; ok {
+			config = translatedConfig(config, values)
+		}
 		out = append(out, shared.PublicSection{
 			Type:      sec.Type,
 			SortOrder: sec.SortOrder,
-			Config:    resolveConfigMediaURLs(ctx, s.files, sec.Config),
-			Data:      s.resolveSectionData(ctx, sec.Type, sec.Config),
+			Config:    resolveConfigMediaURLs(ctx, s.files, config),
+			// The DATA a dynamic section pulls in (articles, members, products)
+			// is read in the language of the request by the resolver itself;
+			// only the words around it come from here.
+			Data: s.resolveSectionData(ctx, sec.Type, config, locale),
 		})
 	}
 	return out, nil
@@ -60,7 +78,7 @@ func (s *PublicService) ResolvePublishedSections(ctx context.Context, id uuid.UU
 
 // resolveSectionData maps a dynamic landing section to the widget resolver (the
 // section config shares its filters/limit shape). Static sections return nil.
-func (s *PublicService) resolveSectionData(ctx context.Context, typ string, config json.RawMessage) any {
+func (s *PublicService) resolveSectionData(ctx context.Context, typ string, config json.RawMessage, locale string) any {
 	var widgetType string
 	switch typ {
 	case SectionFeaturedArticles:
@@ -81,7 +99,7 @@ func (s *PublicService) resolveSectionData(ctx context.Context, typ string, conf
 	if !isConfigObject(config) {
 		return nil
 	}
-	data, err := s.resolver.Resolve(ctx, widgetType, config)
+	data, err := s.resolver.ResolveIn(ctx, widgetType, config, locale)
 	if err != nil {
 		return nil
 	}
@@ -92,4 +110,36 @@ func (s *PublicService) resolveSectionData(ctx context.Context, typ string, conf
 func isConfigObject(config json.RawMessage) bool {
 	var m map[string]json.RawMessage
 	return json.Unmarshal(config, &m) == nil && m != nil
+}
+
+// sectionTranslations loads one language's copy of every section on the page,
+// in one query. A failure is not an error: the page is served as published.
+func (s *PublicService) sectionTranslations(
+	ctx context.Context,
+	sections []sectionSnapshot,
+	locale string,
+) map[uuid.UUID]map[string]any {
+	if s.tr == nil || locale == "" {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(sections))
+	for _, sec := range sections {
+		if sec.ID != uuid.Nil {
+			ids = append(ids, sec.ID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	bundle, err := s.tr.Bundle(ctx, EntityLandingSection, ids, []string{locale})
+	if err != nil {
+		return nil
+	}
+	out := make(map[uuid.UUID]map[string]any, len(bundle))
+	for id, byLocale := range bundle {
+		if values := byLocale[locale]; len(values) > 0 {
+			out[id] = values
+		}
+	}
+	return out
 }

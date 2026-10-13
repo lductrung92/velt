@@ -12,8 +12,9 @@ import (
 // already-grouped, auth-protected /api/cms router (gated cms.landing.manage).
 // Section PATCH/DELETE live under /landing/sections/{id} so the static segment
 // never collides with /landing/{id}.
-func Register(r chi.Router, base *shared.Base, pool *pgxpool.Pool, store storage.Storage) {
-	h := NewHandler(NewService(base, NewRepository(pool), store))
+func Register(r chi.Router, base *shared.Base, pool *pgxpool.Pool, store storage.Storage) *Service {
+	svc := NewService(base, NewRepository(pool), store)
+	h := NewHandler(svc)
 	r.Get("/landing", h.GetLandings)
 	r.Post("/landing", h.CreateLanding)
 	r.Patch("/landing/sections/{id}", h.UpdateSection)
@@ -26,4 +27,5 @@ func Register(r chi.Router, base *shared.Base, pool *pgxpool.Pool, store storage
 	r.Put("/landing/{id}/sections/order", h.ReorderSections)
 	r.Post("/landing/{id}/publish", h.PublishLanding)
 	r.Post("/landing/{id}/unpublish", h.UnpublishLanding)
+	return svc
 }

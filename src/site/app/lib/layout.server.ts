@@ -38,7 +38,13 @@ async function fetchLayout(
         request,
         `/public/cms/menus?locale=${encodeURIComponent(locale)}`,
       ),
-      readJSON(request, "/public/settings"),
+      // The chrome's words are translated too, so the settings read carries
+      // the language as well — without it the header and footer would be the
+      // one Vietnamese thing left on an English page.
+      readJSON(
+        request,
+        `/public/settings?locale=${encodeURIComponent(locale)}`,
+      ),
     ]);
     return resolveLayout(menus, settings, t);
   } catch {

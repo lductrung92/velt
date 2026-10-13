@@ -305,11 +305,18 @@ func run() error {
 				return membersSvc.AuthorizeTranslate(ctx, id, entityID)
 			case translation.EntityMenuItem:
 				return cmsWiring.Menus.AuthorizeTranslate(ctx, id, entityID)
+			case translation.EntityLandingSection:
+				return cmsWiring.Landing.AuthorizeTranslate(ctx, id, entityID)
 			case translation.EntitySiteChrome:
 				return cmsWiring.Settings.AuthorizeTranslate(ctx, id, entityID)
 			}
 			return apperr.NotFound("not_found")
 		})
+	// A landing section's text is translated too: the admin side gates the
+	// write, the public side overlays it onto what was published.
+	cmsWiring.Landing.SetTranslator(translationSvc)
+	cmsWiring.PublicLanding.SetTranslator(translationSvc)
+
 	// The public settings read serves the site's header and footer copy, so it
 	// has to be able to answer in the language being read.
 	settingsSvc.SetTranslatedText(translationSvc)
@@ -425,7 +432,9 @@ func buildSettingsCache(rdb *redis.Client, logger *slog.Logger) settings.Cache {
 type cmsProductsPort struct{ svc *catalog.PublicService }
 
 func (p cmsProductsPort) ListProducts(ctx context.Context, q widgets.ProductsQuery) ([]widgets.ProductItem, error) {
-	res, err := p.svc.List(ctx, catalog.PublicListParams{Category: q.Category, PageSize: q.Limit, Page: 1})
+	res, err := p.svc.List(ctx, catalog.PublicListParams{
+		Category: q.Category, PageSize: q.Limit, Page: 1, Locale: q.Locale,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -449,7 +458,7 @@ func (p cmsProductsPort) ListProducts(ctx context.Context, q widgets.ProductsQue
 type cmsMembersPort struct{ svc *members.Service }
 
 func (p cmsMembersPort) ListMembers(ctx context.Context, q widgets.MembersQuery) ([]widgets.MemberItem, error) {
-	res, err := p.svc.ListPublic(ctx, members.ListParams{PageSize: q.Limit, Page: 1})
+	res, err := p.svc.ListPublic(ctx, members.ListParams{PageSize: q.Limit, Page: 1, Locale: q.Locale})
 	if err != nil {
 		return nil, err
 	}
@@ -472,7 +481,9 @@ func (p cmsArticlesPort) ListArticles(ctx context.Context, q widgets.ArticlesQue
 			catID = &id
 		}
 	}
-	cards, err := p.repo.ListPublished(ctx, cmsarticles.PublicFilter{CategoryID: catID, Tag: q.Tag, Limit: q.Limit})
+	cards, err := p.repo.ListPublished(ctx, cmsarticles.PublicFilter{
+		CategoryID: catID, Tag: q.Tag, Limit: q.Limit, Locale: q.Locale,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -492,7 +503,9 @@ func (p cmsArticlesPort) ListArticles(ctx context.Context, q widgets.ArticlesQue
 type cmsCategoriesPort struct{ repo *cmstaxonomy.PublicRepo }
 
 func (p cmsCategoriesPort) ListCategories(ctx context.Context, q widgets.CategoriesQuery) ([]widgets.CategoryItem, error) {
-	cards, err := p.repo.ListCategories(ctx, q.Limit)
+	// Categories are stored in Vietnamese and translated in the console; the
+	// locale-aware read is what finally serves those translations.
+	cards, err := p.repo.ListCategoriesIn(ctx, q.Limit, q.Locale)
 	if err != nil {
 		return nil, err
 	}

@@ -751,6 +751,13 @@
       }
     },
     "landings": {
+      "translate": {
+        "title": "Translate block: {{section}}",
+        "open": "Translate this block",
+        "hint": "One box per piece of text in the block. Leave a box empty and the site keeps the Vietnamese.",
+        "empty": "This block has no text to translate.",
+        "saved": "Block translation saved"
+      },
       "field": {
         "name": "Name",
         "key": "Key"

@@ -153,6 +153,28 @@ async function serve(req, res) {
       }
       return;
     }
+    // robots.txt and the sitemap are served from the same place as the pages,
+    // so the sitemap always speaks of the origin the request came in on — a
+    // sitemap listing another host is ignored.
+    if (url.pathname === "/robots.txt" || url.pathname === "/sitemap.xml") {
+      const module = production
+        ? await import("./dist/server/entry-server.js")
+        : await vite.ssrLoadModule("/app/lib/sitemap.server.ts");
+      const site = production ? module : module;
+      const body =
+        url.pathname === "/robots.txt"
+          ? site.robots(url.origin)
+          : await site.sitemap(url.origin);
+      res.writeHead(200, {
+        "Content-Type":
+          url.pathname === "/robots.txt"
+            ? "text/plain; charset=utf-8"
+            : "application/xml; charset=utf-8",
+        "Cache-Control": control(await cacheTtl()),
+      });
+      res.end(req.method === "HEAD" ? "" : body);
+      return;
+    }
     if (!["GET", "HEAD"].includes(req.method)) {
       res.writeHead(405, { Allow: "GET, HEAD" }).end();
       return;

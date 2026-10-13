@@ -18,6 +18,9 @@ type Service struct {
 	*shared.Base
 	repo  Repository
 	files storage.Storage // builds served URLs for og_path media
+	// tr is wired after construction and may stay nil: without it a landing has
+	// one language, which is what the feature switched off looks like.
+	tr Translator
 }
 
 // NewService wires the landing service onto the shared CMS base.
@@ -227,6 +230,7 @@ func (s *Service) DeleteSection(ctx context.Context, id *httpx.Identity, section
 	if err := s.repo.DeleteSection(ctx, sectionID); err != nil {
 		return apperr.Internal()
 	}
+	s.purgeTranslations(ctx, sectionID)
 	s.Sec(ctx).Info("cms landing section deleted", "actor", id.UserID, "section", sectionID)
 	s.Record(ctx, id, landingEntry(actionSectionRemoved, cur.LandingPageID, p.Name,
 		map[string]any{"section_id": sectionID, "type": cur.Type}))

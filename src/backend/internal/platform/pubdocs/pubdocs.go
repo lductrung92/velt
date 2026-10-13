@@ -80,21 +80,34 @@ const BaseLocale = "vi"
 // A record with no copy in the requested language is served in the base
 // language at the SAME address, for the same reason the list falls back: the
 // list now offers these records, and an entry that leads to a 404 is worse than
-// one that leads to the original. A slug that belongs to another language
-// entirely still goes through the cross-locale redirect — the fallback only
-// catches the untranslated case, where the base language owns this very slug.
+// one that leads to the original.
+//
+// That fallback is for the UNTRANSLATED case only. A record that does exist in
+// the requested language, under its own slug, still answers 301 to that slug —
+// otherwise one page would be readable at two addresses, which is the thing the
+// whole slug/redirect machinery exists to prevent.
 func (s *Store) Get(ctx context.Context, entity, locale, slug string) (*Found, error) {
 	var f Found
+	var foundLocale string
 	err := s.pool.QueryRow(ctx,
-		`SELECT body, is_current, entity_id, published_at
+		`SELECT body, is_current, entity_id, published_at, locale
 		   FROM published_docs
 		  WHERE entity = $1 AND locale IN ($2, $4) AND slug = $3
 		  ORDER BY (locale = $2) DESC
 		  LIMIT 1`,
 		entity, locale, slug, BaseLocale).
-		Scan(&f.Body, &f.IsCurrent, &f.EntityID, &f.PublishedAt)
+		Scan(&f.Body, &f.IsCurrent, &f.EntityID, &f.PublishedAt, &foundLocale)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
+	}
+	if err == nil && f.IsCurrent && foundLocale != locale {
+		// The base language answered. If the record also lives in the requested
+		// language, that address is the right one.
+		if cur, cerr := s.liveSlugIn(ctx, entity, f.EntityID, locale); cerr == nil {
+			f.IsCurrent = false
+			f.CurrentSlug = cur
+			return &f, nil
+		}
 	}
 	if err != nil {
 		return nil, fmt.Errorf("pubdocs get: %w", err)
@@ -282,4 +295,22 @@ func (s *Store) Version(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("published version: %w", err)
 	}
 	return token, nil
+}
+
+// liveSlugIn is the record's live slug in ONE language, with no fallback. It
+// answers the question Get asks before falling back: does this record exist in
+// the language being read, somewhere else?
+func (s *Store) liveSlugIn(ctx context.Context, entity string, id uuid.UUID, locale string) (string, error) {
+	var slug string
+	err := s.pool.QueryRow(ctx,
+		`SELECT slug FROM published_docs
+		  WHERE entity = $1 AND entity_id = $2 AND locale = $3 AND is_current`,
+		entity, id, locale).Scan(&slug)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("pubdocs live slug: %w", err)
+	}
+	return slug, nil
 }

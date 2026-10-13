@@ -31,6 +31,10 @@ type PublicFilter struct {
 	CategoryID *uuid.UUID
 	Tag        string
 	Limit      int
+	// Locale is the language the card is read in. Empty, or a language the
+	// article was never published in, serves the Vietnamese copy — the same
+	// rule the rest of the public surface follows.
+	Locale string
 }
 
 // PublicRepo reads published articles for public consumption (no auth) — a
@@ -71,10 +75,22 @@ func (r *PublicRepo) ListPublished(ctx context.Context, f PublicFilter) ([]Publi
 		limit = 6
 	}
 	args = append(args, limit)
-	q := `SELECT a.slug, a.title, a.excerpt, a.published_at
+	limitArg := len(args)
+	// The card is read from the PUBLISHED copy in the requested language when
+	// there is one: its title, its summary and — this is the part that matters
+	// for a link — its slug, which is translated with the article.
+	args = append(args, f.Locale)
+	q := `SELECT COALESCE(pd.slug, a.slug),
+	             COALESCE(NULLIF(pd.body ->> 'title', ''), a.title),
+	             COALESCE(NULLIF(pd.body ->> 'excerpt', ''), a.excerpt),
+	             a.published_at
 	        FROM cms_articles a
+	        LEFT JOIN published_docs pd
+	               ON pd.entity = 'article' AND pd.entity_id = a.id
+	              AND pd.locale = $` + fmt.Sprint(len(args)) + `
+	              AND pd.is_current AND pd.body IS NOT NULL
 	       WHERE ` + strings.Join(conds, " AND ") +
-		` ORDER BY a.published_at DESC NULLS LAST ` + fmt.Sprintf(`LIMIT $%d`, len(args))
+		` ORDER BY a.published_at DESC NULLS LAST ` + fmt.Sprintf(`LIMIT $%d`, limitArg)
 
 	rows, err := r.pool.Query(ctx, q, args...)
 	if err != nil {

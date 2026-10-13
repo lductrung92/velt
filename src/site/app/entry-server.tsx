@@ -149,3 +149,7 @@ export async function renderRequest(path: string) {
     redirect: redirect ? withLocale(redirect, locale) : undefined,
   };
 }
+
+// The SSR bundle is the site's whole server surface, so robots.txt and the
+// sitemap are exported from here too rather than from a second entry point.
+export { robots, sitemap } from "./lib/sitemap.server";

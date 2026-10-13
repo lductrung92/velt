@@ -22,6 +22,9 @@ type GameItem struct {
 
 // GamesQuery is the resolved filter a games_list config maps to.
 type GamesQuery struct {
+	// Locale is the language the page is being read in. Empty means the base
+	// language, which is what every port falls back to anyway.
+	Locale   string
 	AgeGroup string
 	Subject  string
 	Skill    string
@@ -48,6 +51,7 @@ type ArticleItem struct {
 // ArticlesQuery is the resolved filter an articles_list config maps to. CategoryID
 // is the raw config string (the adapter parses it to a UUID).
 type ArticlesQuery struct {
+	Locale     string
 	CategoryID string
 	Tag        string
 	Limit      int
@@ -69,7 +73,8 @@ type CategoryItem struct {
 
 // CategoriesQuery is the resolved filter a categories_showcase config maps to.
 type CategoriesQuery struct {
-	Limit int
+	Locale string
+	Limit  int
 }
 
 // CategoriesPort is the categories data the resolver needs.
@@ -106,6 +111,7 @@ type ProductItem struct {
 
 // ProductsQuery is the resolved filter a product_grid config maps to.
 type ProductsQuery struct {
+	Locale   string
 	Category string
 	Limit    int
 }
@@ -129,7 +135,8 @@ type MemberItem struct {
 
 // MembersQuery is the resolved filter a team config maps to.
 type MembersQuery struct {
-	Limit int
+	Locale string
+	Limit  int
 }
 
 // MembersPort is the active-roster data the resolver needs.
@@ -150,17 +157,26 @@ func NewResolver(ports Ports) *Resolver { return &Resolver{ports: ports} }
 // types. Errors are returned so the caller can null that widget without breaking
 // the whole page.
 func (r *Resolver) Resolve(ctx context.Context, typ string, config json.RawMessage) (any, error) {
+	return r.ResolveIn(ctx, typ, config, "")
+}
+
+// ResolveIn is Resolve in one language. The words a widget wraps around its
+// data are translated with the section; the DATA — article titles, product
+// names, a member's role — belongs to the records, and this is what asks for
+// them in the language being read. An empty locale, or a record with no copy in
+// it, yields the base language.
+func (r *Resolver) ResolveIn(ctx context.Context, typ string, config json.RawMessage, locale string) (any, error) {
 	switch typ {
 	case TypeGamesList:
-		return r.resolveGamesList(ctx, config)
+		return r.resolveGamesList(ctx, config, locale)
 	case TypeArticlesList:
-		return r.resolveArticlesList(ctx, config)
+		return r.resolveArticlesList(ctx, config, locale)
 	case TypeCategoriesShowcase:
-		return r.resolveCategoriesShowcase(ctx, config)
+		return r.resolveCategoriesShowcase(ctx, config, locale)
 	case TypeProductGrid:
-		return r.resolveProductGrid(ctx, config)
+		return r.resolveProductGrid(ctx, config, locale)
 	case TypeTeam:
-		return r.resolveTeam(ctx, config)
+		return r.resolveTeam(ctx, config, locale)
 	default:
 		return nil, nil
 	}
@@ -184,13 +200,14 @@ type gamesListConfig struct {
 	Sort  string `json:"sort"`
 }
 
-func (r *Resolver) resolveGamesList(ctx context.Context, config json.RawMessage) (any, error) {
+func (r *Resolver) resolveGamesList(ctx context.Context, config json.RawMessage, locale string) (any, error) {
 	if r.ports.Games == nil {
 		return map[string]any{"items": []GameItem{}}, nil
 	}
 	var c gamesListConfig
 	_ = json.Unmarshal(config, &c) // intentional: config is valid JSON (sanitized at write); a shape mismatch falls back to zero-value defaults below
 	items, err := r.ports.Games.ListGames(ctx, GamesQuery{
+		Locale:   locale,
 		AgeGroup: c.Filters.AgeGroup, Subject: c.Filters.Subject,
 		Skill: c.Filters.Skill, Q: c.Filters.Q, Sort: c.Sort, Limit: clampLimit(c.Limit, 8),
 	})
@@ -216,13 +233,14 @@ type productGridConfig struct {
 	Limit    int    `json:"limit"`
 }
 
-func (r *Resolver) resolveProductGrid(ctx context.Context, config json.RawMessage) (any, error) {
+func (r *Resolver) resolveProductGrid(ctx context.Context, config json.RawMessage, locale string) (any, error) {
 	if r.ports.Products == nil {
 		return map[string]any{"items": []ProductItem{}}, nil
 	}
 	var c productGridConfig
 	_ = json.Unmarshal(config, &c) // see resolveArticlesList: a shape mismatch falls back to defaults
 	items, err := r.ports.Products.ListProducts(ctx, ProductsQuery{
+		Locale:   locale,
 		Category: c.Category, Limit: clampLimit(c.Limit, 6),
 	})
 	if err != nil {
@@ -238,13 +256,14 @@ type teamConfig struct {
 	Limit int `json:"limit"`
 }
 
-func (r *Resolver) resolveTeam(ctx context.Context, config json.RawMessage) (any, error) {
+func (r *Resolver) resolveTeam(ctx context.Context, config json.RawMessage, locale string) (any, error) {
 	if r.ports.Members == nil {
 		return map[string]any{"items": []MemberItem{}}, nil
 	}
 	var c teamConfig
 	_ = json.Unmarshal(config, &c)
-	items, err := r.ports.Members.ListMembers(ctx, MembersQuery{Limit: clampLimit(c.Limit, 12)})
+	items, err := r.ports.Members.ListMembers(ctx, MembersQuery{
+		Locale: locale, Limit: clampLimit(c.Limit, 12)})
 	if err != nil {
 		return nil, err
 	}
@@ -254,13 +273,14 @@ func (r *Resolver) resolveTeam(ctx context.Context, config json.RawMessage) (any
 	return map[string]any{"items": items}, nil
 }
 
-func (r *Resolver) resolveArticlesList(ctx context.Context, config json.RawMessage) (any, error) {
+func (r *Resolver) resolveArticlesList(ctx context.Context, config json.RawMessage, locale string) (any, error) {
 	if r.ports.Articles == nil {
 		return map[string]any{"items": []ArticleItem{}}, nil
 	}
 	var c articlesListConfig
 	_ = json.Unmarshal(config, &c) // intentional: config is valid JSON (sanitized at write); a shape mismatch falls back to zero-value defaults below
 	items, err := r.ports.Articles.ListArticles(ctx, ArticlesQuery{
+		Locale:     locale,
 		CategoryID: c.Filters.CategoryID, Tag: c.Filters.Tag, Limit: clampLimit(c.Limit, 6),
 	})
 	if err != nil {
@@ -276,13 +296,14 @@ type categoriesShowcaseConfig struct {
 	Limit int `json:"limit"`
 }
 
-func (r *Resolver) resolveCategoriesShowcase(ctx context.Context, config json.RawMessage) (any, error) {
+func (r *Resolver) resolveCategoriesShowcase(ctx context.Context, config json.RawMessage, locale string) (any, error) {
 	if r.ports.Categories == nil {
 		return map[string]any{"items": []CategoryItem{}}, nil
 	}
 	var c categoriesShowcaseConfig
 	_ = json.Unmarshal(config, &c) // intentional: config is valid JSON (sanitized at write); a shape mismatch falls back to zero-value defaults below
-	items, err := r.ports.Categories.ListCategories(ctx, CategoriesQuery{Limit: clampLimit(c.Limit, 12)})
+	items, err := r.ports.Categories.ListCategories(ctx, CategoriesQuery{
+		Locale: locale, Limit: clampLimit(c.Limit, 12)})
 	if err != nil {
 		return nil, err
 	}

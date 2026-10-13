@@ -18,7 +18,7 @@ import { Puck, usePuck, type Data } from "@puckeditor/core";
 import "@puckeditor/core/dist/index.css";
 import "../../pages/puck-theme.css";
 import { useQueryClient } from "@tanstack/react-query";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Languages } from "lucide-react";
 import {
   forwardRef,
   useImperativeHandle,
@@ -35,12 +35,14 @@ import {
 } from "./adapter";
 import { buildLandingPuckConfig } from "./puckConfig";
 import { cmsKeys } from "../../hooks/cmsKeys";
+import { useAppConfig } from "@/app/useAppConfig";
+import { SectionTranslateDialog } from "../SectionTranslateDialog";
 import type { LandingDetail } from "../../services/landing.service";
 
 // Puck's root content lives in the "root:default-zone" droppable.
 const ROOT_ZONE = "root:default-zone";
 
-type OutlineItem = { type: string; props: { id?: string } };
+type OutlineItem = { type: string; props: { id?: string; cfg?: unknown } };
 
 // OutlineRow — one draggable section in the Outline (dnd-kit sortable, matching
 // the CMS menu builder). Grip handle drags; the label click selects.
@@ -49,15 +51,24 @@ function OutlineRow({
   label,
   selected,
   onSelect,
+  onTranslate,
 }: {
   id: string;
   label: string;
   selected: boolean;
   onSelect: () => void;
+  /** Absent when the site has one language, or the section is not saved yet. */
+  onTranslate?: () => void;
 }) {
   const { t } = useTranslation();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
   const style = { transform: CSS.Translate.toString(transform), transition };
   return (
     <div
@@ -84,6 +95,17 @@ function OutlineRow({
       >
         {label}
       </button>
+      {onTranslate && (
+        <button
+          type="button"
+          className="rounded p-1 text-muted-foreground hover:text-foreground"
+          aria-label={t("cms.landings.translate.open")}
+          title={t("cms.landings.translate.open")}
+          onClick={onTranslate}
+        >
+          <Languages className="size-4" />
+        </button>
+      )}
     </div>
   );
 }
@@ -94,13 +116,20 @@ function OutlineRow({
 function OutlineNav() {
   const { t } = useTranslation();
   const { appState, dispatch, config } = usePuck();
+  // The other languages of one section, edited in a dialog of their own: the
+  // designer edits the page, and a translation is not a second page.
+  const { data: appConfig } = useAppConfig();
+  const translatable = appConfig?.translationEnabled === true;
+  const [translating, setTranslating] = useState<OutlineItem | null>(null);
   const content = (appState.data.content ?? []) as unknown as OutlineItem[];
   const selected = appState.ui.itemSelector?.index;
   const ids = content.map((it, i) => it.props.id ?? String(i));
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   if (content.length === 0) {
@@ -112,7 +141,10 @@ function OutlineNav() {
   }
 
   const select = (index: number) =>
-    dispatch({ type: "setUi", ui: { itemSelector: { index, zone: ROOT_ZONE } } });
+    dispatch({
+      type: "setUi",
+      ui: { itemSelector: { index, zone: ROOT_ZONE } },
+    });
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
@@ -142,10 +174,26 @@ function OutlineNav() {
               label={config.components[item.type]?.label ?? item.type}
               selected={selected === i}
               onSelect={() => select(i)}
+              onTranslate={
+                translatable && item.props.id
+                  ? () => setTranslating(item)
+                  : undefined
+              }
             />
           ))}
         </div>
       </SortableContext>
+      {translating?.props.id && (
+        <SectionTranslateDialog
+          open
+          onOpenChange={(next) => !next && setTranslating(null)}
+          sectionId={translating.props.id}
+          sectionLabel={
+            config.components[translating.type]?.label ?? translating.type
+          }
+          config={translating.props.cfg}
+        />
+      )}
     </DndContext>
   );
 }
