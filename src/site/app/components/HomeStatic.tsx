@@ -376,6 +376,14 @@ export function EmptyProducts({ href }: LinksProps) {
   );
 }
 
+// The networks the footer can link to, spelled the way they spell themselves.
+const SOCIAL_LABEL: Record<string, string> = {
+  facebook: "Facebook",
+  linkedin: "LinkedIn",
+  youtube: "YouTube",
+  github: "GitHub",
+};
+
 export function Footer({
   href,
   year,
@@ -396,7 +404,7 @@ export function Footer({
               aria-label={t("a11y.brand_home")}
             >
               <img
-                src="/assets/logo.png"
+                src={layout.chrome.logoUrl || "/assets/logo.png"}
                 alt="ZUKATEK"
                 width="1222"
                 height="249"
@@ -406,6 +414,32 @@ export function Footer({
             <p>
               <Lines text={layout.chrome.tagline} />
             </p>
+            {/* Each of these appears only once somebody fills it in, so a site
+                that configures none of them looks exactly as it did. */}
+            {(layout.chrome.phone || layout.chrome.address) && (
+              <p className="footer-contact">
+                {layout.chrome.phone && (
+                  <a href={`tel:${layout.chrome.phone.replace(/\s+/g, "")}`}>
+                    {layout.chrome.phone}
+                  </a>
+                )}
+                {layout.chrome.address && <span>{layout.chrome.address}</span>}
+              </p>
+            )}
+            {layout.chrome.social.length > 0 && (
+              <p className="footer-social">
+                {layout.chrome.social.map((item) => (
+                  <a
+                    key={item.key}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer me"
+                  >
+                    {SOCIAL_LABEL[item.key] ?? item.key}
+                  </a>
+                ))}
+              </p>
+            )}
           </div>
           {/* One column per root of the footer menu: the root is the heading,
               its children are the links under it. */}

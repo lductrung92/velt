@@ -26,6 +26,7 @@ function node(
   return {
     key,
     label: key,
+    description: null,
     link_type: "internal",
     target_id: null,
     url: `/${key}`,
@@ -115,6 +116,7 @@ describe("treesEqual", () => {
       node(k, [node(`${k}-c`, [], { label: "Child", url: "/child" })], {
         label: "Root",
         url: "/root",
+        description: null,
       });
     expect(treesEqual([mk("k1")], [mk("server-1")])).toBe(true);
   });
@@ -213,6 +215,7 @@ describe("fromNodes", () => {
       {
         id: "s1",
         label: "Home",
+        description: null,
         link_type: "internal",
         target_id: null,
         url: "/",

@@ -1,5 +1,4 @@
 import {
-  Bot,
   FileStack,
   FileText,
   FolderTree,
@@ -15,6 +14,7 @@ import {
   Shapes,
   ShieldCheck,
   ShieldHalf,
+  SlidersHorizontal,
   Tags,
   UserPlus,
   Users,
@@ -30,8 +30,12 @@ export interface NavChild {
   labelKey: string;
   icon: LucideIcon;
   end?: boolean;
-  /** Hidden unless the user holds this permission (super_admin `*` bypasses). */
-  permission?: string;
+  /**
+   * Hidden unless the user holds this permission (super_admin `*` bypasses).
+   * A list means "any of these" — one screen can be reachable through more
+   * than one permission when it shows each role a different slice of itself.
+   */
+  permission?: string | string[];
 }
 
 export interface NavItem {
@@ -42,7 +46,7 @@ export interface NavItem {
   path?: string;
   end?: boolean;
   children?: NavChild[];
-  permission?: string;
+  permission?: string | string[];
   /** Hidden unless the user holds at least one of these RBAC roles. */
   rbacRoles?: string[];
   /** Right-aligned count/notification badge. */
@@ -189,12 +193,11 @@ export const NAV_SECTIONS: NavSection[] = [
             permission: "activity.read",
           },
           {
-            path: "/admin/ai",
-            labelKey: "nav.ai",
-            icon: Bot,
-            // settings.manage, not a bespoke ai permission: an API key is a
-            // billing credential, the same class as the SMTP password.
-            permission: "settings.manage",
+            path: "/admin/settings",
+            labelKey: "nav.settings",
+            icon: SlidersHorizontal,
+            // Either permission opens it; the screen shows what you may write.
+            permission: ["settings.manage", "cms.settings.manage"],
           },
         ],
       },
@@ -213,7 +216,8 @@ export function visibleNavSections(
   roles: Set<string>,
 ): NavSection[] {
   const isSuper = perms.has("*");
-  const can = (p?: string) => !p || isSuper || perms.has(p);
+  const can = (p?: string | string[]) =>
+    !p || isSuper || (Array.isArray(p) ? p.some((x) => perms.has(x)) : perms.has(p));
   const hasRole = (rs?: string[]) => !rs || rs.some((r) => roles.has(r));
 
   const filterItems = (items: NavItem[]) =>

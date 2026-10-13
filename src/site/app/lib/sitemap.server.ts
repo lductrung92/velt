@@ -5,6 +5,11 @@ import { blogPath } from "./blog";
 import { allLocales, withLocale } from "./locales";
 import { productPath } from "./catalog";
 
+const API_BASE =
+  process.env.SITE_API_BASE_URL ||
+  process.env.VITE_API_BASE_URL ||
+  "http://127.0.0.1:8081/api";
+
 /**
  * The sitemap and robots.txt.
  *
@@ -131,6 +136,28 @@ export async function sitemap(
  * meta robots tag of their own, which is the signal that survives a page being
  * linked from elsewhere. The one line that matters here is where the sitemap is.
  */
-export function robots(origin: string): string {
+export async function robots(
+  origin: string,
+  request: typeof fetch = fetch,
+): Promise<string> {
+  // A site that is not launched closes entirely — here AND in every page's
+  // robots meta, because a crawler that never reads this file still reads the
+  // page it landed on.
+  if (await noindexAll(request)) return "User-agent: *\nDisallow: /\n";
   return `User-agent: *\nAllow: /\n\nSitemap: ${origin}/sitemap.xml\n`;
+}
+
+/** Whether the console has asked search engines to stay away entirely. */
+async function noindexAll(request: typeof fetch): Promise<boolean> {
+  try {
+    const res = await request(`${API_BASE}/public/settings`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return false;
+    const settings = (await res.json()) as Record<string, unknown>;
+    return settings["seo.noindex_all"] === true;
+  } catch {
+    // Unreachable settings must not close a site that is open.
+    return false;
+  }
 }

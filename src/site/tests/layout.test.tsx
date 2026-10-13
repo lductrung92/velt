@@ -270,3 +270,77 @@ test("on the home page the catalogue link stays an in-page anchor", () => {
   const away = render(defaultLayout(t), "/blog");
   assert.ok(away.includes('class="nav-link" href="/products"'));
 });
+
+test("every setting on the screen changes something on the page", () => {
+  // The point of the settings screen is that nothing on it is decorative, so
+  // this walks the keys it writes and checks each one lands.
+  const layout = resolveLayout(
+    {},
+    {
+      "app.logo_url": "/assets/custom-logo.png",
+      "app.favicon_url": "https://cdn.test/icon.png",
+      "app.primary_color": "#ff0066",
+      "site.og_image_url": "https://cdn.test/share.png",
+      "site.contact_email": "xin-chao@zukatek.test",
+      "site.contact_zalo": "https://zalo.me/zukatek",
+      "site.contact_phone": "0900 000 000",
+      "site.address": "Số 1, Hà Nội",
+      "site.social_facebook": "https://facebook.com/zukatek",
+      "site.social_github": "https://github.com/zukatek",
+      "site.social_linkedin": "javascript:alert(1)",
+      "seo.noindex_all": true,
+      "seo.google_site_verification": "token-123",
+      "seo.analytics_id": "G-ABC123",
+      "site.blog_page_size": 12,
+      "site.products_page_size": 48,
+    },
+    t,
+  );
+
+  assert.equal(layout.chrome.logoUrl, "/assets/custom-logo.png");
+  assert.equal(layout.chrome.contactEmail, "xin-chao@zukatek.test");
+  assert.equal(layout.chrome.phone, "0900 000 000");
+  assert.equal(layout.chrome.address, "Số 1, Hà Nội");
+  // A scheme typed into a settings box never becomes a link.
+  assert.deepEqual(
+    layout.chrome.social.map((s) => s.key),
+    ["facebook", "github"],
+  );
+  assert.equal(layout.head.faviconUrl, "https://cdn.test/icon.png");
+  assert.equal(layout.head.ogImageUrl, "https://cdn.test/share.png");
+  assert.equal(layout.head.primaryColor, "#ff0066");
+  assert.equal(layout.head.noindexAll, true);
+  assert.equal(layout.head.verification, "token-123");
+  assert.equal(layout.head.analyticsId, "G-ABC123");
+  assert.equal(layout.head.blogPageSize, 12);
+  assert.equal(layout.head.productsPageSize, 48);
+
+  const html = render(layout);
+  assert.ok(html.includes('src="/assets/custom-logo.png"'));
+  assert.ok(html.includes("0900 000 000"));
+  assert.ok(html.includes("Số 1, Hà Nội"));
+  assert.ok(html.includes('href="https://facebook.com/zukatek"'));
+  assert.ok(!html.includes("javascript:"));
+});
+
+test("a value that is not a usable setting is ignored, not rendered", () => {
+  const layout = resolveLayout(
+    {},
+    {
+      "app.logo_url": "javascript:alert(1)",
+      "app.primary_color": "red; content: 'x'",
+      "site.blog_page_size": 0,
+      "site.products_page_size": "many",
+      "seo.noindex_all": "yes",
+    },
+    t,
+  );
+  assert.equal(layout.chrome.logoUrl, "", "an unusable logo falls back");
+  assert.equal(layout.head.primaryColor, "", "only a hex colour reaches the CSS");
+  assert.equal(layout.head.blogPageSize, 9, "a page of zero is not a page");
+  assert.equal(layout.head.productsPageSize, 9);
+  assert.equal(layout.head.noindexAll, false, "only a real boolean closes a site");
+  const html = render(layout);
+  assert.ok(html.includes('src="/assets/logo.png"'));
+  assert.ok(!html.includes("javascript:"));
+});

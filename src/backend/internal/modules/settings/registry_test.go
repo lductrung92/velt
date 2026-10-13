@@ -77,3 +77,29 @@ func TestSettingDef_Validate(t *testing.T) {
 		})
 	}
 }
+
+// An image the site hosts itself is written as a path, and that is the common
+// case: logo, favicon and the sharing image all normally live under /assets.
+// Requiring a scheme made the obvious value the invalid one.
+func TestValidateFormat_URLOrPath(t *testing.T) {
+	for _, ok := range []string{
+		"/assets/logo.png",
+		"/assets/logo.png?v=2",
+		"https://cdn.example.com/logo.png",
+		"http://example.com/a",
+		"", // unset
+	} {
+		require.Empty(t, validateFormat("url_or_path", ok), ok)
+	}
+	for _, bad := range []string{
+		"//evil.example.com/logo.png", // protocol-relative: leaves the site
+		"javascript:alert(1)",
+		"assets/logo.png", // neither a path nor an address
+		"ftp://example.com/a",
+	} {
+		require.Equal(t, "invalid_url", validateFormat("url_or_path", bad), bad)
+	}
+	// The strict format is unchanged: a social profile is always absolute.
+	require.Equal(t, "invalid_url", validateFormat("url", "/assets/logo.png"))
+	require.Empty(t, validateFormat("url", "https://facebook.com/zukatek"))
+}

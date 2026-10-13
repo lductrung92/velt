@@ -55,15 +55,20 @@ func (s *Service) GetSettings(ctx context.Context, id *httpx.Identity) (settings
 	return s.withTranslation(ctx, view), nil
 }
 
-// withTranslation folds the translation group into a CMS view. A failure to
-// read it is not a failure to read the page: the screen simply shows no
-// language controls.
+// withTranslation folds the groups this screen owns besides "cms" into the
+// view: the public site's own settings, what it tells search engines, and the
+// language list. A group that fails to read is left out rather than failing the
+// page — the screen then simply shows fewer controls.
 func (s *Service) withTranslation(ctx context.Context, view settingssvc.GroupedView) settingssvc.GroupedView {
-	tr, err := s.port.GroupView(ctx, shared.GroupTranslation)
-	if err != nil || tr[shared.GroupTranslation] == nil {
-		return view
+	for _, group := range []string{
+		shared.GroupSite, shared.GroupSEO, shared.GroupTranslation,
+	} {
+		extra, err := s.port.GroupView(ctx, group)
+		if err != nil || extra[group] == nil {
+			continue
+		}
+		view[group] = extra[group]
 	}
-	view[shared.GroupTranslation] = tr[shared.GroupTranslation]
 	return view
 }
 
@@ -85,7 +90,8 @@ func (s *Service) UpdateSettings(ctx context.Context, id *httpx.Identity, req Up
 		}
 	}
 	view, err := s.port.UpdateScoped(ctx, id, req.Updates,
-		shared.KeyPrefixCMS, shared.KeyPrefixSite, shared.KeyPrefixTranslation)
+		shared.KeyPrefixCMS, shared.KeyPrefixSite, shared.KeyPrefixSEO,
+		shared.KeyPrefixTranslation)
 	if err != nil {
 		return nil, err
 	}

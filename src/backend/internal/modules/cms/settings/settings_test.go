@@ -88,9 +88,12 @@ func TestUpdateSettings_ForwardsCMSPrefixAndScopesResponse(t *testing.T) {
 	view, err := e.svc.UpdateSettings(context.Background(), cmstest.ActorWith(permManage), UpdateRequest{Updates: updates})
 	require.NoError(t, err)
 	require.Equal(t,
-		[]string{shared.KeyPrefixCMS, shared.KeyPrefixSite, shared.KeyPrefixTranslation},
+		[]string{
+			shared.KeyPrefixCMS, shared.KeyPrefixSite,
+			shared.KeyPrefixSEO, shared.KeyPrefixTranslation,
+		},
 		e.port.lastPrefixes,
-		"writes must stay scoped to the three prefixes this screen owns")
+		"writes must stay scoped to the prefixes this screen owns")
 	require.Equal(t, updates, e.port.lastUpdates)
 	require.Contains(t, view, shared.GroupCMS)
 	require.NotContains(t, view, "storage", "response is scoped to the cms group only")

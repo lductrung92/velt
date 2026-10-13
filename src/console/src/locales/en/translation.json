@@ -225,7 +225,8 @@
     "products": "Products",
     "ai": "AI assistant",
     "chat": "Inbox",
-    "leads": "Customers"
+    "leads": "Customers",
+    "settings": "Settings"
   },
   "auth": {
     "login": {
@@ -620,81 +621,6 @@
         "landing_hint": "Built with the page builder"
       },
       "one": "page"
-    },
-    "settings": {
-      "title": "CMS settings",
-      "subtitle": "Manage CMS feature flags.",
-      "saved": "Settings saved",
-      "article_categorize": {
-        "label": "Require a category",
-        "help": "Require a category when creating an article; block clearing it on edit."
-      },
-      "article_require_review": {
-        "label": "Require review before publish",
-        "help": "ON: an editor's article must be approved by an admin before publishing. Admin-authored articles skip review."
-      },
-      "article_allow_slug_edit": {
-        "label": "Allow manual slug editing",
-        "help": "ON: type the slug, duplicates are rejected. OFF: the system derives the slug and auto-suffixes on collision."
-      },
-      "publish_allow_now": {
-        "label": "Allow immediate publish",
-        "help": "ON: immediate publish only (scheduling hidden). OFF: also offer “Scheduled” (pick a time) — immediate publish still allowed."
-      },
-      "newsletter_notify": {
-        "label": "Notify on publish",
-        "help": "Email newsletter subscribers when an article is published."
-      },
-      "homepage": {
-        "label": "Homepage",
-        "help": "Pick which published page is served as the public homepage (\"/\"). Leave empty to use the built-in home. The page must be published to take effect.",
-        "placeholder": "Built-in home (none selected)"
-      },
-      "languages": {
-          "label": "Multilingual site",
-          "help": "On, the site gains a /<code> address per language and a language switcher. Off, it serves Vietnamese only and keeps every translation already written.",
-          "list_label": "Languages besides Vietnamese",
-          "list_help": "Language codes, comma separated. For example: en, or en,ja."
-      },
-      "site": {
-        "title": "Site chrome",
-        "help": "The text in the public site's header and footer. The links themselves are edited in Menus. An empty box means the site keeps its built-in copy.",
-        "help_translate": "The same text in another language. An empty box means the site keeps the Vietnamese one.",
-        "cache_ttl": {
-          "label": "Page cache (seconds)",
-          "help": "How long the site may serve an already rendered page before asking again. 0 disables caching, which is what you want while editing."
-        },
-        "brand_tagline": {
-          "label": "Footer line under the logo",
-          "help": "Short paragraph under the footer logo. Line breaks are kept.",
-          "placeholder": "A team building digital products…"
-        },
-        "footer_note_title": {
-          "label": "Last footer column — heading",
-          "help": "Heading of the footer's last (text) column.",
-          "placeholder": "The people behind the products"
-        },
-        "footer_note_text": {
-          "label": "Last footer column — text",
-          "help": "Body of that column. Line breaks are kept.",
-          "placeholder": "See the team, their skills…"
-        },
-        "footer_copyright": {
-          "label": "Copyright line",
-          "help": "The last line of the footer. Write {year} where the current year should appear.",
-          "placeholder": "© {year} ZUKATEK."
-        },
-        "header_cta_label": {
-          "label": "Header button — label",
-          "help": "Text on the button at the right of the header.",
-          "placeholder": "Contact"
-        },
-        "header_cta_url": {
-          "label": "Header button — link",
-          "help": "Where that button points (a path starting with / or an https:// URL).",
-          "placeholder": "/#contact"
-        }
-      }
     },
     "tags": {
       "title": "Tags",
@@ -1839,5 +1765,159 @@
     "needs_republish": "Needs republishing",
     "slug_hint": "Leave empty and this language reuses the Vietnamese URL.",
     "shared_title": "Shared across languages"
+  },
+  "settings": {
+    "title": "System settings",
+    "subtitle": "Everything configurable, in one place.",
+    "subtitle_scoped": "The site and content settings.",
+    "saved": "Settings saved",
+    "group": {
+      "general": "General",
+      "site": "Public site",
+      "seo": "SEO",
+      "cms": "Content",
+      "translation": "Languages",
+      "email": "Email",
+      "storage": "Storage",
+      "ai": "AI"
+    },
+    "group_help": {
+      "general": "Name, logo and colour — shared by the console and the site.",
+      "site": "What the public site shows around its content: the chrome, how to reach you, how many cards fit a page.",
+      "seo": "What the site tells search engines.",
+      "cms": "The rules for writing and publishing.",
+      "translation": "Which languages the site serves.",
+      "email": "The outgoing mail server. The test uses the SAVED configuration, not what is typed above.",
+      "storage": "Where files live and how large they may be.",
+      "ai": "The assistant that answers visitors. Its connection test and usage chart live on the AI screen."
+    },
+    "secret": {
+      "set": "Set",
+      "unset": "Not set",
+      "hint": "Leave empty to keep what is stored; a stored secret is never shown again.",
+      "placeholder": "••••••••"
+    },
+    "email_test": {
+      "label": "Send a test message",
+      "help": "Uses the STORED configuration — save first, then test.",
+      "run": "Send test",
+      "ok": "Test message sent"
+    },
+    "home_page": {
+      "placeholder": "Built-in home (none selected)"
+    },
+    "chrome": {
+      "base": "Editing the Vietnamese copy.",
+      "translating": "Editing a translation. An empty box means the site keeps the Vietnamese one."
+    },
+    "label": {
+      "app_name": "Application name",
+      "app_logo_url": "Logo",
+      "app_favicon_url": "Favicon",
+      "app_primary_color": "Primary colour",
+      "app_default_locale": "Console default language",
+      "app_language_switcher_enabled": "Console language switcher",
+      "mail_smtp_host": "SMTP host",
+      "mail_smtp_port": "SMTP port",
+      "mail_smtp_user": "SMTP user",
+      "mail_smtp_password": "SMTP password",
+      "mail_from_address": "From address",
+      "mail_from_name": "From name",
+      "storage_driver": "Storage driver",
+      "storage_s3_bucket": "S3 bucket",
+      "storage_s3_region": "S3 region",
+      "storage_s3_endpoint": "S3 endpoint",
+      "storage_s3_access_key": "S3 access key",
+      "storage_s3_secret": "S3 secret",
+      "storage_max_upload_mb": "Max upload size (MB)",
+      "files_storage_quota_mb": "Per-customer storage quota (MB)",
+      "files_max_upload_mb": "Max customer file size (MB)",
+      "cms_article_categorize": "Require a category",
+      "cms_article_require_review": "Review before publishing",
+      "cms_article_allow_slug_edit": "Allow editing the slug",
+      "cms_publish_allow_now": "Immediate publishing only",
+      "cms_newsletter_notify_on_publish": "Notify subscribers",
+      "cms_home_page_slug": "Home page",
+      "site_cache_ttl_seconds": "Page cache (seconds)",
+      "site_og_image_url": "Sharing image",
+      "site_brand_tagline": "Footer line under the logo",
+      "site_footer_note_title": "Last footer column — heading",
+      "site_footer_note_text": "Last footer column — text",
+      "site_footer_copyright": "Copyright line",
+      "site_header_cta_label": "Header button — label",
+      "site_header_cta_url": "Header button — link",
+      "site_contact_email": "Company contact email",
+      "site_contact_zalo": "Company Zalo link",
+      "site_contact_phone": "Phone number",
+      "site_address": "Address",
+      "site_social_facebook": "Facebook",
+      "site_social_linkedin": "LinkedIn",
+      "site_social_youtube": "YouTube",
+      "site_social_github": "GitHub",
+      "site_blog_page_size": "Articles per page",
+      "site_products_page_size": "Products per page",
+      "seo_noindex_all": "Block search engines",
+      "seo_google_site_verification": "Google verification",
+      "seo_analytics_id": "Analytics id",
+      "translation_enabled": "Multilingual site",
+      "translation_locales": "Languages besides Vietnamese",
+      "ai_enabled": "AI assistant",
+      "ai_provider": "Provider",
+      "ai_base_url": "Base URL",
+      "ai_api_key": "API key",
+      "ai_model": "Model",
+      "ai_max_turns": "Max turns per conversation",
+      "ai_daily_token_cap": "Daily token cap",
+      "ai_max_message_len": "Max message length",
+      "ai_system_persona": "Assistant persona"
+    },
+    "help": {
+      "app_name": "Shown in the console and used as the site's brand name.",
+      "app_logo_url": "Image URL. Empty = the logo the site ships with.",
+      "app_favicon_url": "The browser tab icon. Empty = the one that ships with the site.",
+      "app_primary_color": "#RRGGBB. Applies to the console and the public site.",
+      "app_default_locale": "Used when the language switcher is off.",
+      "app_language_switcher_enabled": "Off, everyone sees the default language.",
+      "mail_smtp_port": "Usually 587 (STARTTLS) or 465 (SSL).",
+      "mail_from_address": "The address outgoing mail is sent from.",
+      "mail_from_name": "The name shown beside the address.",
+      "storage_driver": "local = the server's disk; s3 = any S3-compatible service.",
+      "storage_s3_endpoint": "Leave empty for AWS.",
+      "storage_max_upload_mb": "Applies to files uploaded from the console.",
+      "cms_article_categorize": "Choosing a category is required when creating an article.",
+      "cms_article_require_review": "An editor's article needs an admin's approval.",
+      "cms_article_allow_slug_edit": "Off, the system generates it.",
+      "cms_publish_allow_now": "Off, scheduling is offered as well.",
+      "cms_newsletter_notify_on_publish": "Email subscribers when an article is published.",
+      "cms_home_page_slug": "Pick a published page to serve at /. Empty = the site's built-in home.",
+      "site_cache_ttl_seconds": "How long a rendered page may be reused. 0 disables caching.",
+      "site_og_image_url": "Used when a link is shared. An article with its own cover wins.",
+      "site_brand_tagline": "Line breaks are kept. Empty = the built-in copy.",
+      "site_footer_note_text": "Line breaks are kept.",
+      "site_footer_copyright": "Write {year} where the current year should appear.",
+      "site_header_cta_url": "Starts with / or https://.",
+      "site_contact_email": "Used when no member is in play. Empty leaves the contact block without an address.",
+      "site_contact_phone": "Shown in the footer; empty = not shown.",
+      "site_address": "Shown in the footer; empty = not shown.",
+      "site_social_facebook": "Empty = no link.",
+      "site_social_linkedin": "Empty = no link.",
+      "site_social_youtube": "Empty = no link.",
+      "site_social_github": "Empty = no link.",
+      "seo_noindex_all": "Turn ON before launch: every page asks not to be indexed and robots.txt closes the site. Remember to turn it off.",
+      "seo_google_site_verification": "The content value Search Console gives you.",
+      "seo_analytics_id": "G-XXXXXXX for GA4, or a domain for Plausible. Empty = no tracking script at all.",
+      "translation_enabled": "On, the site gains a /<code> address per language and a switcher. Off, Vietnamese only; translations are kept.",
+      "translation_locales": "Comma-separated codes, e.g. en or en,ja.",
+      "ai_base_url": "Empty = the provider's default endpoint.",
+      "ai_system_persona": "Added to the built-in brief; it does not override the safety rules."
+    },
+    "value": {
+      "local": "Server disk",
+      "s3": "S3",
+      "vi": "Tiếng Việt",
+      "en": "English",
+      "anthropic": "Anthropic",
+      "openai": "OpenAI"
+    }
   }
 }

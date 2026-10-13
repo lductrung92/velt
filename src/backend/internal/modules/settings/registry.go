@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/mail"
 	"net/url"
+	"strings"
 )
 
 // SettingType is the value type of a setting key.
@@ -70,18 +71,18 @@ func FoundationDefs() []SettingDef {
 func foundationDefs() []SettingDef {
 	return []SettingDef{
 		{Key: "app.name", Group: GroupGeneral, Type: TypeString, Default: "Zukatek", IsPublic: true, Description: "Application name"},
-		{Key: "app.logo_url", Group: GroupGeneral, Type: TypeString, Format: "url", Default: "", IsPublic: true, Description: "Logo URL"},
+		{Key: "app.logo_url", Group: GroupGeneral, Type: TypeString, Format: "url_or_path", Default: "", IsPublic: true, Description: "Logo URL (console and public site)"},
+		{Key: "app.favicon_url", Group: GroupGeneral, Type: TypeString, Format: "url_or_path", Default: "", IsPublic: true, Description: "Favicon URL; empty = the icon the site ships with"},
 		{Key: "app.primary_color", Group: GroupGeneral, Type: TypeString, Format: "color", Default: "", IsPublic: true, Description: "Brand primary color (#RRGGBB); empty = theme default"},
 		{Key: "app.default_locale", Group: GroupGeneral, Type: TypeEnum, AllowedValues: []string{"vi", "en"}, Default: "vi", IsPublic: true, Description: "Default locale"},
 		{Key: "app.language_switcher_enabled", Group: GroupGeneral, Type: TypeBool, Default: true, IsPublic: true, Description: "Show the UI language switcher"},
-		{Key: "app.maintenance_mode", Group: GroupGeneral, Type: TypeBool, Default: false, IsPublic: true, Description: "Maintenance mode — the public site serves a 503 maintenance page"},
-		{Key: "app.maintenance_message", Group: GroupGeneral, Type: TypeString, Default: "", IsPublic: true, Description: "Message shown on the maintenance page (empty = default copy)"},
 
 		{Key: "mail.smtp_host", Group: GroupEmail, Type: TypeString, Default: "", Description: "SMTP server host"},
 		{Key: "mail.smtp_port", Group: GroupEmail, Type: TypeInt, Default: 587, Min: intp(1), Max: intp(65535), Description: "SMTP server port"},
 		{Key: "mail.smtp_user", Group: GroupEmail, Type: TypeString, Default: "", Description: "SMTP username"},
 		{Key: "mail.smtp_password", Group: GroupEmail, Type: TypeSecret, IsSecret: true, Description: "SMTP password"},
 		{Key: "mail.from_address", Group: GroupEmail, Type: TypeString, Format: "email", Default: "", Description: "Default From address"},
+		{Key: "mail.from_name", Group: GroupEmail, Type: TypeString, Default: "", Description: "Name shown beside the From address"},
 
 		{Key: "storage.driver", Group: GroupStorage, Type: TypeEnum, AllowedValues: []string{"local", "s3"}, Default: "local", Description: "Storage driver"},
 		{Key: "storage.s3_bucket", Group: GroupStorage, Type: TypeString, Default: "", Description: "S3 bucket"},
@@ -189,8 +190,17 @@ func validateFormat(format, s string) string {
 	}
 	switch format {
 	case "url":
-		u, err := url.ParseRequestURI(s)
-		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		if !isAbsoluteURL(s) {
+			return "invalid_url"
+		}
+	// An image this site serves itself is written "/assets/logo.png", and
+	// requiring a scheme for it would make the obvious case the invalid one.
+	// A protocol-relative "//host/x" is not a path: it leaves the site.
+	case "url_or_path":
+		if strings.HasPrefix(s, "//") {
+			return "invalid_url"
+		}
+		if !strings.HasPrefix(s, "/") && !isAbsoluteURL(s) {
 			return "invalid_url"
 		}
 	case "email":
@@ -217,4 +227,10 @@ func isHexColor(s string) bool {
 		}
 	}
 	return true
+}
+
+// isAbsoluteURL reports whether s is an http(s) address with a host.
+func isAbsoluteURL(s string) bool {
+	u, err := url.ParseRequestURI(s)
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
 }

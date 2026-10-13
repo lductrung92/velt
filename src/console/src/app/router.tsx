@@ -14,9 +14,9 @@ import {
   AdminHome,
   RolePermissions,
   Sessions,
+  SystemSettings,
   UserManagement,
 } from "@/modules/admin";
-import { AiAssistant } from "@/modules/ai";
 import { ChatInbox } from "@/modules/chat";
 import { LeadList } from "@/modules/crm";
 import {
@@ -157,10 +157,16 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "/admin/ai",
+        // Every setting in one place. The permission is checked inside too, so
+        // an editor who may only touch the site's own settings still gets the
+        // screen — with the groups they can write.
+        path: "/admin/settings",
         element: (
-          <RequirePermission permission="settings.manage">
-            <AiAssistant />
+          <RequirePermission
+            permission={["settings.manage", "cms.settings.manage"]}
+            mode="any"
+          >
+            <SystemSettings />
           </RequirePermission>
         ),
       },

@@ -43,3 +43,9 @@ button.text-link{padding:0;background:transparent;border:0;align-self:flex-start
 .mobile-lang{display:flex;gap:8px;margin-top:20px}
 .mobile-lang a{flex:1;text-align:center;padding:12px 8px;border:1px solid var(--border);border-radius:12px;font-weight:500}
 .mobile-lang a[aria-current="true"]{border-color:var(--primary);color:var(--primary);font-weight:600}
+
+/* Footer contact line and social links: both render only when the console has something to put in them. */
+.footer-contact{display:flex;flex-direction:column;gap:4px;margin-top:14px;line-height:1.6}
+.footer-contact a:hover{color:var(--primary)}
+.footer-social{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;font-weight:500}
+.footer-social a:hover{color:var(--primary)}

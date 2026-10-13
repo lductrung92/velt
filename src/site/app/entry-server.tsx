@@ -6,7 +6,7 @@ import { loadBlog, articleRedirect } from "./lib/blog.server";
 import { loadSiteContent } from "./lib/site.server";
 import { loadHomeSections } from "./lib/landing.server";
 import { loadLayout } from "./lib/layout.server";
-import type { SiteLayout } from "./lib/layout";
+import { DEFAULT_HEAD, type SiteLayout } from "./lib/layout";
 import { localeConfig } from "./lib/cache.server";
 import {
   alternatesFor,
@@ -72,6 +72,10 @@ export function render(
     ogDescription: blog.article?.seo?.og_description || description,
     ogType: route.blogDetail && blog.article ? "article" : "website",
     lang: locale,
+    // Everything the document head needs that is not a word on the page: the
+    // icon, the sharing image, the colour, the verification token, the
+    // analytics id — and whether this site should be indexed at all.
+    head: layout?.head ?? DEFAULT_HEAD,
     // The server writes the <noscript> note, so it is handed the sentence
     // rather than keeping a second copy of it in another language.
     noscript: t("noscript.note"),
@@ -103,11 +107,12 @@ export function render(
       locale,
     ),
     noindex:
+      (layout?.head ?? DEFAULT_HEAD).noindexAll ||
       !!blog.article?.seo?.noindex ||
       route.status !== 200 ||
       (route.blogList && !!url.searchParams.get("q")),
     nofollow: !!blog.article?.seo?.nofollow,
-    image: blog.article?.cover_url,
+    image: blog.article?.cover_url || (layout?.head ?? DEFAULT_HEAD).ogImageUrl,
   };
 }
 
@@ -129,14 +134,23 @@ export async function renderRequest(path: string) {
   // The home page may be driven by a published landing; other routes never are,
   // so they do not pay for the lookup.
   const isHome = url.pathname === "/" || url.pathname === "/index.html";
+  // The blog's page size is a setting, and the layout read is what carries it:
+  // load that first so the list asks the API for the right number of cards.
+  const layoutFirst = await loadLayout(fetch, locale);
   const [blog, site, sections, layout] = await Promise.all([
     needsBlog
-      ? loadBlog(inner, fetch, undefined, locale)
+      ? loadBlog(
+          inner,
+          fetch,
+          undefined,
+          locale,
+          layoutFirst.head.blogPageSize,
+        )
       : Promise.resolve(emptyBlog()),
     loadSiteContent(fetch, locale),
     isHome ? loadHomeSections(fetch, locale) : Promise.resolve([]),
-    // The header and footer are on every route, home or not.
-    loadLayout(fetch, locale),
+    // Already loaded above; the cache makes this free.
+    Promise.resolve(layoutFirst),
   ]);
   const redirect = url.pathname.startsWith("/blog/")
     ? articleRedirect(inner, blog)

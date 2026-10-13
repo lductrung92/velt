@@ -163,7 +163,7 @@ async function serve(req, res) {
       const site = production ? module : module;
       const body =
         url.pathname === "/robots.txt"
-          ? site.robots(url.origin)
+          ? await site.robots(url.origin)
           : await site.sitemap(url.origin);
       res.writeHead(200, {
         "Content-Type":
@@ -238,7 +238,26 @@ async function serve(req, res) {
         return tags;
       }),
     ].join("");
-    let html = `<!doctype html><html lang="${escape(result.lang || "vi")}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0061fd"><title>${escape(result.title)}</title><meta name="description" content="${escape(result.description)}"><meta property="og:title" content="${escape(result.ogTitle || result.title)}"><meta property="og:description" content="${escape(result.ogDescription || result.description)}"><meta property="og:type" content="${escape(result.ogType || "website")}">${metadata}<link rel="icon" href="/assets/favicon.png"><link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/be-vietnam-pro-6.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/be-vietnam-pro-7.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/be-vietnam-pro-8.woff2"><link rel="stylesheet" href="/assets/fonts/fonts.css">${styles.map((file) => `<link rel="stylesheet" href="${file}">`).join("")}</head><body><div id="root">${result.html}</div><script id="site-data" type="application/json">${serialized}</script><script type="module" src="${production ? "/" + entry.file : "/app/entry-client.tsx"}"></script><noscript><p class="noscript-note">${escape(result.noscript || "")}</p></noscript></body></html>`;
+    const head = result.head || {};
+    // One <script> from one of two vendors, chosen by the shape of the id the
+    // console was given: "G-…" is GA4, anything with a dot is a Plausible
+    // domain. Nothing configured means no third-party script at all, which is
+    // the default a visitor deserves.
+    const analytics = !head.analyticsId
+      ? ""
+      : head.analyticsId.startsWith("G-")
+        ? `<script async src="https://www.googletagmanager.com/gtag/js?id=${escape(head.analyticsId)}"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${escape(head.analyticsId)}')</script>`
+        : `<script defer data-domain="${escape(head.analyticsId)}" src="https://plausible.io/js/script.js"></script>`;
+    const siteHead = [
+      head.verification
+        ? `<meta name="google-site-verification" content="${escape(head.verification)}">`
+        : "",
+      head.primaryColor
+        ? `<style>:root{--primary:${escape(head.primaryColor)}}</style>`
+        : "",
+      analytics,
+    ].join("");
+    let html = `<!doctype html><html lang="${escape(result.lang || "vi")}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0061fd"><title>${escape(result.title)}</title><meta name="description" content="${escape(result.description)}"><meta property="og:title" content="${escape(result.ogTitle || result.title)}"><meta property="og:description" content="${escape(result.ogDescription || result.description)}"><meta property="og:type" content="${escape(result.ogType || "website")}">${metadata}<link rel="icon" href="${escape(head.faviconUrl || "/assets/favicon.png")}">${siteHead}<link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/be-vietnam-pro-6.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/be-vietnam-pro-7.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/be-vietnam-pro-8.woff2"><link rel="stylesheet" href="/assets/fonts/fonts.css">${styles.map((file) => `<link rel="stylesheet" href="${file}">`).join("")}</head><body><div id="root">${result.html}</div><script id="site-data" type="application/json">${serialized}</script><script type="module" src="${production ? "/" + entry.file : "/app/entry-client.tsx"}"></script><noscript><p class="noscript-note">${escape(result.noscript || "")}</p></noscript></body></html>`;
     if (vite) html = await vite.transformIndexHtml(url.pathname, html);
     // A published page is the same bytes for everyone, so it is worth caching
     // in front of us. `stale-while-revalidate` lets a CDN keep answering from

@@ -25,7 +25,7 @@ describe("visibleNavSections", () => {
       "/admin/roles",
       "/admin/sessions",
       "/admin/activity",
-      "/admin/ai",
+      "/admin/settings",
     ]);
   });
 
@@ -81,18 +81,26 @@ describe("visibleNavSections", () => {
     ).toEqual(["members"]);
   });
 
-  it("gates the AI assistant behind settings.manage, not a bespoke permission", () => {
-    // An API key is a billing credential — the same class as the SMTP
-    // password, which settings.manage already guards.
+  it("opens settings to either permission that can write some of it", () => {
+    // The screen holds the server's own configuration (settings.manage) and
+    // the site's (cms.settings.manage). Either one is a reason to show the
+    // link; the screen then offers the groups that person may write.
     const admin = sec(["settings.manage"])
       .find((s) => s.key === "system")
       ?.items.find((i) => i.key === "admin");
-    expect(admin?.children?.map((c) => c.path)).toEqual(["/admin/ai"]);
+    expect(admin?.children?.map((c) => c.path)).toEqual(["/admin/settings"]);
+
+    const editor = sec(["cms.settings.manage"])
+      .find((s) => s.key === "system")
+      ?.items.find((i) => i.key === "admin");
+    expect(editor?.children?.map((c) => c.path)).toEqual(["/admin/settings"]);
 
     const withoutIt = sec(["users.read"])
       .find((s) => s.key === "system")
       ?.items.find((i) => i.key === "admin");
-    expect(withoutIt?.children?.map((c) => c.path)).not.toContain("/admin/ai");
+    expect(withoutIt?.children?.map((c) => c.path)).not.toContain(
+      "/admin/settings",
+    );
   });
 
   it("puts the inbox and leads under overview, not admin", () => {

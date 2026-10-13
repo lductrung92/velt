@@ -6,12 +6,16 @@ import { Categories, ProductCard } from "../components/Products";
 import { Icon } from "../components/Icon";
 
 export function Catalog() {
-  const { products, isExample, url, href, referrer, t } = useSite();
+  const { products, isExample, url, href, referrer, t, layout } = useSite();
   const [filters, setFilters] = useState(() => readFilters(url, products));
   const results = selectProducts(products, filters),
-    totalPages = Math.max(1, Math.ceil(results.length / 9));
+    totalPages = Math.max(
+      1,
+      Math.ceil(results.length / layout.head.productsPageSize),
+    );
+  const perPage = layout.head.productsPageSize;
   const page = Math.min(filters.page, totalPages),
-    start = (page - 1) * 9;
+    start = (page - 1) * perPage;
   const statuses = [
     ...new Set(products.map((product) => product.status).filter(Boolean)),
   ];
@@ -130,7 +134,7 @@ export function Catalog() {
                       : "catalog.showing_products",
                     {
                       from: start + 1,
-                      to: Math.min(start + 9, results.length),
+                      to: Math.min(start + perPage, results.length),
                       total: results.length,
                     },
                   )
@@ -167,7 +171,7 @@ export function Catalog() {
             </div>
           </div>
           <div className="catalog-grid" id="catalog-list">
-            {results.slice(start, start + 9).map((product) => (
+            {results.slice(start, start + perPage).map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>

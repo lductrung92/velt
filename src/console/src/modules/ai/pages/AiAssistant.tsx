@@ -35,7 +35,7 @@ import type { AiSettings, ProviderKind, TestResult } from "../services/ai.servic
 // Deliberately NOT every ai.* setting. `ai.max_message_len` and the per-request
 // sampling knobs are engineering guards nobody tunes meaningfully — putting
 // them here would only add noise and a way to break things.
-export default function AiAssistant() {
+export default function AiAssistant({ embedded }: { embedded?: boolean } = {}) {
   const { t } = useTranslation();
   const { hasPermission } = usePermission();
   const canManage = hasPermission("settings.manage");
@@ -89,7 +89,9 @@ export default function AiAssistant() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title={t("ai.title")} subtitle={t("ai.subtitle")} />
+      {/* Embedded inside the settings screen, the page already has a header;
+          standing on its own route it still needs one. */}
+      {!embedded && <PageHeader title={t("ai.title")} subtitle={t("ai.subtitle")} />}
 
       {status.data && <AiStatusStrip status={status.data} />}
 

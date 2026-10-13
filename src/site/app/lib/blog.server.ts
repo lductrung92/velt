@@ -36,11 +36,13 @@ export async function loadBlog(
   // base already exist; the API falls back to Vietnamese for anything it has
   // no translation of, so a missing locale costs a visitor nothing.
   locale: string = BASE_LOCALE,
+  /** Articles per page; the console sets it, 9 is what the page shipped with. */
+  pageSize = 9,
 ): Promise<BlogState> {
   const url = new URL(path, "http://site.local");
   const state = emptyBlog();
   const isList = /^\/blog\/?$/.test(url.pathname);
-  state.pageSize = isList ? 9 : 3;
+  state.pageSize = isList ? pageSize : 3;
   state.query = isList
     ? (url.searchParams.get("q") || "").trim().slice(0, 200)
     : "";

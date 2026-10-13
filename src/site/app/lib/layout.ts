@@ -35,6 +35,36 @@ export interface SiteChrome {
   copyright: string;
   ctaLabel: string;
   ctaHref: string;
+  /** Empty = the logo the site ships with. */
+  logoUrl: string;
+  /** How to reach the company when no member is in play. */
+  contactEmail: string;
+  contactZalo: string;
+  /** Shown in the footer only when filled. */
+  phone: string;
+  address: string;
+  /** Each link is an icon in the footer, and only when it is filled. */
+  social: { key: string; href: string }[];
+}
+
+/**
+ * What the document head says.
+ *
+ * It travels with the layout because it comes from the same read, but it is
+ * kept apart: these values are not words on the page, they are instructions to
+ * a browser and to a crawler.
+ */
+export interface SiteHead {
+  faviconUrl: string;
+  ogImageUrl: string;
+  primaryColor: string;
+  /** True while the site should be kept out of search results entirely. */
+  noindexAll: boolean;
+  verification: string;
+  analyticsId: string;
+  /** How many cards a listing page shows. */
+  blogPageSize: number;
+  productsPageSize: number;
 }
 
 export interface SiteLayout {
@@ -42,6 +72,7 @@ export interface SiteLayout {
   headerMobile: NavItem[];
   footer: NavItem[];
   chrome: SiteChrome;
+  head: SiteHead;
 }
 
 function nav(
@@ -114,13 +145,32 @@ export const defaultChrome = (t: T): SiteChrome => ({
   copyright: t("layout.chrome.copyright"),
   ctaLabel: t("layout.chrome.cta_label"),
   ctaHref: DEFAULT_CTA_HREF,
+  logoUrl: "",
+  contactEmail: "",
+  contactZalo: "",
+  phone: "",
+  address: "",
+  social: [],
 });
+
+/** Nothing configured: the site's own icon, no tracking, pages of nine. */
+export const DEFAULT_HEAD: SiteHead = {
+  faviconUrl: "",
+  ogImageUrl: "",
+  primaryColor: "",
+  noindexAll: false,
+  verification: "",
+  analyticsId: "",
+  blogPageSize: 9,
+  productsPageSize: 9,
+};
 
 export const defaultLayout = (t: T): SiteLayout => ({
   header: defaultHeader(t),
   headerMobile: defaultHeaderMobile(t),
   footer: defaultFooter(t),
   chrome: defaultChrome(t),
+  head: DEFAULT_HEAD,
 });
 
 /** A setting read as text; anything that is not a non-blank string is absent. */
@@ -257,8 +307,57 @@ export function resolveLayout(
       copyright: str(values["site.footer_copyright"]) || shipped.copyright,
       ctaLabel: str(values["site.header_cta_label"]) || shipped.ctaLabel,
       ctaHref: ctaHref(values["site.header_cta_url"]),
+      logoUrl: safeUrl(values["app.logo_url"]),
+      contactEmail: str(values["site.contact_email"]).trim(),
+      contactZalo: safeUrl(values["site.contact_zalo"]),
+      phone: str(values["site.contact_phone"]).trim(),
+      address: str(values["site.address"]).trim(),
+      // Only the networks somebody filled in, in a fixed order so the footer
+      // does not reshuffle itself between renders.
+      social: (["facebook", "linkedin", "youtube", "github"] as const)
+        .map((key) => ({ key, href: safeUrl(values[`site.social_${key}`]) }))
+        .filter((item) => item.href !== ""),
+    },
+    head: {
+      faviconUrl: safeUrl(values["app.favicon_url"]),
+      ogImageUrl: safeUrl(values["site.og_image_url"]),
+      primaryColor: color(values["app.primary_color"]),
+      noindexAll: values["seo.noindex_all"] === true,
+      verification: str(values["seo.google_site_verification"]).trim(),
+      analyticsId: str(values["seo.analytics_id"]).trim(),
+      blogPageSize: count(values["site.blog_page_size"], 3, 24, 9),
+      productsPageSize: count(values["site.products_page_size"], 3, 48, 9),
     },
   };
+}
+
+/**
+ * A URL typed into a settings box, checked before it reaches the document.
+ *
+ * Same-origin paths and http(s) only: a `javascript:` logo would be a stored
+ * XSS with a settings screen for a front door.
+ */
+function safeUrl(value: unknown): string {
+  const raw = str(value).trim();
+  if (raw.startsWith("/") || /^https?:\/\//i.test(raw)) return raw;
+  return "";
+}
+
+/** A CSS colour, narrowed to the one shape the theme can use. */
+function color(value: unknown): string {
+  const raw = str(value).trim();
+  return /^#[0-9a-f]{3,8}$/i.test(raw) ? raw : "";
+}
+
+/** A page size, clamped to something a page can actually render. */
+function count(value: unknown, min: number, max: number, fallback: number): number {
+  const parsed = typeof value === "string" ? Number(value) : value;
+  return typeof parsed === "number" &&
+    Number.isInteger(parsed) &&
+    parsed >= min &&
+    parsed <= max
+    ? parsed
+    : fallback;
 }
 
 /**

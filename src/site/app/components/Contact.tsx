@@ -27,14 +27,18 @@ export function Contact({
   onAudience: (value: string) => void;
   config?: unknown;
 }) {
-  const { data, products, referrer, url, t } = useSite();
+  const { data, products, referrer, url, t, layout } = useSite();
   const section = contactConfig(config, t);
   const [person, setPerson] = useState(referrer?.id || ""),
     [brief, setBrief] = useState(""),
     [copyStatus, setCopyStatus] = useState("");
   const target = contactFor(data, person);
-  const email = section.email || target.email;
-  const zalo = safeExternalUrl(section.zalo) || target.zalo;
+  // Three sources, narrowest first: what this section was configured with, the
+  // member the visitor is talking to, and the company's own address. Before the
+  // last one existed this block could only say the channel was coming soon.
+  const email = section.email || target.email || layout.chrome.contactEmail;
+  const zalo =
+    safeExternalUrl(section.zalo) || target.zalo || layout.chrome.contactZalo;
   const selectedId = url.searchParams.get("product") || "";
   function prepare(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

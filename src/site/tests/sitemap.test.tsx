@@ -132,9 +132,26 @@ test("an API that is down still produces a usable sitemap", async () => {
   assert.ok(found.length >= 3);
 });
 
-test("robots points at the sitemap on the host that served it", () => {
+test("robots points at the sitemap on the host that served it", async () => {
+  purge();
   assert.equal(
-    robots(ORIGIN),
+    await robots(ORIGIN, api()),
     `User-agent: *\nAllow: /\n\nSitemap: ${ORIGIN}/sitemap.xml\n`,
   );
+});
+
+test("a site that is not launched closes robots.txt entirely", async () => {
+  purge();
+  const closed = (async (input: string) => {
+    const url = String(input);
+    return {
+      ok: true,
+      status: 200,
+      json: async () =>
+        url.includes("/public/settings") ? { "seo.noindex_all": true } : {},
+    };
+  }) as unknown as typeof fetch;
+  assert.equal(await robots(ORIGIN, closed), `User-agent: *\nDisallow: /\n`);
+  // An unreachable API must not close a site that is open.
+  assert.match(await robots(ORIGIN, api({ down: true })), /Allow: /);
 });

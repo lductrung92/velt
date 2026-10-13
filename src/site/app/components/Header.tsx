@@ -96,7 +96,12 @@ export function Header() {
           href={href("/#top")}
           aria-label={t("a11y.brand_home")}
         >
-          <img src="/assets/logo.png" alt="ZUKATEK" width="1222" height="249" />
+          <img
+            src={layout.chrome.logoUrl || "/assets/logo.png"}
+            alt={t("a11y.brand_home")}
+            width="1222"
+            height="249"
+          />
         </a>
         <nav className="desktop-nav" aria-label={t("a11y.nav_main")}>
           {layout.header.map((item, index) =>

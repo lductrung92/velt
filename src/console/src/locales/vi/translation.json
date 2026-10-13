@@ -225,7 +225,8 @@
     "products": "Sản phẩm",
     "ai": "Trợ lý AI",
     "chat": "Hộp thư",
-    "leads": "Khách hàng"
+    "leads": "Khách hàng",
+    "settings": "Cài đặt"
   },
   "auth": {
     "login": {
@@ -668,81 +669,6 @@
         "landing_hint": "Dựng bằng trình kéo thả"
       },
       "one": "trang"
-    },
-    "settings": {
-      "title": "Cài đặt CMS",
-      "subtitle": "Quản lý cờ tính năng CMS.",
-      "saved": "Đã lưu cài đặt",
-      "article_categorize": {
-        "label": "Bắt buộc chọn chuyên mục",
-        "help": "Bắt buộc chọn chuyên mục khi tạo bài; không cho bỏ chuyên mục khi sửa."
-      },
-      "article_require_review": {
-        "label": "Duyệt bài trước khi xuất bản",
-        "help": "BẬT: bài do biên tập viên tạo phải qua admin duyệt mới được xuất bản. Bài do admin tạo không cần duyệt."
-      },
-      "article_allow_slug_edit": {
-        "label": "Cho phép sửa slug thủ công",
-        "help": "BẬT: tự nhập slug, trùng sẽ báo lỗi. TẮT: hệ thống tự sinh slug + thêm hậu tố khi trùng."
-      },
-      "publish_allow_now": {
-        "label": "Cho phép xuất bản ngay",
-        "help": "BẬT: chỉ xuất bản ngay (ẩn lên lịch). TẮT: thêm tùy chọn “Chờ xuất bản” (đặt thời gian) — vẫn xuất bản ngay được."
-      },
-      "newsletter_notify": {
-        "label": "Thông báo khi xuất bản",
-        "help": "Gửi mail subscriber khi xuất bản bài."
-      },
-      "homepage": {
-        "label": "Trang chủ",
-        "help": "Chọn trang (đã xuất bản) làm trang chủ (\"/\"). Để trống để dùng trang chủ mặc định. Trang phải được xuất bản thì mới có hiệu lực.",
-        "placeholder": "Trang chủ mặc định (chưa chọn)"
-      },
-      "languages": {
-          "label": "Site đa ngôn ngữ",
-          "help": "Bật thì site có thêm địa chỉ /<mã ngôn ngữ> và nút đổi ngôn ngữ. Tắt thì chỉ còn tiếng Việt; bản dịch đã lưu vẫn được giữ.",
-          "list_label": "Ngôn ngữ ngoài tiếng Việt",
-          "list_help": "Danh sách mã ngôn ngữ, cách nhau bởi dấu phẩy. Ví dụ: en hoặc en,ja."
-      },
-      "site": {
-        "title": "Giao diện site",
-        "help": "Chữ ở header và footer của site công khai. Các liên kết được sửa ở màn hình Menu. Để trống một ô nghĩa là dùng lại nội dung mặc định của site.",
-        "help_translate": "Bản dịch của phần chữ trên. Để trống ô nào thì site dùng lại bản tiếng Việt của ô đó.",
-        "cache_ttl": {
-          "label": "Thời gian cache trang (giây)",
-          "help": "Site được phục vụ lại trang đã dựng trong bao lâu trước khi hỏi lại. 0 = tắt cache (tiện khi đang chỉnh nội dung)."
-        },
-        "brand_tagline": {
-          "label": "Giới thiệu dưới logo (footer)",
-          "help": "Đoạn ngắn nằm dưới logo ở footer. Xuống dòng được giữ nguyên.",
-          "placeholder": "Đội ngũ phát triển sản phẩm số…"
-        },
-        "footer_note_title": {
-          "label": "Tiêu đề cột cuối (footer)",
-          "help": "Tiêu đề của cột chữ cuối cùng ở footer.",
-          "placeholder": "Con người đứng sau sản phẩm"
-        },
-        "footer_note_text": {
-          "label": "Nội dung cột cuối (footer)",
-          "help": "Đoạn chữ của cột cuối. Xuống dòng được giữ nguyên.",
-          "placeholder": "Xem đội ngũ phát triển, kỹ năng…"
-        },
-        "footer_copyright": {
-          "label": "Dòng bản quyền",
-          "help": "Dòng cuối footer. Viết {year} ở chỗ muốn hiện năm hiện tại.",
-          "placeholder": "© {year} ZUKATEK. Cùng tiến về phía trước."
-        },
-        "header_cta_label": {
-          "label": "Nhãn nút liên hệ (header)",
-          "help": "Chữ trên nút ở góc phải header.",
-          "placeholder": "Liên hệ"
-        },
-        "header_cta_url": {
-          "label": "Liên kết nút liên hệ (header)",
-          "help": "Đường dẫn nút header trỏ tới (bắt đầu bằng / hoặc https://).",
-          "placeholder": "/#contact"
-        }
-      }
     },
     "tags": {
       "title": "Thẻ",
@@ -1887,5 +1813,159 @@
     "needs_republish": "Cần xuất bản lại",
     "slug_hint": "Để trống thì bản dịch dùng chung đường dẫn tiếng Việt.",
     "shared_title": "Dùng chung mọi ngôn ngữ"
+  },
+  "settings": {
+    "title": "Cài đặt hệ thống",
+    "subtitle": "Mọi thứ có thể cấu hình, ở một chỗ.",
+    "subtitle_scoped": "Phần cấu hình của site và nội dung.",
+    "saved": "Đã lưu cài đặt",
+    "group": {
+      "general": "Chung",
+      "site": "Site công khai",
+      "seo": "SEO",
+      "cms": "Nội dung",
+      "translation": "Ngôn ngữ",
+      "email": "Email",
+      "storage": "Lưu trữ",
+      "ai": "AI"
+    },
+    "group_help": {
+      "general": "Tên, logo, màu sắc — dùng chung cho console và site.",
+      "site": "Những gì site công khai hiển thị ngoài phần nội dung: chữ ở khung, cách liên hệ, số mục mỗi trang.",
+      "seo": "Những gì site nói với công cụ tìm kiếm.",
+      "cms": "Quy tắc khi soạn và xuất bản nội dung.",
+      "translation": "Site phục vụ những ngôn ngữ nào.",
+      "email": "Máy chủ gửi thư. Nút gửi thử dùng cấu hình ĐÃ LƯU, không phải giá trị đang gõ.",
+      "storage": "Tệp và ảnh lưu ở đâu, dung lượng tối đa bao nhiêu.",
+      "ai": "Trợ lý trả lời khách trên site. Kiểm tra kết nối và biểu đồ mức dùng nằm ở màn hình AI riêng."
+    },
+    "secret": {
+      "set": "Đã đặt",
+      "unset": "Chưa đặt",
+      "hint": "Để trống nếu không muốn thay đổi. Giá trị đã lưu không bao giờ hiện lại.",
+      "placeholder": "••••••••"
+    },
+    "email_test": {
+      "label": "Gửi thư thử",
+      "help": "Dùng cấu hình ĐÃ LƯU — hãy Lưu trước rồi mới gửi thử.",
+      "run": "Gửi thử",
+      "ok": "Đã gửi thư thử"
+    },
+    "home_page": {
+      "placeholder": "Trang chủ mặc định (chưa chọn)"
+    },
+    "chrome": {
+      "base": "Đang sửa bản tiếng Việt.",
+      "translating": "Đang sửa bản dịch. Ô để trống nghĩa là site dùng lại bản tiếng Việt."
+    },
+    "label": {
+      "app_name": "Tên ứng dụng",
+      "app_logo_url": "Logo",
+      "app_favicon_url": "Favicon",
+      "app_primary_color": "Màu chủ đạo",
+      "app_default_locale": "Ngôn ngữ mặc định của console",
+      "app_language_switcher_enabled": "Cho đổi ngôn ngữ console",
+      "mail_smtp_host": "Máy chủ SMTP",
+      "mail_smtp_port": "Cổng SMTP",
+      "mail_smtp_user": "Tài khoản SMTP",
+      "mail_smtp_password": "Mật khẩu SMTP",
+      "mail_from_address": "Địa chỉ gửi",
+      "mail_from_name": "Tên người gửi",
+      "storage_driver": "Nơi lưu tệp",
+      "storage_s3_bucket": "S3 bucket",
+      "storage_s3_region": "S3 region",
+      "storage_s3_endpoint": "S3 endpoint",
+      "storage_s3_access_key": "S3 access key",
+      "storage_s3_secret": "S3 secret",
+      "storage_max_upload_mb": "Dung lượng tối đa mỗi tệp (MB)",
+      "files_storage_quota_mb": "Hạn mức lưu trữ mỗi khách (MB)",
+      "files_max_upload_mb": "Dung lượng tối đa mỗi tệp của khách (MB)",
+      "cms_article_categorize": "Bắt buộc chọn chuyên mục",
+      "cms_article_require_review": "Duyệt bài trước khi xuất bản",
+      "cms_article_allow_slug_edit": "Cho sửa slug thủ công",
+      "cms_publish_allow_now": "Chỉ xuất bản ngay",
+      "cms_newsletter_notify_on_publish": "Gửi thư khi xuất bản",
+      "cms_home_page_slug": "Trang chủ",
+      "site_cache_ttl_seconds": "Cache trang (giây)",
+      "site_og_image_url": "Ảnh khi chia sẻ link",
+      "site_brand_tagline": "Giới thiệu dưới logo (footer)",
+      "site_footer_note_title": "Tiêu đề cột cuối (footer)",
+      "site_footer_note_text": "Nội dung cột cuối (footer)",
+      "site_footer_copyright": "Dòng bản quyền",
+      "site_header_cta_label": "Nhãn nút liên hệ (header)",
+      "site_header_cta_url": "Liên kết nút liên hệ (header)",
+      "site_contact_email": "Email liên hệ của công ty",
+      "site_contact_zalo": "Link Zalo của công ty",
+      "site_contact_phone": "Số điện thoại",
+      "site_address": "Địa chỉ",
+      "site_social_facebook": "Facebook",
+      "site_social_linkedin": "LinkedIn",
+      "site_social_youtube": "YouTube",
+      "site_social_github": "GitHub",
+      "site_blog_page_size": "Số bài mỗi trang blog",
+      "site_products_page_size": "Số sản phẩm mỗi trang",
+      "seo_noindex_all": "Chặn công cụ tìm kiếm",
+      "seo_google_site_verification": "Mã xác minh Google",
+      "seo_analytics_id": "Mã thống kê truy cập",
+      "translation_enabled": "Site đa ngôn ngữ",
+      "translation_locales": "Ngôn ngữ ngoài tiếng Việt",
+      "ai_enabled": "Bật trợ lý AI",
+      "ai_provider": "Nhà cung cấp",
+      "ai_base_url": "Base URL",
+      "ai_api_key": "API key",
+      "ai_model": "Model",
+      "ai_max_turns": "Số lượt tối đa mỗi hội thoại",
+      "ai_daily_token_cap": "Hạn mức token mỗi ngày",
+      "ai_max_message_len": "Độ dài tối đa một tin nhắn",
+      "ai_system_persona": "Tính cách trợ lý"
+    },
+    "help": {
+      "app_name": "Hiện ở console và làm tên thương hiệu trên site.",
+      "app_logo_url": "Đường dẫn ảnh logo. Để trống thì dùng logo mặc định.",
+      "app_favicon_url": "Biểu tượng trên tab trình duyệt. Để trống thì dùng mặc định.",
+      "app_primary_color": "Dạng #RRGGBB. Áp cho cả console và site.",
+      "app_default_locale": "Dùng khi tắt nút đổi ngôn ngữ.",
+      "app_language_switcher_enabled": "Tắt thì mọi người dùng console đều thấy ngôn ngữ mặc định.",
+      "mail_smtp_port": "Thường là 587 (STARTTLS) hoặc 465 (SSL).",
+      "mail_from_address": "Email hiện ở ô From của thư gửi đi.",
+      "mail_from_name": "Tên hiển thị cạnh địa chỉ gửi.",
+      "storage_driver": "local = ổ đĩa máy chủ; s3 = dịch vụ tương thích S3.",
+      "storage_s3_endpoint": "Để trống nếu dùng AWS.",
+      "storage_max_upload_mb": "Áp cho ảnh và tệp tải lên từ console.",
+      "cms_article_categorize": "Bắt buộc chọn chuyên mục khi tạo bài.",
+      "cms_article_require_review": "Bài của biên tập viên phải qua admin duyệt.",
+      "cms_article_allow_slug_edit": "Tắt thì hệ thống tự sinh slug.",
+      "cms_publish_allow_now": "Tắt thì có thêm lựa chọn hẹn giờ xuất bản.",
+      "cms_newsletter_notify_on_publish": "Gửi mail cho người đăng ký mỗi khi có bài mới.",
+      "cms_home_page_slug": "Chọn trang đã xuất bản để làm trang chủ. Để trống thì site dùng trang chủ mặc định.",
+      "site_cache_ttl_seconds": "Site phục vụ lại trang đã dựng trong bao lâu. 0 = tắt cache, tiện khi đang sửa nội dung.",
+      "site_og_image_url": "Hiện khi dán link site lên mạng xã hội. Bài viết có ảnh bìa riêng thì dùng ảnh đó.",
+      "site_brand_tagline": "Xuống dòng được giữ nguyên. Để trống thì dùng nội dung mặc định.",
+      "site_footer_note_text": "Xuống dòng được giữ nguyên.",
+      "site_footer_copyright": "Viết {year} ở chỗ muốn hiện năm hiện tại.",
+      "site_header_cta_url": "Bắt đầu bằng / hoặc https://.",
+      "site_contact_email": "Dùng khi khách không đến từ lời giới thiệu của một thành viên. Bỏ trống thì khối liên hệ không có địa chỉ nào.",
+      "site_contact_phone": "Hiện ở footer. Để trống thì không hiện.",
+      "site_address": "Hiện ở footer. Để trống thì không hiện.",
+      "site_social_facebook": "Để trống thì không hiện liên kết.",
+      "site_social_linkedin": "Để trống thì không hiện liên kết.",
+      "site_social_youtube": "Để trống thì không hiện liên kết.",
+      "site_social_github": "Để trống thì không hiện liên kết.",
+      "seo_noindex_all": "BẬT khi site chưa ra mắt: mọi trang xin Google đừng lập chỉ mục và robots.txt chặn toàn bộ. Nhớ tắt khi ra mắt.",
+      "seo_google_site_verification": "Giá trị trong thẻ google-site-verification của Search Console.",
+      "seo_analytics_id": "G-XXXXXXX cho Google Analytics 4, hoặc tên miền cho Plausible. Để trống thì site không nạp script theo dõi nào.",
+      "translation_enabled": "Bật thì site có thêm địa chỉ /<mã ngôn ngữ> và nút đổi ngôn ngữ. Tắt thì chỉ còn tiếng Việt; bản dịch đã lưu vẫn giữ nguyên.",
+      "translation_locales": "Danh sách mã ngôn ngữ, cách nhau bởi dấu phẩy. Ví dụ: en hoặc en,ja.",
+      "ai_base_url": "Để trống nếu dùng endpoint mặc định.",
+      "ai_system_persona": "Thêm vào phần mô tả sẵn có; không ghi đè các quy tắc an toàn."
+    },
+    "value": {
+      "local": "Ổ đĩa máy chủ",
+      "s3": "S3",
+      "vi": "Tiếng Việt",
+      "en": "English",
+      "anthropic": "Anthropic",
+      "openai": "OpenAI"
+    }
   }
 }
