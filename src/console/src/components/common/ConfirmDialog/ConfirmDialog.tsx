@@ -54,39 +54,51 @@ export function ConfirmDialog({
   const Icon = ConfirmIcon ?? (destructive ? Trash2 : Check);
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md">
-        <AlertDialogHeader>
+      <AlertDialogContent className="w-[calc(100%-2rem)] max-w-[26rem] gap-5 p-6">
+        <AlertDialogHeader className="items-center space-y-3 text-center sm:text-center">
           {/* The icon states the consequence before the words do, and it is the
               same glyph as the confirm button so the two read as one action.
-              Tinted rather than solid: a filled red disc competes with the
-              button that actually does the deleting. */}
+              The soft outer ring gives the badge depth without a hard edge; a
+              solid disc would compete with the button that does the deleting. */}
           <span
             className={cn(
-              "mx-auto grid size-12 place-items-center rounded-full",
+              "grid size-12 place-items-center rounded-full ring-8",
               destructive
-                ? "bg-destructive/10 text-destructive"
-                : "bg-primary/10 text-primary",
+                ? "bg-destructive/10 text-destructive ring-destructive/5"
+                : "bg-primary/10 text-primary ring-primary/5",
             )}
             aria-hidden
           >
             <Icon className="size-6" />
           </span>
-          <AlertDialogTitle className="sm:text-center">
-            {title}
-          </AlertDialogTitle>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
           {description && (
-            <AlertDialogDescription>{description}</AlertDialogDescription>
+            /* Centred with the rest: the icon sets a centre axis, and a
+               left-aligned paragraph under it leaves the block looking like two
+               unrelated halves. The width cap makes two lines break evenly
+               instead of one long and one short. */
+            <AlertDialogDescription className="max-w-[20rem] leading-relaxed">
+              {description}
+            </AlertDialogDescription>
           )}
         </AlertDialogHeader>
         {children}
         {error && <Alert variant="danger" message={error} />}
-        <AlertDialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        {/* One pair, centred under a centred prompt. The shared footer pushes
+            the first button to the far edge, which reads as two unrelated
+            controls once the heading above them is on a centre axis. */}
+        <AlertDialogFooter className="sm:justify-center sm:[&>*:first-child]:mr-0">
+          <Button
+            variant="outline"
+            className="sm:min-w-28"
+            onClick={() => onOpenChange(false)}
+          >
             <X className="size-4" />
             {t("common.cancel")}
           </Button>
           <Button
             variant={destructive ? "destructive" : "default"}
+            className="sm:min-w-28"
             loading={loading}
             onClick={onConfirm}
           >
