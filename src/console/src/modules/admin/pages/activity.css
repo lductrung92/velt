@@ -1,0 +1,166 @@
+/* Activity-row content. The page chrome around it is src/styles/list-page.css;
+ * only what is specific to a logged action lives here, scoped to this screen so
+ * it cannot repaint another list. */
+
+/* Four columns, and the row is one line of text: the table has no reason to
+ * demand the chrome's default 930px before it starts scrolling. */
+[data-list="activity"] .list-desktop table {
+  min-width: 720px;
+}
+
+/* Relative on top to judge "just now or last month", exact underneath to quote
+ * in a ticket. A tooltip would have answered neither on a touch screen. */
+[data-list="activity"] .activity-when {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  color: hsl(var(--muted-foreground));
+}
+[data-list="activity"] .activity-when strong {
+  font-weight: 400;
+  font-size: var(--font-size-sm);
+  color: hsl(var(--foreground));
+}
+
+[data-list="activity"] .activity-actor,
+[data-list="activity"] .activity-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  text-align: left;
+}
+[data-list="activity"] .activity-target {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+[data-list="activity"] .activity-target strong {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+[data-list="activity"] .activity-target span {
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+}
+[data-list="activity"] .activity-system {
+  color: hsl(var(--muted-foreground));
+}
+
+/* A cell that filters the list when clicked. Underlined on hover only: a table
+ * where every actor and target is permanently blue reads as a link farm. */
+[data-list="activity"] .activity-link {
+  border-radius: calc(var(--radius) - 2px);
+  transition: color 0.15s;
+}
+[data-list="activity"] .activity-link:hover {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+[data-list="activity"] .activity-link:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+[data-list="activity"] .activity-action {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+[data-list="activity"] .activity-action strong {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+/* The raw code, shown under its label. It is what the API filters on, so an
+ * operator reading a ticket can copy it verbatim; a code with no label renders
+ * as the label itself and this line is dropped. */
+[data-list="activity"] .activity-action code {
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+}
+[data-list="activity"] .activity-muted {
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+}
+
+/* Two dates behave as one control, so they share a row and split it evenly
+ * rather than each claiming a filter slot of its own. */
+[data-list="activity"] .activity-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+[data-list="activity"] .activity-range input {
+  height: 36px;
+  min-width: 0;
+  flex: 1;
+  font-size: var(--font-size-sm);
+  background: hsl(var(--muted) / 0.25);
+}
+[data-list="activity"] .activity-range > span {
+  color: hsl(var(--muted-foreground));
+  font-size: var(--font-size-xs);
+}
+
+[data-list="activity"] .activity-window-note {
+  padding: 10px 20px;
+  border-bottom: 1px solid hsl(var(--border));
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+}
+
+@media (max-width: 767px) {
+  [data-list="activity"] .activity-mobile-card {
+    padding: 16px 14px;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  [data-list="activity"] .activity-mobile-card:last-child {
+    border-bottom: 0;
+  }
+
+  [data-list="activity"] .activity-mobile-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  [data-list="activity"] .activity-mobile-heading .activity-when {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  [data-list="activity"] .activity-mobile-footer {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid hsl(var(--border) / 0.6);
+  }
+
+  [data-list="activity"] .activity-mobile-footer .activity-target {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  [data-list="activity"] .activity-window-note {
+    padding: 10px 14px;
+  }
+
+  /* The toolbar's filter row becomes a grid here, where the pair would be
+     squeezed into one column alongside the action select. Two dates and an
+     arrow need the whole row or they collapse to unreadable stubs. */
+  [data-list="activity"] .activity-range {
+    grid-column: 1 / -1;
+  }
+}

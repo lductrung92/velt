@@ -37,6 +37,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 	base := shared.NewBase(settings, log)
 	base.SetRevalidator(rev)
 	var w Wiring
+	w.Base = base
 
 	// Public (no-auth) read surface — published content with widgets resolved.
 	resolver := widgets.NewResolver(ports)
@@ -70,6 +71,9 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 // it must not import itself — translation being the one that matters: the CMS
 // owns the author-only rule, and the translation module must defer to it.
 type Wiring struct {
+	// Base is the spine every CMS feature shares. It is handed back so the
+	// application can wire the activity recorder onto all of them at once.
+	Base           *shared.Base
 	Articles       *articles.Service
 	PublicArticles *articles.PublicService
 	Pages          *pages.Service

@@ -72,6 +72,8 @@ func (s *Service) UpdateComment(ctx context.Context, id *httpx.Identity, comment
 		return Item{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms comment moderated", "actor", id.UserID, "comment", commentID, "status", req.Status)
+	s.Record(ctx, id, commentEntry(actionModerated, commentID, r.AuthorName,
+		map[string]any{"status": req.Status, "article": r.ArticleTitle}))
 	return toItem(*r), nil
 }
 
@@ -80,7 +82,10 @@ func (s *Service) DeleteComment(ctx context.Context, id *httpx.Identity, comment
 	if err := s.Require(ctx, id, permModerate); err != nil {
 		return err
 	}
-	if _, err := s.repo.GetRow(ctx, commentID); err != nil {
+	// Read before the delete: replies cascade away with it, so afterwards there is
+	// nothing left to say whose comment this was.
+	cur, err := s.repo.GetRow(ctx, commentID)
+	if err != nil {
 		if errors.Is(err, shared.ErrNotFound) {
 			return apperr.NotFound("not_found")
 		}
@@ -90,5 +95,7 @@ func (s *Service) DeleteComment(ctx context.Context, id *httpx.Identity, comment
 		return apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms comment deleted", "actor", id.UserID, "comment", commentID)
+	s.Record(ctx, id, commentEntry(actionDeleted, commentID, cur.AuthorName,
+		map[string]any{"status": cur.Status, "article": cur.ArticleTitle}))
 	return nil
 }

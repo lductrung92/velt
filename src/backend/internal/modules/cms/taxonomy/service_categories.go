@@ -67,6 +67,7 @@ func (s *Service) CreateCategory(ctx context.Context, id *httpx.Identity, req Cr
 		return CategoryResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms category created", "actor", id.UserID, "category", created.ID)
+	s.Record(ctx, id, taxonomyEntry(actionCategoryCreated, EntityCategory, created.ID, created.Name, nil))
 	return categoryDetail(*created, 0), nil
 }
 
@@ -107,6 +108,7 @@ func (s *Service) UpdateCategory(ctx context.Context, id *httpx.Identity, catID 
 		return CategoryResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms category updated", "actor", id.UserID, "category", catID)
+	s.Record(ctx, id, taxonomyEntry(actionCategoryUpdated, EntityCategory, catID, updated.Name, nil))
 	return categoryDetail(*updated, count), nil
 }
 
@@ -154,7 +156,9 @@ func (s *Service) DeleteCategory(ctx context.Context, id *httpx.Identity, catID 
 	if err := s.Require(ctx, id, permManage); err != nil {
 		return err
 	}
-	if _, err := s.repo.GetCategory(ctx, catID); errors.Is(err, shared.ErrNotFound) {
+	// Read before the delete: the name has to outlive the row it came from.
+	cur, err := s.repo.GetCategory(ctx, catID)
+	if errors.Is(err, shared.ErrNotFound) {
 		return apperr.NotFound("not_found")
 	} else if err != nil {
 		return apperr.Internal()
@@ -177,6 +181,7 @@ func (s *Service) DeleteCategory(ctx context.Context, id *httpx.Identity, catID 
 	}
 	s.purgeTranslations(ctx, EntityCategory, catID)
 	s.Sec(ctx).Info("cms category deleted", "actor", id.UserID, "category", catID)
+	s.Record(ctx, id, taxonomyEntry(actionCategoryDeleted, EntityCategory, catID, cur.Name, nil))
 	return nil
 }
 

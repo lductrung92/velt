@@ -84,6 +84,7 @@ func (s *Service) EnableTwoFactor(ctx context.Context, id *httpx.Identity, req E
 	if err := s.repo.EnableTwoFactor(ctx, id.UserID, codes, s.now(), step); err != nil {
 		return nil, apperr.Internal()
 	}
+	s.record(ctx, id, actionTwoFactorOn, nil)
 	s.sec(ctx).Info("2fa enabled", "user_id", id.UserID)
 	return raw, nil
 }
@@ -109,6 +110,9 @@ func (s *Service) DisableTwoFactor(ctx context.Context, id *httpx.Identity, req 
 	if err := s.repo.DeleteTwoFactor(ctx, id.UserID); err != nil {
 		return apperr.Internal()
 	}
+	// Turning the second factor off weakens the account, so it is exactly the
+	// kind of change somebody may later be asked about.
+	s.record(ctx, id, actionTwoFactorOff, nil)
 	s.sec(ctx).Info("2fa disabled", "user_id", id.UserID)
 	return nil
 }
@@ -139,6 +143,9 @@ func (s *Service) RegenerateRecoveryCodes(ctx context.Context, id *httpx.Identit
 	if err := s.repo.UpdateRecoveryCodes(ctx, id.UserID, codes); err != nil {
 		return nil, apperr.Internal()
 	}
+	// The codes themselves are a credential and stay out of the row; only the
+	// fact that the old set was invalidated is recorded.
+	s.record(ctx, id, actionRecoveryCodesNew, nil)
 	s.sec(ctx).Info("2fa recovery codes regenerated", "user_id", id.UserID)
 	return raw, nil
 }

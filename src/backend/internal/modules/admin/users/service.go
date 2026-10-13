@@ -114,6 +114,7 @@ func (s *Service) CreateUser(ctx context.Context, id *httpx.Identity, req Create
 		s.Sec(ctx).Warn("create user: set-password mail failed", "user_id", u.ID, "err", err)
 	}
 	s.Sec(ctx).Info("admin created user", "actor", id.UserID, "target", u.ID)
+	s.Record(ctx, id, userEntry(actionCreated, u.ID, u.FullName, map[string]any{"email": u.Email}))
 	return s.adminUser(ctx, u)
 }
 
@@ -134,7 +135,7 @@ func (s *Service) resolveCreateRoles(ctx context.Context, actorID uuid.UUID, req
 	}
 	for _, rid := range roleIDs {
 		if isSuper {
-			if err := s.AssertCanGrantRole(ctx, actorID, rid); err != nil {
+			if _, err := s.AssertCanGrantRole(ctx, actorID, rid); err != nil {
 				return nil, err
 			}
 			continue
@@ -170,7 +171,8 @@ func (s *Service) UpdateUser(ctx context.Context, id *httpx.Identity, targetID u
 	} else if err != nil {
 		return UserDetail{}, apperr.Internal()
 	}
-	if err := s.validateRoleChange(ctx, id.UserID, targetID, req.RoleID); err != nil {
+	newRole, err := s.validateRoleChange(ctx, id.UserID, targetID, req.RoleID)
+	if err != nil {
 		return UserDetail{}, err
 	}
 	reactivating := req.Status != nil && *req.Status == statusActive && existing.Status != statusActive
@@ -192,8 +194,10 @@ func (s *Service) UpdateUser(ctx context.Context, id *httpx.Identity, targetID u
 		}
 		return UserDetail{}, apperr.Internal()
 	}
-	if req.RoleID != nil {
-		s.Sec(ctx).Info("admin set user role", "actor", id.UserID, "target", targetID, "role", *req.RoleID)
+	if newRole != nil {
+		s.Sec(ctx).Info("admin set user role", "actor", id.UserID, "target", targetID, "role", newRole.ID)
+		s.Record(ctx, id, userEntry(actionRoleAssigned, targetID, existing.FullName,
+			map[string]any{"role": newRole.Code, "replaces_previous": true}))
 	}
 	if reactivating {
 		if err := s.SendResetLink(ctx, targetID); err != nil {
@@ -205,31 +209,44 @@ func (s *Service) UpdateUser(ctx context.Context, id *httpx.Identity, targetID u
 	if err != nil {
 		return UserDetail{}, apperr.Internal()
 	}
+	// Losing an account is the half of this anyone comes back for, so it gets its
+	// own code; every other edit is one "updated" carrying the status move.
+	action := actionUpdated
+	if disabling {
+		action = actionDisabled
+	}
+	var meta map[string]any
+	if existing.Status != u.Status {
+		meta = map[string]any{"from": existing.Status, "to": u.Status}
+	}
+	s.Record(ctx, id, userEntry(action, targetID, u.FullName, meta))
 	return s.adminUser(ctx, u)
 }
 
 // validateRoleChange enforces the single-role replacement rules before any
 // mutation: no-op when nil; only super_admin may set a role; the role must exist;
 // replacing super_admin with a lesser role must not orphan the last super_admin.
-func (s *Service) validateRoleChange(ctx context.Context, actorID, targetID uuid.UUID, roleID *uuid.UUID) error {
+func (s *Service) validateRoleChange(ctx context.Context, actorID, targetID uuid.UUID, roleID *uuid.UUID) (*shared.Role, error) {
 	if roleID == nil {
-		return nil
+		return nil, nil
 	}
 	if _, isSuper, err := s.ActorEffective(ctx, actorID); err != nil {
-		return apperr.Internal()
+		return nil, apperr.Internal()
 	} else if !isSuper {
-		return s.DenyAudit(ctx, actorID, "update_user:role_non_super", apperr.AccessDenied("privilege_escalation_denied"))
+		return nil, s.DenyAudit(ctx, actorID, "update_user:role_non_super", apperr.AccessDenied("privilege_escalation_denied"))
 	}
 	role, err := s.GetRole(ctx, *roleID)
 	if errors.Is(err, shared.ErrNotFound) {
-		return apperr.Validation(map[string]string{"role_id": "not_found"})
+		return nil, apperr.Validation(map[string]string{"role_id": "not_found"})
 	} else if err != nil {
-		return apperr.Internal()
+		return nil, apperr.Internal()
 	}
 	if role.Code != shared.RoleSuperAdmin {
-		return s.AssertNotLastSuperAdmin(ctx, targetID)
+		if err := s.AssertNotLastSuperAdmin(ctx, targetID); err != nil {
+			return nil, err
+		}
 	}
-	return nil
+	return role, nil
 }
 
 // DeleteUser soft-deletes (status=disabled) by default; hard delete is
@@ -241,7 +258,9 @@ func (s *Service) DeleteUser(ctx context.Context, id *httpx.Identity, targetID u
 	if targetID == id.UserID {
 		return s.DenyAudit(ctx, id.UserID, "delete_user:self", apperr.AccessDenied("cannot_modify_self"))
 	}
-	if _, err := s.repo.GetUser(ctx, targetID); errors.Is(err, shared.ErrNotFound) {
+	// Read before the delete: once the row is gone nothing can name it.
+	target, err := s.repo.GetUser(ctx, targetID)
+	if errors.Is(err, shared.ErrNotFound) {
 		return apperr.NotFound("not_found")
 	} else if err != nil {
 		return apperr.Internal()
@@ -259,6 +278,8 @@ func (s *Service) DeleteUser(ctx context.Context, id *httpx.Identity, targetID u
 			return apperr.Internal()
 		}
 		s.Sec(ctx).Info("admin hard-deleted user", "actor", id.UserID, "target", targetID)
+		s.Record(ctx, id, userEntry(actionDeleted, targetID, target.FullName,
+			map[string]any{"email": target.Email}))
 		return nil
 	}
 	disabled := statusDisabled
@@ -269,6 +290,9 @@ func (s *Service) DeleteUser(ctx context.Context, id *httpx.Identity, targetID u
 		return apperr.Internal()
 	}
 	s.Sec(ctx).Info("admin disabled user", "actor", id.UserID, "target", targetID)
+	// A plain delete only disables the account, so that is what the row says.
+	s.Record(ctx, id, userEntry(actionDisabled, targetID, target.FullName,
+		map[string]any{"soft_delete": true}))
 	return nil
 }
 
@@ -277,18 +301,22 @@ func (s *Service) AssignRole(ctx context.Context, id *httpx.Identity, targetID, 
 	if err := s.Require(ctx, id, permUsersAssign); err != nil {
 		return err
 	}
-	if _, err := s.repo.GetUser(ctx, targetID); errors.Is(err, shared.ErrNotFound) {
+	target, err := s.repo.GetUser(ctx, targetID)
+	if errors.Is(err, shared.ErrNotFound) {
 		return apperr.NotFound("not_found")
 	} else if err != nil {
 		return apperr.Internal()
 	}
-	if err := s.AssertCanGrantRole(ctx, id.UserID, roleID); err != nil {
+	role, err := s.AssertCanGrantRole(ctx, id.UserID, roleID)
+	if err != nil {
 		return err
 	}
 	if err := s.repo.AssignRole(ctx, targetID, roleID, id.UserID); err != nil {
 		return apperr.Internal()
 	}
 	s.Sec(ctx).Info("admin assigned role", "actor", id.UserID, "target", targetID, "role", roleID)
+	s.Record(ctx, id, userEntry(actionRoleAssigned, targetID, target.FullName,
+		map[string]any{"role": role.Code}))
 	return nil
 }
 
@@ -300,7 +328,8 @@ func (s *Service) RemoveRole(ctx context.Context, id *httpx.Identity, targetID, 
 	}
 	// Verify the target user exists (parity with AssignRole) so a remove against a
 	// non-existent user returns 404 rather than a misleading 204 no-op.
-	if _, err := s.repo.GetUser(ctx, targetID); errors.Is(err, shared.ErrNotFound) {
+	target, err := s.repo.GetUser(ctx, targetID)
+	if errors.Is(err, shared.ErrNotFound) {
 		return apperr.NotFound("not_found")
 	} else if err != nil {
 		return apperr.Internal()
@@ -326,6 +355,8 @@ func (s *Service) RemoveRole(ctx context.Context, id *httpx.Identity, targetID, 
 		return apperr.Internal()
 	}
 	s.Sec(ctx).Info("admin removed role", "actor", id.UserID, "target", targetID, "role", roleID)
+	s.Record(ctx, id, userEntry(actionRoleRemoved, targetID, target.FullName,
+		map[string]any{"role": role.Code}))
 	return nil
 }
 
@@ -353,6 +384,7 @@ func (s *Service) TriggerResetPassword(ctx context.Context, id *httpx.Identity, 
 		return apperr.Internal()
 	}
 	s.Sec(ctx).Info("admin triggered reset", "actor", id.UserID, "target", targetID)
+	s.Record(ctx, id, userEntry(actionResetSent, targetID, u.FullName, nil))
 	return nil
 }
 

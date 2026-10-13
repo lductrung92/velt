@@ -38,7 +38,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, store *storage.Manager, settings
 	// ever see published documents.
 	pub := catalog.NewPublicService(base, catalog.NewPublicRepository(pool, docs), store)
 	catalog.RegisterPublic(r, pub)
-	return Wiring{Catalog: cat, Categories: cats, PublicCatalog: pub}
+	return Wiring{Base: base, Catalog: cat, Categories: cats, PublicCatalog: pub}
 }
 
 // Wiring is what the products context hands back so the application can connect
@@ -47,6 +47,9 @@ func Register(r chi.Router, pool *pgxpool.Pool, store *storage.Manager, settings
 // assistant, which reads the catalog through the same published-only surface
 // the site does rather than getting a second path to the data.
 type Wiring struct {
+	// Base is the spine both features share. It is handed back so the
+	// application can wire the activity recorder onto both at once.
+	Base          *shared.Base
 	Catalog       *catalog.Service
 	Categories    *categories.Service
 	PublicCatalog *catalog.PublicService

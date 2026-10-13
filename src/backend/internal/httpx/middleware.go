@@ -77,6 +77,21 @@ func CorrelationID(next http.Handler) http.Handler {
 	})
 }
 
+// ClientIPContext puts the caller's address into the context so code far from
+// the handler can record it.
+//
+// trustProxy is a parameter rather than a constant for the same reason the rate
+// limiter takes one: believing an X-Forwarded-For header that no proxy set lets
+// the caller choose which address gets written down.
+func ClientIPContext(trustProxy bool) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r.WithContext(
+				WithClientIP(r.Context(), ClientIP(r, trustProxy))))
+		})
+	}
+}
+
 // RequestLogger emits one structured log line per request. 5xx → ERROR,
 // 4xx → WARN, otherwise INFO. Never logs bodies, headers, or tokens.
 func RequestLogger(next http.Handler) http.Handler {

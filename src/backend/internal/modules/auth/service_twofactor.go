@@ -28,6 +28,7 @@ func (s *Service) VerifyTwoFactor(ctx context.Context, req TwoFactorVerifyReques
 		return LoginResult{}, apperr.Unauthorized("challenge_expired")
 	}
 	if user.Status != statusActive {
+		s.recordSignInFailure(ctx, user.Email, user, reasonAccountOff)
 		return LoginResult{}, apperr.AccessDenied("account_disabled")
 	}
 	tf, err := s.repo.GetTwoFactor(ctx, uid)
@@ -40,10 +41,14 @@ func (s *Service) VerifyTwoFactor(ctx context.Context, req TwoFactorVerifyReques
 		return LoginResult{}, apperr.Internal()
 	}
 	if !ok {
+		// The password step already passed, so the account is known; the second
+		// factor is what failed. Same shape as any other sign-in failure, and
+		// the submitted code is left out for the same reason the password is.
+		s.recordSignInFailure(ctx, user.Email, user, reasonBadTwoFactor)
 		s.sec(ctx).Warn("2fa verify failed", "user_id", uid)
 		return LoginResult{}, apperr.Unauthorized("invalid_2fa_code")
 	}
-	return s.completeLogin(ctx, user, meta)
+	return s.completeLogin(ctx, user, meta, methodTwoFactor)
 }
 
 // checkTwoFactorCode validates the submitted code as a TOTP first, then as a

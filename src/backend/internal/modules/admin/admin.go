@@ -23,7 +23,9 @@ import (
 // Register mounts the full admin surface under /api/admin — all gated by authMW;
 // per-endpoint permissions + safety constraints are enforced in each feature's
 // service layer. Single wiring entry point for the bounded context.
-func Register(r chi.Router, pool *pgxpool.Pool, reset shared.ResetSender, limiter ratelimit.Limiter, files storage.URLer, log *slog.Logger, authMW func(http.Handler) http.Handler) {
+// The Base is returned so the application can wire the activity recorder onto
+// it after construction; the three features share that one spine.
+func Register(r chi.Router, pool *pgxpool.Pool, reset shared.ResetSender, limiter ratelimit.Limiter, files storage.URLer, log *slog.Logger, authMW func(http.Handler) http.Handler) *shared.Base {
 	base := shared.NewBase(shared.NewSpineRepo(pool), reset, limiter, files, shared.Options{Logger: log})
 	r.Route("/api/admin", func(r chi.Router) {
 		r.Use(authMW)
@@ -31,4 +33,5 @@ func Register(r chi.Router, pool *pgxpool.Pool, reset shared.ResetSender, limite
 		roles.Register(r, base, pool)
 		sessions.Register(r, base, pool)
 	})
+	return base
 }

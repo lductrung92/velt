@@ -9,6 +9,7 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/activity"
 	"github.com/velt/backend/internal/platform/crypto"
 	"github.com/velt/backend/internal/platform/mail"
 	"github.com/velt/backend/internal/platform/ratelimit"
@@ -40,6 +41,9 @@ type Service struct {
 	tester   mail.Tester
 	now      func() time.Time
 	log      *slog.Logger
+	// acts is wired after construction (see activity.go) and is allowed to stay
+	// nil, which means nothing is recorded.
+	acts activity.Recorder
 }
 
 // NewService wires the settings service.
@@ -314,6 +318,7 @@ func (s *Service) TestEmail(ctx context.Context, id *httpx.Identity, to string) 
 		s.sec(ctx).Warn("smtp test failed", "reason", reason)
 		return apperr.BadGateway("smtp_test_failed", reason)
 	}
+	s.recordEmailTest(ctx, id, to)
 	return nil
 }
 
@@ -326,6 +331,9 @@ func (s *Service) audit(ctx context.Context, id *httpx.Identity, audits []auditE
 			lg.Info("setting changed", "old", a.oldVal, "new", a.newVal)
 		}
 	}
+	// Both write paths (Update and UpdateScoped) land here, so this is the one
+	// place the activity row has to be written from.
+	s.recordUpdate(ctx, id, audits)
 }
 
 func (s *Service) sec(ctx context.Context) *slog.Logger {

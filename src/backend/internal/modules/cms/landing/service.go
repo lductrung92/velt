@@ -78,6 +78,7 @@ func (s *Service) CreateLanding(ctx context.Context, id *httpx.Identity, req Cre
 		return Response{}, mapWriteErr(err)
 	}
 	s.Sec(ctx).Info("cms landing created", "actor", id.UserID, "landing", p.ID, "key", p.Key)
+	s.Record(ctx, id, landingEntry(actionCreated, p.ID, p.Name, map[string]any{"key": p.Key}))
 	return s.landingResponse(ctx, *p), nil
 }
 
@@ -122,6 +123,7 @@ func (s *Service) UpdateLanding(ctx context.Context, id *httpx.Identity, landing
 		return Response{}, mapWriteErr(err)
 	}
 	s.Sec(ctx).Info("cms landing updated", "actor", id.UserID, "landing", landingID)
+	s.Record(ctx, id, landingEntry(actionUpdated, landingID, p.Name, nil))
 	return s.landingResponse(ctx, *p), nil
 }
 
@@ -130,7 +132,9 @@ func (s *Service) DeleteLanding(ctx context.Context, id *httpx.Identity, landing
 	if err := s.Require(ctx, id, permManage); err != nil {
 		return err
 	}
-	if _, err := s.repo.GetLanding(ctx, landingID); err != nil {
+	// Read before the delete: the name has to outlive the row it came from.
+	cur, err := s.repo.GetLanding(ctx, landingID)
+	if err != nil {
 		return mapGetErr(err)
 	}
 	if err := s.repo.DeleteLanding(ctx, landingID); err != nil {
@@ -141,6 +145,7 @@ func (s *Service) DeleteLanding(ctx context.Context, id *httpx.Identity, landing
 		s.Sec(ctx).Warn("cms landing media purge failed", "landing", landingID, "err", err)
 	}
 	s.Sec(ctx).Info("cms landing deleted", "actor", id.UserID, "landing", landingID)
+	s.Record(ctx, id, landingEntry(actionDeleted, landingID, cur.Name, map[string]any{"key": cur.Key}))
 	return nil
 }
 
@@ -165,6 +170,7 @@ func (s *Service) CreateSection(ctx context.Context, id *httpx.Identity, landing
 		return DetailResponse{}, mapGetErr(err)
 	}
 	s.Sec(ctx).Info("cms landing section created", "actor", id.UserID, "landing", landingID, "type", req.Type)
+	s.Record(ctx, id, landingEntry(actionSectionAdded, landingID, p.Name, map[string]any{"type": req.Type}))
 	s.refreshLiveSnapshot(ctx, landingID)
 	return s.landingDetail(ctx, *p)
 }
@@ -197,6 +203,8 @@ func (s *Service) UpdateSection(ctx context.Context, id *httpx.Identity, section
 		return DetailResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms landing section updated", "actor", id.UserID, "section", sectionID)
+	s.Record(ctx, id, landingEntry(actionSectionUpdated, cur.LandingPageID, p.Name,
+		map[string]any{"section_id": sectionID, "type": cur.Type, "visible": visible}))
 	s.refreshLiveSnapshot(ctx, cur.LandingPageID)
 	return s.landingDetail(ctx, *p)
 }
@@ -210,10 +218,18 @@ func (s *Service) DeleteSection(ctx context.Context, id *httpx.Identity, section
 	if err != nil {
 		return mapGetErr(err)
 	}
+	// The landing is what the activity row points at, so its name is read while
+	// the section still exists to lead us to it.
+	p, err := s.repo.GetLanding(ctx, cur.LandingPageID)
+	if err != nil {
+		return mapGetErr(err)
+	}
 	if err := s.repo.DeleteSection(ctx, sectionID); err != nil {
 		return apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms landing section deleted", "actor", id.UserID, "section", sectionID)
+	s.Record(ctx, id, landingEntry(actionSectionRemoved, cur.LandingPageID, p.Name,
+		map[string]any{"section_id": sectionID, "type": cur.Type}))
 	s.refreshLiveSnapshot(ctx, cur.LandingPageID)
 	return nil
 }
@@ -242,6 +258,8 @@ func (s *Service) ReorderSections(ctx context.Context, id *httpx.Identity, landi
 		return DetailResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms landing sections reordered", "actor", id.UserID, "landing", landingID)
+	s.Record(ctx, id, landingEntry(actionSectionsReordered, landingID, p.Name,
+		map[string]any{"sections": len(req.SectionIDs)}))
 	s.refreshLiveSnapshot(ctx, landingID)
 	return s.landingDetail(ctx, *p)
 }
@@ -276,6 +294,8 @@ func (s *Service) PublishLanding(ctx context.Context, id *httpx.Identity, landin
 	gcDroppedMedia(ctx, s.files, landingMediaPrefix(landingID), cur.PublishedSnapshot,
 		liveMediaPaths(snap, sections, cur.OGPath))
 	s.Sec(ctx).Info("cms landing published", "actor", id.UserID, "landing", landingID, "key", p.Key)
+	s.Record(ctx, id, landingEntry(actionPublished, landingID, p.Name,
+		map[string]any{"from": cur.Status, "to": p.Status, "sections": len(sections)}))
 	s.revalidateHostPages(ctx, landingID)
 	return s.landingDetail(ctx, *p)
 }
@@ -285,7 +305,8 @@ func (s *Service) UnpublishLanding(ctx context.Context, id *httpx.Identity, land
 	if err := s.Require(ctx, id, permManage); err != nil {
 		return DetailResponse{}, err
 	}
-	if _, err := s.repo.GetLanding(ctx, landingID); err != nil {
+	cur, err := s.repo.GetLanding(ctx, landingID)
+	if err != nil {
 		return DetailResponse{}, mapGetErr(err)
 	}
 	p, err := s.repo.UnpublishLanding(ctx, landingID)
@@ -296,6 +317,8 @@ func (s *Service) UnpublishLanding(ctx context.Context, id *httpx.Identity, land
 		return DetailResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms landing unpublished", "actor", id.UserID, "landing", landingID)
+	s.Record(ctx, id, landingEntry(actionUnpublished, landingID, p.Name,
+		map[string]any{"from": cur.Status, "to": p.Status}))
 	s.revalidateHostPages(ctx, landingID)
 	return s.landingDetail(ctx, *p)
 }

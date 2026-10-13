@@ -10,6 +10,7 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/activity"
 	"github.com/velt/backend/internal/platform/ratelimit"
 	"github.com/velt/backend/internal/platform/storage"
 )
@@ -36,6 +37,21 @@ type Base struct {
 	files   storage.URLer
 	now     func() time.Time
 	log     *slog.Logger
+	// acts is wired after construction and may stay nil, which is what this
+	// context looked like before the activity log existed.
+	acts activity.Recorder
+}
+
+// SetActivity wires the activity recorder (called once at startup).
+func (b *Base) SetActivity(r activity.Recorder) { b.acts = r }
+
+// Record files one entry in the activity log. A nil recorder is a no-op: the
+// log is a record OF the action, never a condition for it.
+func (b *Base) Record(ctx context.Context, id *httpx.Identity, e activity.Entry) {
+	if b.acts == nil {
+		return
+	}
+	b.acts.Record(ctx, id, e)
 }
 
 // NewBase wires the admin service spine.
@@ -102,37 +118,39 @@ func (b *Base) ActorEffective(ctx context.Context, actorID uuid.UUID) (map[strin
 // AssertCanGrantRole enforces anti-escalation for assigning a role: super_admin
 // role only by super_admin; otherwise the role's permissions must be a subset of
 // the actor's effective permissions.
-func (b *Base) AssertCanGrantRole(ctx context.Context, actorID, roleID uuid.UUID) error {
+// It hands back the role it validated so a caller that has to name it in the
+// activity log does not read the same row twice.
+func (b *Base) AssertCanGrantRole(ctx context.Context, actorID, roleID uuid.UUID) (*Role, error) {
 	role, err := b.spine.GetRole(ctx, roleID)
 	if errors.Is(err, ErrNotFound) {
-		return apperr.Validation(map[string]string{"role_id": "not_found"})
+		return nil, apperr.Validation(map[string]string{"role_id": "not_found"})
 	}
 	if err != nil {
-		return apperr.Internal()
+		return nil, apperr.Internal()
 	}
 	set, isSuper, err := b.ActorEffective(ctx, actorID)
 	if err != nil {
-		return apperr.Internal()
+		return nil, apperr.Internal()
 	}
 	if role.Code == RoleSuperAdmin {
 		if !isSuper {
-			return b.DenyAudit(ctx, actorID, "grant_role:super_admin", apperr.AccessDenied("privilege_escalation_denied"))
+			return nil, b.DenyAudit(ctx, actorID, "grant_role:super_admin", apperr.AccessDenied("privilege_escalation_denied"))
 		}
-		return nil
+		return role, nil
 	}
 	if isSuper {
-		return nil
+		return role, nil
 	}
 	codes, err := b.spine.RolePermissionCodes(ctx, roleID)
 	if err != nil {
-		return apperr.Internal()
+		return nil, apperr.Internal()
 	}
 	for _, c := range codes {
 		if !set[c] {
-			return b.DenyAudit(ctx, actorID, "grant_role:"+role.Code, apperr.AccessDenied("privilege_escalation_denied"))
+			return nil, b.DenyAudit(ctx, actorID, "grant_role:"+role.Code, apperr.AccessDenied("privilege_escalation_denied"))
 		}
 	}
-	return nil
+	return role, nil
 }
 
 // AssertCanGrantPermissions enforces anti-escalation for building/editing a role:

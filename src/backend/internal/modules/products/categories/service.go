@@ -74,6 +74,7 @@ func (s *Service) Create(ctx context.Context, id *httpx.Identity, req CreateRequ
 	if err != nil {
 		return Response{}, s.MapRepoErr(ctx, "create category", err)
 	}
+	s.Record(ctx, id, categoryEntry(actionCreated, c.ID, c.Name, nil))
 	return toResponse(*c), nil
 }
 
@@ -127,6 +128,7 @@ func (s *Service) Update(ctx context.Context, id *httpx.Identity, catID uuid.UUI
 	if err != nil {
 		return Response{}, s.MapRepoErr(ctx, "update category", err)
 	}
+	s.Record(ctx, id, categoryEntry(actionUpdated, catID, c.Name, nil))
 	return toResponse(*c), nil
 }
 
@@ -139,10 +141,18 @@ func (s *Service) Delete(ctx context.Context, id *httpx.Identity, catID uuid.UUI
 	if err := s.Require(ctx, id, permManage); err != nil {
 		return err
 	}
+	// Read before the delete: the name has to outlive the row it came from, and
+	// the product links cascade away with it.
+	cur, err := s.repo.Get(ctx, catID)
+	if err != nil {
+		return s.MapRepoErr(ctx, "delete category: load", err)
+	}
 	if err := s.repo.Delete(ctx, catID); err != nil {
 		return s.MapRepoErr(ctx, "delete category", err)
 	}
 	s.purgeTranslations(ctx, catID)
+	s.Record(ctx, id, categoryEntry(actionDeleted, catID, cur.Name,
+		map[string]any{"products": cur.ProductCount}))
 	return nil
 }
 

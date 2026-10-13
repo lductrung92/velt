@@ -1,3 +1,4 @@
+import type { ActivityListParams } from "../services/activity.service";
 import type {
   ListSessionsParams,
   ListUsersParams,
@@ -23,6 +24,12 @@ export const adminKeys = {
     all: () => [...adminKeys.all, "sessions"] as const,
     list: (params: ListSessionsParams) =>
       [...adminKeys.sessions.all(), "list", params] as const,
+  },
+  activity: {
+    all: () => [...adminKeys.all, "activity"] as const,
+    list: (params: ActivityListParams) =>
+      [...adminKeys.activity.all(), "list", params] as const,
+    actions: () => [...adminKeys.activity.all(), "actions"] as const,
   },
   home: {
     all: () => [...adminKeys.all, "home"] as const,

@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
@@ -105,22 +106,112 @@ describe("RolePermissions", () => {
     renderPage();
 
     // Editor is auto-selected; its two permissions render with descriptions.
-    expect(await screen.findByText("Read users")).toBeInTheDocument();
-    expect(screen.getByText("Read roles")).toBeInTheDocument();
+    expect(await screen.findByText("users.read")).toBeInTheDocument();
+    expect(screen.getByText("roles.read")).toBeInTheDocument();
     // Editor holds users.read but NOT users.manage.
-    expect(screen.queryByText("Manage users")).not.toBeInTheDocument();
+    expect(screen.queryByText("users.manage")).not.toBeInTheDocument();
     // super_admin is kept out of the picker entirely.
     expect(screen.queryByText("Super Admin")).not.toBeInTheDocument();
   });
 
   it("shows an empty state when the selected role has no permissions", async () => {
     mockRbac([EDITOR], { "r-editor": { ...EDITOR, permissions: [] } });
-    const { container } = renderPage();
+    renderPage();
+    expect(
+      await screen.findByText(/chưa có quyền nào|has no permissions/i),
+    ).toBeInTheDocument();
+  });
 
-    // Wait for the role list + its (empty) detail to settle, then assert.
-    await new Promise((r) => setTimeout(r, 1500));
-    expect(container.textContent).toMatch(
-      /chưa có quyền nào|has no permissions/i,
+  it("clears permission search when switching roles and renders the new role's rights", async () => {
+    const viewer = {
+      ...EDITOR,
+      id: "r-viewer",
+      name: "Viewer",
+      code: "viewer",
+    };
+    mockRbac([EDITOR, viewer], {
+      "r-editor": { ...EDITOR, permissions: ["users.read", "roles.read"] },
+      "r-viewer": { ...viewer, permissions: ["users.manage"] },
+    });
+    renderPage();
+    await screen.findByText("roles.read");
+    const user = userEvent.setup();
+    const search = screen.getByRole("textbox", {
+      name: /Tìm quyền|Find a permission/i,
+    });
+    await user.type(search, "roles.read");
+    expect(screen.queryByText("users.read")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Viewer/ }));
+    expect(await screen.findByText("users.manage")).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: /Tìm quyền|Find a permission/i }),
+    ).toHaveValue("");
+    expect(screen.queryByText("roles.read")).not.toBeInTheDocument();
+  });
+
+  it("finds a normally collapsed permission and restores the list after a no-match search", async () => {
+    const permissions = [
+      "users.read",
+      "users.manage",
+      "users.create",
+      "users.update",
+      "users.delete",
+      "users.assign_role",
+    ];
+    mockRbac([EDITOR], { "r-editor": { ...EDITOR, permissions } });
+    renderPage();
+    await screen.findByText("users.read");
+    expect(screen.queryByText("users.assign_role")).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    const search = screen.getByRole("textbox", {
+      name: /Tìm quyền|Find a permission/i,
+    });
+    await user.type(search, "USERS.ASSIGN_ROLE");
+    expect(screen.getByText("users.assign_role")).toBeInTheDocument();
+    await user.clear(search);
+    await user.type(search, "does-not-exist");
+    expect(
+      screen.getByText(/Không tìm thấy quyền phù hợp|No matching permissions/i),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getAllByRole("button", { name: /Xóa tìm kiếm|Clear search/i })[0],
     );
+    expect(screen.getByText("users.read")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: /Xem thêm|Show more/i }),
+    );
+    expect(screen.getByText("users.assign_role")).toBeInTheDocument();
+  });
+
+  it("distinguishes an empty role directory from a role with no permissions", async () => {
+    mockRbac([SUPER], {});
+    renderPage();
+    expect(
+      await screen.findByText(
+        /Chưa có vai trò để hiển thị|No roles to display/i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/chưa có quyền nào|has no permissions/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a catalog error instead of an empty permission set", async () => {
+    mockRbac([EDITOR], {
+      "r-editor": { ...EDITOR, permissions: ["users.read"] },
+    });
+    server.use(
+      http.get(
+        `${API}/admin/permissions`,
+        () => new HttpResponse(null, { status: 403 }),
+      ),
+    );
+    renderPage();
+    expect(
+      await screen.findByRole("button", { name: /Thử lại|Try again/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/chưa có quyền nào|has no permissions/i),
+    ).not.toBeInTheDocument();
   });
 });

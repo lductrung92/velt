@@ -185,6 +185,7 @@
     "users": "Users",
     "rbac": "Roles & Permissions",
     "sessions": "Sessions",
+    "activity": "Activity log",
     "admin": "Administration",
     "account": "Account",
     "cms": "CMS",
@@ -1565,6 +1566,162 @@
     "no_results": "No matching customers",
     "no_results_hint": "Try another search or remove filters to find more customers.",
     "reset_filters": "Clear filters"
+  },
+  "activity": {
+    "title": "Activity log",
+    "subtitle": "Who changed what, and when. Written as it happened and never edited afterwards.",
+    "list_title": "Recorded activity",
+    "list_hint": "Every deliberate change, newest first.",
+    "record_count_one": "{{count}} recorded action",
+    "record_count_other": "{{count}} recorded actions",
+    "search_label": "Search the log",
+    "search_ph": "Person, record or action code",
+    "apply_search": "Search the log",
+    "search_window": "Searching activity since {{since}}. Pick a date range to look further back.",
+    "all_actions": "All actions",
+    "from": "From date",
+    "to": "To date",
+    "filter_by_actor": "Show only what {{name}} did",
+    "filter_by_target": "Show only what happened to {{name}}",
+    "no_target": "No particular record",
+    "reset_filters": "Clear filters",
+    "empty_title": "Nothing recorded yet",
+    "empty_description": "The moment someone publishes, edits or removes something, it appears here with their name and the exact time.",
+    "no_results": "No matching activity",
+    "no_results_hint": "Try a wider date range, a different action, or clear the filters.",
+    "col": {
+      "when": "When",
+      "actor": "Who",
+      "action": "Did what",
+      "target": "To what"
+    },
+    "entity": {
+      "article": "Article",
+      "page": "Page",
+      "product": "Product",
+      "member": "Member",
+      "user": "User",
+      "role": "Role",
+      "menu": "Menu",
+      "category": "Category",
+      "tag": "Tag",
+      "lead": "Customer",
+      "setting": "Setting"
+    },
+    "action": {
+      "account": {
+        "password_changed": "Changed own password",
+        "profile_updated": "Updated own profile",
+        "recovery_codes_regenerated": "Regenerated recovery codes",
+        "two_factor_disabled": "Disabled two-factor",
+        "two_factor_enabled": "Enabled two-factor"
+      },
+      "article": {
+        "created": "Created article",
+        "deleted": "Deleted article",
+        "published": "Published article",
+        "unpublished": "Unpublished article",
+        "updated": "Updated article"
+      },
+      "auth": {
+        "locked_out": "Account locked after failed sign-ins",
+        "password_reset_completed": "Completed password reset",
+        "password_reset_requested": "Requested password reset",
+        "session_reuse_detected": "Token reuse detected — all sessions revoked",
+        "sign_in": "Signed in",
+        "sign_in_failed": "Failed sign-in",
+        "sign_out": "Signed out",
+        "sign_out_all": "Signed out everywhere"
+      },
+      "cms_category": {
+        "created": "Created category",
+        "deleted": "Deleted category",
+        "updated": "Updated category"
+      },
+      "comment": {
+        "deleted": "Deleted comment",
+        "moderated": "Moderated comment"
+      },
+      "landing": {
+        "created": "Created landing page",
+        "deleted": "Deleted landing page",
+        "published": "Published landing page",
+        "section_added": "Added section",
+        "section_removed": "Removed section",
+        "section_updated": "Updated section",
+        "sections_reordered": "Reordered sections",
+        "unpublished": "Unpublished landing page",
+        "updated": "Updated landing page"
+      },
+      "lead": {
+        "created": "Created lead",
+        "deleted": "Deleted lead",
+        "updated": "Updated lead"
+      },
+      "member": {
+        "created": "Added member",
+        "deleted": "Deleted member",
+        "updated": "Updated member"
+      },
+      "menu": {
+        "created": "Created menu",
+        "deleted": "Deleted menu",
+        "items_replaced": "Replaced menu items",
+        "updated": "Updated menu"
+      },
+      "newsletter_subscriber": {
+        "deleted": "Deleted newsletter subscriber"
+      },
+      "page": {
+        "created": "Created page",
+        "deleted": "Deleted page",
+        "published": "Published page",
+        "unpublished": "Unpublished page",
+        "updated": "Updated page"
+      },
+      "product": {
+        "archived": "Archived product",
+        "created": "Created product",
+        "deleted": "Deleted product",
+        "published": "Published product",
+        "unpublished": "Unpublished product",
+        "updated": "Updated product"
+      },
+      "product_category": {
+        "created": "Created product category",
+        "deleted": "Deleted product category",
+        "updated": "Updated product category"
+      },
+      "role": {
+        "created": "Created role",
+        "deleted": "Deleted role",
+        "permissions_set": "Set role permissions",
+        "updated": "Updated role"
+      },
+      "session": {
+        "revoked": "Revoked a session",
+        "revoked_all": "Revoked all sessions for a user"
+      },
+      "settings": {
+        "email_tested": "Sent an SMTP test message",
+        "updated": "Changed system settings"
+      },
+      "tag": {
+        "created": "Created tag",
+        "deleted": "Deleted tag",
+        "merged": "Merged tags",
+        "updated": "Updated tag"
+      },
+      "user": {
+        "created": "Created user",
+        "deleted": "Deleted user",
+        "disabled": "Disabled user",
+        "password_reset_sent": "Sent a password-reset link",
+        "role_assigned": "Assigned a role",
+        "role_removed": "Removed a role",
+        "updated": "Updated user"
+      }
+    }
   },
   "tr": {
     "tabs": "Content language",

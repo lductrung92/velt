@@ -106,6 +106,8 @@ func (s *Service) Create(ctx context.Context, id *httpx.Identity, req CreateRequ
 	if err != nil {
 		return Response{}, s.MapRepoErr(ctx, "create lead", err)
 	}
+	s.Record(ctx, id, leadEntry(actionCreated, l.ID, leadLabel(l),
+		map[string]any{"source": l.Source, "status": l.Status}))
 	return s.decorate(ctx, *l)
 }
 
@@ -167,6 +169,13 @@ func (s *Service) Update(ctx context.Context, id *httpx.Identity, leadID uuid.UU
 	if err != nil {
 		return Response{}, s.MapRepoErr(ctx, "update lead", err)
 	}
+	// Where a lead got to is the point of the pipeline, so a status move is the
+	// one thing the row carries beyond "edited".
+	var meta map[string]any
+	if cur.Status != l.Status {
+		meta = map[string]any{"from": cur.Status, "to": l.Status}
+	}
+	s.Record(ctx, id, leadEntry(actionUpdated, leadID, leadLabel(l), meta))
 	return s.decorate(ctx, *l)
 }
 
@@ -178,9 +187,17 @@ func (s *Service) Delete(ctx context.Context, id *httpx.Identity, leadID uuid.UU
 	if err := s.Require(ctx, id, permManage); err != nil {
 		return err
 	}
+	// Read before the delete: a lead deleted as one that should not have existed
+	// still has to be identifiable afterwards.
+	cur, err := s.repo.Get(ctx, leadID)
+	if err != nil {
+		return s.MapRepoErr(ctx, "delete lead: load", err)
+	}
 	if err := s.repo.Delete(ctx, leadID); err != nil {
 		return s.MapRepoErr(ctx, "delete lead", err)
 	}
+	s.Record(ctx, id, leadEntry(actionDeleted, leadID, leadLabel(cur),
+		map[string]any{"source": cur.Source, "status": cur.Status}))
 	return nil
 }
 

@@ -82,7 +82,8 @@ func (s *Service) CreateRole(ctx context.Context, id *httpx.Identity, req Create
 	} else if !errors.Is(err, shared.ErrNotFound) {
 		return RoleResponse{}, apperr.Internal()
 	}
-	role, err := s.repo.CreateRole(ctx, req.Code, req.Name, req.Description, shared.DedupeIDs(req.PermissionIDs))
+	permIDs := shared.DedupeIDs(req.PermissionIDs)
+	role, err := s.repo.CreateRole(ctx, req.Code, req.Name, req.Description, permIDs)
 	if errors.Is(err, shared.ErrConflict) {
 		return RoleResponse{}, apperr.Conflict("conflict")
 	}
@@ -90,6 +91,8 @@ func (s *Service) CreateRole(ctx context.Context, id *httpx.Identity, req Create
 		return RoleResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("admin created role", "actor", id.UserID, "role", role.ID)
+	s.Record(ctx, id, roleEntry(actionCreated, role.ID, role.Name,
+		map[string]any{"code": role.Code, "permissions": len(permIDs)}))
 	return s.roleDetail(ctx, role)
 }
 
@@ -127,6 +130,7 @@ func (s *Service) UpdateRole(ctx context.Context, id *httpx.Identity, roleID uui
 	if err != nil {
 		return RoleResponse{}, apperr.Internal()
 	}
+	s.Record(ctx, id, roleEntry(actionUpdated, roleID, updated.Name, nil))
 	return s.roleDetail(ctx, updated)
 }
 
@@ -149,12 +153,17 @@ func (s *Service) ReplaceRolePermissions(ctx context.Context, id *httpx.Identity
 	if err := s.AssertCanGrantPermissions(ctx, id.UserID, req.PermissionIDs); err != nil {
 		return RoleResponse{}, err
 	}
-	if _, err := s.repo.ReplaceRolePermissions(ctx, roleID, shared.DedupeIDs(req.PermissionIDs), req.UpdatedAt); errors.Is(err, shared.ErrConflict) {
+	permIDs := shared.DedupeIDs(req.PermissionIDs)
+	if _, err := s.repo.ReplaceRolePermissions(ctx, roleID, permIDs, req.UpdatedAt); errors.Is(err, shared.ErrConflict) {
 		return RoleResponse{}, apperr.Conflict("conflict")
 	} else if err != nil {
 		return RoleResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("admin set role permissions", "actor", id.UserID, "role", roleID)
+	// The set replaces whatever was there, so its size is the one number that
+	// says how much the role just gained or lost.
+	s.Record(ctx, id, roleEntry(actionPermissionsSet, roleID, role.Name,
+		map[string]any{"permissions": len(permIDs)}))
 	updated, err := s.Base.GetRole(ctx, roleID)
 	if err != nil {
 		return RoleResponse{}, apperr.Internal()
@@ -189,6 +198,8 @@ func (s *Service) DeleteRole(ctx context.Context, id *httpx.Identity, roleID uui
 		return apperr.Internal()
 	}
 	s.Sec(ctx).Info("admin deleted role", "actor", id.UserID, "role", roleID)
+	// Named from the row read above, before the delete took it away.
+	s.Record(ctx, id, roleEntry(actionDeleted, roleID, role.Name, map[string]any{"code": role.Code}))
 	return nil
 }
 

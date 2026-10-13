@@ -76,3 +76,19 @@ func CorrelationIDFromContext(ctx context.Context) string {
 	id, _ := ctx.Value(correlationCtxKey{}).(string)
 	return id
 }
+
+type clientIPCtxKey struct{}
+
+// WithClientIP stores the caller's address in the context. Services that record
+// an action are far from the request, but "signed in from where" is one of the
+// few things an activity log is read for, so the address has to travel.
+func WithClientIP(ctx context.Context, ip string) context.Context {
+	return context.WithValue(ctx, clientIPCtxKey{}, ip)
+}
+
+// ClientIPFromContext returns the caller's address, or "" when the context did
+// not come from a request.
+func ClientIPFromContext(ctx context.Context) string {
+	ip, _ := ctx.Value(clientIPCtxKey{}).(string)
+	return ip
+}

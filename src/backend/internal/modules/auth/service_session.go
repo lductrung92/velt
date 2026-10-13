@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/velt/backend/internal/apperr"
+	"github.com/velt/backend/internal/platform/activity"
 	"github.com/velt/backend/internal/platform/crypto"
 )
 
@@ -35,6 +36,7 @@ func (s *Service) Refresh(ctx context.Context, rawRefresh string, meta RequestMe
 			s.sec(ctx).Error("revoke-all after reuse", "err", err)
 		}
 		s.sec(ctx).Error("refresh token reuse detected", "user_id", sess.UserID)
+		s.recordSessionReuse(ctx, sess.UserID, causeRevokedTokenReplayed)
 		return LoginResult{}, apperr.Unauthorized("unauthorized")
 	}
 	if !sess.ExpiresAt.After(now) {
@@ -77,6 +79,7 @@ func (s *Service) rotateAndIssue(ctx context.Context, oldSessionID uuid.UUID, us
 				s.sec(ctx).Error("revoke-all after rotate race", "err", e)
 			}
 			s.sec(ctx).Error("refresh token reuse detected (rotate race)", "user_id", user.ID)
+			s.recordSessionReuse(ctx, user.ID, causeRotateRace)
 			return LoginResult{}, apperr.Unauthorized("unauthorized")
 		}
 		return LoginResult{}, apperr.Internal()
@@ -115,6 +118,11 @@ func (s *Service) Logout(ctx context.Context, rawRefresh string) error {
 	if err := s.repo.RevokeSession(ctx, sess.ID, s.now()); err != nil {
 		return apperr.Internal()
 	}
+	// The cookie is the only identity this endpoint has, and it just proved it
+	// belongs to this session, so the sign-out is attributable to its owner.
+	s.record(ctx, actor(sess.UserID), activity.Entry{
+		Action: actionSignOut, Entity: entityUser, EntityID: &sess.UserID,
+	})
 	return nil
 }
 
@@ -123,6 +131,9 @@ func (s *Service) LogoutAll(ctx context.Context, userID uuid.UUID) error {
 	if err := s.repo.RevokeAllUserSessions(ctx, userID, s.now()); err != nil {
 		return apperr.Internal()
 	}
+	s.record(ctx, actor(userID), activity.Entry{
+		Action: actionSignOutAll, Entity: entityUser, EntityID: &userID,
+	})
 	return nil
 }
 

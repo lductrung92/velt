@@ -23,6 +23,7 @@ import (
 	"github.com/velt/backend/internal/config"
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/account"
+	activityread "github.com/velt/backend/internal/modules/activity"
 	"github.com/velt/backend/internal/modules/admin"
 	"github.com/velt/backend/internal/modules/ai"
 	aitools "github.com/velt/backend/internal/modules/ai/tools"
@@ -37,6 +38,7 @@ import (
 	"github.com/velt/backend/internal/modules/products"
 	"github.com/velt/backend/internal/modules/settings"
 	"github.com/velt/backend/internal/modules/translation"
+	"github.com/velt/backend/internal/platform/activity"
 	"github.com/velt/backend/internal/platform/crypto"
 	"github.com/velt/backend/internal/platform/db"
 	"github.com/velt/backend/internal/platform/mail"
@@ -206,6 +208,7 @@ func run() error {
 		chimw.RequestSize(maxRequestBytes),
 		httpx.CORS(cfg.CORSAllowedOrigins),
 		httpx.CorrelationID,
+		httpx.ClientIPContext(cfg.TrustProxyHeaders),
 		httpx.RequestLogger,
 		httpx.Recoverer,
 		timeoutExceptStreams(requestTimeout),
@@ -219,7 +222,7 @@ func run() error {
 	account.RegisterRoutes(r, accountHandler, authMW)
 	// admin bounded context (users + roles + sessions; authSvc satisfies the
 	// password-reset port for set-password / trigger-reset).
-	admin.Register(r, pool, authSvc, limiter, store, logger, authMW)
+	adminBase := admin.Register(r, pool, authSvc, limiter, store, logger, authMW)
 	// members bounded context: the public team roster the site shows and
 	// products attach to. Separate from users (login identity) by design.
 	membersSvc := members.Register(r, pool, store, settingsSvc, logger, authMW)
@@ -231,6 +234,9 @@ func run() error {
 	// type. It replaces the per-table published_snapshot column and is what makes
 	// a second language a row rather than a schema change.
 	publicDocs := pubdocs.New(pool)
+	// The activity log. Best-effort by design: a failed write warns, it never
+	// fails the action it describes (internal/platform/activity).
+	acts := activity.New(pool, logger)
 	// products bounded context: the catalog VELT sells, plus its own taxonomy.
 	productsWiring := products.Register(r, pool, store, settingsSvc, logger, authMW,
 		revalidate.NewHTTP(cfg.CustomerWebBaseURL, cfg.RevalidateSecret, logger), publicDocs)
@@ -296,6 +302,24 @@ func run() error {
 			}
 			return apperr.NotFound("not_found")
 		})
+	// One recorder per bounded context: every feature inside it shares the same
+	// spine, so this is the whole write side of the activity log.
+	adminBase.SetActivity(acts)
+	cmsWiring.Base.SetActivity(acts)
+	productsWiring.Base.SetActivity(acts)
+	membersSvc.SetActivity(acts)
+	crmLeads.SetActivity(acts)
+	authSvc.SetRecorder(acts)
+	accountSvc.SetRecorder(acts)
+	settingsSvc.SetRecorder(acts)
+
+	// The read side: GET /api/activity and /api/activity/actions, gated by
+	// activity.read. It never writes the table.
+	activityread.Register(r, activityread.NewService(
+		activityread.NewRepository(pool),
+		activityread.Options{Logger: logger},
+	), authMW)
+
 	cmsWiring.Articles.SetTranslator(translationSvc)
 	cmsWiring.PublicArticles.SetLocales(translationSvc)
 	cmsWiring.Pages.SetTranslator(translationSvc)

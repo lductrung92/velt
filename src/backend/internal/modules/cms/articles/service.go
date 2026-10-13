@@ -189,6 +189,8 @@ func (s *Service) CreateArticle(ctx context.Context, id *httpx.Identity, req Cre
 		return ArticleResponse{}, mapArticleWriteErr(err)
 	}
 	s.Sec(ctx).Info("cms article created", "actor", id.UserID, "article", created.ID, "status", created.Status)
+	s.Record(ctx, id, articleEntry(actionCreated, created.ID, created.Title,
+		map[string]any{"status": created.Status}))
 	if err := s.syncPublic(ctx, created); err != nil {
 		return ArticleResponse{}, err
 	}
@@ -290,6 +292,8 @@ func (s *Service) UpdateArticle(ctx context.Context, id *httpx.Identity, article
 	}
 	s.gcInlineMedia(ctx, articleID, body)
 	s.Sec(ctx).Info("cms article updated", "actor", id.UserID, "article", articleID, "from", cur.Status, "to", updated.Status)
+	s.Record(ctx, id, articleEntry(updateAction(cur.Status, updated.Status), articleID, updated.Title,
+		statusMeta(cur.Status, updated.Status)))
 	if err := s.syncPublic(ctx, updated); err != nil {
 		return ArticleResponse{}, err
 	}
@@ -430,5 +434,9 @@ func (s *Service) DeleteArticle(ctx context.Context, id *httpx.Identity, article
 		s.Sec(ctx).Warn("cms article media purge failed", "article", articleID, "err", err)
 	}
 	s.Sec(ctx).Info("cms article deleted", "actor", id.UserID, "article", articleID)
+	// Titled from the row read at the top of this method: by now there is nothing
+	// left to resolve the id against.
+	s.Record(ctx, id, articleEntry(actionDeleted, articleID, cur.Title,
+		map[string]any{"status": cur.Status}))
 	return nil
 }

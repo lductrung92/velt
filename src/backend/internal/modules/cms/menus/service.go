@@ -68,6 +68,7 @@ func (s *Service) CreateMenu(ctx context.Context, id *httpx.Identity, req Create
 		return Response{}, mapWriteErr(err)
 	}
 	s.Sec(ctx).Info("cms menu created", "actor", id.UserID, "menu", m.ID, "location", m.Location)
+	s.Record(ctx, id, menuEntry(actionCreated, m.ID, m.Name, map[string]any{"location": m.Location}))
 	return toResponse(*m), nil
 }
 
@@ -98,6 +99,7 @@ func (s *Service) UpdateMenu(ctx context.Context, id *httpx.Identity, menuID uui
 		return Response{}, mapWriteErr(err)
 	}
 	s.Sec(ctx).Info("cms menu updated", "actor", id.UserID, "menu", menuID)
+	s.Record(ctx, id, menuEntry(actionUpdated, menuID, m.Name, map[string]any{"location": m.Location}))
 	return toResponse(*m), nil
 }
 
@@ -106,13 +108,16 @@ func (s *Service) DeleteMenu(ctx context.Context, id *httpx.Identity, menuID uui
 	if err := s.Require(ctx, id, permManage); err != nil {
 		return err
 	}
-	if _, err := s.repo.GetMenu(ctx, menuID); err != nil {
+	// Read before the delete: the name has to outlive the row it came from.
+	cur, err := s.repo.GetMenu(ctx, menuID)
+	if err != nil {
 		return mapGetErr(err)
 	}
 	if err := s.repo.DeleteMenu(ctx, menuID); err != nil {
 		return apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms menu deleted", "actor", id.UserID, "menu", menuID)
+	s.Record(ctx, id, menuEntry(actionDeleted, menuID, cur.Name, map[string]any{"location": cur.Location}))
 	return nil
 }
 
@@ -134,6 +139,7 @@ func (s *Service) ReplaceMenuItems(ctx context.Context, id *httpx.Identity, menu
 		return DetailResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms menu items replaced", "actor", id.UserID, "menu", menuID, "roots", len(req.Items))
+	s.Record(ctx, id, menuEntry(actionItemsReplaced, menuID, m.Name, map[string]any{"roots": len(req.Items)}))
 	return s.menuDetail(ctx, *m)
 }
 

@@ -90,7 +90,6 @@ backend/storage/
 
 # air hot-reload build output
 backend/tmp/
-sessions/
 .claude
 .codex
 .wolf

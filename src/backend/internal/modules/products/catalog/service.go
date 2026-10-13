@@ -150,6 +150,8 @@ func (s *Service) Create(ctx context.Context, id *httpx.Identity, req CreateRequ
 	if err != nil {
 		return Response{}, s.MapRepoErr(ctx, "create product", err)
 	}
+	s.Record(ctx, id, productEntry(actionCreated, p.ID, p.Name,
+		map[string]any{"status": p.Status, "lifecycle": p.Lifecycle}))
 	if err := s.syncPublic(ctx, p); err != nil {
 		return Response{}, err
 	}
@@ -273,6 +275,7 @@ func (s *Service) Update(ctx context.Context, id *httpx.Identity, productID uuid
 	if err != nil {
 		return Response{}, s.MapRepoErr(ctx, "update product", err)
 	}
+	s.Record(ctx, id, productEntry(actionUpdated, productID, updated.Name, nil))
 	// Only reclaim a replaced image when no published snapshot still points at
 	// it; the frozen copy must keep rendering.
 	if cur.PublishedSnapshot == nil {
@@ -295,9 +298,16 @@ func (s *Service) Delete(ctx context.Context, id *httpx.Identity, productID uuid
 	if err := s.Require(ctx, id, permDelete); err != nil {
 		return err
 	}
+	// Read before the delete: the name has to outlive the row it came from.
+	cur, err := s.repo.Get(ctx, productID)
+	if err != nil {
+		return s.MapRepoErr(ctx, "delete product: load", err)
+	}
 	if err := s.repo.Delete(ctx, productID); err != nil {
 		return s.MapRepoErr(ctx, "delete product", err)
 	}
+	s.Record(ctx, id, productEntry(actionDeleted, productID, cur.Name,
+		map[string]any{"status": cur.Status}))
 	// An orphan in the public read model is not wasted space: it is a URL still
 	// serving a product that no longer exists. Same for the translation store.
 	if s.pub != nil {
@@ -366,6 +376,8 @@ func (s *Service) transition(ctx context.Context, id *httpx.Identity, productID 
 	if err != nil {
 		return Response{}, s.MapRepoErr(ctx, "transition product", err)
 	}
+	s.Record(ctx, id, productEntry(transitionAction(status), productID, p.Name,
+		map[string]any{"from": cur.Status, "to": p.Status}))
 	if err := s.syncPublic(ctx, p); err != nil {
 		return Response{}, err
 	}

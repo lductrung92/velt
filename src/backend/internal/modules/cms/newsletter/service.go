@@ -78,7 +78,9 @@ func (s *Service) DeleteSubscriber(ctx context.Context, id *httpx.Identity, subI
 	if err := s.Require(ctx, id, permNewsletterManage); err != nil {
 		return err
 	}
-	if _, err := s.repo.GetSubscriber(ctx, subID); err != nil {
+	// Read before the delete: the address is the only label this row can carry.
+	cur, err := s.repo.GetSubscriber(ctx, subID)
+	if err != nil {
 		if errors.Is(err, shared.ErrNotFound) {
 			return apperr.NotFound("not_found")
 		}
@@ -88,5 +90,6 @@ func (s *Service) DeleteSubscriber(ctx context.Context, id *httpx.Identity, subI
 		return apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms newsletter subscriber deleted", "actor", id.UserID, "subscriber", subID)
+	s.Record(ctx, id, subscriberEntry(actionSubscriberDeleted, subID, cur.Email))
 	return nil
 }

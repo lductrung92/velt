@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/activity"
 	"github.com/velt/backend/internal/platform/crypto"
 	"github.com/velt/backend/internal/platform/mail"
 	"github.com/velt/backend/internal/platform/ratelimit"
@@ -65,6 +66,9 @@ type Service struct {
 	now      func() time.Time
 	log      *slog.Logger
 	dispatch func(func())
+	// acts is wired after construction (see activity.go) and is allowed to stay
+	// nil, which means nothing is recorded.
+	acts activity.Recorder
 
 	accessTTL   time.Duration
 	refreshTTL  time.Duration
@@ -128,6 +132,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta RequestMeta)
 	user, err := s.repo.GetUserByEmail(ctx, req.Email)
 	if errors.Is(err, ErrNotFound) {
 		_, _ = crypto.VerifyPassword(req.Password, getDummyHash()) // constant-time mitigation
+		s.recordSignInFailure(ctx, req.Email, nil, reasonUnknownEmail)
 		return LoginResult{}, apperr.Unauthorized("invalid_credentials")
 	}
 	if err != nil {
@@ -136,6 +141,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta RequestMeta)
 
 	ok, err := crypto.VerifyPassword(req.Password, user.PasswordHash)
 	if err != nil || !ok {
+		s.recordSignInFailure(ctx, req.Email, user, reasonBadPassword)
 		s.registerFailedLogin(ctx, user)
 		return LoginResult{}, apperr.Unauthorized("invalid_credentials")
 	}
@@ -143,9 +149,11 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta RequestMeta)
 	now := s.now()
 	// Only reveal lock/disabled state to someone who proved the password.
 	if user.LockedUntil != nil && user.LockedUntil.After(now) {
+		s.recordSignInFailure(ctx, req.Email, user, reasonAccountLocked)
 		return LoginResult{}, apperr.Unauthorized("account_locked")
 	}
 	if user.Status != statusActive {
+		s.recordSignInFailure(ctx, req.Email, user, reasonAccountOff)
 		return LoginResult{}, apperr.AccessDenied("account_disabled")
 	}
 
@@ -161,12 +169,13 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta RequestMeta)
 		return LoginResult{TwoFactorRequired: true, ChallengeToken: challenge}, nil
 	}
 
-	return s.completeLogin(ctx, user, meta)
+	return s.completeLogin(ctx, user, meta, methodPassword)
 }
 
 // completeLogin marks the login successful, issues an access token, and creates
-// a refresh session (enforcing the per-user session cap).
-func (s *Service) completeLogin(ctx context.Context, user *User, meta RequestMeta) (LoginResult, error) {
+// a refresh session (enforcing the per-user session cap). method says which
+// step produced the session, for the activity row.
+func (s *Service) completeLogin(ctx context.Context, user *User, meta RequestMeta, method string) (LoginResult, error) {
 	now := s.now()
 	if err := s.repo.MarkLoginSuccess(ctx, user.ID, now); err != nil {
 		return LoginResult{}, apperr.Internal()
@@ -184,6 +193,12 @@ func (s *Service) completeLogin(ctx context.Context, user *User, meta RequestMet
 		return LoginResult{}, apperr.Internal()
 	}
 	s.sec(ctx).Info("login success", "user_id", user.ID)
+	// The session exists now, so the sign-in is a fact worth accounting for.
+	// The actor and the entity are the same person on purpose: "who did this"
+	// and "whose account was it done to" are asked separately of every row.
+	e := userEntry(actionSignIn, user)
+	e.Metadata = map[string]any{"method": method}
+	s.record(ctx, actor(user.ID), e)
 	return LoginResult{
 		AccessToken:      access,
 		ExpiresIn:        int(s.accessTTL.Seconds()),
@@ -231,6 +246,9 @@ func (s *Service) registerFailedLogin(ctx context.Context, user *User) {
 	}
 	if err := s.repo.IncrementFailedLogin(ctx, user.ID, lockedUntil); err != nil {
 		s.sec(ctx).Error("increment failed login", "err", err)
+	}
+	if lockedUntil != nil {
+		s.recordLockout(ctx, user, newCount, *lockedUntil)
 	}
 	s.sec(ctx).Warn("login failed", "user_id", user.ID, "locked", lockedUntil != nil)
 }

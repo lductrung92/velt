@@ -185,6 +185,7 @@
     "users": "Người dùng",
     "rbac": "Vai trò & Quyền",
     "sessions": "Phiên đăng nhập",
+    "activity": "Nhật ký hoạt động",
     "admin": "Quản trị",
     "account": "Tài khoản",
     "cms": "CMS",
@@ -1613,6 +1614,162 @@
     "no_results": "Chưa có khách phù hợp",
     "no_results_hint": "Thử từ khóa khác hoặc bỏ bớt bộ lọc để xem thêm khách hàng.",
     "reset_filters": "Xóa bộ lọc"
+  },
+  "activity": {
+    "title": "Nhật ký hoạt động",
+    "subtitle": "Ai đã thay đổi gì, vào lúc nào. Ghi ngay khi xảy ra và không chỉnh sửa về sau.",
+    "list_title": "Hoạt động đã ghi",
+    "list_hint": "Mọi thay đổi có chủ đích, mới nhất trước.",
+    "record_count_one": "{{count}} hoạt động đã ghi",
+    "record_count_other": "{{count}} hoạt động đã ghi",
+    "search_label": "Tìm trong nhật ký",
+    "search_ph": "Người, bản ghi hoặc mã hành động",
+    "apply_search": "Tìm trong nhật ký",
+    "search_window": "Đang tìm hoạt động từ {{since}}. Chọn khoảng ngày để xem xa hơn.",
+    "all_actions": "Mọi hành động",
+    "from": "Từ ngày",
+    "to": "Đến ngày",
+    "filter_by_actor": "Chỉ xem những gì {{name}} đã làm",
+    "filter_by_target": "Chỉ xem những gì đã xảy ra với {{name}}",
+    "no_target": "Không gắn bản ghi nào",
+    "reset_filters": "Xoá bộ lọc",
+    "empty_title": "Chưa ghi nhận hoạt động nào",
+    "empty_description": "Ngay khi có người xuất bản, chỉnh sửa hay xoá một nội dung, hoạt động đó sẽ hiện ở đây kèm tên người thực hiện và thời điểm chính xác.",
+    "no_results": "Không có hoạt động phù hợp",
+    "no_results_hint": "Hãy mở rộng khoảng ngày, chọn hành động khác hoặc xoá bộ lọc.",
+    "col": {
+      "when": "Thời điểm",
+      "actor": "Ai",
+      "action": "Làm gì",
+      "target": "Với nội dung nào"
+    },
+    "entity": {
+      "article": "Bài viết",
+      "page": "Trang",
+      "product": "Sản phẩm",
+      "member": "Thành viên",
+      "user": "Người dùng",
+      "role": "Vai trò",
+      "menu": "Menu",
+      "category": "Chuyên mục",
+      "tag": "Thẻ",
+      "lead": "Khách hàng",
+      "setting": "Cấu hình"
+    },
+    "action": {
+      "account": {
+        "password_changed": "Đổi mật khẩu của mình",
+        "profile_updated": "Cập nhật hồ sơ của mình",
+        "recovery_codes_regenerated": "Tạo lại mã khôi phục",
+        "two_factor_disabled": "Tắt xác thực 2 bước",
+        "two_factor_enabled": "Bật xác thực 2 bước"
+      },
+      "article": {
+        "created": "Tạo bài viết",
+        "deleted": "Xoá bài viết",
+        "published": "Xuất bản bài viết",
+        "unpublished": "Gỡ xuất bản bài viết",
+        "updated": "Sửa bài viết"
+      },
+      "auth": {
+        "locked_out": "Khoá tài khoản do đăng nhập sai nhiều lần",
+        "password_reset_completed": "Đặt lại mật khẩu thành công",
+        "password_reset_requested": "Yêu cầu đặt lại mật khẩu",
+        "session_reuse_detected": "Phát hiện dùng lại token — thu hồi mọi phiên",
+        "sign_in": "Đăng nhập",
+        "sign_in_failed": "Đăng nhập thất bại",
+        "sign_out": "Đăng xuất",
+        "sign_out_all": "Đăng xuất mọi thiết bị"
+      },
+      "cms_category": {
+        "created": "Tạo chuyên mục",
+        "deleted": "Xoá chuyên mục",
+        "updated": "Sửa chuyên mục"
+      },
+      "comment": {
+        "deleted": "Xoá bình luận",
+        "moderated": "Duyệt bình luận"
+      },
+      "landing": {
+        "created": "Tạo trang đích",
+        "deleted": "Xoá trang đích",
+        "published": "Xuất bản trang đích",
+        "section_added": "Thêm khối",
+        "section_removed": "Xoá khối",
+        "section_updated": "Sửa khối",
+        "sections_reordered": "Sắp xếp lại khối",
+        "unpublished": "Gỡ xuất bản trang đích",
+        "updated": "Sửa trang đích"
+      },
+      "lead": {
+        "created": "Tạo khách tiềm năng",
+        "deleted": "Xoá khách tiềm năng",
+        "updated": "Sửa khách tiềm năng"
+      },
+      "member": {
+        "created": "Thêm thành viên",
+        "deleted": "Xoá thành viên",
+        "updated": "Sửa thành viên"
+      },
+      "menu": {
+        "created": "Tạo menu",
+        "deleted": "Xoá menu",
+        "items_replaced": "Thay toàn bộ mục menu",
+        "updated": "Sửa menu"
+      },
+      "newsletter_subscriber": {
+        "deleted": "Xoá người đăng ký bản tin"
+      },
+      "page": {
+        "created": "Tạo trang",
+        "deleted": "Xoá trang",
+        "published": "Xuất bản trang",
+        "unpublished": "Gỡ xuất bản trang",
+        "updated": "Sửa trang"
+      },
+      "product": {
+        "archived": "Lưu trữ sản phẩm",
+        "created": "Tạo sản phẩm",
+        "deleted": "Xoá sản phẩm",
+        "published": "Xuất bản sản phẩm",
+        "unpublished": "Gỡ xuất bản sản phẩm",
+        "updated": "Sửa sản phẩm"
+      },
+      "product_category": {
+        "created": "Tạo danh mục sản phẩm",
+        "deleted": "Xoá danh mục sản phẩm",
+        "updated": "Sửa danh mục sản phẩm"
+      },
+      "role": {
+        "created": "Tạo vai trò",
+        "deleted": "Xoá vai trò",
+        "permissions_set": "Đặt quyền cho vai trò",
+        "updated": "Sửa vai trò"
+      },
+      "session": {
+        "revoked": "Thu hồi một phiên",
+        "revoked_all": "Thu hồi mọi phiên của người dùng"
+      },
+      "settings": {
+        "email_tested": "Gửi thư kiểm tra SMTP",
+        "updated": "Đổi cấu hình hệ thống"
+      },
+      "tag": {
+        "created": "Tạo thẻ",
+        "deleted": "Xoá thẻ",
+        "merged": "Gộp thẻ",
+        "updated": "Sửa thẻ"
+      },
+      "user": {
+        "created": "Tạo người dùng",
+        "deleted": "Xoá người dùng",
+        "disabled": "Vô hiệu hoá người dùng",
+        "password_reset_sent": "Gửi liên kết đặt lại mật khẩu",
+        "role_assigned": "Gán vai trò",
+        "role_removed": "Gỡ vai trò",
+        "updated": "Sửa người dùng"
+      }
+    }
   },
   "tr": {
     "tabs": "Ngôn ngữ nội dung",

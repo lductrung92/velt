@@ -79,6 +79,7 @@ func (s *Service) CreateTag(ctx context.Context, id *httpx.Identity, req CreateT
 		return TagResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms tag created", "actor", id.UserID, "tag", created.ID)
+	s.Record(ctx, id, taxonomyEntry(actionTagCreated, EntityTag, created.ID, created.Name, nil))
 	return toTagResponse(tagWithCount{Tag: *created, UsageCount: 0}), nil
 }
 
@@ -132,6 +133,7 @@ func (s *Service) UpdateTag(ctx context.Context, id *httpx.Identity, tagID uuid.
 		return TagResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms tag updated", "actor", id.UserID, "tag", tagID)
+	s.Record(ctx, id, taxonomyEntry(actionTagUpdated, EntityTag, tagID, updated.Name, nil))
 	return toTagResponse(tagWithCount{Tag: *updated, UsageCount: count}), nil
 }
 
@@ -141,7 +143,9 @@ func (s *Service) DeleteTag(ctx context.Context, id *httpx.Identity, tagID uuid.
 	if err := s.Require(ctx, id, permManage); err != nil {
 		return err
 	}
-	if _, err := s.repo.GetTag(ctx, tagID); errors.Is(err, shared.ErrNotFound) {
+	// Read before the delete: the name has to outlive the row it came from.
+	cur, err := s.repo.GetTag(ctx, tagID)
+	if errors.Is(err, shared.ErrNotFound) {
 		return apperr.NotFound("not_found")
 	} else if err != nil {
 		return apperr.Internal()
@@ -151,6 +155,7 @@ func (s *Service) DeleteTag(ctx context.Context, id *httpx.Identity, tagID uuid.
 	}
 	s.purgeTranslations(ctx, EntityTag, tagID)
 	s.Sec(ctx).Info("cms tag deleted", "actor", id.UserID, "tag", tagID)
+	s.Record(ctx, id, taxonomyEntry(actionTagDeleted, EntityTag, tagID, cur.Name, nil))
 	return nil
 }
 
@@ -163,10 +168,13 @@ func (s *Service) MergeTags(ctx context.Context, id *httpx.Identity, req MergeTa
 	if req.SourceID == req.TargetID {
 		return TagResponse{}, apperr.Validation(map[string]string{"target_id": "invalid_value"})
 	}
-	if ok, err := s.repo.TagExists(ctx, req.SourceID); err != nil {
-		return TagResponse{}, apperr.Internal()
-	} else if !ok {
+	// The source tag is read rather than probed: the merge deletes it, and its
+	// name is what the activity row has to carry afterwards.
+	source, err := s.repo.GetTag(ctx, req.SourceID)
+	if errors.Is(err, shared.ErrNotFound) {
 		return TagResponse{}, apperr.Validation(map[string]string{"source_id": "not_found"})
+	} else if err != nil {
+		return TagResponse{}, apperr.Internal()
 	}
 	if ok, err := s.repo.TagExists(ctx, req.TargetID); err != nil {
 		return TagResponse{}, apperr.Internal()
@@ -185,6 +193,9 @@ func (s *Service) MergeTags(ctx context.Context, id *httpx.Identity, req MergeTa
 	if err != nil {
 		return TagResponse{}, apperr.Internal()
 	}
+	// The row points at the surviving tag: that is what a reader can still open.
+	s.Record(ctx, id, taxonomyEntry(actionTagMerged, EntityTag, target.ID, target.Name,
+		map[string]any{"source_id": req.SourceID, "source": source.Name}))
 	count, err := s.repo.TagUsageCount(ctx, req.TargetID)
 	if err != nil {
 		return TagResponse{}, apperr.Internal()

@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/activity"
 	"github.com/velt/backend/internal/platform/authpolicy"
 	"github.com/velt/backend/internal/platform/crypto"
 	"github.com/velt/backend/internal/platform/ratelimit"
@@ -56,6 +57,9 @@ type Service struct {
 	settings SettingsReader
 	now      func() time.Time
 	log      *slog.Logger
+	// acts is wired after construction (see activity.go) and is allowed to stay
+	// nil, which means nothing is recorded.
+	acts activity.Recorder
 
 	accessTTL     time.Duration
 	refreshTTL    time.Duration
@@ -130,6 +134,14 @@ func (s *Service) UpdateProfile(ctx context.Context, id *httpx.Identity, req Upd
 	if err := s.repo.UpdateFullName(ctx, id.UserID, name); err != nil {
 		return UserResponse{}, apperr.Internal()
 	}
+	if name != user.FullName {
+		// Only a real change is worth a row: saving the form unedited is not
+		// something anyone has to account for. The old name is kept because the
+		// point of the entry is that this person used to be called that.
+		s.record(ctx, id, actionProfileUpdated, map[string]any{
+			"field": "full_name", "from": user.FullName, "to": name,
+		})
+	}
 	user.FullName = name
 	return toUserResponse(user, s.avatarURL(ctx, user.AvatarPath)), nil
 }
@@ -175,6 +187,9 @@ func (s *Service) ChangePassword(ctx context.Context, id *httpx.Identity, req Ch
 	if err != nil {
 		return ChangePasswordResult{}, apperr.Internal()
 	}
+	// The new password is not in the metadata and never will be; that this
+	// account's password moved, and when, is the whole of what is recorded.
+	s.record(ctx, id, actionPasswordChanged, nil)
 	s.sec(ctx).Info("password changed", "user_id", id.UserID)
 	return ChangePasswordResult{
 		AccessToken:      access,

@@ -6,6 +6,7 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/activity"
 	"github.com/velt/backend/internal/platform/revalidate"
 )
 
@@ -17,6 +18,21 @@ type Base struct {
 	settings SettingsPort
 	log      *slog.Logger
 	rev      revalidate.Revalidator
+	// acts is wired after construction and may stay nil, which is what this
+	// context looked like before the activity log existed.
+	acts activity.Recorder
+}
+
+// SetActivity wires the activity recorder (called once at startup).
+func (b *Base) SetActivity(r activity.Recorder) { b.acts = r }
+
+// Record files one entry in the activity log. A nil recorder is a no-op: the
+// log is a record OF the action, never a condition for it.
+func (b *Base) Record(ctx context.Context, id *httpx.Identity, e activity.Entry) {
+	if b.acts == nil {
+		return
+	}
+	b.acts.Record(ctx, id, e)
 }
 
 // NewBase builds the shared CMS service spine.

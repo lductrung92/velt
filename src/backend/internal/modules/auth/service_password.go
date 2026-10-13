@@ -108,6 +108,10 @@ func (s *Service) ForgotPassword(ctx context.Context, req ForgotPasswordRequest,
 			s.sec(mctx).Error("forgot: send mail", "err", err)
 		}
 	})
+	// No actor: anyone can ask for a reset of anybody's address, and the person
+	// who typed it has proved nothing yet. The account it was asked for is the
+	// entity, which is also what makes a burst of these readable.
+	s.record(ctx, nil, userEntry(actionResetRequest, user))
 	s.sec(ctx).Info("password reset requested", "user_id", user.ID)
 	return nil
 }
@@ -152,6 +156,10 @@ func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest, m
 		}
 		return apperr.Internal()
 	}
+	// Attributed to the account owner: the single-use token was mailed to their
+	// address, so possession of it is the proof of control this flow runs on —
+	// the same assumption the password change itself is already making.
+	s.record(ctx, actor(user.ID), userEntry(actionResetComplete, user))
 	s.sec(ctx).Info("password reset completed", "user_id", user.ID)
 	return nil
 }

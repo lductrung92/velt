@@ -127,6 +127,7 @@ func (s *Service) CreatePage(ctx context.Context, id *httpx.Identity, req Create
 		return PageDetailResponse{}, mapWriteErr(err)
 	}
 	s.Sec(ctx).Info("cms page created", "actor", id.UserID, "page", created.ID, "kind", req.Kind)
+	s.Record(ctx, id, pageEntry(actionCreated, created.ID, created.Title, map[string]any{"kind": req.Kind}))
 	// A new page is always a draft, so this only ever asserts "nothing public
 	// here". It is called anyway so that every write path leaves the read model
 	// in step without the reader having to prove which ones cannot.
@@ -164,6 +165,7 @@ func (s *Service) UpdatePage(ctx context.Context, id *httpx.Identity, pageID uui
 		return PageDetailResponse{}, err
 	}
 	s.Sec(ctx).Info("cms page updated", "actor", id.UserID, "page", pageID)
+	s.Record(ctx, id, pageEntry(actionUpdated, pageID, updated.Title, nil))
 	// Save = live: a published page re-freezes its snapshot so title/body/SEO/
 	// inline-widget edits reach the public page immediately.
 	s.refreshLivePageSnapshot(ctx, updated)
@@ -245,6 +247,9 @@ func (s *Service) DeletePage(ctx context.Context, id *httpx.Identity, pageID uui
 		}
 	}
 	s.Sec(ctx).Info("cms page deleted", "actor", id.UserID, "page", pageID)
+	// Titled from the row read at the top of this method: by now there is nothing
+	// left to resolve the id against.
+	s.Record(ctx, id, pageEntry(actionDeleted, pageID, cur.Title, map[string]any{"status": cur.Status}))
 	return nil
 }
 
@@ -285,6 +290,8 @@ func (s *Service) PublishPage(ctx context.Context, id *httpx.Identity, pageID uu
 		return PageDetailResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms page published", "actor", id.UserID, "page", pageID, "from", cur.Status, "to", updated.Status)
+	s.Record(ctx, id, pageEntry(actionPublished, pageID, updated.Title,
+		map[string]any{"from": cur.Status, "to": updated.Status}))
 	if err := s.syncPublic(ctx, updated); err != nil {
 		return PageDetailResponse{}, err
 	}
@@ -320,6 +327,8 @@ func (s *Service) UnpublishPage(ctx context.Context, id *httpx.Identity, pageID 
 		}
 	}
 	s.Sec(ctx).Info("cms page unpublished", "actor", id.UserID, "page", pageID)
+	s.Record(ctx, id, pageEntry(actionUnpublished, pageID, updated.Title,
+		map[string]any{"from": cur.Status, "to": updated.Status}))
 	if err := s.syncPublic(ctx, updated); err != nil {
 		return PageDetailResponse{}, err
 	}

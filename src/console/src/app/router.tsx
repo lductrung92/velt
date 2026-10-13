@@ -8,6 +8,7 @@ import {
   TwoFactor,
 } from "@/modules/account";
 import {
+  ActivityLog,
   AdminHome,
   RolePermissions,
   Sessions,
@@ -121,6 +122,14 @@ export const router = createBrowserRouter([
         element: (
           <RequirePermission permission="sessions.read">
             <Sessions />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/admin/activity",
+        element: (
+          <RequirePermission permission="activity.read">
+            <ActivityLog />
           </RequirePermission>
         ),
       },

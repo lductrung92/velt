@@ -15,6 +15,7 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/activity"
 	"github.com/velt/backend/internal/platform/storage"
 )
 
@@ -41,6 +42,9 @@ type Service struct {
 	settings SettingsPort
 	tr       Translator
 	log      *slog.Logger
+	// acts is wired after construction and may stay nil, which is what this
+	// module looked like before the activity log existed.
+	acts activity.Recorder
 }
 
 // NewService wires the members service. store and urls are the same storage
@@ -51,6 +55,18 @@ func NewService(repo Repository, store storage.Storage, urls storage.URLer, sett
 		opts.Logger = slog.Default()
 	}
 	return &Service{repo: repo, store: store, urls: urls, settings: settings, log: opts.Logger}
+}
+
+// SetActivity wires the activity recorder (called once at startup).
+func (s *Service) SetActivity(r activity.Recorder) { s.acts = r }
+
+// record files one entry in the activity log. A nil recorder is a no-op: the
+// log is a record OF the action, never a condition for it.
+func (s *Service) record(ctx context.Context, id *httpx.Identity, e activity.Entry) {
+	if s.acts == nil {
+		return
+	}
+	s.acts.Record(ctx, id, e)
 }
 
 // require enforces the per-endpoint permission gate using the caller's resolved
@@ -203,6 +219,8 @@ func (s *Service) Create(ctx context.Context, id *httpx.Identity, req CreateRequ
 	if err != nil {
 		return Response{}, s.mapRepoErr(ctx, "create", err)
 	}
+	s.record(ctx, id, memberEntry(actionCreated, m.ID, m.FullName,
+		map[string]any{"active": m.IsActive}))
 	return s.toResponse(ctx, *m), nil
 }
 
@@ -275,6 +293,13 @@ func (s *Service) Update(ctx context.Context, id *httpx.Identity, memberID uuid.
 	if err != nil {
 		return Response{}, s.mapRepoErr(ctx, "update", err)
 	}
+	// Hiding a member is the roster change people ask about afterwards, so the
+	// visibility move travels with the row.
+	var meta map[string]any
+	if cur.IsActive != m.IsActive {
+		meta = map[string]any{"active": m.IsActive}
+	}
+	s.record(ctx, id, memberEntry(actionUpdated, memberID, m.FullName, meta))
 	return s.toResponse(ctx, *m), nil
 }
 
@@ -294,6 +319,9 @@ func (s *Service) Delete(ctx context.Context, id *httpx.Identity, memberID uuid.
 	}
 	s.deleteFile(ctx, cur.AvatarPath)
 	s.purgeTranslations(ctx, memberID)
+	// Named from the row read above: product links cascade away with it, so
+	// nothing afterwards can say whose profile this was.
+	s.record(ctx, id, memberEntry(actionDeleted, memberID, cur.FullName, nil))
 	return nil
 }
 
