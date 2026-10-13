@@ -13,8 +13,10 @@ const compact = new Intl.NumberFormat("vi-VN", { notation: "compact" });
 // ceiling nobody can see is not a ceiling.
 export function UsagePanel({ usage }: { usage: UsageReport }) {
   const { t } = useTranslation();
-  const cap = usage.daily_cap;
-  const used = usage.today_tokens_out;
+  // A report with a field missing must not put "NaN" on the screen; zero is
+  // both true and readable.
+  const cap = usage.daily_cap ?? 0;
+  const used = usage.today_tokens_out ?? 0;
   const pct = cap > 0 ? Math.min(100, Math.round((used / cap) * 100)) : 0;
   const near = cap > 0 && pct >= 80;
 

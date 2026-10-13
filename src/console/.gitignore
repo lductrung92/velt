@@ -11,6 +11,9 @@ coverage
 
 # playwright (e2e) artifacts
 test-results
+# Screenshots the settings spec writes for a human to look at — evidence,
+# not fixtures: they are regenerated on every run.
+e2e/__screenshots__
 playwright-report
 blob-report
 .playwright

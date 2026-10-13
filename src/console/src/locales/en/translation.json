@@ -1781,16 +1781,6 @@
       "storage": "Storage",
       "ai": "AI"
     },
-    "group_help": {
-      "general": "Name, logo and colour — shared by the console and the site.",
-      "site": "What the public site shows around its content: the chrome, how to reach you, how many cards fit a page.",
-      "seo": "What the site tells search engines.",
-      "cms": "The rules for writing and publishing.",
-      "translation": "Which languages the site serves.",
-      "email": "The outgoing mail server. The test uses the SAVED configuration, not what is typed above.",
-      "storage": "Where files live and how large they may be.",
-      "ai": "The assistant that answers visitors. Its connection test and usage chart live on the AI screen."
-    },
     "secret": {
       "set": "Set",
       "unset": "Not set",
@@ -1916,8 +1906,97 @@
       "s3": "S3",
       "vi": "Tiếng Việt",
       "en": "English",
-      "anthropic": "Anthropic",
-      "openai": "OpenAI"
+      "anthropic": "Anthropic (Claude)",
+      "openai": "OpenAI / OpenAI-compatible"
+    },
+    "section": {
+      "general_brand": {
+        "title": "Brand",
+        "help": "Name, logo and colour — shared by the console and the public site."
+      },
+      "general_console": {
+        "title": "Console",
+        "help": "The language of the admin screens themselves."
+      },
+      "site_brand": {
+        "title": "Link sharing",
+        "help": "The image shown when someone shares a link to the site."
+      },
+      "site_chrome": {
+        "title": "Header and footer text",
+        "help": "The words around the navigation. The links are edited in Menus."
+      },
+      "site_contact": {
+        "title": "Contact",
+        "help": "Used when a visitor did not arrive through a member's referral."
+      },
+      "site_social": {
+        "title": "Social",
+        "help": "Each filled box becomes one link in the footer."
+      },
+      "site_display": {
+        "title": "Display and performance",
+        "help": "How many cards a page shows, and how long a rendered page is reused."
+      },
+      "seo_indexing": {
+        "title": "Indexing and tracking",
+        "help": "What the site tells search engines."
+      },
+      "cms_articles": {
+        "title": "Writing",
+        "help": "The rules for creating and editing articles."
+      },
+      "cms_publishing": {
+        "title": "Publishing",
+        "help": "How content goes live, and which page is the home page."
+      },
+      "translation_languages": {
+        "title": "Site languages",
+        "help": "On, the site gains a /<code> address per language and a switcher."
+      },
+      "email_smtp": {
+        "title": "Outgoing mail server",
+        "help": "SMTP details. The test uses the SAVED configuration."
+      },
+      "email_sender": {
+        "title": "Sender",
+        "help": "The name and address the recipient sees."
+      },
+      "storage_where": {
+        "title": "Where files live",
+        "help": "The server's disk, or an S3-compatible service."
+      },
+      "storage_s3": {
+        "title": "S3 connection",
+        "help": "Only needed when S3 is selected above."
+      },
+      "storage_limits": {
+        "title": "Limits",
+        "help": "How large an upload may be, and how much each customer may keep."
+      },
+      "ai_connection": {
+        "title": "Connection",
+        "help": "The assistant's provider, model and API key."
+      },
+      "ai_behaviour": {
+        "title": "Behaviour",
+        "help": "How the assistant answers, and how much it may spend."
+      },
+      "ai_check": {
+        "title": "Connection test",
+        "help": "Sends one real request to the provider, with the saved configuration."
+      },
+      "ai_usage": {
+        "title": "Usage, last 14 days",
+        "help": "Tokens and estimated cost per day."
+      },
+      "ai_mcp": {
+        "title": "MCP tokens"
+      },
+      "other": {
+        "title": "Other",
+        "help": "Keys with no section yet — usually ones just added to the backend."
+      }
     }
   }
 }

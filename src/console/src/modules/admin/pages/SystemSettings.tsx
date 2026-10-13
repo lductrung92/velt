@@ -1,5 +1,25 @@
-import { Mail, RotateCw, Save } from "lucide-react";
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import {
+  Bot,
+  Building2,
+  FileText,
+  Globe,
+  HardDrive,
+  Languages,
+  Mail,
+  RotateCw,
+  Save,
+  Search,
+  Settings2,
+  SlidersHorizontal,
+  type LucideIcon,
+} from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -10,17 +30,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
-import { AiAssistant } from "@/modules/ai";
 import { usePages, type PageNode } from "@/modules/cms";
 import { useEntityTranslation } from "@/modules/translation/hooks/useEntityTranslation";
 import { parseApiError } from "@/utils/apiError";
 
+import { AiExtras } from "../components/AiExtras";
+import { SettingRow, SettingsSection } from "../components/SettingsSection";
 import {
   useSettingsAccess,
   useSystemSettings,
@@ -48,27 +68,186 @@ import type {
  * language tabs) and the SMTP block (which gets a "send a test" button).
  */
 
-/** The order the groups are shown in; anything unknown goes last. */
-const GROUP_ORDER = [
-  "general",
-  "site",
-  "seo",
-  "cms",
-  "translation",
-  "email",
-  "storage",
-  "ai",
+/** Tab order, and the icon each one wears. Unknown groups come last, plainly. */
+const GROUPS: { key: string; icon: LucideIcon }[] = [
+  { key: "general", icon: SlidersHorizontal },
+  { key: "site", icon: Globe },
+  { key: "seo", icon: Search },
+  { key: "cms", icon: FileText },
+  { key: "translation", icon: Languages },
+  { key: "email", icon: Mail },
+  { key: "storage", icon: HardDrive },
+  { key: "ai", icon: Bot },
 ];
+const groupIcon = (group: string) =>
+  GROUPS.find((g) => g.key === group)?.icon ?? Settings2;
+
+/**
+ * Which keys sit together, under which heading.
+ *
+ * This is presentation, not truth: a key missing from it still renders, in a
+ * section of its own at the end, so the registry stays the only place that
+ * decides what exists.
+ */
+const SECTIONS: Record<
+  string,
+  { id: string; icon?: LucideIcon; keys: string[] }[]
+> = {
+  general: [
+    {
+      id: "brand",
+      icon: Building2,
+      keys: ["app.name", "app.logo_url", "app.favicon_url", "app.primary_color"],
+    },
+    {
+      id: "console",
+      icon: SlidersHorizontal,
+      keys: ["app.default_locale", "app.language_switcher_enabled"],
+    },
+  ],
+  site: [
+    { id: "brand", icon: Building2, keys: ["site.og_image_url"] },
+    {
+      id: "chrome",
+      icon: FileText,
+      keys: [
+        "site.brand_tagline",
+        "site.footer_note_title",
+        "site.footer_note_text",
+        "site.footer_copyright",
+        "site.header_cta_label",
+        "site.header_cta_url",
+      ],
+    },
+    {
+      id: "contact",
+      icon: Mail,
+      keys: [
+        "site.contact_email",
+        "site.contact_zalo",
+        "site.contact_phone",
+        "site.address",
+      ],
+    },
+    {
+      id: "social",
+      icon: Globe,
+      keys: [
+        "site.social_facebook",
+        "site.social_linkedin",
+        "site.social_youtube",
+        "site.social_github",
+      ],
+    },
+    {
+      id: "display",
+      icon: Settings2,
+      keys: [
+        "site.blog_page_size",
+        "site.products_page_size",
+        "site.cache_ttl_seconds",
+      ],
+    },
+  ],
+  seo: [
+    {
+      id: "indexing",
+      icon: Search,
+      keys: [
+        "seo.noindex_all",
+        "seo.google_site_verification",
+        "seo.analytics_id",
+      ],
+    },
+  ],
+  cms: [
+    {
+      id: "articles",
+      icon: FileText,
+      keys: [
+        "cms.article.categorize",
+        "cms.article.require_review",
+        "cms.article.allow_slug_edit",
+      ],
+    },
+    {
+      id: "publishing",
+      icon: Globe,
+      keys: [
+        "cms.publish.allow_now",
+        "cms.newsletter.notify_on_publish",
+        "cms.home_page_slug",
+      ],
+    },
+  ],
+  translation: [
+    {
+      id: "languages",
+      icon: Languages,
+      keys: ["translation.enabled", "translation.locales"],
+    },
+  ],
+  email: [
+    {
+      id: "smtp",
+      icon: Mail,
+      keys: [
+        "mail.smtp_host",
+        "mail.smtp_port",
+        "mail.smtp_user",
+        "mail.smtp_password",
+      ],
+    },
+    {
+      id: "sender",
+      icon: Building2,
+      keys: ["mail.from_address", "mail.from_name"],
+    },
+  ],
+  storage: [
+    { id: "where", icon: HardDrive, keys: ["storage.driver"] },
+    {
+      id: "s3",
+      icon: Globe,
+      keys: [
+        "storage.s3_bucket",
+        "storage.s3_region",
+        "storage.s3_endpoint",
+        "storage.s3_access_key",
+        "storage.s3_secret",
+      ],
+    },
+    {
+      id: "limits",
+      icon: Settings2,
+      keys: [
+        "storage.max_upload_mb",
+        "files_max_upload_mb",
+        "files_storage_quota_mb",
+      ],
+    },
+  ],
+  ai: [
+    {
+      id: "connection",
+      icon: Bot,
+      keys: ["ai.enabled", "ai.provider", "ai.base_url", "ai.api_key", "ai.model"],
+    },
+    {
+      id: "behaviour",
+      icon: Settings2,
+      keys: [
+        "ai.system_persona",
+        "ai.daily_token_cap",
+        "ai.max_turns",
+        "ai.max_message_len",
+      ],
+    },
+  ],
+};
 
 /** Keys whose text is stored per language (translation entity "site_chrome"). */
-const CHROME_KEYS = [
-  "site.brand_tagline",
-  "site.footer_note_title",
-  "site.footer_note_text",
-  "site.footer_copyright",
-  "site.header_cta_label",
-  "site.header_cta_url",
-];
+const CHROME_KEYS = SECTIONS.site[1].keys;
 const CHROME_ID = "00000000-0000-0000-0000-00005174e000";
 
 /** Keys that deserve more than one line. */
@@ -84,9 +263,18 @@ const HOME_SLUG_KEY = "cms.home_page_slug";
 const labelKey = (key: string) => `settings.label.${key.replace(/\./g, "_")}`;
 const helpKey = (key: string) => `settings.help.${key.replace(/\./g, "_")}`;
 
+/**
+ * A stored value as the form holds it — text, whatever its type.
+ *
+ * Booleans included: without them every switch read "" and therefore rendered
+ * OFF, no matter what was saved. The draft is text because one state has to
+ * cover six control types; `save` turns it back into the declared type.
+ */
 function text(value: unknown): string {
   if (typeof value === "string") return value;
-  if (typeof value === "number") return String(value);
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
   return "";
 }
 
@@ -142,17 +330,16 @@ export default function SystemSettings() {
 
 function SettingsBody({ data }: { data: SettingsView }) {
   const { t } = useTranslation();
-  const groups = useMemo(
-    () =>
-      Object.keys(data)
-        .filter((g) => (data[g] ?? []).length > 0)
-        .sort((a, b) => {
-          const ai = GROUP_ORDER.indexOf(a),
-            bi = GROUP_ORDER.indexOf(b);
-          return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-        }),
-    [data],
-  );
+  const groups = useMemo(() => {
+    const known = GROUPS.map((g) => g.key);
+    return Object.keys(data)
+      .filter((g) => (data[g] ?? []).length > 0)
+      .sort((a, b) => {
+        const ai = known.indexOf(a),
+          bi = known.indexOf(b);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      });
+  }, [data]);
   const [group, setGroup] = useState(groups[0] ?? "general");
   useEffect(() => {
     if (!groups.includes(group)) setGroup(groups[0] ?? "general");
@@ -212,87 +399,109 @@ function SettingsBody({ data }: { data: SettingsView }) {
   }
 
   const entries = data[group] ?? [];
+  const byKey = new Map(entries.map((e) => [e.key, e]));
+  const planned = SECTIONS[group] ?? [];
+  const placed = new Set(planned.flatMap((section) => section.keys));
+  // Anything the layout above does not mention still has to be editable.
+  const leftovers = entries.filter((e) => !placed.has(e.key));
+
+  const field = (entry: SettingEntry) => (
+    <Field
+      key={entry.key}
+      entry={entry}
+      value={draft[entry.key] ?? ""}
+      onChange={(next) => setDraft((prev) => ({ ...prev, [entry.key]: next }))}
+      disabled={update.isPending}
+      translation={CHROME_KEYS.includes(entry.key) ? tr : undefined}
+      translating={translating}
+    />
+  );
 
   return (
     <div className="space-y-4">
       <Tabs value={group} onValueChange={setGroup}>
-        <TabsList className="flex-wrap">
-          {groups.map((name) => (
-            <TabsTrigger key={name} value={name}>
-              {t(`settings.group.${name}`, name)}
-            </TabsTrigger>
-          ))}
+        <TabsList className="h-auto flex-wrap justify-start gap-1 p-1">
+          {groups.map((name) => {
+            const Icon = groupIcon(name);
+            return (
+              <TabsTrigger key={name} value={name} className="gap-1.5">
+                <Icon className="size-4" aria-hidden />
+                {t(`settings.group.${name}`, name)}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
       </Tabs>
 
-      <Card>
-        <CardContent className="space-y-5 pt-6">
-          <p className="text-xs text-muted-foreground">
-            {t(`settings.group_help.${group}`, "")}
-          </p>
-
-          {group === "site" && tr.enabled && tr.tabs.length > 1 && (
-            <div className="flex items-center justify-between gap-3 rounded-md border p-3">
-              <p className="text-xs text-muted-foreground">
-                {translating
-                  ? t("settings.chrome.translating")
-                  : t("settings.chrome.base")}
-              </p>
-              <div className="flex gap-1" role="group" aria-label={t("tr.tabs")}>
-                {tr.tabs.map((locale) => (
-                  <Button
-                    key={locale}
-                    type="button"
-                    size="sm"
-                    variant={locale === tr.locale ? "secondary" : "ghost"}
-                    aria-pressed={locale === tr.locale}
-                    onClick={() => tr.setLocale(locale)}
-                  >
-                    {locale.toUpperCase()}
-                  </Button>
-                ))}
-              </div>
+      {group === "site" && tr.enabled && tr.tabs.length > 1 && (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
+            <p className="text-xs text-muted-foreground">
+              {translating
+                ? t("settings.chrome.translating")
+                : t("settings.chrome.base")}
+            </p>
+            <div className="flex gap-1" role="group" aria-label={t("tr.tabs")}>
+              {tr.tabs.map((locale) => (
+                <Button
+                  key={locale}
+                  type="button"
+                  size="sm"
+                  variant={locale === tr.locale ? "secondary" : "ghost"}
+                  aria-pressed={locale === tr.locale}
+                  onClick={() => tr.setLocale(locale)}
+                >
+                  {locale.toUpperCase()}
+                </Button>
+              ))}
             </div>
-          )}
+          </CardContent>
+        </Card>
+      )}
 
-          {/* AI is the one group with more than settings — a connection test
-              and a usage chart — so its own screen is rendered here rather
-              than flattened into generic fields. */}
-          {group === "ai" ? (
-            <AiAssistant embedded />
-          ) : (
-            entries.map((entry) => (
-            <Field
-              key={entry.key}
-              entry={entry}
-              value={draft[entry.key] ?? ""}
-              onChange={(next) =>
-                setDraft((prev) => ({ ...prev, [entry.key]: next }))
-              }
-              disabled={update.isPending}
-              translation={CHROME_KEYS.includes(entry.key) ? tr : undefined}
-              translating={translating}
-            />
-            ))
-          )}
+      {planned.map((section) => {
+        const rows = section.keys
+          .map((key) => byKey.get(key))
+          .filter((e): e is SettingEntry => !!e);
+        if (rows.length === 0) return null;
+        return (
+          <SettingsSection
+            key={section.id}
+            icon={section.icon}
+            title={t(`settings.section.${group}_${section.id}.title`)}
+            description={t(`settings.section.${group}_${section.id}.help`, "")}
+            footer={
+              section.id === "smtp" ? (
+                <EmailTest disabled={update.isPending} />
+              ) : undefined
+            }
+          >
+            {rows.map(field)}
+          </SettingsSection>
+        );
+      })}
 
-          {group === "email" && <EmailTest disabled={update.isPending} />}
+      {leftovers.length > 0 && (
+        <SettingsSection
+          icon={groupIcon(group)}
+          title={t("settings.section.other.title")}
+          description={t("settings.section.other.help")}
+        >
+          {leftovers.map(field)}
+        </SettingsSection>
+      )}
 
-          {/* The AI panel brings its own Save, because it saves more than
-              plain fields; every other group shares this one. */}
-          <div className="!mt-6" hidden={group === "ai"}>
-            {saveError && (
-              <Alert className="mb-3" variant="danger" message={saveError} />
-            )}
-            <div className="flex justify-end">
-              <Button loading={update.isPending} disabled={!dirty} onClick={save}>
-                <Save className="size-4" />
-                {t("common.save")}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* AI carries two things that are not settings — a connection test and a
+          usage chart — and they belong beside the fields they describe. */}
+      {group === "ai" && <AiExtras />}
+
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {saveError && <Alert variant="danger" message={saveError} />}
+        <Button loading={update.isPending} disabled={!dirty} onClick={save}>
+          <Save className="size-4" />
+          {t("common.save")}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -324,10 +533,11 @@ function Field({
   const field = translation?.values[entry.key.replace("site.", "")];
   const inLanguage = translating && !!translation;
   const shown = inLanguage ? (typeof field === "string" ? field : "") : value;
+  const locked = disabled || (translating && !translation);
 
   const common = {
     id,
-    disabled: disabled || (translating && !translation),
+    disabled: locked,
     value: shown,
     onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       inLanguage
@@ -335,55 +545,43 @@ function Field({
         : onChange(e.target.value),
   };
 
+  const row = (control: ReactNode, badge?: ReactNode) => (
+    <SettingRow id={id} label={label} help={help} badge={badge}>
+      {control}
+    </SettingRow>
+  );
+
   if (entry.key === HOME_SLUG_KEY && !translating) {
-    return (
-      <Row id={id} label={label} help={help}>
-        <HomePagePicker value={value} onChange={onChange} disabled={disabled} />
-      </Row>
+    return row(
+      <HomePagePicker value={value} onChange={onChange} disabled={disabled} />,
     );
   }
 
   if (entry.type === "bool") {
-    return (
-      <div className="flex items-start justify-between gap-3 rounded-md border p-4">
-        <div className="space-y-1">
-          <Label htmlFor={id} className="text-sm font-medium leading-none">
-            {label}
-          </Label>
-          {help && <p className="text-xs text-muted-foreground">{help}</p>}
-        </div>
-        <Switch
-          id={id}
-          checked={value === "true"}
-          disabled={disabled || translating}
-          onCheckedChange={(next) => onChange(String(next))}
-        />
-      </div>
+    return row(
+      <Switch
+        id={id}
+        checked={value === "true"}
+        disabled={locked}
+        onCheckedChange={(next) => onChange(String(next))}
+      />,
     );
   }
 
   if (entry.type === "secret") {
-    return (
-      <Row
+    return row(
+      <Input
         id={id}
-        label={label}
-        help={help || t("settings.secret.hint")}
-        badge={
-          <Badge variant={entry.is_set ? "secondary" : "outline"}>
-            {entry.is_set ? t("settings.secret.set") : t("settings.secret.unset")}
-          </Badge>
-        }
-      >
-        <Input
-          id={id}
-          type="password"
-          autoComplete="new-password"
-          placeholder={t("settings.secret.placeholder")}
-          disabled={disabled || translating}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      </Row>
+        type="password"
+        autoComplete="new-password"
+        placeholder={t("settings.secret.placeholder")}
+        disabled={locked}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />,
+      <Badge variant={entry.is_set ? "secondary" : "outline"}>
+        {entry.is_set ? t("settings.secret.set") : t("settings.secret.unset")}
+      </Badge>,
     );
   }
 
@@ -392,84 +590,39 @@ function Field({
       value: v,
       label: t(`settings.value.${v}`, v),
     }));
-    return (
-      <Row id={id} label={label} help={help}>
-        <Select
-          inputId={id}
-          options={options}
-          value={options.find((o) => o.value === value) ?? null}
-          isDisabled={disabled || translating}
-          isClearable={false}
-          isSearchable={false}
-          onChange={(o) => onChange(o?.value ?? "")}
-        />
-      </Row>
+    return row(
+      <Select
+        inputId={id}
+        options={options}
+        value={options.find((o) => o.value === value) ?? null}
+        isDisabled={locked}
+        isClearable={false}
+        isSearchable={false}
+        onChange={(o) => onChange(o?.value ?? "")}
+      />,
     );
   }
 
   if (entry.type === "int") {
-    return (
-      <Row id={id} label={label} help={help}>
-        <Input
-          {...common}
-          type="number"
-          className="max-w-44"
-          disabled={disabled || translating}
-        />
-      </Row>
-    );
+    return row(<Input {...common} type="number" className="max-w-44" />);
   }
 
   if (LONG_KEYS.has(entry.key)) {
-    return (
-      <Row id={id} label={label} help={help}>
-        <Textarea {...common} rows={3} maxLength={2000} />
-      </Row>
-    );
+    return row(<Textarea {...common} rows={3} maxLength={2000} />);
   }
 
-  return (
-    <Row id={id} label={label} help={help}>
-      {/* type=url would refuse "/assets/logo.png" in the browser before the
-          server ever saw it, and a same-site path is the common case for an
-          image this site hosts itself. */}
-      {entry.format === "email" ? (
-        <Input {...common} type="email" />
-      ) : (
-        <TextField {...common} maxLength={500} />
-      )}
-    </Row>
+  // type=url would refuse "/assets/logo.png" in the browser before the server
+  // ever saw it, and a same-site path is the common case for an image this site
+  // hosts itself — so only e-mail narrows the input type.
+  return row(
+    entry.format === "email" ? (
+      <Input {...common} type="email" />
+    ) : (
+      <TextField {...common} maxLength={500} />
+    ),
   );
 }
 
-function Row({
-  id,
-  label,
-  help,
-  badge,
-  children,
-}: {
-  id: string;
-  label: string;
-  help?: string;
-  badge?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2">
-        <Label htmlFor={id} className="text-sm font-medium">
-          {label}
-        </Label>
-        {badge}
-      </div>
-      {help && <p className="pb-1 text-xs text-muted-foreground">{help}</p>}
-      {children}
-    </div>
-  );
-}
-
-/** The homepage is a published page, so it is picked rather than typed. */
 function HomePagePicker({
   value,
   onChange,
@@ -518,13 +671,13 @@ function EmailTest({ disabled }: { disabled: boolean }) {
   const [to, setTo] = useState("");
   const test = useTestEmail();
   return (
-    <div className="space-y-1 rounded-md border bg-muted/20 p-4">
-      <Label htmlFor="set-email-test" className="text-sm font-medium">
-        {t("settings.email_test.label")}
-      </Label>
-      <p className="pb-1 text-xs text-muted-foreground">
-        {t("settings.email_test.help")}
-      </p>
+    // The same two-column grid as every row above, so the action lines up
+    // with the fields it belongs to instead of floating in its own box.
+    <SettingRow
+      id="set-email-test"
+      label={t("settings.email_test.label")}
+      help={t("settings.email_test.help")}
+    >
       <div className="flex flex-wrap items-center gap-2">
         <Input
           id="set-email-test"
@@ -551,6 +704,6 @@ function EmailTest({ disabled }: { disabled: boolean }) {
           {t("settings.email_test.run")}
         </Button>
       </div>
-    </div>
+    </SettingRow>
   );
 }

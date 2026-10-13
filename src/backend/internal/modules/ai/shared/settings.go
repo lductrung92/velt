@@ -37,7 +37,8 @@ func SettingDefs() []settings.SettingDef {
 		// anthropic | openai. "openai" is the OpenAI Chat Completions shape,
 		// which also covers Ollama, LM Studio, vLLM, Groq and DeepSeek — a
 		// local model is that adapter with a different base URL.
-		{Key: KeyProvider, Group: GroupAI, Type: settings.TypeString, Default: "anthropic",
+		{Key: KeyProvider, Group: GroupAI, Type: settings.TypeEnum,
+			AllowedValues: []string{"anthropic", "openai"}, Default: "anthropic",
 			Description: "LLM provider: anthropic | openai"},
 		{Key: KeyBaseURL, Group: GroupAI, Type: settings.TypeString, Default: "",
 			Description: "Endpoint base URL; empty → the provider's default (e.g. http://localhost:11434/v1 for Ollama)"},

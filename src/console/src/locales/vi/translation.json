@@ -1829,16 +1829,6 @@
       "storage": "Lưu trữ",
       "ai": "AI"
     },
-    "group_help": {
-      "general": "Tên, logo, màu sắc — dùng chung cho console và site.",
-      "site": "Những gì site công khai hiển thị ngoài phần nội dung: chữ ở khung, cách liên hệ, số mục mỗi trang.",
-      "seo": "Những gì site nói với công cụ tìm kiếm.",
-      "cms": "Quy tắc khi soạn và xuất bản nội dung.",
-      "translation": "Site phục vụ những ngôn ngữ nào.",
-      "email": "Máy chủ gửi thư. Nút gửi thử dùng cấu hình ĐÃ LƯU, không phải giá trị đang gõ.",
-      "storage": "Tệp và ảnh lưu ở đâu, dung lượng tối đa bao nhiêu.",
-      "ai": "Trợ lý trả lời khách trên site. Kiểm tra kết nối và biểu đồ mức dùng nằm ở màn hình AI riêng."
-    },
     "secret": {
       "set": "Đã đặt",
       "unset": "Chưa đặt",
@@ -1964,8 +1954,97 @@
       "s3": "S3",
       "vi": "Tiếng Việt",
       "en": "English",
-      "anthropic": "Anthropic",
-      "openai": "OpenAI"
+      "anthropic": "Anthropic (Claude)",
+      "openai": "OpenAI / tương thích OpenAI"
+    },
+    "section": {
+      "general_brand": {
+        "title": "Thương hiệu",
+        "help": "Tên, logo và màu — dùng chung cho console và site công khai."
+      },
+      "general_console": {
+        "title": "Console",
+        "help": "Ngôn ngữ của chính màn hình quản trị."
+      },
+      "site_brand": {
+        "title": "Chia sẻ liên kết",
+        "help": "Ảnh hiện khi ai đó dán link site lên mạng xã hội."
+      },
+      "site_chrome": {
+        "title": "Chữ ở header và footer",
+        "help": "Phần chữ quanh menu. Liên kết thì sửa ở màn hình Menu."
+      },
+      "site_contact": {
+        "title": "Liên hệ",
+        "help": "Dùng khi khách không đến từ lời giới thiệu của một thành viên."
+      },
+      "site_social": {
+        "title": "Mạng xã hội",
+        "help": "Mỗi ô có nội dung mới hiện thành một liên kết ở footer."
+      },
+      "site_display": {
+        "title": "Hiển thị và hiệu năng",
+        "help": "Số mục mỗi trang, và site được giữ bản dựng sẵn bao lâu."
+      },
+      "seo_indexing": {
+        "title": "Lập chỉ mục và theo dõi",
+        "help": "Những gì site nói với công cụ tìm kiếm."
+      },
+      "cms_articles": {
+        "title": "Soạn bài",
+        "help": "Quy tắc khi tạo và sửa bài viết."
+      },
+      "cms_publishing": {
+        "title": "Xuất bản",
+        "help": "Cách bài viết ra ngoài, và trang nào là trang chủ."
+      },
+      "translation_languages": {
+        "title": "Ngôn ngữ của site",
+        "help": "Bật thì site có thêm địa chỉ /<mã> và nút đổi ngôn ngữ."
+      },
+      "email_smtp": {
+        "title": "Máy chủ gửi thư",
+        "help": "Thông tin SMTP. Thư thử dùng cấu hình ĐÃ LƯU."
+      },
+      "email_sender": {
+        "title": "Người gửi",
+        "help": "Tên và địa chỉ hiện trong hộp thư người nhận."
+      },
+      "storage_where": {
+        "title": "Nơi lưu",
+        "help": "Ổ đĩa máy chủ, hay một dịch vụ tương thích S3."
+      },
+      "storage_s3": {
+        "title": "Kết nối S3",
+        "help": "Chỉ cần khi chọn S3 ở trên."
+      },
+      "storage_limits": {
+        "title": "Giới hạn",
+        "help": "Dung lượng tối đa cho tệp tải lên và cho mỗi khách."
+      },
+      "ai_connection": {
+        "title": "Kết nối",
+        "help": "Nhà cung cấp, model và khoá API của trợ lý."
+      },
+      "ai_behaviour": {
+        "title": "Hành vi",
+        "help": "Cách trợ lý trả lời, và mức dùng tối đa."
+      },
+      "ai_check": {
+        "title": "Kiểm tra kết nối",
+        "help": "Gửi một yêu cầu thật tới nhà cung cấp. Dùng cấu hình đã lưu."
+      },
+      "ai_usage": {
+        "title": "Mức dùng 14 ngày",
+        "help": "Số token và chi phí ước tính theo ngày."
+      },
+      "ai_mcp": {
+        "title": "Khoá MCP"
+      },
+      "other": {
+        "title": "Khác",
+        "help": "Những khoá chưa được xếp nhóm — thường là khoá mới thêm ở backend."
+      }
     }
   }
 }

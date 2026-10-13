@@ -43,6 +43,9 @@ function view() {
     ],
     cms: [
       { key: "cms.article.categorize", type: "bool", value: false },
+      // Stored true: the switch must render ON. It did not, because the draft
+      // kept values as text and a boolean turned into "" on the way in.
+      { key: "cms.article.require_review", type: "bool", value: true },
       { key: "cms.home_page_slug", type: "string", is_public: true, value: "" },
     ],
   };
@@ -148,7 +151,10 @@ describe("SystemSettings", () => {
     await user.click(
       screen.getByRole("tab", { name: i18n.t("settings.group.cms") }),
     );
-    await user.click(await screen.findByRole("switch"));
+    const switches = await screen.findAllByRole("switch");
+    expect(switches[0]).not.toBeChecked();
+    expect(switches[1]).toBeChecked(); // stored true, shown on
+    await user.click(switches[0]);
 
     await user.click(saveButton());
     await waitFor(() => expect(body).toBeDefined());
@@ -215,6 +221,46 @@ describe("SystemSettings", () => {
     await waitFor(() => expect(to).toBe("me@example.com"));
   });
 
+  it("the AI tab is the same screen, with the two things that are not settings", async () => {
+    // AI used to be a screen of its own with its own layout. It is a tab now,
+    // built from the same sections as every other tab, plus the connection
+    // test and the usage chart — which are not values anybody types.
+    signIn(["settings.manage"]);
+    server.use(
+      http.get(`${API}/settings`, () =>
+        HttpResponse.json({
+          ai: [
+            { key: "ai.enabled", type: "bool", value: true },
+            { key: "ai.api_key", type: "secret", is_set: false },
+            { key: "ai.model", type: "string", value: "claude-sonnet-5-5" },
+          ],
+        }),
+      ),
+      http.get(`${API}/ai/status`, () =>
+        HttpResponse.json({ enabled: true, degraded: false, provider: "anthropic" }),
+      ),
+      http.get(`${API}/ai/usage`, () => HttpResponse.json({ days: [], total_tokens: 0 })),
+      http.get(`${API}/ai/mcp/tokens`, () => HttpResponse.json([])),
+    );
+    renderPage();
+
+    // The fields render through the standard rows…
+    expect(
+      await screen.findByLabelText(i18n.t("settings.label.ai_model")),
+    ).toHaveValue("claude-sonnet-5-5");
+    // …under the standard section headings. They are queried as headings
+    // because the connection section and its button share a name.
+    const heading = (key: string) =>
+      screen.getByRole("heading", { name: i18n.t(key) });
+    expect(heading("settings.section.ai_connection.title")).toBeInTheDocument();
+    // …and the two extras are there, in sections of their own.
+    expect(heading("settings.section.ai_check.title")).toBeInTheDocument();
+    expect(heading("settings.section.ai_usage.title")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: i18n.t("ai.test.run") }),
+    ).toBeInTheDocument();
+  });
+
   it("an editor reads and writes through the CMS-scoped door", async () => {
     // Only cms.settings.manage: the server's own configuration is none of this
     // person's business, and the endpoint enforces that — the screen simply
@@ -239,9 +285,10 @@ describe("SystemSettings", () => {
     renderPage();
 
     await waitFor(() => expect(scopedRead).toBe(true));
-    const dialog = screen.getByRole("tab", { name: i18n.t("settings.group.cms") });
-    await user.click(dialog);
-    await user.click(await screen.findByRole("switch"));
+    await user.click(
+      screen.getByRole("tab", { name: i18n.t("settings.group.cms") }),
+    );
+    await user.click((await screen.findAllByRole("switch"))[0]);
     await user.click(saveButton());
     await waitFor(() => expect(scopedWrite).toBe(true));
   });
