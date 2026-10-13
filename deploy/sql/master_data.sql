@@ -200,24 +200,66 @@ SELECT setval(
 COMMIT;
 
 --
--- THE FIRST ADMINISTRATOR — you must do this yourself.
+-- THE TEAM.
 --
--- There is no public sign-up and no CLI that creates a user, and creating one
--- through the API needs the users.create permission that only an existing user
--- can hold. So a fresh install has no way in until a row is inserted here.
+-- ⚠ EVERY ONE OF THESE ACCOUNTS SHARES ONE PASSWORD, AND THAT PASSWORD IS IN
+--   VERSION CONTROL. It is a way IN, not a way to stay. Change each one from
+--   the console the first time you sign in, before the site is reachable from
+--   the internet. Anybody who can read this repository can read these accounts.
 --
--- password_hash is argon2id in the application's own encoding
--- (src/backend/internal/platform/crypto/password.go). A hash from an online
--- generator will NOT work. Produce one on the server with:
+-- The hashes are argon2id, produced by the application's own
+-- crypto.HashPassword (src/backend/internal/platform/crypto/password.go) — the
+-- only thing that produces an encoding this build can verify. Four different
+-- hashes of the same password is correct: each carries its own salt.
 --
---   cd src/backend && go run ./cmd/hashpw          # see deploy/README.md
+-- full_name is derived from the address and is a placeholder. Edit it here
+-- before the first deploy, or in the console afterwards.
 --
--- Then uncomment and fill in. Use an address you control and a password you
--- generated randomly — this account can do everything.
+INSERT INTO public.users (email, password_hash, full_name, status, email_verified_at)
+VALUES
+  ('trungld@zakutek.com',
+   '$argon2id$v=19$m=65536,t=3,p=2$Iw5kdaQnxc1XWVB/+VEBIA$5eVwzsqeUzzoSR8U0/eETWJPNCycwQCvBkQo9gbl8n8',
+   'Trung', 'active', now()),
+  ('nhat@zakutek.com',
+   '$argon2id$v=19$m=65536,t=3,p=2$FpOFvo5XaRCHufaoN2b4SA$Z9GcOfDymm1lTgAHL/ZVBr9x1OOEdQkN6wYw4+vrPCs',
+   'Nhật', 'active', now()),
+  ('linh@zakutek.com',
+   '$argon2id$v=19$m=65536,t=3,p=2$Coo2RngINTiRzYocpj/fPA$j2iVQMu+Jd/H6uQA/l32YuLuAVT3/LKEFIJCRdJoenw',
+   'Linh', 'active', now()),
+  ('tiennv@zakutek.com',
+   '$argon2id$v=19$m=65536,t=3,p=2$Rz0JEv8z+WaDLUCOcDINTA$F4XxhdLWbkTTq0xTXa+gNjZPnVefXCpplXmYlHPNE1s',
+   'Tiến', 'active', now())
+ON CONFLICT (email) DO NOTHING;
+
+-- One role each. The grants themselves live in role_permissions above, so a
+-- change to what "editor" may do reaches these four without touching this file.
+INSERT INTO public.user_roles (user_id, role_id)
+SELECT u.id, r.id
+  FROM public.users u
+  JOIN (VALUES
+          ('trungld@zakutek.com', 'admin'),
+          ('nhat@zakutek.com', 'editor'),
+          ('linh@zakutek.com', 'editor'),
+          ('tiennv@zakutek.com', 'editor')
+       ) AS a(email, role_code) ON a.email = u.email::text
+  JOIN public.roles r ON r.code = a.role_code
+ON CONFLICT DO NOTHING;
+
 --
--- INSERT INTO public.users (email, password_hash, full_name, status, email_verified_at)
--- VALUES ('you@example.com', '$argon2id$v=19$m=...', 'Tên của bạn', 'active', now());
+-- The same four as public team members.
 --
--- INSERT INTO public.user_roles (user_id, role_id)
--- SELECT u.id, r.id FROM public.users u, public.roles r
---  WHERE u.email = 'you@example.com' AND r.code = 'super_admin';
+-- `members` has no foreign key to `users`: a person on the public roster need
+-- not have a login, and someone with a login need not be shown on the site. The
+-- two are kept in step by hand, which is why they are seeded together here.
+--
+-- Everything else — role, bio, photo, skills, links, order — is left empty for
+-- the console to fill. is_active defaults to true, so all four appear on the
+-- site's team section as soon as it reads them.
+--
+INSERT INTO public.members (slug, full_name, email, sort_order)
+VALUES
+  ('trungld', 'Trung', 'trungld@zakutek.com', 0),
+  ('nhat', 'Nhật', 'nhat@zakutek.com', 1),
+  ('linh', 'Linh', 'linh@zakutek.com', 2),
+  ('tiennv', 'Tiến', 'tiennv@zakutek.com', 3)
+ON CONFLICT (slug) DO NOTHING;
