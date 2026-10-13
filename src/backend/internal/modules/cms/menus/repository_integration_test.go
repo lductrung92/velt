@@ -82,3 +82,71 @@ func TestIT_MenuReplaceItemsTreeAndCascade(t *testing.T) {
 	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM cms_menu_items WHERE menu_id = $1`, m.ID).Scan(&n))
 	require.Equal(t, 0, n)
 }
+
+// An item that comes back with its id keeps that id. Anything stored against
+// the item — its translated label — is attached by id, so an id that changed on
+// every save would silently orphan the translation the editor just wrote.
+func TestIT_MenuItemsKeepTheirIDsAcrossSaves(t *testing.T) {
+	pool := cmstest.RequireDB(t)
+	repo := NewRepository(pool)
+	ctx := context.Background()
+	t.Cleanup(func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM cms_menus WHERE location LIKE 'cmsit-%'`)
+	})
+
+	m, err := repo.CreateMenu(ctx, "Stable", "cmsit-"+uuid.NewString()[:8])
+	require.NoError(t, err)
+	require.NoError(t, repo.ReplaceMenuItems(ctx, m.ID, []itemWrite{
+		{Label: "Products", LinkType: LinkInternal, URL: strptr("/products"), Children: []itemWrite{
+			{Label: "Child", LinkType: LinkInternal, URL: strptr("/c")},
+		}},
+		{Label: "Gone", LinkType: LinkInternal, URL: strptr("/gone")},
+	}))
+
+	first, err := repo.MenuItems(ctx, m.ID)
+	require.NoError(t, err)
+	require.Len(t, first, 3)
+	byLabel := map[string]itemRow{}
+	for _, r := range first {
+		byLabel[r.Label] = r
+	}
+
+	// Save again: the renamed parent and its child come back with their ids,
+	// one item is dropped, and one is new.
+	parent := byLabel["Products"]
+	child := byLabel["Child"]
+	require.NoError(t, repo.ReplaceMenuItems(ctx, m.ID, []itemWrite{
+		{ID: &parent.ID, Label: "Sản phẩm", LinkType: LinkInternal, URL: strptr("/products"),
+			Children: []itemWrite{
+				{ID: &child.ID, Label: "Child", LinkType: LinkInternal, URL: strptr("/c")},
+			}},
+		{Label: "Fresh", LinkType: LinkInternal, URL: strptr("/fresh")},
+	}))
+
+	second, err := repo.MenuItems(ctx, m.ID)
+	require.NoError(t, err)
+	require.Len(t, second, 3)
+	kept := map[uuid.UUID]itemRow{}
+	for _, r := range second {
+		kept[r.ID] = r
+	}
+	require.Contains(t, kept, parent.ID, "the parent must survive its own rename")
+	require.Equal(t, "Sản phẩm", kept[parent.ID].Label)
+	require.Contains(t, kept, child.ID, "a child must keep its id too")
+	require.Equal(t, parent.ID, *kept[child.ID].ParentID)
+	require.NotContains(t, kept, byLabel["Gone"].ID, "an item left out of the tree is deleted")
+
+	// An id belonging to another menu is not ours to take: it is inserted fresh.
+	other, err := repo.CreateMenu(ctx, "Other", "cmsit-"+uuid.NewString()[:8])
+	require.NoError(t, err)
+	require.NoError(t, repo.ReplaceMenuItems(ctx, other.ID, []itemWrite{
+		{ID: &parent.ID, Label: "Stolen", LinkType: LinkInternal, URL: strptr("/x")},
+	}))
+	mine, err := repo.MenuItems(ctx, m.ID)
+	require.NoError(t, err)
+	require.Len(t, mine, 3, "the other menu must not have taken an item from this one")
+	theirs, err := repo.MenuItems(ctx, other.ID)
+	require.NoError(t, err)
+	require.Len(t, theirs, 1)
+	require.NotEqual(t, parent.ID, theirs[0].ID)
+}

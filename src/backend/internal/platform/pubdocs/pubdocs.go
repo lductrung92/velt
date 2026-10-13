@@ -255,6 +255,9 @@ func (s *Store) Version(ctx context.Context) (string, error) {
 	// The site's header and footer are read live too: their links come from
 	// cms_menus (whose updated_at the item replace bumps, since the items
 	// themselves carry no timestamp) and their text from system_settings.
+	// Their OTHER languages are read live as well — a menu label and the chrome
+	// copy are overlaid from `translations` at request time, never published —
+	// so writing a translation has to move this token too.
 	var token string
 	err := s.pool.QueryRow(ctx, `
 		WITH marks AS (
@@ -267,6 +270,8 @@ func (s *Store) Version(ctx context.Context) (string, error) {
 		  SELECT MAX(updated_at), COUNT(*) FROM cms_menus
 		  UNION ALL
 		  SELECT MAX(updated_at), COUNT(*) FROM system_settings
+		  UNION ALL
+		  SELECT MAX(updated_at), COUNT(*) FROM translations
 		)
 		SELECT COALESCE(
 		         to_char(MAX(at) AT TIME ZONE 'UTC', 'YYYYMMDD"T"HH24MISS.US')

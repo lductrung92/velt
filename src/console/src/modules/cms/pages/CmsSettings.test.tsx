@@ -65,7 +65,7 @@ beforeEach(() => useAuthStore.getState().clear());
 afterEach(() => useAuthStore.getState().clear());
 
 describe("CmsSettings", () => {
-  it("loads 5 switches with the response state; Save disabled until dirty", async () => {
+  it("loads the flags with the response state; Save disabled until dirty", async () => {
     signIn(["cms.settings.read", "cms.settings.manage"]);
     server.use(
       http.get(`${API}/cms/settings`, () => HttpResponse.json(cmsView())),
@@ -73,8 +73,10 @@ describe("CmsSettings", () => {
     const user = userEvent.setup();
     renderPage();
 
+    // Five feature flags plus the multilingual switch, which is the only other
+    // on/off control on this screen.
     const switches = await screen.findAllByRole("switch");
-    expect(switches).toHaveLength(5);
+    expect(switches).toHaveLength(6);
     expect(switches[0]).toBeChecked();
     expect(switches[NOTIFY_IDX]).not.toBeChecked(); // notify_on_publish = false
     expect(saveButton()).toBeDisabled();
@@ -176,6 +178,65 @@ describe("CmsSettings", () => {
       "site.footer_copyright": "© {year} ZUKATEK.",
       "site.cache_ttl_seconds": 120,
     });
+  });
+
+  it("site chrome: the English boxes are stored as a translation", async () => {
+    // The chrome is one record with a fixed id, so the other languages go to
+    // the translation endpoint while the Vietnamese boxes stay settings.
+    const CHROME = "00000000-0000-0000-0000-00005174e000";
+    signIn(["cms.settings.read", "cms.settings.manage"]);
+    let trBody: { values?: Record<string, unknown> } | undefined;
+    const calls: string[] = [];
+    server.use(
+      http.get(`${API}/public/settings`, () =>
+        HttpResponse.json({
+          "translation.enabled": true,
+          "translation.locales": "en",
+        }),
+      ),
+      http.get(`${API}/cms/settings`, () => HttpResponse.json(cmsView())),
+      http.get(`${API}/translations/site_chrome/${CHROME}`, () =>
+        HttpResponse.json({
+          entity: "site_chrome",
+          entity_id: CHROME,
+          base_locale: "vi",
+          locales: ["en"],
+          translatable_fields: [
+            "brand_tagline",
+            "footer_note_title",
+            "footer_note_text",
+            "footer_copyright",
+            "header_cta_label",
+            "header_cta_url",
+          ],
+          translations: {},
+          requires_republish: false,
+        }),
+      ),
+      http.put(`${API}/translations/site_chrome/${CHROME}/en`, async ({ request }) => {
+        calls.push("translation");
+        trBody = (await request.json()) as typeof trBody;
+        return HttpResponse.json({ ok: true });
+      }),
+      http.put(`${API}/cms/settings`, () => {
+        calls.push("settings");
+        return HttpResponse.json(cmsView());
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    // Switch the chrome block to English, then type into the button label.
+    const toEnglish = await screen.findByRole("button", { name: "EN" });
+    await user.click(toEnglish);
+    const label = screen.getByLabelText(
+      i18n.t("cms.settings.site.header_cta_label.label"),
+    );
+    await user.type(label, "Contact us");
+    await user.click(saveButton());
+
+    await waitFor(() => expect(calls).toContain("translation"));
+    expect(trBody?.values).toMatchObject({ header_cta_label: "Contact us" });
   });
 
   it("save 403 → access-denied banner; flags stay dirty", async () => {

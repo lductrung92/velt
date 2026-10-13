@@ -22,7 +22,7 @@ export const cmsSettingsService = {
   // (booleans for feature flags, strings for values like the homepage slug). An
   // empty `updates` is a valid no-op. The server returns the fresh "cms" group.
   async update(
-    updates: Record<string, boolean | string>,
+    updates: Record<string, boolean | string | number>,
   ): Promise<CmsSettingsView> {
     const { data } = await api.put<CmsSettingsView>("/cms/settings", {
       updates,

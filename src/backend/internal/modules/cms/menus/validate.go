@@ -91,6 +91,7 @@ func toItemWrites(items []ItemInput) []itemWrite {
 	out := make([]itemWrite, 0, len(items))
 	for _, it := range items {
 		w := itemWrite{
+			ID:    it.ID,
 			Label: strings.TrimSpace(it.Label), Description: trimmedOrNil(it.Description),
 			LinkType: it.LinkType,
 			TargetID: it.TargetID, URL: it.URL, OpenNewTab: it.OpenNewTab,

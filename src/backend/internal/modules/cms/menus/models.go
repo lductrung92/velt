@@ -48,6 +48,8 @@ type itemRow struct {
 // itemWrite is one node to persist on a tree replace (children nested).
 // sort_order is assigned from slice order by the repo.
 type itemWrite struct {
+	// ID is the row to keep; nil means a new item.
+	ID          *uuid.UUID
 	Label       string
 	Description *string
 	LinkType    string
@@ -73,6 +75,10 @@ type UpdateRequest struct {
 
 // ItemInput is one node in the PUT /menus/{id}/items tree replace.
 type ItemInput struct {
+	// ID identifies an item that already exists, so a save keeps it rather than
+	// replacing it with a copy — anything stored against the item (its
+	// translated label) stays attached. Absent = a new item.
+	ID          *uuid.UUID  `json:"id"`
 	Label       string      `json:"label" validate:"required,max=200"`
 	Description *string     `json:"description" validate:"omitempty,max=300"`
 	LinkType   string      `json:"link_type" validate:"required,oneof=internal external article page category"`

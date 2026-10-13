@@ -14,7 +14,7 @@ export function useCmsSettings(enabled = true) {
 export function useUpdateCmsSettings() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (updates: Record<string, boolean | string>) =>
+    mutationFn: (updates: Record<string, boolean | string | number>) =>
       cmsSettingsService.update(updates),
     // Server returns the fresh "cms" group — seed the cache so the form resyncs
     // (clears dirty state).

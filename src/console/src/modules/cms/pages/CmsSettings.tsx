@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { usePermission } from "@/modules/auth";
+import { useEntityTranslation } from "@/modules/translation/hooks/useEntityTranslation";
 import { parseApiError } from "@/utils/apiError";
 
 import { useCmsSettings, useUpdateCmsSettings } from "../hooks/useCmsSettings";
@@ -27,6 +28,17 @@ const HOME_SLUG_KEY = "cms.home_page_slug";
 
 // How long the site may serve a page from its own cache (seconds, 0 = never).
 const TTL_KEY = "site.cache_ttl_seconds";
+
+// The chrome is one record that lives in the settings table, so its
+// translations are stored against a fixed id (translation.SiteChromeID).
+const SITE_CHROME_ID = "00000000-0000-0000-0000-00005174e000";
+
+// Which languages the site offers. They belong to the translation module and
+// arrive in their own group; this is the only screen that shows them, because
+// the alternative — the one that was in force until now — is editing the
+// database by hand to add a language.
+const TR_ENABLED_KEY = "translation.enabled";
+const TR_LOCALES_KEY = "translation.locales";
 
 // The site's chrome: the words around the navigation, which belong to no
 // article or page. The links themselves are edited in the menu builder.
@@ -142,6 +154,15 @@ function buildInitial(data: CmsSettingsView): Record<string, boolean> {
   return out;
 }
 
+// A value from any group of the response.
+function readValue(data: CmsSettingsView, key: string): unknown {
+  for (const entries of Object.values(data)) {
+    const hit = (entries ?? []).find((e) => e.key === key);
+    if (hit) return hit.value;
+  }
+  return undefined;
+}
+
 // Current homepage slug from the "cms" group ("" when unset → built-in home).
 function readHomeSlug(data: CmsSettingsView): string {
   const v = (data.cms ?? []).find((e) => e.key === HOME_SLUG_KEY)?.value;
@@ -158,6 +179,8 @@ function readTexts(data: CmsSettingsView): Record<string, string> {
   }
   const ttl = byKey.get(TTL_KEY);
   out[TTL_KEY] = typeof ttl === "number" ? String(ttl) : "";
+  const locales = readValue(data, TR_LOCALES_KEY);
+  out[TR_LOCALES_KEY] = typeof locales === "string" ? locales : "";
   return out;
 }
 
@@ -167,6 +190,9 @@ function SettingsBody({ data }: { data: CmsSettingsView }) {
   const canManage = hasPermission("cms.settings.manage");
 
   const initial = useMemo(() => buildInitial(data), [data]);
+  const initialLanguages = readValue(data, TR_ENABLED_KEY) === true;
+  const [languages, setLanguages] = useState(initialLanguages);
+  useEffect(() => setLanguages(initialLanguages), [initialLanguages]);
   const [draft, setDraft] = useState<Record<string, boolean>>(initial);
   // Resync after a successful save (cache reseeded with the fresh view).
   useEffect(() => setDraft(initial), [initial]);
@@ -191,16 +217,32 @@ function SettingsBody({ data }: { data: CmsSettingsView }) {
     pageOptions.find((o) => o.value === homeSlug) ??
     (homeSlug ? { value: homeSlug, label: homeSlug } : null);
 
+  /*
+   * The chrome in the site's other languages.
+   *
+   * The same six boxes, bound to the translation draft instead of the settings
+   * draft while a second language is selected — one form, one Save, and no
+   * second screen to keep in step with this one.
+   */
+  const tr = useEntityTranslation("site_chrome", SITE_CHROME_ID);
+  const showLanguages = tr.enabled && tr.tabs.length > 1;
+  const translating = showLanguages && !tr.isBase;
+
   const update = useUpdateCmsSettings();
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const dirty =
     FLAGS.some((f) => draft[f.key] !== initial[f.key]) ||
     homeSlug !== initialHomeSlug ||
-    Object.keys(initialTexts).some((k) => texts[k] !== initialTexts[k]);
+    Object.keys(initialTexts).some((k) => texts[k] !== initialTexts[k]) ||
+    languages !== initialLanguages ||
+    tr.dirty;
 
   function save() {
     setSaveError(null);
+    // Translations have their own endpoint; store them first so one Save
+    // writes both halves, the way every editor screen does it.
+    void tr.flush(SITE_CHROME_ID);
     const updates: Record<string, boolean | string | number> = {};
     for (const f of FLAGS) {
       if (draft[f.key] !== initial[f.key]) updates[f.key] = draft[f.key];
@@ -209,6 +251,10 @@ function SettingsBody({ data }: { data: CmsSettingsView }) {
     if (homeSlug !== initialHomeSlug) updates[HOME_SLUG_KEY] = homeSlug;
     for (const f of SITE_FIELDS) {
       if (texts[f.key] !== initialTexts[f.key]) updates[f.key] = texts[f.key];
+    }
+    if (languages !== initialLanguages) updates[TR_ENABLED_KEY] = languages;
+    if (texts[TR_LOCALES_KEY] !== initialTexts[TR_LOCALES_KEY]) {
+      updates[TR_LOCALES_KEY] = texts[TR_LOCALES_KEY];
     }
     // The TTL is the one number here; an unreadable box is left alone rather
     // than written as 0, which would silently switch the site's cache off.
@@ -284,19 +330,83 @@ function SettingsBody({ data }: { data: CmsSettingsView }) {
           );
         })}
 
+        {/* Which languages the site serves. The switch and the list are the
+            translation module's own settings; they live here because this is
+            the screen that owns everything else about the public site. */}
+        <div className="!mt-6 space-y-3 rounded-md border p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="tr-enabled" className="text-sm font-medium">
+                {t("cms.settings.languages.label")}
+              </Label>
+              <p id="tr-enabled-help" className="text-xs text-muted-foreground">
+                {t("cms.settings.languages.help")}
+              </p>
+            </div>
+            <Switch
+              id="tr-enabled"
+              checked={languages}
+              disabled={!canManage || update.isPending}
+              aria-describedby="tr-enabled-help"
+              onCheckedChange={setLanguages}
+            />
+          </div>
+          {languages && (
+            <div className="space-y-1">
+              <Label htmlFor="tr-locales" className="text-sm font-medium">
+                {t("cms.settings.languages.list_label")}
+              </Label>
+              <p className="pb-1 text-xs text-muted-foreground">
+                {t("cms.settings.languages.list_help")}
+              </p>
+              <Input
+                id="tr-locales"
+                className="max-w-60"
+                value={texts[TR_LOCALES_KEY]}
+                disabled={!canManage || update.isPending}
+                placeholder="en"
+                onChange={(e) =>
+                  setTexts((v) => ({ ...v, [TR_LOCALES_KEY]: e.target.value }))
+                }
+              />
+            </div>
+          )}
+        </div>
+
         {/* The site's chrome. Links live in the menu builder; these are the
             words beside them, plus how long the site may cache a page. */}
         <div className="!mt-6 space-y-4 rounded-md border p-4">
-          <div className="space-y-1">
-            <h3 className="text-sm font-medium leading-none">
-              {t("cms.settings.site.title")}
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              {t("cms.settings.site.help")}
-            </p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium leading-none">
+                {t("cms.settings.site.title")}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {translating
+                  ? t("cms.settings.site.help_translate")
+                  : t("cms.settings.site.help")}
+              </p>
+            </div>
+            {showLanguages && (
+              <div className="flex gap-1" role="group" aria-label={t("tr.tabs")}>
+                {tr.tabs.map((locale) => (
+                  <Button
+                    key={locale}
+                    type="button"
+                    size="sm"
+                    variant={locale === tr.locale ? "secondary" : "ghost"}
+                    aria-pressed={locale === tr.locale}
+                    disabled={!canManage || update.isPending}
+                    onClick={() => tr.setLocale(locale)}
+                  >
+                    {locale.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1" hidden={translating}>
             <Label htmlFor="site-cache-ttl" className="text-sm font-medium">
               {t("cms.settings.site.cache_ttl.label")}
             </Label>
@@ -319,14 +429,25 @@ function SettingsBody({ data }: { data: CmsSettingsView }) {
 
           {SITE_FIELDS.map((f) => {
             const id = `site-${f.name}`;
+            const translated =
+              typeof tr.values[f.name] === "string"
+                ? (tr.values[f.name] as string)
+                : "";
             const common = {
               id,
-              value: texts[f.key],
+              value: translating ? translated : texts[f.key],
               disabled: !canManage || update.isPending,
-              placeholder: t(`cms.settings.site.${f.name}.placeholder`),
+              // In another language the Vietnamese text is the placeholder: an
+              // empty box means "use it", which is exactly what the site does.
+              placeholder: translating
+                ? texts[f.key] || t(`cms.settings.site.${f.name}.placeholder`)
+                : t(`cms.settings.site.${f.name}.placeholder`),
               onChange: (
                 e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-              ) => setTexts((v) => ({ ...v, [f.key]: e.target.value })),
+              ) =>
+                translating
+                  ? tr.setField(f.name, e.target.value)
+                  : setTexts((v) => ({ ...v, [f.key]: e.target.value })),
             };
             return (
               <div key={f.key} className="space-y-1">

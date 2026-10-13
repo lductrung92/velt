@@ -110,11 +110,23 @@ func (r *pgxRepository) MenuItems(ctx context.Context, menuID uuid.UUID) ([]item
 	return out, rows.Err()
 }
 
-// ReplaceMenuItems swaps the whole item tree of a menu in one transaction:
-// delete all existing items, then insert the new tree (sort_order = sibling index).
+// ReplaceMenuItems writes the whole item tree of a menu in one transaction.
+//
+// An item the client sends back with its id KEEPS that id: it is updated in
+// place, and only the items missing from the tree are deleted. The tree used to
+// be deleted and re-inserted wholesale, which gave every item a new id on every
+// save — fine while nothing referred to an item, and fatal the moment something
+// did: a translated label is stored against the item's id, and would have been
+// orphaned by the next Save of the menu it belongs to.
+//
+// An id that is not this menu's is treated as absent and the item is inserted
+// fresh, so a stray id cannot reach across menus.
 func (r *pgxRepository) ReplaceMenuItems(ctx context.Context, menuID uuid.UUID, items []itemWrite) error {
 	return pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
-		if _, e := tx.Exec(ctx, `DELETE FROM cms_menu_items WHERE menu_id = $1`, menuID); e != nil {
+		keep := keptIDs(items)
+		if _, e := tx.Exec(ctx,
+			`DELETE FROM cms_menu_items WHERE menu_id = $1 AND NOT (id = ANY($2::uuid[]))`,
+			menuID, keep); e != nil {
 			return e
 		}
 		// The slot's updated_at is what the public cache version watches: the
@@ -123,22 +135,58 @@ func (r *pgxRepository) ReplaceMenuItems(ctx context.Context, menuID uuid.UUID, 
 		if _, e := tx.Exec(ctx, `UPDATE cms_menus SET updated_at = now() WHERE id = $1`, menuID); e != nil {
 			return e
 		}
-		return insertItems(ctx, tx, menuID, nil, items)
+		return writeItems(ctx, tx, menuID, nil, items)
 	})
 }
 
-func insertItems(ctx context.Context, tx pgx.Tx, menuID uuid.UUID, parentID *uuid.UUID, items []itemWrite) error {
+// keptIDs collects the ids the client sent back, at every depth.
+func keptIDs(items []itemWrite) []uuid.UUID {
+	out := []uuid.UUID{}
+	var walk func(list []itemWrite)
+	walk = func(list []itemWrite) {
+		for _, it := range list {
+			if it.ID != nil {
+				out = append(out, *it.ID)
+			}
+			walk(it.Children)
+		}
+	}
+	walk(items)
+	return out
+}
+
+func writeItems(ctx context.Context, tx pgx.Tx, menuID uuid.UUID, parentID *uuid.UUID, items []itemWrite) error {
 	for i, it := range items {
 		var id uuid.UUID
-		err := tx.QueryRow(ctx, `
-			INSERT INTO cms_menu_items (menu_id, parent_id, label, description, link_type, target_id, url, open_new_tab, sort_order)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
-			menuID, parentID, it.Label, it.Description, it.LinkType, it.TargetID, it.URL, it.OpenNewTab, i).Scan(&id)
-		if err != nil {
-			return err
+		var err error
+		if it.ID != nil {
+			err = tx.QueryRow(ctx, `
+				UPDATE cms_menu_items
+				   SET parent_id = $3, label = $4, description = $5, link_type = $6,
+				       target_id = $7, url = $8, open_new_tab = $9, sort_order = $10
+				 WHERE id = $1 AND menu_id = $2
+				 RETURNING id`,
+				*it.ID, menuID, parentID, it.Label, it.Description, it.LinkType,
+				it.TargetID, it.URL, it.OpenNewTab, i).Scan(&id)
+			if errors.Is(err, pgx.ErrNoRows) {
+				err = nil
+				id = uuid.Nil // not ours: fall through and insert it as new
+			}
+			if err != nil {
+				return err
+			}
+		}
+		if id == uuid.Nil {
+			err = tx.QueryRow(ctx, `
+				INSERT INTO cms_menu_items (menu_id, parent_id, label, description, link_type, target_id, url, open_new_tab, sort_order)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+				menuID, parentID, it.Label, it.Description, it.LinkType, it.TargetID, it.URL, it.OpenNewTab, i).Scan(&id)
+			if err != nil {
+				return err
+			}
 		}
 		if len(it.Children) > 0 {
-			if err := insertItems(ctx, tx, menuID, &id, it.Children); err != nil {
+			if err := writeItems(ctx, tx, menuID, &id, it.Children); err != nil {
 				return err
 			}
 		}

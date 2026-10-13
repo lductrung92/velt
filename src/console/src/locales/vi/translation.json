@@ -698,9 +698,16 @@
         "help": "Chọn trang (đã xuất bản) làm trang chủ (\"/\"). Để trống để dùng trang chủ mặc định. Trang phải được xuất bản thì mới có hiệu lực.",
         "placeholder": "Trang chủ mặc định (chưa chọn)"
       },
+      "languages": {
+          "label": "Site đa ngôn ngữ",
+          "help": "Bật thì site có thêm địa chỉ /<mã ngôn ngữ> và nút đổi ngôn ngữ. Tắt thì chỉ còn tiếng Việt; bản dịch đã lưu vẫn được giữ.",
+          "list_label": "Ngôn ngữ ngoài tiếng Việt",
+          "list_help": "Danh sách mã ngôn ngữ, cách nhau bởi dấu phẩy. Ví dụ: en hoặc en,ja."
+      },
       "site": {
         "title": "Giao diện site",
         "help": "Chữ ở header và footer của site công khai. Các liên kết được sửa ở màn hình Menu. Để trống một ô nghĩa là dùng lại nội dung mặc định của site.",
+        "help_translate": "Bản dịch của phần chữ trên. Để trống ô nào thì site dùng lại bản tiếng Việt của ô đó.",
         "cache_ttl": {
           "label": "Thời gian cache trang (giây)",
           "help": "Site được phục vụ lại trang đã dựng trong bao lâu trước khi hỏi lại. 0 = tắt cache (tiện khi đang chỉnh nội dung)."
@@ -961,7 +968,9 @@
         "url_internal_ph": "/gioi-thieu",
         "url_external_ph": "https://example.com",
         "open_new_tab": "Mở trong tab mới",
-        "reorder": "Kéo để sắp xếp"
+        "reorder": "Kéo để sắp xếp",
+        "translate_heading": "Bản dịch của liên kết",
+        "translate_hint": "Để trống thì site hiển thị nhãn gốc tiếng Việt."
       },
       "toast": {
         "create_success": "Đã tạo menu",

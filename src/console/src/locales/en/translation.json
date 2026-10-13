@@ -650,9 +650,16 @@
         "help": "Pick which published page is served as the public homepage (\"/\"). Leave empty to use the built-in home. The page must be published to take effect.",
         "placeholder": "Built-in home (none selected)"
       },
+      "languages": {
+          "label": "Multilingual site",
+          "help": "On, the site gains a /<code> address per language and a language switcher. Off, it serves Vietnamese only and keeps every translation already written.",
+          "list_label": "Languages besides Vietnamese",
+          "list_help": "Language codes, comma separated. For example: en, or en,ja."
+      },
       "site": {
         "title": "Site chrome",
         "help": "The text in the public site's header and footer. The links themselves are edited in Menus. An empty box means the site keeps its built-in copy.",
+        "help_translate": "The same text in another language. An empty box means the site keeps the Vietnamese one.",
         "cache_ttl": {
           "label": "Page cache (seconds)",
           "help": "How long the site may serve an already rendered page before asking again. 0 disables caching, which is what you want while editing."
@@ -913,7 +920,9 @@
         "url_internal_ph": "/about-us",
         "url_external_ph": "https://example.com",
         "open_new_tab": "Open in new tab",
-        "reorder": "Drag to reorder"
+        "reorder": "Drag to reorder",
+        "translate_heading": "This link in another language",
+        "translate_hint": "Leave a box empty and the site shows the Vietnamese original."
       },
       "toast": {
         "create_success": "Menu created",

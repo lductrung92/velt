@@ -41,13 +41,30 @@ func NewService(base *shared.Base, port shared.SettingsPort) *Service {
 	return &Service{Base: base, port: port}
 }
 
-// GetSettings returns the CMS feature flags (group "cms"). Requires
-// cms.settings.read.
+// GetSettings returns the CMS feature flags (group "cms") plus the two keys
+// that decide which languages the site offers (group "translation"), because
+// one screen carries both. Requires cms.settings.read.
 func (s *Service) GetSettings(ctx context.Context, id *httpx.Identity) (settingssvc.GroupedView, error) {
 	if err := s.Require(ctx, id, permRead); err != nil {
 		return nil, err
 	}
-	return s.port.GroupView(ctx, shared.GroupCMS)
+	view, err := s.port.GroupView(ctx, shared.GroupCMS)
+	if err != nil {
+		return nil, err
+	}
+	return s.withTranslation(ctx, view), nil
+}
+
+// withTranslation folds the translation group into a CMS view. A failure to
+// read it is not a failure to read the page: the screen simply shows no
+// language controls.
+func (s *Service) withTranslation(ctx context.Context, view settingssvc.GroupedView) settingssvc.GroupedView {
+	tr, err := s.port.GroupView(ctx, shared.GroupTranslation)
+	if err != nil || tr[shared.GroupTranslation] == nil {
+		return view
+	}
+	view[shared.GroupTranslation] = tr[shared.GroupTranslation]
+	return view
 }
 
 // UpdateSettings writes CMS feature flags. Requires cms.settings.manage; the
@@ -67,7 +84,8 @@ func (s *Service) UpdateSettings(ctx context.Context, id *httpx.Identity, req Up
 			oldHome = homeSlugFromView(cur)
 		}
 	}
-	view, err := s.port.UpdateScoped(ctx, id, req.Updates, shared.KeyPrefixCMS, shared.KeyPrefixSite)
+	view, err := s.port.UpdateScoped(ctx, id, req.Updates,
+		shared.KeyPrefixCMS, shared.KeyPrefixSite, shared.KeyPrefixTranslation)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +94,7 @@ func (s *Service) UpdateSettings(ctx context.Context, id *httpx.Identity, req Up
 			s.revalidateHome(ctx, oldHome, newHome)
 		}
 	}
-	return scopedGroup(view, shared.GroupCMS), nil
+	return s.withTranslation(ctx, scopedGroup(view, shared.GroupCMS)), nil
 }
 
 // revalidateHome drops the web ISR cache affected by a homepage-slug change: the

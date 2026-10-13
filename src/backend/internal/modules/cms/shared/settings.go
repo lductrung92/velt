@@ -12,8 +12,11 @@ import (
 // share the system_settings store; there is no cms_settings table). KeyPrefixCMS
 // bounds which keys /api/cms/settings may write.
 const (
-	GroupCMS     = "cms"
-	KeyPrefixCMS = "cms."
+	GroupCMS = "cms"
+	// GroupTranslation is the translation module's own group, read (and written)
+	// by the CMS settings screen because that is where the language list belongs.
+	GroupTranslation = "translation"
+	KeyPrefixCMS     = "cms."
 	// KeyPrefixSite bounds the site.* keys: what the public site renders
 	// outside the content itself (cache TTL, header/footer copy). They live in
 	// the same group and the same screen as the CMS flags, and are written
@@ -21,6 +24,11 @@ const (
 	// accept this prefix too — without it site.* keys are readable and
 	// unwritable, which is how the cache TTL shipped uneditable.
 	KeyPrefixSite = "site."
+	// KeyPrefixTranslation bounds the two keys that decide which languages the
+	// site offers. They belong to the translation module, but the only screen
+	// that could sensibly carry them is this one — the alternative is editing
+	// the database by hand to add a language, which is how it worked until now.
+	KeyPrefixTranslation = "translation."
 )
 
 // CMS feature-flag keys (registered in the settings registry, group "cms").

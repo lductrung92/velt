@@ -73,6 +73,9 @@ export function toItemsInput(drafts: MenuItemDraft[]): MenuItemInput[] {
       d.link_type === "page" ||
       d.link_type === "category";
     return {
+      // A server id travels back; a `tmp-` key is this session's invention and
+      // must not, or the backend would try to keep a row that never existed.
+      ...(d.key.startsWith("tmp-") ? {} : { id: d.key }),
       label: d.label,
       description: d.description,
       link_type: d.link_type,
@@ -84,10 +87,14 @@ export function toItemsInput(drafts: MenuItemDraft[]): MenuItemInput[] {
   });
 }
 
-// Content fingerprint (ignores client keys) — two trees are equal iff every
-// node's content + order + nesting match. Used for the dirty check.
+// Content fingerprint (ignores identity) — two trees are equal iff every node's
+// content + order + nesting match. Used for the dirty check, which asks "is
+// there anything to write", not "are these the same rows": the `id` the PUT
+// body carries is identity, so it is dropped here.
 export function serializeTree(drafts: MenuItemDraft[]): string {
-  return JSON.stringify(toItemsInput(drafts));
+  return JSON.stringify(toItemsInput(drafts), (key, value) =>
+    key === "id" ? undefined : value,
+  );
 }
 
 export function treesEqual(a: MenuItemDraft[], b: MenuItemDraft[]): boolean {

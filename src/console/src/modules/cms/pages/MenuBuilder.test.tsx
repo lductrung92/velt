@@ -276,6 +276,52 @@ describe("MenuBuilder", () => {
     ]);
   });
 
+  it("save: an item that already exists keeps its id", async () => {
+    // The backend keeps a row whose id comes back and deletes the rest. Drop
+    // the id here and every save would recreate the item under a new one,
+    // orphaning its translated label — silently, and only in the second
+    // language, which is the worst place to find out.
+    signIn(MANAGE);
+    let putBody: { items: { id?: string; label: string }[] } | undefined;
+    server.use(
+      http.get(`${API}/cms/menus`, () =>
+        HttpResponse.json([slot("m1", "Header", "header")]),
+      ),
+      http.get(`${API}/cms/menus/m1`, () =>
+        HttpResponse.json({
+          ...slot("m1", "Header", "header"),
+          items: [itemNode("i7", "About")],
+        }),
+      ),
+      http.put(`${API}/cms/menus/m1/items`, async ({ request }) => {
+        putBody = (await request.json()) as typeof putBody;
+        return HttpResponse.json({
+          ...slot("m1", "Header", "header"),
+          items: [itemNode("i7", "About")],
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByText("Header"));
+    await user.click(await screen.findByText("About"));
+    const label = screen.getAllByRole("textbox")[0];
+    await user.clear(label);
+    await user.type(label, "Giới thiệu");
+    await user.type(
+      screen.getByPlaceholderText(t("cms.menus.item.url_internal_ph")),
+      "{Enter}",
+    );
+    await user.click(
+      await screen.findByRole("button", { name: t("cms.menus.save") }),
+    );
+
+    await waitFor(() => expect(putBody).toBeDefined());
+    expect(putBody?.items[0].id).toBe("i7");
+    expect(putBody?.items[0].label).toBe("Giới thiệu");
+  });
+
   it("delete slot: overflow → confirm → DELETE", async () => {
     signIn(MANAGE);
     let deleted = false;

@@ -60,9 +60,12 @@ export interface UpdateMenuBody {
   location?: string;
 }
 
-// One node in the PUT /items whole-tree replace. No `id`/`sort_order` — the
-// backend recreates the tree and assigns sort_order from slice order.
+// One node in the PUT /items whole-tree replace. `sort_order` is assigned by
+// the backend from slice order; `id` is sent back for an item that already
+// exists so it keeps its row — and with it anything stored against that row,
+// starting with its translated label.
 export interface MenuItemInput {
+  id?: string;
   label: string;
   description: string | null;
   link_type: MenuLinkType;
