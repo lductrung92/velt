@@ -87,11 +87,11 @@ export const DateField = React.forwardRef<
             type="button"
             disabled={disabled}
             className={cn(
-              "flex h-10 w-full items-center gap-2 rounded-md border border-input bg-background px-3 text-sm ring-offset-background",
+              "flex h-10 w-full items-center gap-2 rounded-md border border-input bg-background px-3 text-sm",
               // The clear button sits on top of the right edge, so the
               // label has to stop before it rather than run underneath.
               value && !disabled ? "pr-9" : "",
-              "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+              "focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/25",
               "disabled:cursor-not-allowed disabled:opacity-50",
               value ? "text-foreground" : "text-muted-foreground",
             )}
@@ -142,7 +142,7 @@ export const DateField = React.forwardRef<
                 out.setHours(+h, +mi, 0, 0);
                 onChange(format(out, true));
               }}
-              className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/25"
             />
           </div>
         )}

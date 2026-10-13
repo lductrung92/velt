@@ -128,8 +128,8 @@ export function Select<Option extends SelectOption = SelectOption>({
             aria-invalid={invalid || undefined}
             disabled={isDisabled}
             className={cn(
-              "flex h-9 w-full items-center rounded-md border bg-background px-3 py-1 text-left text-sm ring-offset-background transition-colors",
-              "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+              "flex h-9 w-full items-center rounded-md border bg-background px-3 py-1 text-left text-sm transition-colors",
+              "focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/25",
               "disabled:cursor-not-allowed disabled:opacity-50",
               showClear ? "pr-14" : "pr-9",
               invalid ? "border-destructive" : "border-input",

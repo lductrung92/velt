@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { mockApi } from "../mocks/api";
 
@@ -232,6 +232,50 @@ test("every tab is the same layout, and says so in Vietnamese", async ({
       fullPage: true,
     });
   }
+});
+
+/**
+ * Tailwind paints a focus ring as a box-shadow, and that shadow's spread radius
+ * IS the thickness the eye reads. The old rule was 2px of solid ring held 2px
+ * away from the control, which computes to 4px of slab around a 1px field.
+ */
+async function ringSpread(field: Locator): Promise<number> {
+  await field.focus();
+  return field.evaluate((node) => {
+    const shadow = getComputedStyle(node as Element).boxShadow;
+    const spreads = [
+      ...shadow.matchAll(
+        /(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px/g,
+      ),
+    ].map((m) => Number.parseFloat(m[4]));
+    return spreads.length ? Math.max(...spreads) : 0;
+  });
+}
+
+test("a focused field wears a thin ring, not a slab", async ({ page }) => {
+  await openSettings(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+
+  const tabs = page.getByRole("tab");
+  for (const name of ["site", "ai"]) {
+    await tabs.nth(TABS.indexOf(name)).click();
+    const fields = page.locator(
+      "main input:not([type=checkbox]):not([type=radio]), main textarea",
+    );
+    const count = await fields.count();
+    expect(count, `${name}: expected fields`).toBeGreaterThan(0);
+    for (let i = 0; i < count; i += 1) {
+      const field = fields.nth(i);
+      if (!(await field.isVisible())) continue;
+      const spread = await ringSpread(field);
+      const id = (await field.getAttribute("id")) ?? `#${i}`;
+      expect(spread, `${name} ${id}: focus ring too thick`).toBeLessThanOrEqual(2);
+      expect(spread, `${name} ${id}: no focus ring at all`).toBeGreaterThan(0);
+    }
+  }
+
+  await page.locator("main input").first().focus();
+  await page.screenshot({ path: "e2e/__screenshots__/settings-focus.png" });
 });
 
 test("the layout holds on a phone", async ({ page }) => {

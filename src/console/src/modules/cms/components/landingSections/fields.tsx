@@ -252,7 +252,7 @@ export function CodeField({
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <div className="overflow-hidden rounded-md border focus-within:ring-2 focus-within:ring-ring">
+      <div className="overflow-hidden rounded-md border focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25">
         <Suspense fallback={<Skeleton className="h-72 w-full" />}>
           <CodeMirrorEditor
             value={str(cfg, k)}
