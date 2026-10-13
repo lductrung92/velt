@@ -138,7 +138,7 @@ export default function CmsTags() {
           title={t("common.delete")}
           onClick={() => setDeleteTarget(tg)}
         >
-          <Trash2 className="size-4 text-destructive" />
+          <Trash2 className="size-4 text-destructive-ink" />
         </Button>
       </div>
     );

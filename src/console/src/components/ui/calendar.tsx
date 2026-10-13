@@ -39,8 +39,7 @@ export function Calendar({ className, classNames, ...props }: DayPickerProps) {
         ),
         month_grid: "w-full border-collapse",
         weekdays: "flex",
-        weekday:
-          "w-9 text-[0.7rem] font-normal uppercase text-muted-foreground",
+        weekday: "w-9 text-caption font-normal uppercase text-muted-foreground",
         week: "flex w-full mt-1.5",
         // Every modifier class lands on the same <td>, next to `day` — the
         // button inside it only ever gets `day_button`. So the cell carries the

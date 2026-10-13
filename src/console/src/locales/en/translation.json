@@ -379,7 +379,12 @@
       "created": "User created — a set-password email was sent",
       "updated": "User updated",
       "deleted": "User deleted",
-      "reset_sent": "Reset-password email sent"
+      "reset_sent": "Reset-password email sent",
+      "list_title": "Users",
+      "empty_title": "No users yet",
+      "empty_hint": "Create the first account to start assigning roles.",
+      "no_results": "No users found",
+      "no_results_hint": "Try a different term or clear a filter."
     },
     "rbac": {
       "title": "Roles & Permissions",
@@ -438,7 +443,12 @@
       "revoke_confirm": "Revoke this session? That device will have to sign in again.",
       "revoke_current_warn": "This is your current session — you'll have to sign in again on this device.",
       "revoke_last_super_admin_warn": "This is the last super admin — revoking may lock out emergency access.",
-      "revoked": "Session revoked"
+      "revoked": "Session revoked",
+      "list_title": "Sign-in sessions",
+      "empty_title": "No sessions",
+      "empty_hint": "Sessions appear here once someone signs in.",
+      "no_results": "No sessions found",
+      "no_results_hint": "Try clearing the active-only filter."
     },
     "home": {
       "title": "Administration",
@@ -1165,7 +1175,12 @@
       "actions": "Actions"
     },
     "search_label": "Search members",
-    "search_ph": "Name, role or skill"
+    "search_ph": "Name, role or skill",
+    "list_title": "Team members",
+    "empty_title": "No members yet",
+    "empty_hint": "Add the first member to introduce the team on the public site.",
+    "no_results": "No members found",
+    "no_results_hint": "Try a different search term."
   },
   "products": {
     "title": "Products",
@@ -1218,7 +1233,7 @@
       "permalink": "Permalink",
       "details": "Product details",
       "settings": "Settings",
-      "search_preview": "Search preview",
+      "search_preview": "Search appearance preview",
       "preview_title": "Product name",
       "preview_description": "The summary shown in search results.",
       "social": "Social sharing"

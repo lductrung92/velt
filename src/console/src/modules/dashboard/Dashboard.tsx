@@ -62,7 +62,7 @@ function RecentPanel({
   return (
     <section className="dashboard-panel min-w-0 rounded-lg border bg-background">
       <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
-        <h2 className="flex items-center gap-2.5 text-sm font-semibold">
+        <h2 className="flex items-center gap-2.5 text-base font-medium">
           <Icon className="size-4 text-muted-foreground" aria-hidden />
           {title}
         </h2>
@@ -105,14 +105,14 @@ function RecentPanel({
               <Plus className="size-3.5" />
             </span>
           </div>
-          <p className="text-sm font-semibold">
+          <p className="text-sm font-medium">
             {t(
               to === "/products"
                 ? "dashboard.empty_products"
                 : "dashboard.empty_articles",
             )}
           </p>
-          <p className="mt-2 max-w-64 text-xs leading-5 text-muted-foreground">
+          <p className="mt-2 max-w-64 text-sm leading-5 text-muted-foreground">
             {t(
               to === "/products"
                 ? "dashboard.empty_products_description"
@@ -120,7 +120,7 @@ function RecentPanel({
             )}
           </p>
           {createTo && (
-            <Button asChild variant="outline" className="mt-5 text-xs">
+            <Button asChild variant="outline" className="mt-5 text-sm">
               <Link to={createTo}>
                 <Plus className="size-3.5" aria-hidden />
                 {t("dashboard.create_first")}
@@ -148,7 +148,10 @@ function RecentPanel({
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium group-hover:text-primary">
+                  <p
+                    className="truncate text-sm font-medium group-hover:text-primary"
+                    title={record.title}
+                  >
                     {record.title}
                   </p>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -325,7 +328,7 @@ export default function Dashboard() {
                     aria-label={t("common.loading")}
                   />
                 ) : (
-                  <span className="text-4xl font-semibold tabular-nums tracking-tight">
+                  <span className="text-4xl font-medium tabular-nums tracking-tight">
                     {query.isError
                       ? "—"
                       : total?.toLocaleString(i18n.resolvedLanguage)}
@@ -364,10 +367,10 @@ export default function Dashboard() {
             <span className="dashboard-quick-heading-icon">
               <Sparkles className="size-5" aria-hidden />
             </span>
-            <h2 className="mt-3 text-base font-semibold">
+            <h2 className="mt-3 text-base font-medium">
               {t("dashboard.quick_title")}
             </h2>
-            <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+            <p className="mt-1.5 text-sm leading-5 text-muted-foreground">
               {t("dashboard.quick_description")}
             </p>
             <div className="mt-5 space-y-2">
@@ -386,10 +389,10 @@ export default function Dashboard() {
                     />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-semibold">
+                    <span className="block text-sm font-medium">
                       {t(`dashboard.actions.${key}`)}
                     </span>
-                    <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">
+                    <span className="mt-1 block text-xs leading-4 text-muted-foreground">
                       {t(`dashboard.action_descriptions.${key}`)}
                     </span>
                   </span>

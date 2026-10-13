@@ -189,7 +189,7 @@ export default function ChatInbox() {
         >
           <div className="chat-queue-heading">
             <h2>
-              <MessageSquare className="size-4 text-primary" aria-hidden />
+              <MessageSquare className="size-4 text-primary-ink" aria-hidden />
               {t("chat.conversations")}
               <span className="chat-count">
                 {inbox.isPending ? "—" : conversations.length}

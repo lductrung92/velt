@@ -70,8 +70,25 @@ describe("UserManagement", () => {
     );
     renderPage();
 
-    expect(await screen.findByText("Jane Doe")).toBeInTheDocument();
-    expect(screen.getByText("jane@velt.local.vn")).toBeInTheDocument();
+    const table = within(await screen.findByTestId("admin-users-table"));
+    expect(table.getByText("Jane Doe")).toBeInTheDocument();
+    expect(table.getByText("jane@velt.local.vn")).toBeInTheDocument();
+  });
+
+  it("repeats every row as a card, so a narrow column keeps its actions", async () => {
+    // Below 960px of panel width the table is hidden and these cards are the
+    // only list; a row action that lives solely in the table is unreachable.
+    signInWith(["users.read", "users.update"]);
+    server.use(
+      http.get(`${API}/admin/users`, () => HttpResponse.json(pageOf([ROW]))),
+    );
+    renderPage();
+
+    const cards = within(await screen.findByTestId("admin-users-cards"));
+    expect(cards.getByText("Jane Doe")).toBeInTheDocument();
+    expect(
+      cards.getByRole("button", { name: i18n.t("admin.users.col.actions") }),
+    ).toBeInTheDocument();
   });
 
   it("renders a user with null roles without crashing (— placeholder)", async () => {
@@ -86,8 +103,9 @@ describe("UserManagement", () => {
     );
     renderPage();
 
-    expect(await screen.findByText("No Roles")).toBeInTheDocument();
-    expect(screen.getByText("—")).toBeInTheDocument();
+    const table = within(await screen.findByTestId("admin-users-table"));
+    expect(table.getByText("No Roles")).toBeInTheDocument();
+    expect(table.getByText("—")).toBeInTheDocument();
   });
 
   it("hides 'Add new' without users.create permission", async () => {
@@ -97,7 +115,7 @@ describe("UserManagement", () => {
     );
     renderPage();
 
-    await screen.findByText("Jane Doe");
+    await screen.findByTestId("admin-users-table");
     expect(
       screen.queryByRole("button", { name: /thêm mới|add new/i }),
     ).not.toBeInTheDocument();
@@ -117,7 +135,7 @@ describe("UserManagement", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByText("Jane Doe");
+    await screen.findByTestId("admin-users-table");
     await user.click(screen.getByRole("button", { name: /thêm mới|add new/i }));
 
     const dialog = await screen.findByRole("dialog");
@@ -162,7 +180,7 @@ describe("UserManagement", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByText("Jane Doe");
+    await screen.findByTestId("admin-users-table");
     await user.click(screen.getByRole("button", { name: /thêm mới|add new/i }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/^vai trò$|^role$/i)).toBeInTheDocument();
@@ -176,7 +194,7 @@ describe("UserManagement", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByText("Jane Doe");
+    await screen.findByTestId("admin-users-table");
     await user.click(screen.getByRole("button", { name: /thêm mới|add new/i }));
     const dialog = await screen.findByRole("dialog");
     expect(
@@ -184,7 +202,7 @@ describe("UserManagement", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("empty list → shared no-data row inside the table (header kept)", async () => {
+  it("empty list → the shared empty state with its own call to action", async () => {
     signInWith(["users.read", "users.create"]);
     server.use(
       http.get(`${API}/admin/users`, () => HttpResponse.json(pageOf([]))),
@@ -192,13 +210,15 @@ describe("UserManagement", () => {
     renderPage();
 
     expect(
-      await screen.findByText(i18n.t("common.empty_state.default_title")),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", {
-        name: i18n.t("admin.users.col.user"),
+      await screen.findByRole("heading", {
+        name: i18n.t("admin.users.empty_title"),
       }),
     ).toBeInTheDocument();
+    // Panel heading + empty state; the second one is the point of this test.
+    expect(
+      screen.getAllByRole("button", { name: /thêm mới|add new/i }),
+    ).toHaveLength(2);
+    expect(screen.queryByTestId("admin-users-table")).not.toBeInTheDocument();
   });
 
   it("sorts by a column header: cycles asc → desc → default, sets aria-sort", async () => {
@@ -212,7 +232,7 @@ describe("UserManagement", () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("Jane Doe");
+    await screen.findByTestId("admin-users-table");
 
     // Default sort on first load.
     expect(sorts[0]).toBe("-created_at");
@@ -244,7 +264,7 @@ describe("UserManagement", () => {
       http.get(`${API}/admin/users`, () => HttpResponse.json(pageOf([ROW]))),
     );
     renderPage();
-    await screen.findByText("Jane Doe");
+    await screen.findByTestId("admin-users-table");
 
     expect(
       screen.queryByRole("button", { name: i18n.t("admin.users.col.roles") }),

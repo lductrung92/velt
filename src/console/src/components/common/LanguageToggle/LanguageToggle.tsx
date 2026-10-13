@@ -59,7 +59,7 @@ export function LanguageToggle() {
             >
               <img src={l.flag} alt="" width={20} height={14} />
               <span className="flex-1">{l.name}</span>
-              {active && <Check className="h-4 w-4 text-primary" />}
+              {active && <Check className="h-4 w-4 text-primary-ink" />}
             </DropdownMenuItem>
           );
         })}

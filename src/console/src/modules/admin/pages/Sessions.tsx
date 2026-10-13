@@ -1,11 +1,10 @@
-import { LogOut } from "lucide-react";
+import { LogOut, MonitorSmartphone, Plus, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { ListToolbar } from "@/components/common/ListToolbar";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { UserAgentBadge } from "@/components/common/UserAgentBadge";
@@ -16,7 +15,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableEmpty,
   TableHead,
   TableHeader,
   TableRow,
@@ -31,6 +29,8 @@ import { formatDateTime } from "@/utils/format";
 
 import { useRevokeSession, useSessions } from "../hooks/useAdminSessions";
 import type { AdminSession } from "../services/admin.service";
+
+import "@/styles/list-page.css";
 
 export default function Sessions() {
   const { t } = useTranslation();
@@ -81,116 +81,212 @@ export default function Sessions() {
         : t("admin.sessions.revoke_confirm")
     : "";
 
+  // The former "Trạng thái" column only ever filled in for the viewer's own
+  // session and was blank on every other row, so the badge rides along with the
+  // identity it describes and the column is gone.
+  const identity = (s: AdminSession) => (
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="truncate font-medium">{s.full_name}</span>
+        {s.current && (
+          <StatusBadge tone="success">
+            {t("admin.sessions.current")}
+          </StatusBadge>
+        )}
+      </span>
+      <span className="truncate text-xs text-muted-foreground">{s.email}</span>
+    </div>
+  );
+
+  const revokeButton = (s: AdminSession) => (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={t("admin.sessions.revoke")}
+      title={t("admin.sessions.revoke")}
+      onClick={() => {
+        setConfirmError(null);
+        setTarget(s);
+      }}
+    >
+      <LogOut className="size-4 text-destructive" />
+    </Button>
+  );
+
   return (
-    <div className="space-y-3">
+    <div className="list-page" data-list="admin-sessions">
       <PageHeader
         title={t("admin.sessions.title")}
         subtitle={t("admin.sessions.subtitle")}
         breadcrumbs={[{ labelKey: "nav.sessions" }]}
       />
 
-      <ListToolbar
-        onRefresh={() => void sessions.refetch()}
-        refreshDisabled={sessions.isFetching}
-      >
-        <label className="flex items-center gap-2 text-sm">
-          <Switch checked={activeOnly} onCheckedChange={setActiveOnly} />
-          {t("admin.sessions.active_only")}
-        </label>
-      </ListToolbar>
+      <section className="list-panel" aria-label={t("admin.sessions.title")}>
+        <div className="list-panel-heading">
+          <div>
+            <h2>{t("admin.sessions.list_title")}</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={sessions.isFetching}
+              onClick={() => void sessions.refetch()}
+            >
+              <RotateCcw
+                className={
+                  sessions.isFetching
+                    ? "size-3.5 animate-spin motion-reduce:animate-none"
+                    : "size-3.5"
+                }
+                aria-hidden
+              />
+              {t("common.refresh")}
+            </Button>
+          </div>
+        </div>
 
-      {sessions.isLoading && !sessions.data ? (
-        <Skeleton className="h-40 w-full" />
-      ) : sessions.isError ? (
-        <Alert
-          variant="danger"
-          message={parseApiError(sessions.error, t).message}
-        />
-      ) : (
-        <>
-          <Table scroll={false} data-testid="admin-sessions-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("admin.sessions.col.user")}</TableHead>
-                <TableHead>{t("admin.sessions.col.device")}</TableHead>
-                <TableHead>{t("admin.sessions.col.ip")}</TableHead>
-                <TableHead>{t("admin.sessions.col.created")}</TableHead>
-                <TableHead>{t("admin.sessions.col.last_used")}</TableHead>
-                <TableHead>{t("admin.sessions.col.expires")}</TableHead>
-                <TableHead>{t("admin.sessions.col.status")}</TableHead>
-                {canRevoke && (
-                  <TableHead className="w-12 text-right">
-                    <span className="sr-only">
-                      {t("admin.sessions.col.actions")}
-                    </span>
-                  </TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.length === 0 && (
-                <TableEmpty colSpan={canRevoke ? 8 : 7} />
-              )}
-              {items.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{s.full_name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {s.email}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <UserAgentBadge ua={s.user_agent} />
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {s.ip ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDateTime(s.created_at)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {s.last_used_at ? formatDateTime(s.last_used_at) : "—"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDateTime(s.expires_at)}
-                  </TableCell>
-                  <TableCell>
-                    {s.current && (
-                      <StatusBadge tone="success">
-                        {t("admin.sessions.current")}
-                      </StatusBadge>
+        {/* No status axis here, so no tabs row — the toolbar carries the rule
+            that would otherwise come from it. */}
+        <div className="list-toolbar list-toolbar-edge">
+          <div className="list-filter-controls">
+            <label className="flex items-center gap-2 text-sm">
+              <Switch checked={activeOnly} onCheckedChange={setActiveOnly} />
+              {t("admin.sessions.active_only")}
+            </label>
+          </div>
+        </div>
+
+        {sessions.isError ? (
+          <div className="list-error">
+            <Alert
+              variant="danger"
+              message={parseApiError(sessions.error, t).message}
+            />
+            <Button
+              className="mt-3"
+              variant="outline"
+              size="sm"
+              onClick={() => void sessions.refetch()}
+            >
+              {t("common.retry")}
+            </Button>
+          </div>
+        ) : sessions.isLoading && !sessions.data ? (
+          <div className="list-loading" aria-label={t("common.loading")}>
+            {Array.from({ length: 5 }, (_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        ) : !items.length ? (
+          <div className="list-empty">
+            <div className="list-empty-art" aria-hidden>
+              <span className="list-empty-ring" />
+              <div className="list-empty-card">
+                <span>
+                  <MonitorSmartphone className="size-5" />
+                </span>
+                <div>
+                  <i />
+                  <i />
+                  <i />
+                </div>
+                <Plus className="list-empty-plus" />
+              </div>
+            </div>
+            <h3>{t("admin.sessions.empty_title")}</h3>
+            <p>{t("admin.sessions.empty_hint")}</p>
+          </div>
+        ) : (
+          <>
+            <div className="list-desktop">
+              <Table
+                scroll={false}
+                data-testid="admin-sessions-table"
+                wrapperClassName="list-table-wrap"
+              >
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("admin.sessions.col.user")}</TableHead>
+                    <TableHead>{t("admin.sessions.col.device")}</TableHead>
+                    <TableHead>{t("admin.sessions.col.ip")}</TableHead>
+                    <TableHead>{t("admin.sessions.col.created")}</TableHead>
+                    <TableHead>{t("admin.sessions.col.last_used")}</TableHead>
+                    <TableHead>{t("admin.sessions.col.expires")}</TableHead>
+                    {canRevoke && (
+                      <TableHead className="w-12 text-right">
+                        <span className="sr-only">
+                          {t("admin.sessions.col.actions")}
+                        </span>
+                      </TableHead>
                     )}
-                  </TableCell>
-                  {canRevoke && (
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t("admin.sessions.revoke")}
-                        title={t("admin.sessions.revoke")}
-                        onClick={() => {
-                          setConfirmError(null);
-                          setTarget(s);
-                        }}
-                      >
-                        <LogOut className="size-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell>{identity(s)}</TableCell>
+                      <TableCell>
+                        <UserAgentBadge ua={s.user_agent} />
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {s.ip ?? "—"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        {formatDateTime(s.created_at)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        {s.last_used_at ? formatDateTime(s.last_used_at) : "—"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        {formatDateTime(s.expires_at)}
+                      </TableCell>
+                      {canRevoke && (
+                        <TableCell className="text-right">
+                          {revokeButton(s)}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="list-mobile" data-testid="admin-sessions-cards">
+              {items.map((s) => (
+                <div
+                  className="flex flex-col gap-2.5 border-b p-3.5 last:border-b-0"
+                  key={s.id}
+                >
+                  <div className="flex items-start justify-between gap-2.5">
+                    {identity(s)}
+                    {canRevoke && (
+                      <span className="shrink-0">{revokeButton(s)}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 text-xs text-muted-foreground">
+                    <UserAgentBadge ua={s.user_agent} />
+                    <span className="font-mono">{s.ip ?? "—"}</span>
+                    <span>
+                      {t("admin.sessions.col.expires")}:{" "}
+                      {formatDateTime(s.expires_at)}
+                    </span>
+                  </div>
+                </div>
               ))}
-            </TableBody>
-          </Table>
-          <TablePagination
-            page={page}
-            pageSize={DEFAULT_PAGE_SIZE}
-            total={sessions.data?.total ?? 0}
-            onPageChange={setPage}
-          />
-        </>
-      )}
+            </div>
+
+            <div className="list-pagination">
+              <TablePagination
+                page={page}
+                pageSize={DEFAULT_PAGE_SIZE}
+                total={sessions.data?.total ?? 0}
+                onPageChange={setPage}
+              />
+            </div>
+          </>
+        )}
+      </section>
 
       {target && (
         <ConfirmDialog

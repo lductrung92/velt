@@ -81,7 +81,7 @@ export function MemberRow({
         </div>
       </TableCell>
 
-      <TableCell className="text-muted-foreground">
+      <TableCell className="text-xs text-muted-foreground">
         {member.role || t("members.no_role")}
       </TableCell>
 
@@ -89,7 +89,7 @@ export function MemberRow({
         {member.skills.length > 0 ? member.skills.join(" · ") : "—"}
       </TableCell>
 
-      <TableCell className="text-right text-muted-foreground">
+      <TableCell className="text-right text-xs tabular-nums text-muted-foreground">
         {member.sort_order}
       </TableCell>
 

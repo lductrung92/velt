@@ -3,7 +3,7 @@ import { ArrowRight, LockKeyhole, Mail } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Alert } from "@/components/common/Alert";
 import { PasswordField } from "@/components/common/PasswordField";
@@ -176,6 +176,17 @@ export default function Login() {
                 </FormItem>
               )}
             />
+            {/* The reset screen existed and auth.login.forgot was already
+                translated, but nothing ever linked to it — the only way to
+                reach /forgot-password was to type the URL. */}
+            <div className="flex justify-end">
+              <Link
+                to="/forgot-password"
+                className="rounded-sm text-sm text-primary-ink hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("auth.login.forgot")}
+              </Link>
+            </div>
             <Button
               type="submit"
               className="auth-submit w-full"
@@ -211,7 +222,7 @@ export default function Login() {
               <p
                 id="twofactor-code-error"
                 role="alert"
-                className="!mt-1 text-xs font-medium text-destructive"
+                className="!mt-1 text-xs font-medium text-destructive-ink"
               >
                 {codeError}
               </p>

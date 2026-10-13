@@ -34,7 +34,10 @@ export function SortableHead({
     <TableHead aria-sort={ariaSort} className={className}>
       <button
         type="button"
-        className="inline-flex items-center gap-1 hover:text-foreground"
+        // The ring is spelled out here rather than left to `.list-page button`:
+        // the sortable head is used on screens outside that container too, and
+        // there it fell back to the browser's own hairline outline.
+        className="inline-flex items-center gap-1 rounded-sm ring-offset-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         onClick={() => onSort(nextSort(sort, col))}
       >
         {label}

@@ -785,7 +785,7 @@ export default function ArticleEditor() {
                 <span className="text-xs font-medium text-muted-foreground">
                   {"Zukatek"}
                 </span>
-                <p className="mt-1 break-words text-lg font-medium text-primary">
+                <p className="mt-1 break-words text-lg font-medium text-primary-ink">
                   {form.watch("seo_title") ||
                     form.watch("title") ||
                     t("cms.articles.editor.preview_title")}
@@ -893,7 +893,7 @@ export default function ArticleEditor() {
               </div>
               <div className="border-t pt-5">
                 <h3 className="mb-4 flex items-center gap-2 text-sm font-medium">
-                  <Globe2 className="size-4 text-primary" aria-hidden />
+                  <Globe2 className="size-4 text-primary-ink" aria-hidden />
                   {t("cms.articles.editor.social")}
                 </h3>
                 <div className="editor-social">

@@ -1,4 +1,5 @@
 import { AlertCircle, Languages } from "lucide-react";
+import { useRef, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { EntityTranslation } from "../hooks/useEntityTranslation";
@@ -33,6 +34,33 @@ interface Props {
  */
 export function LanguageTabs({ tr, disabled, embedded }: Props) {
   const { t } = useTranslation();
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  // role="tablist" promises the roving-tabindex contract, so the strip keeps
+  // it: one Tab stop (the open language), arrows walk between languages and
+  // switch as they go, Home/End jump to the ends. Locked languages are stepped
+  // over — a disabled button cannot take focus.
+  function moveFocus(from: number, step: number) {
+    const n = tr.tabs.length;
+    for (let i = 1; i <= n; i++) {
+      const loc = tr.tabs[(from + step * i + n * i) % n];
+      if (disabled && loc !== tr.baseLocale) continue;
+      tr.setLocale(loc);
+      tabRefs.current[loc]?.focus();
+      return;
+    }
+  }
+
+  function onTabKeyDown(e: KeyboardEvent, index: number) {
+    const n = tr.tabs.length;
+    if (e.key === "ArrowRight") moveFocus(index, 1);
+    else if (e.key === "ArrowLeft") moveFocus(index, -1);
+    else if (e.key === "Home") moveFocus(-1, 1);
+    else if (e.key === "End") moveFocus(n, -1);
+    else return;
+    e.preventDefault();
+  }
+
   if (!tr.enabled || tr.tabs.length < 2) return null;
 
   return (
@@ -41,20 +69,25 @@ export function LanguageTabs({ tr, disabled, embedded }: Props) {
         <Languages className="size-4" />
       </span>
       <div className="tr-tabs-list" role="tablist" aria-label={t("tr.tabs")}>
-        {tr.tabs.map((loc) => {
+        {tr.tabs.map((loc, index) => {
           const active = loc === tr.locale;
           const isBase = loc === tr.baseLocale;
           const { done, total } = tr.progress(loc);
           return (
             <button
               key={loc}
+              ref={(node) => {
+                tabRefs.current[loc] = node;
+              }}
               type="button"
               role="tab"
               aria-selected={active}
+              tabIndex={active ? 0 : -1}
               disabled={disabled && !isBase}
               className="tr-tab"
               data-active={active || undefined}
               onClick={() => tr.setLocale(loc)}
+              onKeyDown={(e) => onTabKeyDown(e, index)}
             >
               {LOCALE_LABEL[loc] ?? loc.toUpperCase()}
               {isBase ? (

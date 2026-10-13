@@ -595,7 +595,7 @@ export default function PageEditor() {
                   <span className="text-xs font-medium text-muted-foreground">
                     {"Zukatek"}
                   </span>
-                  <p className="mt-1 break-words text-lg font-medium text-primary">
+                  <p className="mt-1 break-words text-lg font-medium text-primary-ink">
                     {seo.title ||
                       form.watch("title") ||
                       t("cms.pages.editor.preview_title")}
@@ -624,7 +624,7 @@ export default function PageEditor() {
                 </div>
                 <div className="border-t pt-5">
                   <h3 className="mb-4 flex items-center gap-2 text-sm font-medium">
-                    <Globe2 className="size-4 text-primary" aria-hidden />
+                    <Globe2 className="size-4 text-primary-ink" aria-hidden />
                     {t("cms.pages.editor.social")}
                   </h3>
                   <div className="space-y-4">{SEO_SOCIAL.map(seoRow)}</div>
@@ -795,7 +795,7 @@ function PageTranslationPanel({
             {/* The preview applies the same fallback the public page will: an
                 untranslated field quietly serves the Vietnamese one, and this is
                 where the translator sees that happen. */}
-            <p className="mt-1 break-words text-lg font-medium text-primary">
+            <p className="mt-1 break-words text-lg font-medium text-primary-ink">
               {str(seo.title) ||
                 source.seoTitle ||
                 str(tr.values.title) ||

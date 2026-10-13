@@ -13,7 +13,15 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Plus } from "lucide-react";
+import {
+  ArrowRight,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Search,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -21,19 +29,15 @@ import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { FilterChips } from "@/components/common/FilterChips";
-import { FilterPopover } from "@/components/common/FilterPopover";
-import { ListToolbar } from "@/components/common/ListToolbar";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SortableHead } from "@/components/common/SortableHead";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
-  TableEmpty,
   TableHead,
   TableHeader,
   TableRow,
@@ -48,6 +52,8 @@ import {
   useReorderMembers,
 } from "../hooks/useMembers";
 import type { Member } from "../services/members.service";
+
+import "@/styles/list-page.css";
 
 // The roster is a curated list a team edits by hand, not a dataset: one page
 // holds it, so there is no pagination.
@@ -70,8 +76,6 @@ export default function MemberList() {
   const [pending, setPending] = useState<Member | null>(null);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<string | null>(null);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [draftQ, setDraftQ] = useState("");
 
   // Local mirror so a drag renders instantly; the server call follows.
   const [order, setOrder] = useState<Member[]>([]);
@@ -81,7 +85,9 @@ export default function MemberList() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const reorderable = q === "" && sort === null;
@@ -112,10 +118,6 @@ export default function MemberList() {
     }
     return out;
   }, [order, q, sort]);
-
-  const filterChips = q
-    ? [{ key: "q", label: t("members.search_label"), value: q, onRemove: () => setQ("") }]
-    : [];
 
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
@@ -153,108 +155,227 @@ export default function MemberList() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="list-page" data-list="members">
       <PageHeader title={t("members.title")} subtitle={t("members.subtitle")} />
 
-      <ListToolbar
-        onRefresh={() => void list.refetch()}
-        refreshDisabled={list.isFetching}
-        filter={
-          <FilterPopover
-            open={filterOpen}
-            onOpenChange={(open) => {
-              setFilterOpen(open);
-              if (open) setDraftQ(q);
-            }}
-            onApply={() => {
-              setQ(draftQ.trim());
-              setFilterOpen(false);
-            }}
-            onReset={() => setDraftQ("")}
-            filterActive={q !== ""}
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="member-q">{t("members.search_label")}</Label>
-              <Input
-                id="member-q"
-                type="search"
-                value={draftQ}
-                placeholder={t("members.search_ph")}
-                onChange={(e) => setDraftQ(e.target.value)}
+      <section className="list-panel" aria-label={t("members.title")}>
+        <div className="list-panel-heading">
+          <div>
+            <h2>{t("members.list_title")}</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={list.isFetching}
+              onClick={() => void list.refetch()}
+            >
+              <RotateCcw
+                className={
+                  list.isFetching
+                    ? "size-3.5 animate-spin motion-reduce:animate-none"
+                    : "size-3.5"
+                }
+                aria-hidden
               />
-            </div>
-          </FilterPopover>
-        }
-      >
-        {canManage && (
-          <Button type="button" onClick={() => navigate("/members/new")}>
-            <Plus className="size-4" />
-            {t("members.create")}
-          </Button>
-        )}
-      </ListToolbar>
-
-      <FilterChips items={filterChips} onClearAll={q ? () => setQ("") : undefined} />
-
-      {list.isError ? (
-        <Alert variant="danger" message={parseApiError(list.error, t).message} />
-      ) : list.isLoading && !list.data ? (
-        <div className="space-y-2 p-3">
-          {Array.from({ length: 5 }, (_, i) => (
-            <Skeleton key={i} className="h-9 w-full" />
-          ))}
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <Table scroll={false} data-testid="members-table">
-            <TableHeader>
-              <TableRow>
-                <SortableHead
-                  col="name"
-                  label={t("members.col.name")}
-                  sort={sort}
-                  onSort={setSort}
-                />
-                <SortableHead
-                  col="role"
-                  label={t("members.col.role")}
-                  sort={sort}
-                  onSort={setSort}
-                />
-                <TableHead>{t("members.col.skills")}</TableHead>
-                <TableHead className="text-right">
-                  {t("members.col.sort_order")}
-                </TableHead>
-                <TableHead className="text-right">
-                  {t("members.col.actions")}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 && <TableEmpty colSpan={5} />}
-              <SortableContext
-                items={rows.map((m) => m.id)}
-                strategy={verticalListSortingStrategy}
+              {t("common.refresh")}
+            </Button>
+            {canManage && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => navigate("/members/new")}
               >
-                {rows.map((m) => (
-                  <MemberRow
-                    key={m.id}
-                    member={m}
-                    canManage={canManage}
-                    reorderable={canManage && reorderable}
-                    onEdit={(id) => navigate(`/members/${id}`)}
-                    onDelete={setPending}
-                  />
-                ))}
-              </SortableContext>
-            </TableBody>
-          </Table>
-        </DndContext>
-      )}
+                <Plus className="size-4" />
+                {t("members.create")}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* No status axis here, so no tabs row — the toolbar carries the rule
+            that would otherwise come from it. */}
+        <div className="list-toolbar list-toolbar-edge">
+          <form
+            className="list-search"
+            onSubmit={(event) => event.preventDefault()}
+          >
+            <Search className="size-4" aria-hidden />
+            <Input
+              type="search"
+              value={q}
+              aria-label={t("members.search_label")}
+              placeholder={t("members.search_ph")}
+              // The whole roster is already in memory, so searching as you type
+              // costs nothing and waiting for Enter would be pure friction.
+              onChange={(event) => setQ(event.target.value)}
+            />
+            <Button
+              type="submit"
+              variant="ghost"
+              size="icon"
+              aria-label={t("members.search_label")}
+            >
+              <ArrowRight className="size-4" aria-hidden />
+            </Button>
+          </form>
+        </div>
+
+        {list.isError ? (
+          <div className="list-error">
+            <Alert
+              variant="danger"
+              message={parseApiError(list.error, t).message}
+            />
+            <Button
+              className="mt-3"
+              variant="outline"
+              size="sm"
+              onClick={() => void list.refetch()}
+            >
+              {t("common.retry")}
+            </Button>
+          </div>
+        ) : list.isLoading && !list.data ? (
+          <div className="list-loading" aria-label={t("common.loading")}>
+            {Array.from({ length: 5 }, (_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        ) : !rows.length ? (
+          <div className="list-empty">
+            <div className="list-empty-art" aria-hidden>
+              <span className="list-empty-ring" />
+              <div className="list-empty-card">
+                <span>
+                  <Users className="size-5" />
+                </span>
+                <div>
+                  <i />
+                  <i />
+                  <i />
+                </div>
+                <Plus className="list-empty-plus" />
+              </div>
+            </div>
+            <h3>{t(q ? "members.no_results" : "members.empty_title")}</h3>
+            <p>{t(q ? "members.no_results_hint" : "members.empty_hint")}</p>
+            {!q && canManage && (
+              <Button size="sm" onClick={() => navigate("/members/new")}>
+                <Plus className="size-4" />
+                {t("members.create")}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="list-desktop">
+                <Table
+                  scroll={false}
+                  data-testid="members-table"
+                  wrapperClassName="list-table-wrap"
+                >
+                  <TableHeader>
+                    <TableRow>
+                      <SortableHead
+                        col="name"
+                        label={t("members.col.name")}
+                        sort={sort}
+                        onSort={setSort}
+                      />
+                      <SortableHead
+                        col="role"
+                        label={t("members.col.role")}
+                        sort={sort}
+                        onSort={setSort}
+                      />
+                      <TableHead>{t("members.col.skills")}</TableHead>
+                      <TableHead className="text-right">
+                        {t("members.col.sort_order")}
+                      </TableHead>
+                      <TableHead className="text-right">
+                        {t("members.col.actions")}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <SortableContext
+                      items={rows.map((m) => m.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {rows.map((m) => (
+                        <MemberRow
+                          key={m.id}
+                          member={m}
+                          canManage={canManage}
+                          reorderable={canManage && reorderable}
+                          onEdit={(id) => navigate(`/members/${id}`)}
+                          onDelete={setPending}
+                        />
+                      ))}
+                    </SortableContext>
+                  </TableBody>
+                </Table>
+              </div>
+            </DndContext>
+
+            {/* Reading only: dragging needs a pointer, so the handle stays on
+                the desktop table. */}
+            <div className="list-mobile" data-testid="members-cards">
+              {rows.map((m) => (
+                <div
+                  className="flex flex-col gap-2.5 border-b p-3.5 last:border-b-0"
+                  key={m.id}
+                >
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm font-medium">
+                        {m.full_name}
+                      </span>
+                      {!m.is_active && (
+                        <Badge variant="secondary">{t("members.hidden")}</Badge>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={t("common.edit")}
+                        onClick={() => navigate(`/members/${m.id}`)}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      {canManage && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t("common.delete")}
+                          onClick={() => setPending(m)}
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 text-xs text-muted-foreground">
+                    <span>{m.role || t("members.no_role")}</span>
+                    {m.skills.length > 0 && (
+                      <span className="truncate">{m.skills.join(" · ")}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
 
       <ConfirmDialog
         open={!!pending}

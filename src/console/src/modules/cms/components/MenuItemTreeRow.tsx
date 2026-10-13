@@ -99,7 +99,7 @@ export function MenuItemTreeRow({
             {t("common.edit")}
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
+            className="text-destructive-ink focus:text-destructive-ink"
             onClick={() => onDelete(node.key)}
           >
             <Trash2 className="size-4" />

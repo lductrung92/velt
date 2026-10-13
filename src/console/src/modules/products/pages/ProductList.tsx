@@ -246,7 +246,11 @@ export default function ProductList() {
       </span>
       <span className="product-title">
         <span className="product-title-line">
-          <button type="button" onClick={() => navigate(`/products/${p.id}`)}>
+          <button
+            type="button"
+            title={p.name}
+            onClick={() => navigate(`/products/${p.id}`)}
+          >
             {p.name}
           </button>
           {p.is_featured && (
@@ -258,7 +262,9 @@ export default function ProductList() {
             </span>
           )}
         </span>
-        <span className="product-slug">{p.slug}</span>
+        <span className="product-slug" title={p.slug}>
+          {p.slug}
+        </span>
       </span>
     </div>
   );

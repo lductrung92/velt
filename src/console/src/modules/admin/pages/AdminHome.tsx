@@ -41,6 +41,7 @@ export default function AdminHome() {
       <PageHeader
         title={t("admin.home.title")}
         subtitle={t("admin.home.subtitle")}
+        breadcrumbs={[{ labelKey: "nav.admin" }]}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -51,6 +52,7 @@ export default function AdminHome() {
             value={usersCount.data}
             loading={usersCount.isLoading}
             error={usersCount.isError}
+            to="/admin/users"
           />
         )}
         {canSessions && (
@@ -60,6 +62,7 @@ export default function AdminHome() {
             value={sessionsCount.data}
             loading={sessionsCount.isLoading}
             error={sessionsCount.isError}
+            to="/admin/sessions"
           />
         )}
         {canRoles && (
@@ -69,6 +72,7 @@ export default function AdminHome() {
             value={rolesCount.data}
             loading={rolesCount.isLoading}
             error={rolesCount.isError}
+            to="/admin/roles"
           />
         )}
       </div>

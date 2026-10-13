@@ -177,16 +177,6 @@ export function ImageUpload(props: ImageUploadProps) {
       </div>
       {isEmpty && (
         <>
-          {/* Light backdrop fades in on hover so the upload affordance reads
-              clearly. Sits above the clipped <img> but below the button.
-              Inherits the frame shape via clipShape. */}
-          <div
-            aria-hidden="true"
-            className={cn(
-              "pointer-events-none absolute inset-0 bg-white/60 opacity-0 transition-opacity duration-150 group-hover:opacity-100",
-              clipShape,
-            )}
-          />
           <button
             type="button"
             aria-label={t("image.upload.trigger")}
@@ -195,11 +185,13 @@ export function ImageUpload(props: ImageUploadProps) {
             onClick={handlePicker}
             className={cn(
               actionBtn,
-              // Centered + smaller than before (was h-12 w-12 = 48px).
               "inset-0 m-auto h-10 w-10",
-              // Hidden until the wrapper is hovered. focus-visible keeps
-              // keyboard users from being locked out.
-              "opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-visible:opacity-100",
+              // Always visible while the slot is empty. It used to wait for
+              // `group-hover`, which never fires on a touch device — so on a
+              // tablet the slot looked like a decorative grey box with no way
+              // to fill it. There is nothing underneath to reveal: the
+              // placeholder is a flat tint, and this button is the affordance.
+              "[@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11",
             )}
           >
             <Upload className={type === "circle" ? "h-4 w-4" : "h-5 w-5"} />

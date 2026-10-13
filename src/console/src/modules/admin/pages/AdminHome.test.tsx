@@ -87,6 +87,35 @@ describe("AdminHome", () => {
     expect(await screen.findByText("2")).toBeInTheDocument();
   });
 
+  it("each count card is the entry point to the screen it counts", async () => {
+    signIn(["users.read", "sessions.read", "roles.read"]);
+    server.use(
+      http.get(`${API}/admin/users`, () =>
+        HttpResponse.json({ items: [], total: 5, page: 1, page_size: 1 }),
+      ),
+      http.get(`${API}/admin/sessions`, () =>
+        HttpResponse.json({ items: [], total: 3, page: 1, page_size: 1 }),
+      ),
+      http.get(`${API}/admin/roles`, () => HttpResponse.json([])),
+    );
+    renderPage();
+
+    const hrefs = (await screen.findAllByRole("link")).map((a) =>
+      a.getAttribute("href"),
+    );
+    expect(hrefs).toEqual(
+      expect.arrayContaining([
+        "/admin/users",
+        "/admin/sessions",
+        "/admin/roles",
+      ]),
+    );
+    // The admin root still declares its own crumb, like every sibling screen.
+    expect(
+      screen.getByRole("navigation", { name: i18n.t("common.breadcrumbs") }),
+    ).toHaveTextContent(i18n.t("nav.admin"));
+  });
+
   it("hides count cards the actor has no permission for", async () => {
     signIn(["sessions.read"]); // only sessions
     server.use(
@@ -101,8 +130,6 @@ describe("AdminHome", () => {
     expect(
       screen.getByText(/phiên đang hoạt động|active sessions/i),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByText(/^người dùng$|^users$/i),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/^người dùng$|^users$/i)).not.toBeInTheDocument();
   });
 });

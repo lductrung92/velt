@@ -1,3 +1,4 @@
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   ArrowUp,
   LogOut,
@@ -85,6 +86,7 @@ export function AppLayoutCombo() {
   );
 
   const asideRef = useRef<HTMLElement>(null);
+  const asideToggleRef = useRef<HTMLButtonElement>(null);
 
   // Swap desktop sidebar ↔ mobile drawer on viewport change.
   useEffect(() => {
@@ -143,16 +145,6 @@ export function AppLayoutCombo() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Esc closes the mobile drawer.
-  useEffect(() => {
-    if (isDesktop || !asideOpen) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setAsideOpen(false);
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [isDesktop, asideOpen]);
-
   const handleNavClick = useCallback(() => {
     if (!isDesktop) setAsideOpen(false);
     if (isDesktop && !asideOpen) setOpenBranch(null);
@@ -190,62 +182,100 @@ export function AppLayoutCombo() {
   const showLabels = asideOpen || !isDesktop;
   const isRail = isDesktop && !asideOpen;
 
+  const sidebarBody = (
+    <>
+      <div className="flex h-14 items-center justify-center border-b px-4">
+        <Link
+          to="/"
+          aria-label={APP_NAME}
+          className={cn(
+            "flex items-center justify-center overflow-hidden dark:rounded-md dark:bg-white",
+            !isRail && "dark:px-2 dark:py-1",
+          )}
+        >
+          {isRail ? (
+            // Rail → square app-icon that fits the w-16 rail.
+            <img
+              src="/app-icon.png"
+              alt=""
+              className="h-8 w-8 object-contain"
+            />
+          ) : (
+            <img
+              src="/logo.png"
+              alt=""
+              className="h-8 w-auto max-w-full object-contain"
+            />
+          )}
+        </Link>
+      </div>
+      <SidebarNav
+        sections={navSections}
+        pathname={location.pathname}
+        showLabels={showLabels}
+        isRail={isRail}
+        openBranch={openBranch}
+        onToggleBranch={toggleBranch}
+        onNavClick={handleNavClick}
+      />
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-muted/30">
       {/* ── Sidebar ─────────────────────────────────────────────────── */}
-      <aside
-        ref={asideRef}
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 flex flex-col border-r bg-background transition-[width,transform] duration-200",
-          asideWidth,
-          !isDesktop && !asideOpen && "-translate-x-full",
-        )}
-        aria-label={t("nav.primary")}
-      >
-        <div className="flex h-14 items-center justify-center border-b px-4">
-          <Link
-            to="/"
-            aria-label={APP_NAME}
-            className={cn(
-              "flex items-center justify-center overflow-hidden dark:rounded-md dark:bg-white",
-              !isRail && "dark:px-2 dark:py-1",
-            )}
-          >
-            {isRail ? (
-              // Rail → square app-icon that fits the w-16 rail.
-              <img
-                src="/app-icon.png"
-                alt=""
-                className="h-8 w-8 object-contain"
-              />
-            ) : (
-              <img
-                src="/logo.png"
-                alt=""
-                className="h-8 w-auto max-w-full object-contain"
-              />
-            )}
-          </Link>
-        </div>
-        <SidebarNav
-          sections={navSections}
-          pathname={location.pathname}
-          showLabels={showLabels}
-          isRail={isRail}
-          openBranch={openBranch}
-          onToggleBranch={toggleBranch}
-          onNavClick={handleNavClick}
-        />
-      </aside>
-
-      {/* Mobile drawer backdrop */}
-      {!isDesktop && asideOpen && (
-        <div
-          role="presentation"
-          aria-hidden="true"
-          onClick={() => setAsideOpen(false)}
-          className="fixed inset-0 z-30 bg-black/50"
-        />
+      {isDesktop ? (
+        <aside
+          ref={asideRef}
+          className={cn(
+            "fixed inset-y-0 left-0 z-40 flex flex-col border-r bg-background transition-[width] duration-200",
+            asideWidth,
+          )}
+          aria-label={t("nav.primary")}
+        >
+          {sidebarBody}
+        </aside>
+      ) : (
+        // The mobile drawer is a modal, so it is a real Radix Dialog instead of
+        // an <aside> plus a bare backdrop <div>: only that locks the page
+        // behind it (wheeling over the old backdrop scrolled the list), traps
+        // Tab inside the nav, moves focus in on open, closes on Esc and hands
+        // focus back to the toggle on close.
+        //
+        // Unlike the form modals (DialogContent prevents outside-close so a
+        // half-filled form can't be lost), tapping the scrim closes the drawer:
+        // nothing is being edited, and that is how every drawer behaves.
+        <DialogPrimitive.Root open={asideOpen} onOpenChange={setAsideOpen}>
+          <DialogPrimitive.Portal>
+            <DialogPrimitive.Overlay className="fixed inset-0 z-30 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+            <DialogPrimitive.Content
+              aria-describedby={undefined}
+              // Radix leaves this off and relies on marking the rest of the
+              // page aria-hidden, which measurably does not reach #root here,
+              // so a screen reader would still wander out of the open drawer.
+              aria-modal="true"
+              // Radix's modal content hands focus back to its own <Trigger>,
+              // and the drawer has none — the toggle is a plain header button —
+              // so without this Esc drops focus on <body>.
+              onCloseAutoFocus={(e) => {
+                e.preventDefault();
+                asideToggleRef.current?.focus();
+              }}
+              className={cn(
+                "fixed inset-y-0 left-0 z-40 flex flex-col border-r bg-background duration-200 focus:outline-none",
+                ASIDE_WIDTH_OPEN,
+                "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
+              )}
+            >
+              {/* Radix needs an accessible name; the drawer's own name is the
+                  logo row, which is a link, so the label is screen-reader only. */}
+              <DialogPrimitive.Title className="sr-only">
+                {t("nav.primary")}
+              </DialogPrimitive.Title>
+              {sidebarBody}
+            </DialogPrimitive.Content>
+          </DialogPrimitive.Portal>
+        </DialogPrimitive.Root>
       )}
 
       {/* ── Header + Main ───────────────────────────────────────────── */}
@@ -257,6 +287,7 @@ export function AppLayoutCombo() {
       >
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-background px-4">
           <Button
+            ref={asideToggleRef}
             type="button"
             variant="ghost"
             size="icon"

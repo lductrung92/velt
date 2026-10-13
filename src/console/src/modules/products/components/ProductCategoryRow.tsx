@@ -56,11 +56,13 @@ export function ProductCategoryRow({
               <GripVertical className="size-4" />
             </button>
           )}
-          <strong>{category.name}</strong>
+          <strong title={category.name}>{category.name}</strong>
         </div>
       </TableCell>
       <TableCell>
-        <span className="pcat-slug">{category.slug}</span>
+        <span className="pcat-slug" title={category.slug}>
+          {category.slug}
+        </span>
       </TableCell>
       <TableCell>
         <span

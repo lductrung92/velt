@@ -24,7 +24,25 @@ createRoot(rootEl).render(
         <AuthBootstrap>
           <RouterProvider router={router} />
         </AuthBootstrap>
-        <Toaster richColors closeButton position="top-right" />
+        <Toaster
+          richColors
+          closeButton
+          position="top-right"
+          toastOptions={{
+            classNames: {
+              // sonner parks the ✕ half outside the card's top-left corner,
+              // which at 390px put it 7px off the card and 9px from the screen
+              // edge. Bring it inside the card's top-right instead; `pr-9`
+              // keeps the text from running under it.
+              closeButton:
+                "left-auto right-1.5 top-1.5 size-7 transform-none [@media(pointer:coarse)]:size-9",
+              // sonner's own 13px is the only body text in the console that is
+              // not 14px/20px.
+              toast: "pr-9 text-sm",
+              title: "leading-5",
+            },
+          }}
+        />
       </QueryClientProvider>
     </I18nextProvider>
   </StrictMode>,

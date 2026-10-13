@@ -101,7 +101,7 @@ function CalendarPanel({ today }: { today: string }) {
     >
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-base font-medium">
-          <CalendarDays className="size-4 text-primary" aria-hidden />
+          <CalendarDays className="size-4 text-primary-ink" aria-hidden />
           {t("dashboard.daily.calendar_title")}
         </h3>
         <Button
@@ -116,7 +116,7 @@ function CalendarPanel({ today }: { today: string }) {
         </Button>
       </div>
       <div className="dashboard-calendar-summary mt-4 flex items-center gap-4 rounded-lg bg-primary/5 p-4">
-        <span className="text-4xl font-medium tabular-nums text-primary">
+        <span className="text-4xl font-medium tabular-nums text-primary-ink">
           {Number(dateKey.slice(-2))}
         </span>
         <div className="min-w-0">
@@ -126,7 +126,7 @@ function CalendarPanel({ today }: { today: string }) {
           <p className="mt-1 text-xs text-muted-foreground">
             {format(dateKey, { month: "long", year: "numeric" })}
           </p>
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-primary">
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-primary-ink">
             <Moon className="size-3" aria-hidden />
             {t("dashboard.daily.lunar_date", {
               day: lunar.day,
@@ -196,7 +196,7 @@ function CalendarPanel({ today }: { today: string }) {
           >
             <span className="text-sm font-medium tabular-nums">{day.day}</span>
             <span
-              className={`text-caption tabular-nums ${day.lunar.day === 1 ? "text-primary" : "text-muted-foreground"}`}
+              className={`text-caption tabular-nums ${day.lunar.day === 1 ? "text-primary-ink" : "text-muted-foreground"}`}
             >
               {day.lunar.day === 1
                 ? `${day.lunar.day}/${day.lunar.month}`
@@ -292,7 +292,7 @@ function WeatherPanel({ today }: { today: string }) {
     >
       <div className="dashboard-weather-heading flex flex-wrap items-center justify-between gap-3">
         <h3 className="flex items-center gap-2 text-base font-medium">
-          <CloudSun className="size-4 text-primary" aria-hidden />
+          <CloudSun className="size-4 text-primary-ink" aria-hidden />
           {t("dashboard.daily.weather_title")}
         </h3>
         <div className="flex min-w-0 items-center gap-2">
@@ -363,7 +363,7 @@ function WeatherPanel({ today }: { today: string }) {
         </div>
       </div>
       {locationError && (
-        <p role="alert" className="mt-3 text-xs text-destructive">
+        <p role="alert" className="mt-3 text-xs text-destructive-ink">
           {t("dashboard.daily.location_error")}
         </p>
       )}
@@ -392,7 +392,7 @@ function WeatherPanel({ today }: { today: string }) {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="flex items-center gap-1.5 text-sm font-medium">
-                  <MapPin className="size-3.5 text-primary" aria-hidden />
+                  <MapPin className="size-3.5 text-primary-ink" aria-hidden />
                   {location.id === "current"
                     ? t("dashboard.daily.current_location")
                     : location.name}
@@ -514,7 +514,7 @@ function WeatherPanel({ today }: { today: string }) {
                       ),
                     })}
                   >
-                    <Droplets className="size-3 text-primary" aria-hidden />
+                    <Droplets className="size-3 text-primary-ink" aria-hidden />
                     {number(
                       weather.daily.precipitation_probability_max[i],
                       "%",
@@ -529,7 +529,7 @@ function WeatherPanel({ today }: { today: string }) {
               href="https://open-meteo.com/"
               target="_blank"
               rel="noreferrer"
-              className="hover:text-primary hover:underline"
+              className="hover:text-primary-ink hover:underline"
             >
               {t("dashboard.daily.source")}
             </a>
@@ -540,7 +540,7 @@ function WeatherPanel({ today }: { today: string }) {
             </span>
           </div>
           {query.isError && (
-            <p role="alert" className="mt-2 text-xs text-destructive">
+            <p role="alert" className="mt-2 text-xs text-destructive-ink">
               {t("dashboard.daily.stale_weather")}
             </p>
           )}

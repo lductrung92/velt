@@ -204,7 +204,7 @@ export function ProductTranslationPanel({ tr, source, readOnly }: Props) {
             {/* The preview applies the same fallback the public page will: an
                 untranslated field quietly serves the Vietnamese one, and this is
                 where the translator sees that happen. */}
-            <p className="mt-1 break-words text-lg font-medium text-primary">
+            <p className="mt-1 break-words text-lg font-medium text-primary-ink">
               {str(seo.title) ||
                 source.seoTitle ||
                 str(tr.values.name) ||

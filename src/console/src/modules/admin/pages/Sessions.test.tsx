@@ -77,8 +77,59 @@ describe("Sessions", () => {
     );
     renderPage();
 
-    expect(await screen.findByText("Jane Doe")).toBeInTheDocument();
-    expect(screen.getByText("127.0.0.1")).toBeInTheDocument();
+    const table = within(await screen.findByTestId("admin-sessions-table"));
+    expect(table.getByText("Jane Doe")).toBeInTheDocument();
+    expect(table.getByText("127.0.0.1")).toBeInTheDocument();
+  });
+
+  it("repeats every row as a card, so a narrow column keeps the revoke action", async () => {
+    // Below 960px of panel width the table is hidden and these cards are the
+    // only list. Revoke is this screen's single action; losing it loses the
+    // screen.
+    signIn(["sessions.read", "sessions.revoke"]);
+    server.use(
+      http.get(`${API}/admin/sessions`, () =>
+        HttpResponse.json(pageOf([session()])),
+      ),
+    );
+    renderPage();
+
+    const cards = within(await screen.findByTestId("admin-sessions-cards"));
+    expect(cards.getByText("Jane Doe")).toBeInTheDocument();
+    expect(
+      cards.getByRole("button", { name: /thu hồi|revoke/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("marks the current session on its own row, with no column that is blank for every other", async () => {
+    // The old "Trạng thái" column only ever filled in for the viewer's own
+    // session; it cost ~150px of a table that already overflowed.
+    signIn(["sessions.read"]);
+    server.use(
+      http.get(`${API}/admin/sessions`, () =>
+        HttpResponse.json(
+          pageOf([
+            session({ current: true }),
+            session({
+              id: "s2",
+              full_name: "John Roe",
+              email: "john@velt.local.vn",
+            }),
+          ]),
+        ),
+      ),
+    );
+    renderPage();
+
+    const table = within(await screen.findByTestId("admin-sessions-table"));
+    expect(
+      table.getByText(i18n.t("admin.sessions.current")),
+    ).toBeInTheDocument();
+    expect(
+      table.queryByRole("columnheader", {
+        name: i18n.t("admin.sessions.col.status"),
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("revoke → confirm → DELETE → dialog closes", async () => {
@@ -95,8 +146,8 @@ describe("Sessions", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByText("Jane Doe");
-    await user.click(screen.getByRole("button", { name: /thu hồi|revoke/i }));
+    const table = within(await screen.findByTestId("admin-sessions-table"));
+    await user.click(table.getByRole("button", { name: /thu hồi|revoke/i }));
     const dialog = await screen.findByRole("alertdialog");
     await user.click(
       within(dialog).getByRole("button", { name: /thu hồi|revoke/i }),
@@ -117,10 +168,8 @@ describe("Sessions", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByText("Jane Doe");
-    await user.click(
-      screen.getAllByRole("button", { name: /thu hồi|revoke/i })[0],
-    );
+    const table = within(await screen.findByTestId("admin-sessions-table"));
+    await user.click(table.getByRole("button", { name: /thu hồi|revoke/i }));
     const dialog = await screen.findByRole("alertdialog");
     expect(
       within(dialog).getByText(/phiên hiện tại|current session/i),

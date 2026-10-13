@@ -356,7 +356,7 @@
         "roles": "Vai trò",
         "last_login": "Đăng nhập gần nhất",
         "created": "Ngày tạo",
-        "actions": "Hành động"
+        "actions": "Thao tác"
       },
       "never_logged_in": "Chưa đăng nhập",
       "roles_more": "+{{n}}",
@@ -379,7 +379,12 @@
       "created": "Đã tạo người dùng — đã gửi mail đặt mật khẩu",
       "updated": "Đã cập nhật người dùng",
       "deleted": "Đã xoá người dùng",
-      "reset_sent": "Đã gửi mail đặt lại mật khẩu"
+      "reset_sent": "Đã gửi mail đặt lại mật khẩu",
+      "list_title": "Danh sách người dùng",
+      "empty_title": "Chưa có người dùng nào",
+      "empty_hint": "Tạo tài khoản đầu tiên để bắt đầu phân quyền.",
+      "no_results": "Không tìm thấy người dùng",
+      "no_results_hint": "Thử đổi từ khoá hoặc bỏ bớt bộ lọc."
     },
     "rbac": {
       "title": "Vai trò & Quyền",
@@ -478,7 +483,7 @@
         "last_used": "Dùng gần nhất",
         "expires": "Hết hạn",
         "status": "Trạng thái",
-        "actions": "Hành động"
+        "actions": "Thao tác"
       },
       "current": "Phiên hiện tại",
       "revoke": "Thu hồi",
@@ -486,7 +491,12 @@
       "revoke_confirm": "Thu hồi phiên này? Thiết bị đó sẽ phải đăng nhập lại.",
       "revoke_current_warn": "Đây là phiên hiện tại — bạn sẽ phải đăng nhập lại trên thiết bị này.",
       "revoke_last_super_admin_warn": "Đây là super admin cuối cùng — thu hồi có thể khoá quyền truy cập khẩn cấp.",
-      "revoked": "Đã thu hồi phiên"
+      "revoked": "Đã thu hồi phiên",
+      "list_title": "Phiên đăng nhập",
+      "empty_title": "Không có phiên nào",
+      "empty_hint": "Phiên đăng nhập sẽ xuất hiện ở đây khi có người đăng nhập.",
+      "no_results": "Không tìm thấy phiên",
+      "no_results_hint": "Thử bỏ bộ lọc phiên đang hoạt động."
     },
     "home": {
       "title": "Quản trị",
@@ -524,8 +534,8 @@
         "canonical_url": "URL chuẩn (canonical)",
         "noindex": "Không lập chỉ mục",
         "nofollow": "Không theo liên kết",
-        "og_title": "OG title",
-        "og_description": "OG description"
+        "og_title": "Tiêu đề khi chia sẻ",
+        "og_description": "Mô tả khi chia sẻ"
       },
       "field": {
         "title": "Tiêu đề",
@@ -544,7 +554,7 @@
         "permalink": "Đường dẫn",
         "kind_hint": "Trang landing được dựng bằng trình kéo thả ngay sau khi tạo.",
         "publish_hint": "Dùng nút Xuất bản ở trên để đưa trang lên website.",
-        "search_preview": "Xem trước trên kết quả tìm kiếm",
+        "search_preview": "Minh họa hiển thị tìm kiếm",
         "preview_title": "Tiêu đề trang của bạn",
         "preview_description": "Mô tả SEO sẽ hiển thị ở đây.",
         "social": "Chia sẻ mạng xã hội"
@@ -689,7 +699,7 @@
         "name": "Tên",
         "slug": "Slug",
         "usage": "Lượt dùng",
-        "actions": "Hành động"
+        "actions": "Thao tác"
       },
       "placeholder": {
         "slug": "Nếu bạn không nhập slug sẽ tự generate từ tên"
@@ -1213,7 +1223,12 @@
       "actions": "Thao tác"
     },
     "search_label": "Tìm thành viên",
-    "search_ph": "Tên, vai trò hoặc kỹ năng"
+    "search_ph": "Tên, vai trò hoặc kỹ năng",
+    "list_title": "Danh sách thành viên",
+    "empty_title": "Chưa có thành viên nào",
+    "empty_hint": "Thêm thành viên đầu tiên để giới thiệu đội ngũ trên trang công khai.",
+    "no_results": "Không tìm thấy thành viên",
+    "no_results_hint": "Thử đổi từ khoá tìm kiếm."
   },
   "products": {
     "title": "Sản phẩm",
@@ -1266,7 +1281,7 @@
       "permalink": "Đường dẫn",
       "details": "Đặc điểm sản phẩm",
       "settings": "Thiết lập",
-      "search_preview": "Xem trước trên Google",
+      "search_preview": "Minh họa hiển thị tìm kiếm",
       "preview_title": "Tên sản phẩm",
       "preview_description": "Mô tả ngắn hiển thị trong kết quả tìm kiếm.",
       "social": "Chia sẻ mạng xã hội"

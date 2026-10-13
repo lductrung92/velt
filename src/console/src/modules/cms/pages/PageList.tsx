@@ -182,7 +182,7 @@ export default function PageList() {
           title={t("common.delete")}
           onClick={() => setToDelete(node)}
         >
-          <Trash2 className="size-4 text-destructive" />
+          <Trash2 className="size-4 text-destructive-ink" />
         </Button>
       )}
     </div>

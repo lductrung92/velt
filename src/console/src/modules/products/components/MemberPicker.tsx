@@ -60,8 +60,14 @@ function Row({
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: entry.member_id, disabled });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: entry.member_id, disabled });
 
   const initials = entry.full_name
     .split(/\s+/)
@@ -92,7 +98,11 @@ function Row({
       )}
       <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-medium text-muted-foreground">
         {entry.avatar_url ? (
-          <img src={entry.avatar_url} alt="" className="size-full object-cover" />
+          <img
+            src={entry.avatar_url}
+            alt=""
+            className="size-full object-cover"
+          />
         ) : (
           initials
         )}
@@ -118,7 +128,7 @@ function Row({
           aria-label={t("common.remove")}
           onClick={onRemove}
         >
-          <Trash2 className="size-4 text-destructive" />
+          <Trash2 className="size-4 text-destructive-ink" />
         </Button>
       )}
     </div>
@@ -144,11 +154,15 @@ export function MemberPicker({
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const chosen = new Set(value.map((v) => v.member_id));
-  const available = (members.data?.items ?? []).filter((m) => !chosen.has(m.id));
+  const available = (members.data?.items ?? []).filter(
+    (m) => !chosen.has(m.id),
+  );
 
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;

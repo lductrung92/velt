@@ -94,10 +94,30 @@ describe("MemberList", () => {
     );
     renderPage();
 
-    expect(await screen.findByText("An Nguyễn")).toBeInTheDocument();
-    expect(screen.getByText("Backend Engineer")).toBeInTheDocument();
-    expect(screen.getByText("Go")).toBeInTheDocument();
-    expect(screen.getByText("Bình Trần")).toBeInTheDocument();
+    const table = within(await screen.findByTestId("members-table"));
+    expect(table.getByText("An Nguyễn")).toBeInTheDocument();
+    expect(table.getByText("Backend Engineer")).toBeInTheDocument();
+    expect(table.getByText("Go")).toBeInTheDocument();
+    expect(table.getByText("Bình Trần")).toBeInTheDocument();
+  });
+
+  it("repeats every row as a card, so a narrow column keeps its actions", async () => {
+    // Below 960px of panel width the table is hidden and these cards are the
+    // only list; a row action that lives solely in the table is unreachable.
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/members`, () => HttpResponse.json(page([member()]))),
+    );
+    renderPage();
+
+    const cards = within(await screen.findByTestId("members-cards"));
+    expect(cards.getByText("An Nguyễn")).toBeInTheDocument();
+    expect(
+      cards.getByRole("button", { name: i18n.t("common.edit") }),
+    ).toBeInTheDocument();
+    expect(
+      cards.getByRole("button", { name: i18n.t("common.delete") }),
+    ).toBeInTheDocument();
   });
 
   it("labels a hidden member instead of dropping it from the list", async () => {
@@ -111,8 +131,9 @@ describe("MemberList", () => {
     );
     renderPage();
 
-    expect(await screen.findByText("An Nguyễn")).toBeInTheDocument();
-    expect(screen.getByText(i18n.t("members.hidden"))).toBeInTheDocument();
+    const table = within(await screen.findByTestId("members-table"));
+    expect(table.getByText("An Nguyễn")).toBeInTheDocument();
+    expect(table.getByText(i18n.t("members.hidden"))).toBeInTheDocument();
   });
 
   it("hides create and delete from a viewer without members.manage", async () => {
@@ -122,7 +143,7 @@ describe("MemberList", () => {
     );
     renderPage();
 
-    await screen.findByText("An Nguyễn");
+    await screen.findByTestId("members-table");
     expect(
       screen.queryByRole("button", { name: i18n.t("members.create") }),
     ).not.toBeInTheDocument();
@@ -138,27 +159,33 @@ describe("MemberList", () => {
     );
     renderPage();
 
-    await screen.findByText("An Nguyễn");
+    const table = within(await screen.findByTestId("members-table"));
     expect(
       screen.getByRole("button", { name: i18n.t("members.create") }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: i18n.t("common.delete") }),
+      table.getByRole("button", { name: i18n.t("common.delete") }),
     ).toBeInTheDocument();
   });
 
-  it("uses the standard empty row, keeping the header visible", async () => {
-    // docs/styles/console/table.md §2: one empty treatment across every list
-    // table, header included — not a page-level empty state.
+  it("offers a way in from an empty roster, not just a bare no-data row", async () => {
+    // An empty roster is the first thing a new install shows, so it has to say
+    // what the screen is for and hand over the create action.
     signIn(MANAGER);
     server.use(http.get(`${API}/members`, () => HttpResponse.json(page([]))));
     renderPage();
 
-    const table = await screen.findByTestId("members-table");
     expect(
-      within(table).getByText(i18n.t("common.empty_state.default_title")),
+      await screen.findByRole("heading", {
+        name: i18n.t("members.empty_title"),
+      }),
     ).toBeInTheDocument();
-    expect(within(table).getByText(i18n.t("members.col.name"))).toBeInTheDocument();
+    // Two create buttons: the panel heading and the empty state's own call to
+    // action. The second one is the point of this test.
+    expect(
+      screen.getAllByRole("button", { name: i18n.t("members.create") }),
+    ).toHaveLength(2);
+    expect(screen.queryByTestId("members-table")).not.toBeInTheDocument();
   });
 
   it("filters by the search term", async () => {
@@ -176,12 +203,10 @@ describe("MemberList", () => {
     renderPage();
 
     await screen.findAllByTestId("member-row");
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.filter") }));
     await userEvent.type(
-      screen.getByLabelText(i18n.t("members.search_label")),
+      screen.getByRole("searchbox", { name: i18n.t("members.search_label") }),
       "Thiết kế",
     );
-    await userEvent.click(screen.getByRole("button", { name: i18n.t("common.apply") }));
 
     const rows = screen.getAllByTestId("member-row");
     expect(rows).toHaveLength(1);
@@ -260,9 +285,9 @@ describe("MemberList", () => {
     );
     renderPage();
 
-    await screen.findByText("An Nguyễn");
+    const table = within(await screen.findByTestId("members-table"));
     await userEvent.click(
-      screen.getByRole("button", { name: i18n.t("common.delete") }),
+      table.getByRole("button", { name: i18n.t("common.delete") }),
     );
 
     expect(

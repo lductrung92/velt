@@ -41,7 +41,7 @@ export function ChipMultiSelect({
               "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               on
-                ? "border-primary/40 bg-primary/10 text-primary"
+                ? "border-primary/40 bg-primary/10 text-primary-ink"
                 : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
               disabled && "cursor-not-allowed opacity-60",
             )}

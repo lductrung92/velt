@@ -167,11 +167,11 @@ export default function RolePermissions() {
                     }}
                     className="group flex min-w-0 items-start gap-2 rounded-md border border-transparent p-2 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-pressed:border-primary/15 aria-pressed:bg-primary/5 sm:gap-3 sm:p-3"
                   >
-                    <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground group-aria-pressed:bg-primary/10 group-aria-pressed:text-primary">
+                    <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground group-aria-pressed:bg-primary/10 group-aria-pressed:text-primary-ink">
                       <ShieldCheck className="size-4" aria-hidden />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block break-words text-sm font-medium group-aria-pressed:text-primary">
+                      <span className="block break-words text-sm font-medium group-aria-pressed:text-primary-ink">
                         {role.name}
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">
@@ -181,7 +181,7 @@ export default function RolePermissions() {
                       </span>
                     </span>
                     <ChevronRight
-                      className="mt-1 hidden size-4 shrink-0 text-muted-foreground/50 group-aria-pressed:text-primary sm:block"
+                      className="mt-1 hidden size-4 shrink-0 text-muted-foreground/50 group-aria-pressed:text-primary-ink sm:block"
                       aria-hidden
                     />
                   </button>
@@ -200,7 +200,7 @@ export default function RolePermissions() {
           {selectedRole && (
             <div className="overflow-hidden rounded-lg border bg-background shadow-sm">
               <div className="flex flex-wrap items-start gap-4 border-b bg-primary/[0.025] p-5">
-                <span className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-primary/10 bg-primary/10 text-primary">
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-primary/10 bg-primary/10 text-primary-ink">
                   <ShieldCheck className="size-6" aria-hidden />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -407,7 +407,7 @@ function PermissionGroupCard({
   return (
     <section className="min-w-0 overflow-hidden rounded-lg border bg-background shadow-sm">
       <div className="flex items-center gap-3 border-b bg-muted/20 px-5 py-4">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-background text-primary">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-background text-primary-ink">
           <Icon className="size-4" aria-hidden />
         </span>
         <h3 className="min-w-0 flex-1 break-words text-sm font-medium">
@@ -443,7 +443,7 @@ function PermissionGroupCard({
           type="button"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
-          className="flex w-full items-center justify-center gap-2 border-t bg-muted/10 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          className="flex w-full items-center justify-center gap-2 border-t bg-muted/10 px-4 py-3 text-sm font-medium text-primary-ink transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
           {expanded ? (
             <>

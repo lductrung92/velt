@@ -37,3 +37,21 @@ if (!globalThis.ResizeObserver) {
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function () {};
 }
+
+// jsdom doesn't implement matchMedia. Components that pick a layout from the
+// viewport — the date range picker shows one month on a phone, two where there
+// is room — call it on first render. Report "no match", which is the narrow
+// branch: a test that passes in the cramped layout passes in the roomy one.
+if (!window.matchMedia) {
+  window.matchMedia = (query: string) =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) as MediaQueryList;
+}

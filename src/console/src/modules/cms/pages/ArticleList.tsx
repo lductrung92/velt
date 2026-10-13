@@ -239,10 +239,16 @@ export default function ArticleList() {
       minute: "2-digit",
     }).format(new Date(iso));
 
+  // Both lines ellipsize in the column, so each carries its full string as a
+  // title — otherwise the clipped tail is unreachable.
   const titleCell = (a: ArticleListItem) => (
     <div className="article-title">
-      <Link to={`/cms/articles/${a.id}`}>{a.title}</Link>
-      <span className="article-slug">{a.slug}</span>
+      <Link to={`/cms/articles/${a.id}`} title={a.title}>
+        {a.title}
+      </Link>
+      <span className="article-slug" title={a.slug}>
+        {a.slug}
+      </span>
     </div>
   );
   const taxonomy = (a: ArticleListItem) =>

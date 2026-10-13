@@ -15,7 +15,7 @@ const TONE: Record<StatusTone, string> = {
   warning:
     "border-amber-500/30 bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
   danger:
-    "border-destructive/30 bg-destructive/10 text-destructive dark:bg-destructive/20",
+    "border-destructive/30 bg-destructive/10 text-destructive-ink dark:bg-destructive/20",
 };
 
 export function StatusBadge({

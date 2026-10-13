@@ -62,7 +62,7 @@ export function FilterChips({
           variant="link"
           size="sm"
           onClick={onClearAll}
-          className="h-auto px-1 py-0 text-xs font-normal text-destructive hover:text-destructive/80"
+          className="h-auto px-1 py-0 text-xs font-normal text-destructive-ink hover:text-destructive-ink/80"
         >
           {t("common.clear_all")}
         </Button>

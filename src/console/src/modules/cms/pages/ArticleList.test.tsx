@@ -171,6 +171,26 @@ describe("ArticleList", () => {
     expect(await screen.findByText("EDITOR DETAIL")).toBeInTheDocument();
   });
 
+  it("title and slug carry the full string as a tooltip (both truncate)", async () => {
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/cms/articles`, () =>
+        HttpResponse.json(articlesResult()),
+      ),
+      ...taxonomyHandlers(),
+    );
+    renderPage();
+
+    const table = await screen.findByTestId("cms-articles-table");
+    expect(
+      within(table).getByRole("link", { name: "First post" }),
+    ).toHaveAttribute("title", "First post");
+    expect(within(table).getByText("first-post")).toHaveAttribute(
+      "title",
+      "first-post",
+    );
+  });
+
   it("sort: clicking the Title header refetches with a server-side sort param", async () => {
     signIn(MANAGER);
     const sorts: (string | null)[] = [];

@@ -35,6 +35,11 @@ const DropdownMenuItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4",
+      // 32px is a comfortable row for a mouse but misses the 44px touch floor.
+      // Only finger-driven screens pay for the extra height, so the console's
+      // deliberate desktop density is untouched. (Tailwind 3 has no built-in
+      // `pointer-coarse:` variant — that landed in v4 — hence the arbitrary one.)
+      "[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-3",
       destructive &&
         "text-destructive focus:bg-destructive/10 focus:text-destructive",
       className,

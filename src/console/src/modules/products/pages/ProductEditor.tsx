@@ -1004,7 +1004,7 @@ export default function ProductEditor() {
                 <span className="text-xs font-medium text-muted-foreground">
                   {"Zukatek"}
                 </span>
-                <p className="mt-1 break-words text-lg font-medium text-primary">
+                <p className="mt-1 break-words text-lg font-medium text-primary-ink">
                   {seo.title ||
                     form.watch("name") ||
                     t("products.editor.preview_title")}
@@ -1041,7 +1041,7 @@ export default function ProductEditor() {
               </div>
               <div className="border-t pt-5">
                 <h3 className="mb-4 flex items-center gap-2 text-sm font-medium">
-                  <Globe2 className="size-4 text-primary" aria-hidden />
+                  <Globe2 className="size-4 text-primary-ink" aria-hidden />
                   {t("products.editor.social")}
                 </h3>
                 {/* Fields only, no media column: a product's social image is

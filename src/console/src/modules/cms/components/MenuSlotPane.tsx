@@ -102,7 +102,7 @@ export function MenuSlotPane({
                         {t("common.edit")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
+                        className="text-destructive-ink focus:text-destructive-ink"
                         onClick={() => onDeleteSlot(slot)}
                       >
                         <Trash2 className="size-4" />

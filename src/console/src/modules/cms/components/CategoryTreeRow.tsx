@@ -104,7 +104,7 @@ export function CategoryTreeRow({
               title={t("common.delete")}
               onClick={() => onDelete(node.id)}
             >
-              <Trash2 className="size-4 text-destructive" />
+              <Trash2 className="size-4 text-destructive-ink" />
             </Button>
           </div>
         )}

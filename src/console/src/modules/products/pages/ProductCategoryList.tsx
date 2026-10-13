@@ -421,7 +421,7 @@ export default function ProductCategoryList() {
                 <div className="pcat-mobile-card" key={c.id}>
                   <div className="pcat-mobile-heading">
                     <div className="pcat-name">
-                      <strong>{c.name}</strong>
+                      <strong title={c.name}>{c.name}</strong>
                     </div>
                     {canManage && (
                       <div className="pcat-row-actions">
@@ -443,7 +443,7 @@ export default function ProductCategoryList() {
                           aria-label={t("common.delete")}
                           onClick={() => setDeleteTarget(c)}
                         >
-                          <Trash2 className="size-4 text-destructive" />
+                          <Trash2 className="size-4 text-destructive-ink" />
                         </Button>
                       </div>
                     )}
@@ -458,7 +458,9 @@ export default function ProductCategoryList() {
                         count: c.product_count,
                       })}
                     </span>
-                    <span className="pcat-slug">{c.slug}</span>
+                    <span className="pcat-slug" title={c.slug}>
+                      {c.slug}
+                    </span>
                   </div>
                 </div>
               ))}

@@ -23,6 +23,22 @@ function format(date: Date): string {
   return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
 }
 
+/** 2 months side by side where there is room for them, 1 on a phone. */
+function useMonthCount(): 1 | 2 {
+  const query = "(min-width: 640px)";
+  const [wide, setWide] = React.useState(
+    () => typeof window !== "undefined" && window.matchMedia(query).matches,
+  );
+  React.useEffect(() => {
+    const mq = window.matchMedia(query);
+    const sync = () => setWide(mq.matches);
+    mq.addEventListener("change", sync);
+    sync();
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return wide ? 2 : 1;
+}
+
 /**
  * One control for a "from → to" filter. Two separate date boxes with crossed
  * min/max guards describe a range without ever drawing one; here the calendar
@@ -49,6 +65,7 @@ export function DateRangeField({
 >) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = React.useState(false);
+  const months = useMonthCount();
   const selected: DateRange | undefined = React.useMemo(() => {
     const start = parse(from);
     const end = parse(to);
@@ -100,11 +117,25 @@ export function DateRangeField({
           </button>
         )}
       </div>
-      <PopoverContent className="w-auto p-0" align="start">
+      {/*
+        collisionPadding keeps the popover off the screen edges, and the height
+        cap plus scroll is what saves it when it still cannot fit: below `sm`
+        the two months stack, which made this 630px tall in an 844px viewport.
+        Radix flipped it above the trigger and 224px of it — the month arrows
+        and the first three weeks — ended up off the top of the screen with no
+        way to scroll to them.
+      */}
+      <PopoverContent
+        className="max-h-[calc(100dvh-5rem)] w-auto overflow-y-auto p-0"
+        align="start"
+        collisionPadding={16}
+      >
         <Calendar
           mode="range"
           autoFocus
-          numberOfMonths={2}
+          // One month on a phone. Two stacked months is taller than the screen,
+          // and a range that spans a month boundary is not what a phone is for.
+          numberOfMonths={months}
           selected={selected}
           defaultMonth={selected?.from}
           // Deliberately no auto-close. The library completes the range on

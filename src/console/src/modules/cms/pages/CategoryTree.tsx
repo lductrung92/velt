@@ -82,8 +82,16 @@ const SORTABLE = new Set(["name", "slug"]);
 const OVERVIEW = [
   { key: "total", Icon: FolderTree, match: null },
   { key: "roots", Icon: FolderOpen, match: (n: FlatCategory) => n.depth === 0 },
-  { key: "used", Icon: FileText, match: (n: FlatCategory) => n.articleCount > 0 },
-  { key: "unused", Icon: Inbox, match: (n: FlatCategory) => n.articleCount === 0 },
+  {
+    key: "used",
+    Icon: FileText,
+    match: (n: FlatCategory) => n.articleCount > 0,
+  },
+  {
+    key: "unused",
+    Icon: Inbox,
+    match: (n: FlatCategory) => n.articleCount === 0,
+  },
 ] as const;
 
 type Scope = (typeof OVERVIEW)[number]["key"];
@@ -164,7 +172,9 @@ export default function CategoryTree() {
       : null;
 
   function cycleSort(col: string) {
-    setSort((cur) => (cur === col ? `-${col}` : cur === `-${col}` ? null : col));
+    setSort((cur) =>
+      cur === col ? `-${col}` : cur === `-${col}` ? null : col,
+    );
   }
   function sortIcon(col: string) {
     if (sort === col) return ArrowUp;
@@ -411,10 +421,7 @@ export default function CategoryTree() {
               )}
             </p>
             {!flatMode && canManage && (
-              <Button
-                size="sm"
-                onClick={() => navigate("/cms/categories/new")}
-              >
+              <Button size="sm" onClick={() => navigate("/cms/categories/new")}>
                 <Plus className="size-4" />
                 {t("common.add_new")}
               </Button>
@@ -523,7 +530,7 @@ export default function CategoryTree() {
                             setDeleteTarget(findCategory(tree, node.id) ?? null)
                           }
                         >
-                          <Trash2 className="size-4 text-destructive" />
+                          <Trash2 className="size-4 text-destructive-ink" />
                         </Button>
                       </div>
                     )}

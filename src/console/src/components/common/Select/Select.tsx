@@ -30,7 +30,7 @@ export interface SelectProps<Option extends SelectOption = SelectOption> {
   invalid?: boolean;
   isDisabled?: boolean;
   isLoading?: boolean;
-  /** Show the hover ✕ to clear the selection. Default true. */
+  /** Show the ✕ that clears the selection. Default true. */
   isClearable?: boolean;
   /** Show the search input inside the menu. Default true. */
   isSearchable?: boolean;
@@ -128,7 +128,7 @@ export function Select<Option extends SelectOption = SelectOption>({
             aria-invalid={invalid || undefined}
             disabled={isDisabled}
             className={cn(
-              "group flex h-9 w-full items-center rounded-md border bg-background px-3 py-1 text-left text-sm ring-offset-background transition-colors",
+              "flex h-9 w-full items-center rounded-md border bg-background px-3 py-1 text-left text-sm ring-offset-background transition-colors",
               "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
               "disabled:cursor-not-allowed disabled:opacity-50",
               showClear ? "pr-14" : "pr-9",
@@ -152,7 +152,14 @@ export function Select<Option extends SelectOption = SelectOption>({
             <button
               type="button"
               aria-label={t("common.clear")}
-              className="pointer-events-auto rounded-sm p-0.5 text-destructive opacity-0 transition-opacity hover:text-destructive/80 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
+              // Always visible, like DateField's clear. It used to be revealed
+              // by `group-hover`, but `group` sits on the trigger and this
+              // button is the trigger's SIBLING, so the variant could never
+              // match: an invisible yet clickable target inside the trigger's
+              // right edge. On touch there is no hover at all, so a tap meant
+              // for the menu silently wiped the selection. Full trigger height
+              // and the width the `pr-14` reserve already allows for.
+              className="pointer-events-auto grid h-full w-7 place-items-center rounded-sm text-muted-foreground transition-colors hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => select(null)}
             >
               <X className="size-4" />

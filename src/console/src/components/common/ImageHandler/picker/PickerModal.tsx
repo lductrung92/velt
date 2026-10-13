@@ -361,7 +361,7 @@ export function PickerModal(props: PickerModalProps) {
         {applyError && (
           <div
             role="alert"
-            className="mx-6 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            className="mx-6 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive-ink"
           >
             {applyError}
           </div>

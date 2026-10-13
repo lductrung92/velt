@@ -67,8 +67,14 @@ function Card({
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: item.id, disabled });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id, disabled });
   const [caption, setCaption] = useState(item.caption ?? "");
   useEffect(() => setCaption(item.caption ?? ""), [item.caption]);
 
@@ -123,7 +129,7 @@ function Card({
             aria-label={t("common.remove")}
             onClick={onRemove}
           >
-            <Trash2 className="size-4 text-destructive" />
+            <Trash2 className="size-4 text-destructive-ink" />
           </Button>
         )}
       </div>
@@ -172,7 +178,9 @@ export function GalleryPane({
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const fail = (err: unknown) => toast.error(parseApiError(err, t).message);
@@ -190,7 +198,10 @@ export function GalleryPane({
   };
 
   const appendDraft = (item: Omit<GalleryDraftItem, "id">) =>
-    onDraftChange?.([...draft, { ...item, id: `draft-${crypto.randomUUID()}` }]);
+    onDraftChange?.([
+      ...draft,
+      { ...item, id: `draft-${crypto.randomUUID()}` },
+    ]);
 
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
@@ -227,7 +238,10 @@ export function GalleryPane({
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext items={view.map((m) => m.id)} strategy={rectSortingStrategy}>
+          <SortableContext
+            items={view.map((m) => m.id)}
+            strategy={rectSortingStrategy}
+          >
             <ul
               className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
               data-testid="gallery-grid"
@@ -340,7 +354,11 @@ export function GalleryPane({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setVideoOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setVideoOpen(false)}
+            >
               {t("common.cancel")}
             </Button>
             <Button

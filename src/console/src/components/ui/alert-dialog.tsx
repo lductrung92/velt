@@ -18,7 +18,10 @@ const AlertDialogOverlay = React.forwardRef<
   <AlertDialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      // One scrim for both modal kinds: /50 is Dialog's, and the pair used to
+      // read as two different surfaces. /80 was also heavy enough to hide the
+      // row the confirm refers to, which is the context the reader needs.
+      "fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className,
     )}
     {...props}
@@ -29,19 +32,58 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <AlertDialogPortal>
-    <AlertDialogOverlay />
-    <AlertDialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-5 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-        className,
-      )}
-      {...props}
-    />
-  </AlertDialogPortal>
-));
+>(({ className, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
+  // The control the dialog was opened from. Radix remembers it too, but only
+  // to focus it back blindly; see onCloseAutoFocus.
+  const openerRef = React.useRef<HTMLElement | null>(null);
+  return (
+    <AlertDialogPortal>
+      <AlertDialogOverlay />
+      <AlertDialogPrimitive.Content
+        ref={ref}
+        // Radix aims the opening focus at <AlertDialogCancel>, and our confirms
+        // deliberately use a plain Button there (Radix's closes on click, and
+        // the prompt has to survive an API error). That ref is therefore null,
+        // and Radix's own handler — which suppresses the usual focus-first —
+        // then focuses nothing: the dialog opened with focus left on <body>,
+        // behind the overlay. Seed it on the first control instead.
+        onOpenAutoFocus={(event) => {
+          onOpenAutoFocus?.(event);
+          if (event.defaultPrevented) return;
+          openerRef.current = document.activeElement as HTMLElement | null;
+          const content = event.currentTarget as HTMLElement;
+          const first = content.querySelector<HTMLElement>(
+            'button:not([disabled]),[href],input:not([type="hidden"]),select,textarea,[tabindex]:not([tabindex="-1"])',
+          );
+          (first ?? content).focus({ preventScroll: true });
+        }}
+        // Nearly every confirm here is opened from a row's "⋯" menu, so the
+        // control Radix would restore focus to is a menu item that has been
+        // unmounted by the time the dialog closes — focus falls through to
+        // <body>. The menu names its own trigger, which is the row control the
+        // reader actually came from, so aim there instead.
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          if (event.defaultPrevented) return;
+          const opener = openerRef.current;
+          if (!opener || opener.isConnected) return;
+          const id = opener
+            .closest('[role="menu"]')
+            ?.getAttribute("aria-labelledby");
+          const trigger = id ? document.getElementById(id) : null;
+          if (!trigger) return;
+          event.preventDefault();
+          trigger.focus();
+        }}
+        className={cn(
+          "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-5 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+          className,
+        )}
+        {...props}
+      />
+    </AlertDialogPortal>
+  );
+});
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName;
 
 function AlertDialogHeader({
@@ -80,10 +122,7 @@ const AlertDialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Title
     ref={ref}
-    className={cn(
-      "text-lg font-semibold leading-none tracking-tight",
-      className,
-    )}
+    className={cn("text-lg font-medium leading-none tracking-tight", className)}
     {...props}
   />
 ));

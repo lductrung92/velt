@@ -29,7 +29,7 @@ export function MenuEmptyState({ onCreate }: { onCreate?: () => void }) {
               <div className="h-1.5 w-24 rounded bg-muted/70" />
             </div>
           </div>
-          <div className="absolute bottom-0 right-2 flex size-16 items-center justify-center rounded-xl border border-primary/20 bg-background text-primary shadow-sm">
+          <div className="absolute bottom-0 right-2 flex size-16 items-center justify-center rounded-xl border border-primary/20 bg-background text-primary-ink shadow-sm">
             <ListTree className="size-8" strokeWidth={1.5} />
           </div>
         </div>

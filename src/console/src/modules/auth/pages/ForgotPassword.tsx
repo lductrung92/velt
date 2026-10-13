@@ -99,7 +99,7 @@ export default function ForgotPassword() {
           <div className="text-center">
             <Link
               to="/login"
-              className="text-sm text-primary underline-offset-4 hover:underline"
+              className="text-sm text-primary-ink underline-offset-4 hover:underline"
             >
               {t("common.back_to_login")}
             </Link>
@@ -132,7 +132,7 @@ export default function ForgotPassword() {
             <div className="text-center">
               <Link
                 to="/login"
-                className="text-sm text-primary underline-offset-4 hover:underline"
+                className="text-sm text-primary-ink underline-offset-4 hover:underline"
               >
                 {t("common.back_to_login")}
               </Link>

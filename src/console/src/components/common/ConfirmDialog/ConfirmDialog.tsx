@@ -67,8 +67,8 @@ export function ConfirmDialog({
               // measured 12px gap is only 4px of actual air under the badge.
               "mb-3 grid size-12 place-items-center rounded-full ring-8",
               destructive
-                ? "bg-destructive/10 text-destructive ring-destructive/5"
-                : "bg-primary/10 text-primary ring-primary/5",
+                ? "bg-destructive/10 text-destructive-ink ring-destructive/5"
+                : "bg-primary/10 text-primary-ink ring-primary/5",
             )}
             aria-hidden
           >

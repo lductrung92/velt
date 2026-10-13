@@ -19,7 +19,11 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
     return (
       <label
         htmlFor={inputId}
-        className="flex w-fit cursor-pointer items-center gap-2"
+        // The whole label is the hit area, and it is only as tall as the 16px
+        // box. Finger-driven screens get the 44px floor; a mouse keeps the
+        // console's tight form rhythm. (No `pointer-coarse:` variant in
+        // Tailwind 3, so the media query is written out.)
+        className="flex w-fit cursor-pointer items-center gap-2 [@media(pointer:coarse)]:min-h-11"
       >
         <span className="relative inline-flex size-4 items-center justify-center">
           <input
@@ -35,7 +39,10 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
           />
           <Check className="pointer-events-none absolute hidden size-3 text-primary-foreground peer-checked:block" />
         </span>
-        {label && <span className="text-sm leading-none">{label}</span>}
+        {/* font-medium: every other form label in the same card is 14px/500. */}
+        {label && (
+          <span className="text-sm font-medium leading-none">{label}</span>
+        )}
       </label>
     );
   },

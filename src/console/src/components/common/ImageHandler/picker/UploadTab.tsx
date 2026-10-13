@@ -188,7 +188,7 @@ export function UploadTab({
       {error && (
         <div
           role="alert"
-          className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive-ink"
         >
           {error}
         </div>
