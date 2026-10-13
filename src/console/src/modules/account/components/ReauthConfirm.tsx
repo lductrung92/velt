@@ -50,7 +50,7 @@ export function ReauthConfirm({
   return (
     <div className="space-y-4 rounded-md border p-4">
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold">{title}</h3>
+        <h3 className="text-sm font-medium">{title}</h3>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       {error && <Alert variant="danger" message={error} />}

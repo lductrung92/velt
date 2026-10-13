@@ -142,7 +142,7 @@ export default function RolePermissions() {
           className="min-w-0 rounded-lg border bg-background p-3 shadow-sm"
         >
           <div className="flex items-center justify-between gap-2 px-2 pb-3 pt-1">
-            <h2 className="text-base font-semibold">
+            <h2 className="text-base font-medium">
               {t("admin.rbac.roles_label")}
             </h2>
             {!roles.isLoading && !roles.isError && (
@@ -171,7 +171,7 @@ export default function RolePermissions() {
                       <ShieldCheck className="size-4" aria-hidden />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block break-words text-sm font-semibold group-aria-pressed:text-primary">
+                      <span className="block break-words text-sm font-medium group-aria-pressed:text-primary">
                         {role.name}
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">
@@ -205,7 +205,7 @@ export default function RolePermissions() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="break-words text-xl font-semibold">
+                    <h2 className="break-words text-xl font-medium">
                       {selectedRole.name}
                     </h2>
                     <span className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2 py-1 text-xs text-muted-foreground">
@@ -255,7 +255,7 @@ export default function RolePermissions() {
                         {t(`admin.rbac.summary_${key}`)}
                       </span>
                     </dt>
-                    <dd className="mt-auto pt-2 text-2xl font-semibold tabular-nums">
+                    <dd className="mt-auto pt-2 text-2xl font-medium tabular-nums">
                       {value === undefined ? (
                         <Skeleton className="h-8 w-10" />
                       ) : (
@@ -299,7 +299,7 @@ export default function RolePermissions() {
             <>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-semibold">
+                  <h2 className="text-base font-medium">
                     {t("admin.rbac.permissions_label")}
                   </h2>
                   <p
@@ -410,7 +410,7 @@ function PermissionGroupCard({
         <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-background text-primary">
           <Icon className="size-4" aria-hidden />
         </span>
-        <h3 className="min-w-0 flex-1 break-words text-sm font-semibold">
+        <h3 className="min-w-0 flex-1 break-words text-sm font-medium">
           {t(`admin.rbac.resources.${resource}`, { defaultValue: resource })}
         </h3>
         <span className="shrink-0 rounded-md bg-muted px-2 py-1 text-xs tabular-nums text-muted-foreground">

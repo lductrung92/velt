@@ -100,7 +100,7 @@ function CalendarPanel({ today }: { today: string }) {
       aria-label={t("dashboard.daily.calendar_title")}
     >
       <div className="flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-base font-semibold">
+        <h3 className="flex items-center gap-2 text-base font-medium">
           <CalendarDays className="size-4 text-primary" aria-hidden />
           {t("dashboard.daily.calendar_title")}
         </h3>
@@ -116,11 +116,11 @@ function CalendarPanel({ today }: { today: string }) {
         </Button>
       </div>
       <div className="dashboard-calendar-summary mt-4 flex items-center gap-4 rounded-lg bg-primary/5 p-4">
-        <span className="text-4xl font-semibold tabular-nums text-primary">
+        <span className="text-4xl font-medium tabular-nums text-primary">
           {Number(dateKey.slice(-2))}
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-semibold capitalize">
+          <p className="text-sm font-medium capitalize">
             {format(dateKey, { weekday: "long" })}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -150,7 +150,7 @@ function CalendarPanel({ today }: { today: string }) {
         >
           <ChevronLeft aria-hidden />
         </Button>
-        <p aria-live="polite" className="text-xs font-semibold capitalize">
+        <p aria-live="polite" className="text-xs font-medium capitalize">
           {format(`${monthKey}-01`, { month: "long", year: "numeric" })}
         </p>
         <Button
@@ -291,7 +291,7 @@ function WeatherPanel({ today }: { today: string }) {
       aria-label={t("dashboard.daily.weather_title")}
     >
       <div className="dashboard-weather-heading flex flex-wrap items-center justify-between gap-3">
-        <h3 className="flex items-center gap-2 text-base font-semibold">
+        <h3 className="flex items-center gap-2 text-base font-medium">
           <CloudSun className="size-4 text-primary" aria-hidden />
           {t("dashboard.daily.weather_title")}
         </h3>
@@ -416,7 +416,7 @@ function WeatherPanel({ today }: { today: string }) {
                 className="size-14 shrink-0"
               />
               <div>
-                <p className="text-4xl font-semibold tabular-nums tracking-tight">
+                <p className="text-4xl font-medium tabular-nums tracking-tight">
                   {number(weather.current.temperature_2m, "°")}
                   <span className="ml-1 text-xl font-normal text-muted-foreground">
                     C
@@ -472,7 +472,7 @@ function WeatherPanel({ today }: { today: string }) {
               </div>
             </div>
           </div>
-          <h4 className="mb-3 mt-5 text-sm font-semibold">
+          <h4 className="mb-3 mt-5 text-sm font-medium">
             {t("dashboard.daily.next_seven")}
           </h4>
           <div className="dashboard-weather-forecast">
@@ -498,7 +498,7 @@ function WeatherPanel({ today }: { today: string }) {
                   </div>
                   <span className="sr-only">{condition}</span>
                   <p className="whitespace-nowrap text-sm tabular-nums">
-                    <strong className="font-semibold">
+                    <strong className="font-medium">
                       {number(weather.daily.temperature_2m_max[i], "°")}
                     </strong>{" "}
                     <span className="text-muted-foreground">
@@ -563,7 +563,7 @@ export function DailyOverview() {
   return (
     <section className="space-y-3" aria-labelledby="dashboard-daily-title">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="dashboard-daily-title" className="text-base font-semibold">
+        <h2 id="dashboard-daily-title" className="text-base font-medium">
           {t("dashboard.daily.title")}
         </h2>
         <span className="text-xs text-muted-foreground">

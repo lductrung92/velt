@@ -43,7 +43,7 @@ export function IllustrativeTab({ path, onSelect, selectedUrl }: Props) {
     <div className="max-h-[480px] space-y-5 overflow-y-auto pr-1">
       {Object.entries(data).map(([key, category]) => (
         <section key={key} className="space-y-2">
-          <h6 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h6 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {category.title[lang]}
           </h6>
           {category.items.length === 0 ? (

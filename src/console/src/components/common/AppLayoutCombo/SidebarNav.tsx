@@ -37,7 +37,7 @@ export function SidebarNav({
       {sections.map((section, i) => (
         <div key={section.key} className={cn(i > 0 && "mt-4")}>
           {showLabels ? (
-            <p className="p-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+            <p className="p-3 text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
               {t(section.labelKey)}
             </p>
           ) : (
@@ -108,7 +108,7 @@ function NavLeaf({ item, showLabels, onNavClick }: NavItemRowProps) {
           <>
             <span className="flex-1 truncate text-left">{label}</span>
             {item.badge && (
-              <span className="shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[11px] font-semibold leading-none text-primary-foreground">
+              <span className="shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-caption font-medium leading-none text-primary-foreground">
                 {item.badge}
               </span>
             )}
@@ -250,7 +250,7 @@ function NavBranch({
             style={{ top: flyoutCoords.top, left: flyoutCoords.left }}
             className="fixed z-50 min-w-[12rem] rounded-md border bg-popover p-1 shadow-md"
           >
-            <li className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <li className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {label}
             </li>
             {children.map((child) => {

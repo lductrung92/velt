@@ -43,7 +43,7 @@ const CardTitle = React.forwardRef<
     ref={ref}
     className={cn(
       // Card title = 1rem (text-base) per the console type scale.
-      "font-semibold tracking-tight text-base",
+      "font-medium tracking-tight text-base",
       className,
     )}
     {...props}

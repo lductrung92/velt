@@ -111,7 +111,7 @@
   min-height: 2rem;
   margin-top: 0.375rem;
   font-size: var(--font-size-3xl);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -1px;
   font-variant-numeric: tabular-nums;
 }
@@ -149,7 +149,7 @@
      1rem (see the CardTitle primitive, which every editor screen uses). At
      text-sm it was the same size as the rows underneath it. */
   font-size: var(--font-size-base);
-  font-weight: 600;
+  font-weight: 500;
 }
 .list-panel-heading p {
   margin-top: 4px;
@@ -318,7 +318,7 @@
 }
 .list-empty h3 {
   font-size: var(--font-size-base);
-  font-weight: 600;
+  font-weight: 500;
   margin-top: 16px;
 }
 .list-empty > p {

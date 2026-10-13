@@ -35,7 +35,7 @@ export function MenuEmptyState({ onCreate }: { onCreate?: () => void }) {
         </div>
         <h2
           id="menu-empty-title"
-          className="text-xl font-semibold tracking-tight"
+          className="text-xl font-medium tracking-tight"
         >
           {t("cms.menus.empty_title")}
         </h2>

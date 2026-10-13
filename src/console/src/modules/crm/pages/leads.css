@@ -52,7 +52,7 @@
   background: hsl(var(--primary) / 0.075);
   border: 1px solid hsl(var(--primary) / 0.1);
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-weight: 500;
 }
 .lead-avatar[data-status="qualified"] {
   color: #8952d4;

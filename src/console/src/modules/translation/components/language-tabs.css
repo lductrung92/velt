@@ -89,7 +89,7 @@
   padding: 0.0625rem 0.375rem;
   border-radius: 999px;
   font-size: var(--font-size-caption);
-  font-weight: 600;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: hsl(var(--muted-foreground));
   background: hsl(var(--muted));
@@ -116,7 +116,7 @@
 
 .tr-caption {
   font-size: var(--font-size-caption);
-  font-weight: 600;
+  font-weight: 500;
   color: hsl(var(--muted-foreground));
 }
 

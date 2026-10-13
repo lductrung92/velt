@@ -891,7 +891,7 @@ export default function ArticleEditor() {
                 />
               </div>
               <div className="border-t pt-5">
-                <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold">
+                <h3 className="mb-4 flex items-center gap-2 text-sm font-medium">
                   <Globe2 className="size-4 text-primary" aria-hidden />
                   {t("cms.articles.editor.social")}
                 </h3>
