@@ -4,6 +4,7 @@ import {
   FileText,
   FolderTree,
   Headset,
+  History,
   LayoutDashboard,
   ListTree,
   MessagesSquare,
@@ -180,6 +181,12 @@ export const NAV_SECTIONS: NavSection[] = [
             labelKey: "nav.sessions",
             icon: MonitorSmartphone,
             permission: "sessions.read",
+          },
+          {
+            path: "/admin/activity",
+            labelKey: "nav.activity",
+            icon: History,
+            permission: "activity.read",
           },
           {
             path: "/admin/ai",

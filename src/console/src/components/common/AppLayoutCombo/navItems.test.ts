@@ -24,6 +24,7 @@ describe("visibleNavSections", () => {
       "/admin/users",
       "/admin/roles",
       "/admin/sessions",
+      "/admin/activity",
       "/admin/ai",
     ]);
   });
@@ -47,6 +48,13 @@ describe("visibleNavSections", () => {
       .find((s) => s.key === "system")
       ?.items.find((i) => i.key === "admin");
     expect(admin?.children?.map((c) => c.path)).toEqual(["/admin/users"]);
+
+    // The activity log is its own permission: holding users.read is not a
+    // licence to read what everybody else did.
+    const auditor = sec(["activity.read"])
+      .find((s) => s.key === "system")
+      ?.items.find((i) => i.key === "admin");
+    expect(auditor?.children?.map((c) => c.path)).toEqual(["/admin/activity"]);
   });
 
   it("keeps the dashboard when neither overview branch has a visible child", () => {
