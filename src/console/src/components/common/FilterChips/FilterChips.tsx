@@ -53,13 +53,16 @@ export function FilterChips({
           </button>
         </span>
       ))}
+      {/* Quieter than the chips it sits beside, not louder. This is the way out
+          of a filter, not the filter itself: at 14px semibold primary it read as
+          the most important thing in a row whose actual content is 12px grey. */}
       {onClearAll && (
         <Button
           type="button"
           variant="link"
           size="sm"
           onClick={onClearAll}
-          className="h-auto px-1 py-0"
+          className="h-auto px-1 py-0 text-xs font-normal text-muted-foreground hover:text-foreground"
         >
           {t("common.clear_all")}
         </Button>
