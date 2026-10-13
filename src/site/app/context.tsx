@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
-import type { Member, Product, SiteContent } from "./types";
+import type { Member, Product, PublicSection, SiteContent } from "./types";
+import type { BlogState } from "./lib/blog";
 
 export interface SiteContextValue {
   data: SiteContent;
@@ -7,6 +8,9 @@ export interface SiteContextValue {
   referrer?: Member;
   products: Product[];
   isExample: boolean;
+  blog: BlogState;
+  /** Sections the console published for this page; empty = built-in layout. */
+  sections?: PublicSection[];
   href: (path: string) => string;
 }
 export const SiteContext = createContext<SiteContextValue | null>(null);

@@ -1,6 +1,6 @@
 // Defaults for the home sections. Every value here is the copy the component
 // used to hard-code, so a section with no config renders exactly as before.
-import type { Member, Product } from "../types";
+import type { Member, Product, PublicSection } from "../types";
 
 export interface AudienceItem {
   key: string;
@@ -230,3 +230,20 @@ export const sectionList = <T extends Member | Product>(
   Array.isArray(data) && data.every((item) => item && typeof item === "object")
     ? (data as T[])
     : undefined;
+
+/**
+ * The home page as it shipped before the builder existed: eight sections, this
+ * order, no config — every component falls back to its own copy. This is the
+ * page a visitor sees until somebody publishes a landing for it, and it is the
+ * baseline the pixel comparison is run against.
+ */
+export const DEFAULT_HOME_SECTIONS: PublicSection[] = [
+  "hero",
+  "audience_picker",
+  "product_grid",
+  "team",
+  "buying_steps",
+  "featured_articles",
+  "faq",
+  "contact_form",
+].map((type, i) => ({ type, sort_order: i, config: null, data: null }));

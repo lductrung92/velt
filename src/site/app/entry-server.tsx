@@ -1,14 +1,16 @@
 import { renderToString } from "react-dom/server";
 import { App, resolveRoute } from "./App";
-import type { AppProps, SiteContent } from "./types";
+import type { AppProps, PublicSection, SiteContent } from "./types";
 import { emptyBlog, type BlogState } from "./lib/blog";
 import { loadBlog, articleRedirect } from "./lib/blog.server";
 import { loadSiteContent } from "./lib/site.server";
+import { loadHomeSections } from "./lib/landing.server";
 
 export function render(
   path: string,
   blog: BlogState = emptyBlog(),
   data?: SiteContent,
+  sections?: PublicSection[],
 ) {
   const url = new URL(path, "http://site.local"),
     route = resolveRoute(url, data, blog);
@@ -17,6 +19,7 @@ export function render(
     year: new Date().getUTCFullYear(),
     blog,
     data,
+    sections,
   };
   const title = route.home
     ? "ZUKATEK — Đội ngũ phát triển & sản phẩm số"
@@ -71,12 +74,16 @@ export async function renderRequest(path: string) {
     url.pathname === "/blog" ||
     url.pathname.startsWith("/blog/");
   // Content and blog are independent reads; fetch them together.
-  const [blog, site] = await Promise.all([
+  // The home page may be driven by a published landing; other routes never are,
+  // so they do not pay for the lookup.
+  const isHome = url.pathname === "/" || url.pathname === "/index.html";
+  const [blog, site, sections] = await Promise.all([
     needsBlog ? loadBlog(path) : Promise.resolve(emptyBlog()),
     loadSiteContent(),
+    isHome ? loadHomeSections() : Promise.resolve([]),
   ]);
   return {
-    ...render(path, blog, site.content),
+    ...render(path, blog, site.content, sections),
     redirect: url.pathname.startsWith("/blog/")
       ? articleRedirect(path, blog)
       : undefined,

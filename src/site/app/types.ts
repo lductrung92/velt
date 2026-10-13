@@ -48,6 +48,8 @@ export interface AppProps {
   blog?: BlogState;
   /** Content the server loaded, serialised so hydration sees the same page. */
   data?: SiteContent;
+  /** Sections published for this page, if the console has a landing for it. */
+  sections?: PublicSection[];
 }
 /** One section of a landing page, as the backend's shared.PublicSection sends
  *  it. config is console input, so it may be missing, partial or malformed. */

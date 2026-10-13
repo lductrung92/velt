@@ -10,8 +10,15 @@ import { Chat } from "./components/Chat";
 import { Home } from "./pages/Home";
 import { Catalog } from "./pages/Catalog";
 import { ProductDetail, NotFound } from "./pages/ProductDetail";
+import { Blog } from "./pages/Blog";
+import { BlogArticle } from "./pages/BlogArticle";
+import { emptyBlog, type BlogState } from "./lib/blog";
 
-export function resolveRoute(url: URL, data: SiteContent = content) {
+export function resolveRoute(
+  url: URL,
+  data: SiteContent = content,
+  blog: BlogState = emptyBlog(),
+) {
   const { products } = getCatalog(data);
   const home = url.pathname === "/" || url.pathname === "/index.html";
   const catalog = ["/products", "/products/", "/products.html"].includes(
@@ -29,17 +36,32 @@ export function resolveRoute(url: URL, data: SiteContent = content) {
     url.pathname === "/product.html" || url.pathname.startsWith("/products/");
   const product =
     detail && !catalog ? products.find((item) => item.id === id) : undefined;
+  const blogList = /^\/blog\/?$/.test(url.pathname);
+  const blogDetail = !blogList && url.pathname.startsWith("/blog/");
   return {
     home,
     catalog,
     product,
-    status: home || catalog || product ? 200 : 404,
+    blogList,
+    blogDetail,
+    status:
+      blogList || blogDetail
+        ? blog.status === "unavailable"
+          ? 503
+          : blogDetail && !blog.article
+            ? 404
+            : 200
+        : home || catalog || product
+          ? 200
+          : 404,
   };
 }
 export function App({
   url: path,
   year,
   data = content,
+  blog,
+  sections,
 }: AppProps & { data?: SiteContent }) {
   const url = useMemo(() => new URL(path, "http://site.local"), [path]);
   const context = useMemo(() => {
@@ -53,10 +75,12 @@ export function App({
       referrer,
       products,
       isExample,
+      blog: blog || emptyBlog(),
+      sections,
       href: (path: string) => withReferral(path, referrer),
     };
-  }, [data, url]);
-  const route = resolveRoute(url, data);
+  }, [data, url, blog, sections]);
+  const route = resolveRoute(url, data, blog);
   return (
     <SiteContext value={context}>
       <a className="skip-link" href="#main">
@@ -66,7 +90,11 @@ export function App({
       <Header />
       <main
         id="main"
-        className={!route.home && !route.catalog ? "product-page" : undefined}
+        className={
+          !route.home && !route.catalog && !route.blogList && !route.blogDetail
+            ? "product-page"
+            : undefined
+        }
       >
         {context.referrer && (
           <div className="referral-banner">
@@ -88,6 +116,10 @@ export function App({
           <Home />
         ) : route.catalog ? (
           <Catalog />
+        ) : route.blogList ? (
+          <Blog />
+        ) : route.blogDetail ? (
+          <BlogArticle />
         ) : route.product ? (
           <ProductDetail product={route.product} />
         ) : (
