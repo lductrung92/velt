@@ -99,3 +99,33 @@ tham-khao/
 # Local dev run logs (scripts/dev.ps1 output redirected here)
 dev-start.log
 dev-start.error.log
+
+# ── Thêm 2026-10-13 ─────────────────────────────────────
+# Lưu ý: các luật "backend/…", "console/…" phía trên được viết cho bố cục cũ
+# (backend/ và console/ ở gốc). Repo hiện là src/backend, src/console, src/site
+# nên một luật như "backend/storage/" KHÔNG khớp gì cả — nó neo vào gốc repo vì
+# có dấu "/" ở giữa. Giữ nguyên chúng cho an toàn; các luật dưới đây mới là luật
+# đang có tác dụng.
+
+# Ảnh/tệp người dùng tải lên qua driver lưu trữ cục bộ. Đây là nội dung thật của
+# một lần chạy, không phải mã nguồn — mỗi máy một khác, và nó lớn dần mãi.
+src/backend/storage/
+
+# air hot-reload dựng nhị phân vào đây (xem src/backend/.air.toml: tmp_dir="tmp")
+src/backend/tmp/
+
+# Nhị phân Go khi build tại chỗ trên máy chủ. scripts/dev.ps1 build vào %TEMP%
+# nên không đụng repo, nhưng `go build` trần thì đặt file ngay cạnh mã nguồn.
+src/backend/api
+src/backend/velt-api
+src/backend/*.exe
+
+# Bản dump trung gian của deploy/sql/regenerate.sh — luôn sinh lại được, và
+# commit nhầm nó sẽ thành bản sao thứ hai của master_data.sql rồi trôi đi.
+deploy/sql/_data_raw.sql
+
+# Cấu hình triển khai của từng máy: chuỗi kết nối, khoá API, mật khẩu.
+# *.pem/*.key/*.cert đã bị chặn ở trên; đây là phần còn lại.
+deploy/**/.env
+deploy/**/*.local.env
+deploy/**/secrets.*
