@@ -227,13 +227,25 @@ func (s *Store) Purge(ctx context.Context, entity string, id uuid.UUID) error {
 // An empty table yields "0" rather than an error: no published content is a
 // perfectly good state, and it is stable, which is all a cache key needs.
 func (s *Store) Version(ctx context.Context) (string, error) {
+	// published_docs covers articles, pages and products. It does NOT cover a
+	// landing's sections: the public page read resolves those live from
+	// cms_landing_sections, so editing a section changes what visitors see
+	// without writing a published doc. Leaving them out meant a landing edit
+	// never invalidated the site's cache — measured, not theorised.
 	var token string
 	err := s.pool.QueryRow(ctx, `
+		WITH marks AS (
+		  SELECT MAX(written_at) AS at, COUNT(*) AS n FROM published_docs
+		  UNION ALL
+		  SELECT MAX(updated_at), COUNT(*) FROM cms_landing_sections
+		  UNION ALL
+		  SELECT MAX(updated_at), COUNT(*) FROM cms_landing_pages
+		)
 		SELECT COALESCE(
-		         to_char(MAX(written_at) AT TIME ZONE 'UTC', 'YYYYMMDD"T"HH24MISS.US')
-		         || '-' || COUNT(*)::text,
+		         to_char(MAX(at) AT TIME ZONE 'UTC', 'YYYYMMDD"T"HH24MISS.US')
+		         || '-' || SUM(n)::text,
 		       '0')
-		  FROM published_docs`).Scan(&token)
+		  FROM marks`).Scan(&token)
 	if err != nil {
 		return "", fmt.Errorf("published version: %w", err)
 	}
