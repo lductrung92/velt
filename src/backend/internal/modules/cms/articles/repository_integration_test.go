@@ -127,3 +127,53 @@ func TestIT_ArticleOptimisticLock(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "cmsit-changed", upd.Title)
 }
+
+// Sorting by status used to be a no-op: the console offered the column, the
+// clause had no arm for it, and the rows came back in the default updated_at
+// order. The assertion is on the workflow rank, not the alphabet.
+func TestIT_ArticleSortByStatus(t *testing.T) {
+	repo, pool := articlesDB(t)
+	ctx := context.Background()
+	author := itUser(t, pool)
+
+	// Deliberately scrambled: creating them in workflow order (or its reverse)
+	// would make the default updated_at DESC order match one of the two
+	// assertions below, and that direction would then pass without the clause
+	// doing anything. This order matches neither.
+	for _, st := range []string{
+		ArticleStatusScheduled, ArticleStatusDraft, ArticleStatusArchived,
+		ArticleStatusNeedsRevision, ArticleStatusPublished, ArticleStatusPendingReview,
+	} {
+		sw := articleStatusWrite{Status: st}
+		if st == ArticleStatusScheduled {
+			at := time.Now().Add(48 * time.Hour).UTC().Truncate(time.Second)
+			sw.PublishAt = &at
+		}
+		_, err := repo.CreateArticle(ctx, itArticleWrite("cmsit-sort-"+uuid.NewString()[:8]), author, "admin", sw, nil)
+		require.NoError(t, err)
+	}
+
+	statuses := func(sort string) []string {
+		rows, _, err := repo.ListArticles(ctx, ArticleListParams{
+			AuthorID: &author, Sort: sort, Page: 1, PageSize: 20,
+		})
+		require.NoError(t, err)
+		out := make([]string, 0, len(rows))
+		for _, r := range rows {
+			out = append(out, r.Status)
+		}
+		return out
+	}
+
+	workflow := []string{
+		ArticleStatusDraft, ArticleStatusPendingReview, ArticleStatusNeedsRevision,
+		ArticleStatusScheduled, ArticleStatusPublished, ArticleStatusArchived,
+	}
+	require.Equal(t, workflow, statuses("status"))
+
+	reversed := make([]string, len(workflow))
+	for i, s := range workflow {
+		reversed[len(workflow)-1-i] = s
+	}
+	require.Equal(t, reversed, statuses("-status"))
+}

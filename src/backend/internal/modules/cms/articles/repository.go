@@ -66,6 +66,21 @@ func scanArticle(row pgx.Row) (*Article, error) {
 	return &a, nil
 }
 
+// articleStatusRank orders the workflow stages the way the status tabs above
+// the list do — draft through archived — because that is the only order a
+// person sorting by status is asking for. Alphabetical would open with
+// "archived" and drop "scheduled" after "published", which is backwards twice
+// over. The arms match the cms_articles_status_check constraint; an unknown
+// status sorts last rather than silently sharing a rank with draft.
+const articleStatusRank = `CASE a.status
+	        WHEN 'draft' THEN 1
+	        WHEN 'pending_review' THEN 2
+	        WHEN 'needs_revision' THEN 3
+	        WHEN 'scheduled' THEN 4
+	        WHEN 'published' THEN 5
+	        WHEN 'archived' THEN 6
+	        ELSE 7 END`
+
 func articleSortClause(sort string) string {
 	// a.id is appended as a unique tiebreaker so rows with equal sort values keep a
 	// stable order across LIMIT/OFFSET pages (no skip/repeat on equal timestamps).
@@ -84,6 +99,10 @@ func articleSortClause(sort string) string {
 		return "a.published_at DESC NULLS LAST, a.id DESC"
 	case "updated_at":
 		return "a.updated_at ASC, a.id ASC"
+	case "status":
+		return articleStatusRank + " ASC, a.updated_at DESC, a.id ASC"
+	case "-status":
+		return articleStatusRank + " DESC, a.updated_at DESC, a.id DESC"
 	default:
 		return "a.updated_at DESC, a.id DESC"
 	}
