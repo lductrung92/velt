@@ -1,5 +1,5 @@
 import { RotateCw, Save } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -8,7 +8,10 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { Select, type SelectOption } from "@/components/common/Select/Select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TextField } from "@/components/ui/text-field";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { usePermission } from "@/modules/auth";
@@ -21,6 +24,22 @@ import type { PageNode } from "../services/pages.service";
 
 // Registry key for the slug of the page served as the public homepage ("/").
 const HOME_SLUG_KEY = "cms.home_page_slug";
+
+// How long the site may serve a page from its own cache (seconds, 0 = never).
+const TTL_KEY = "site.cache_ttl_seconds";
+
+// The site's chrome: the words around the navigation, which belong to no
+// article or page. The links themselves are edited in the menu builder.
+// Empty means "keep the copy the site ships with", so clearing a field is a
+// way back to the default rather than a way to blank the page.
+const SITE_FIELDS = [
+  { key: "site.brand_tagline", name: "brand_tagline", multiline: true },
+  { key: "site.footer_note_title", name: "footer_note_title" },
+  { key: "site.footer_note_text", name: "footer_note_text", multiline: true },
+  { key: "site.footer_copyright", name: "footer_copyright" },
+  { key: "site.header_cta_label", name: "header_cta_label" },
+  { key: "site.header_cta_url", name: "header_cta_url" },
+] as const;
 
 // Flatten the page tree into slug options, indenting nested pages so the
 // hierarchy reads in a flat <Select>. value = slug (what the web resolves "/" by).
@@ -129,6 +148,19 @@ function readHomeSlug(data: CmsSettingsView): string {
   return typeof v === "string" ? v : "";
 }
 
+// Every string setting on this screen, read as text (missing → empty).
+function readTexts(data: CmsSettingsView): Record<string, string> {
+  const byKey = new Map((data.cms ?? []).map((e) => [e.key, e.value]));
+  const out: Record<string, string> = {};
+  for (const f of SITE_FIELDS) {
+    const v = byKey.get(f.key);
+    out[f.key] = typeof v === "string" ? v : "";
+  }
+  const ttl = byKey.get(TTL_KEY);
+  out[TTL_KEY] = typeof ttl === "number" ? String(ttl) : "";
+  return out;
+}
+
 function SettingsBody({ data }: { data: CmsSettingsView }) {
   const { t } = useTranslation();
   const { hasPermission } = usePermission();
@@ -143,6 +175,11 @@ function SettingsBody({ data }: { data: CmsSettingsView }) {
   const initialHomeSlug = useMemo(() => readHomeSlug(data), [data]);
   const [homeSlug, setHomeSlug] = useState(initialHomeSlug);
   useEffect(() => setHomeSlug(initialHomeSlug), [initialHomeSlug]);
+
+  // The site's cache TTL and chrome copy (all strings while being edited).
+  const initialTexts = useMemo(() => readTexts(data), [data]);
+  const [texts, setTexts] = useState(initialTexts);
+  useEffect(() => setTexts(initialTexts), [initialTexts]);
 
   // Page options for the homepage picker (value = slug).
   const pagesQuery = usePages();
@@ -159,16 +196,28 @@ function SettingsBody({ data }: { data: CmsSettingsView }) {
 
   const dirty =
     FLAGS.some((f) => draft[f.key] !== initial[f.key]) ||
-    homeSlug !== initialHomeSlug;
+    homeSlug !== initialHomeSlug ||
+    Object.keys(initialTexts).some((k) => texts[k] !== initialTexts[k]);
 
   function save() {
     setSaveError(null);
-    const updates: Record<string, boolean | string> = {};
+    const updates: Record<string, boolean | string | number> = {};
     for (const f of FLAGS) {
       if (draft[f.key] !== initial[f.key]) updates[f.key] = draft[f.key];
     }
     // Empty string clears the homepage override (web falls back to built-in home).
     if (homeSlug !== initialHomeSlug) updates[HOME_SLUG_KEY] = homeSlug;
+    for (const f of SITE_FIELDS) {
+      if (texts[f.key] !== initialTexts[f.key]) updates[f.key] = texts[f.key];
+    }
+    // The TTL is the one number here; an unreadable box is left alone rather
+    // than written as 0, which would silently switch the site's cache off.
+    if (texts[TTL_KEY] !== initialTexts[TTL_KEY]) {
+      const ttl = Number(texts[TTL_KEY]);
+      if (Number.isFinite(ttl) && texts[TTL_KEY].trim() !== "") {
+        updates[TTL_KEY] = ttl;
+      }
+    }
     if (Object.keys(updates).length === 0) return;
     update.mutate(updates, {
       onSuccess: () => toast.success(t("cms.settings.saved")),
@@ -234,6 +283,68 @@ function SettingsBody({ data }: { data: CmsSettingsView }) {
             </div>
           );
         })}
+
+        {/* The site's chrome. Links live in the menu builder; these are the
+            words beside them, plus how long the site may cache a page. */}
+        <div className="!mt-6 space-y-4 rounded-md border p-4">
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium leading-none">
+              {t("cms.settings.site.title")}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {t("cms.settings.site.help")}
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="site-cache-ttl" className="text-sm font-medium">
+              {t("cms.settings.site.cache_ttl.label")}
+            </Label>
+            <p className="pb-1 text-xs text-muted-foreground">
+              {t("cms.settings.site.cache_ttl.help")}
+            </p>
+            <Input
+              id="site-cache-ttl"
+              type="number"
+              min={0}
+              max={86400}
+              className="max-w-40"
+              value={texts[TTL_KEY]}
+              disabled={!canManage || update.isPending}
+              onChange={(e) =>
+                setTexts((v) => ({ ...v, [TTL_KEY]: e.target.value }))
+              }
+            />
+          </div>
+
+          {SITE_FIELDS.map((f) => {
+            const id = `site-${f.name}`;
+            const common = {
+              id,
+              value: texts[f.key],
+              disabled: !canManage || update.isPending,
+              placeholder: t(`cms.settings.site.${f.name}.placeholder`),
+              onChange: (
+                e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+              ) => setTexts((v) => ({ ...v, [f.key]: e.target.value })),
+            };
+            return (
+              <div key={f.key} className="space-y-1">
+                <Label htmlFor={id} className="text-sm font-medium">
+                  {t(`cms.settings.site.${f.name}.label`)}
+                </Label>
+                <p className="pb-1 text-xs text-muted-foreground">
+                  {t(`cms.settings.site.${f.name}.help`)}
+                </p>
+                {f.multiline ? (
+                  <Textarea rows={2} maxLength={500} {...common} />
+                ) : (
+                  <TextField maxLength={300} {...common} />
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         {canManage && (
           <div className="!mt-6">

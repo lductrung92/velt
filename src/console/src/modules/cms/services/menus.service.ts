@@ -34,6 +34,8 @@ export interface MenuSlot {
 export interface MenuItemNode {
   id: string;
   label: string;
+  /** One line shown under the label on the site (header dropdown). */
+  description: string | null;
   link_type: MenuLinkType;
   target_id: string | null;
   url: string | null;
@@ -62,6 +64,7 @@ export interface UpdateMenuBody {
 // backend recreates the tree and assigns sort_order from slice order.
 export interface MenuItemInput {
   label: string;
+  description: string | null;
   link_type: MenuLinkType;
   target_id: string | null;
   url: string | null;

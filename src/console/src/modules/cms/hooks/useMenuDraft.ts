@@ -26,6 +26,7 @@ function toNodeFields(
   const entity = isEntityLink(values.link_type);
   return {
     label: values.label.trim(),
+    description: values.description.trim() || null,
     link_type: values.link_type,
     target_id: entity ? values.target_id : null,
     url: entity ? null : values.url.trim(),

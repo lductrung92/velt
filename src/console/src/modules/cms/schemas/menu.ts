@@ -36,6 +36,8 @@ export function makeMenuSlotSchema(t: TFunction) {
 
 export interface MenuItemFormValues {
   label: string;
+  // One line under the label on the site; empty = label only.
+  description: string;
   link_type: MenuLinkType;
   // Used for internal/external; empty otherwise.
   url: string;
@@ -46,6 +48,7 @@ export interface MenuItemFormValues {
 
 export const menuItemDefaults: MenuItemFormValues = {
   label: "",
+  description: "",
   link_type: "internal",
   url: "",
   target_id: null,
@@ -68,6 +71,10 @@ export function makeMenuItemSchema(t: TFunction) {
         .trim()
         .min(1, t("errors.validation.required"))
         .max(200, t("errors.validation.too_long")),
+      description: z
+        .string()
+        .trim()
+        .max(300, t("errors.validation.too_long")),
       link_type: z.enum([
         "internal",
         "external",

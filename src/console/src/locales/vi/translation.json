@@ -697,6 +697,44 @@
         "label": "Trang chủ",
         "help": "Chọn trang (đã xuất bản) làm trang chủ (\"/\"). Để trống để dùng trang chủ mặc định. Trang phải được xuất bản thì mới có hiệu lực.",
         "placeholder": "Trang chủ mặc định (chưa chọn)"
+      },
+      "site": {
+        "title": "Giao diện site",
+        "help": "Chữ ở header và footer của site công khai. Các liên kết được sửa ở màn hình Menu. Để trống một ô nghĩa là dùng lại nội dung mặc định của site.",
+        "cache_ttl": {
+          "label": "Thời gian cache trang (giây)",
+          "help": "Site được phục vụ lại trang đã dựng trong bao lâu trước khi hỏi lại. 0 = tắt cache (tiện khi đang chỉnh nội dung)."
+        },
+        "brand_tagline": {
+          "label": "Giới thiệu dưới logo (footer)",
+          "help": "Đoạn ngắn nằm dưới logo ở footer. Xuống dòng được giữ nguyên.",
+          "placeholder": "Đội ngũ phát triển sản phẩm số…"
+        },
+        "footer_note_title": {
+          "label": "Tiêu đề cột cuối (footer)",
+          "help": "Tiêu đề của cột chữ cuối cùng ở footer.",
+          "placeholder": "Con người đứng sau sản phẩm"
+        },
+        "footer_note_text": {
+          "label": "Nội dung cột cuối (footer)",
+          "help": "Đoạn chữ của cột cuối. Xuống dòng được giữ nguyên.",
+          "placeholder": "Xem đội ngũ phát triển, kỹ năng…"
+        },
+        "footer_copyright": {
+          "label": "Dòng bản quyền",
+          "help": "Dòng cuối footer. Viết {year} ở chỗ muốn hiện năm hiện tại.",
+          "placeholder": "© {year} ZUKATEK. Cùng tiến về phía trước."
+        },
+        "header_cta_label": {
+          "label": "Nhãn nút liên hệ (header)",
+          "help": "Chữ trên nút ở góc phải header.",
+          "placeholder": "Liên hệ"
+        },
+        "header_cta_url": {
+          "label": "Liên kết nút liên hệ (header)",
+          "help": "Đường dẫn nút header trỏ tới (bắt đầu bằng / hoặc https://).",
+          "placeholder": "/#contact"
+        }
       }
     },
     "tags": {
@@ -897,6 +935,7 @@
         "location_ph": "Chọn vị trí",
         "location_opt": {
           "header": "Header",
+          "header_mobile": "Header (điện thoại)",
           "footer": "Footer",
           "sidebar": "Sidebar"
         }
@@ -912,6 +951,8 @@
         "new_title": "Thêm liên kết",
         "edit_title": "Sửa liên kết",
         "label": "Nhãn",
+        "description": "Mô tả",
+        "description_help": "Dòng chữ nhỏ hiển thị dưới nhãn (menu thả xuống ở header). Để trống thì chỉ hiện nhãn.",
         "link_type": "Loại liên kết",
         "target": "Đối tượng",
         "target_ph": "Tìm kiếm…",

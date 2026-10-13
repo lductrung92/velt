@@ -66,6 +66,7 @@ export function ItemFormDialog({
       node
         ? {
             label: node.label,
+            description: node.description ?? "",
             link_type: node.link_type,
             url: node.url ?? "",
             target_id: node.target_id,
@@ -120,6 +121,23 @@ export function ItemFormDialog({
                   <FormControl>
                     <TextField maxLength={200} {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("cms.menus.item.description")}</FormLabel>
+                  <FormControl>
+                    <TextField maxLength={300} {...field} />
+                  </FormControl>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("cms.menus.item.description_help")}
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

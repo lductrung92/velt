@@ -649,6 +649,44 @@
         "label": "Homepage",
         "help": "Pick which published page is served as the public homepage (\"/\"). Leave empty to use the built-in home. The page must be published to take effect.",
         "placeholder": "Built-in home (none selected)"
+      },
+      "site": {
+        "title": "Site chrome",
+        "help": "The text in the public site's header and footer. The links themselves are edited in Menus. An empty box means the site keeps its built-in copy.",
+        "cache_ttl": {
+          "label": "Page cache (seconds)",
+          "help": "How long the site may serve an already rendered page before asking again. 0 disables caching, which is what you want while editing."
+        },
+        "brand_tagline": {
+          "label": "Footer line under the logo",
+          "help": "Short paragraph under the footer logo. Line breaks are kept.",
+          "placeholder": "A team building digital products…"
+        },
+        "footer_note_title": {
+          "label": "Last footer column — heading",
+          "help": "Heading of the footer's last (text) column.",
+          "placeholder": "The people behind the products"
+        },
+        "footer_note_text": {
+          "label": "Last footer column — text",
+          "help": "Body of that column. Line breaks are kept.",
+          "placeholder": "See the team, their skills…"
+        },
+        "footer_copyright": {
+          "label": "Copyright line",
+          "help": "The last line of the footer. Write {year} where the current year should appear.",
+          "placeholder": "© {year} ZUKATEK."
+        },
+        "header_cta_label": {
+          "label": "Header button — label",
+          "help": "Text on the button at the right of the header.",
+          "placeholder": "Contact"
+        },
+        "header_cta_url": {
+          "label": "Header button — link",
+          "help": "Where that button points (a path starting with / or an https:// URL).",
+          "placeholder": "/#contact"
+        }
       }
     },
     "tags": {
@@ -849,6 +887,7 @@
         "location_ph": "Select a location",
         "location_opt": {
           "header": "Header",
+          "header_mobile": "Header (mobile)",
           "footer": "Footer",
           "sidebar": "Sidebar"
         }
@@ -864,6 +903,8 @@
         "new_title": "Add link",
         "edit_title": "Edit link",
         "label": "Label",
+        "description": "Description",
+        "description_help": "Small line shown under the label (header dropdown). Empty = label only.",
         "link_type": "Link type",
         "target": "Target",
         "target_ph": "Search…",

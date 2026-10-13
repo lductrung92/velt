@@ -13,6 +13,7 @@ import { ProductDetail, NotFound } from "./pages/ProductDetail";
 import { Blog } from "./pages/Blog";
 import { BlogArticle } from "./pages/BlogArticle";
 import { emptyBlog, type BlogState } from "./lib/blog";
+import { DEFAULT_LAYOUT } from "./lib/layout";
 
 export function resolveRoute(
   url: URL,
@@ -62,6 +63,7 @@ export function App({
   data = content,
   blog,
   sections,
+  layout = DEFAULT_LAYOUT,
 }: AppProps & { data?: SiteContent }) {
   const url = useMemo(() => new URL(path, "http://site.local"), [path]);
   const context = useMemo(() => {
@@ -77,9 +79,10 @@ export function App({
       isExample,
       blog: blog || emptyBlog(),
       sections,
+      layout,
       href: (path: string) => withReferral(path, referrer),
     };
-  }, [data, url, blog, sections]);
+  }, [data, url, blog, sections, layout]);
   const route = resolveRoute(url, data, blog);
   return (
     <SiteContext value={context}>
@@ -126,7 +129,7 @@ export function App({
           <NotFound />
         )}
       </main>
-      <Footer href={context.href} year={year} />
+      <Footer href={context.href} year={year} layout={layout} />
       <Chat />
     </SiteContext>
   );

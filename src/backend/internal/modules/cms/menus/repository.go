@@ -91,7 +91,7 @@ func (r *pgxRepository) DeleteMenu(ctx context.Context, id uuid.UUID) error {
 
 func (r *pgxRepository) MenuItems(ctx context.Context, menuID uuid.UUID) ([]itemRow, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, parent_id, label, link_type, target_id, url, open_new_tab, sort_order
+		SELECT id, parent_id, label, description, link_type, target_id, url, open_new_tab, sort_order
 		  FROM cms_menu_items WHERE menu_id = $1 ORDER BY sort_order, id`, menuID)
 	if err != nil {
 		return nil, fmt.Errorf("menu items: %w", err)
@@ -100,8 +100,8 @@ func (r *pgxRepository) MenuItems(ctx context.Context, menuID uuid.UUID) ([]item
 	out := []itemRow{}
 	for rows.Next() {
 		var x itemRow
-		if err := rows.Scan(&x.ID, &x.ParentID, &x.Label, &x.LinkType, &x.TargetID,
-			&x.URL, &x.OpenNewTab, &x.SortOrder); err != nil {
+		if err := rows.Scan(&x.ID, &x.ParentID, &x.Label, &x.Description, &x.LinkType,
+			&x.TargetID, &x.URL, &x.OpenNewTab, &x.SortOrder); err != nil {
 			return nil, fmt.Errorf("scan menu item: %w", err)
 		}
 		out = append(out, x)
@@ -116,6 +116,12 @@ func (r *pgxRepository) ReplaceMenuItems(ctx context.Context, menuID uuid.UUID, 
 		if _, e := tx.Exec(ctx, `DELETE FROM cms_menu_items WHERE menu_id = $1`, menuID); e != nil {
 			return e
 		}
+		// The slot's updated_at is what the public cache version watches: the
+		// items themselves carry no timestamp, so editing a label would be
+		// invisible to the site's cache if this were left out.
+		if _, e := tx.Exec(ctx, `UPDATE cms_menus SET updated_at = now() WHERE id = $1`, menuID); e != nil {
+			return e
+		}
 		return insertItems(ctx, tx, menuID, nil, items)
 	})
 }
@@ -124,9 +130,9 @@ func insertItems(ctx context.Context, tx pgx.Tx, menuID uuid.UUID, parentID *uui
 	for i, it := range items {
 		var id uuid.UUID
 		err := tx.QueryRow(ctx, `
-			INSERT INTO cms_menu_items (menu_id, parent_id, label, link_type, target_id, url, open_new_tab, sort_order)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-			menuID, parentID, it.Label, it.LinkType, it.TargetID, it.URL, it.OpenNewTab, i).Scan(&id)
+			INSERT INTO cms_menu_items (menu_id, parent_id, label, description, link_type, target_id, url, open_new_tab, sort_order)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+			menuID, parentID, it.Label, it.Description, it.LinkType, it.TargetID, it.URL, it.OpenNewTab, i).Scan(&id)
 		if err != nil {
 			return err
 		}

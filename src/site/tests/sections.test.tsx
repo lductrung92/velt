@@ -5,6 +5,7 @@ import { SiteContext } from "../app/context";
 import { content } from "../app/data/content";
 import { getCatalog } from "../app/lib/catalog";
 import { emptyBlog } from "../app/lib/blog";
+import { DEFAULT_LAYOUT } from "../app/lib/layout";
 import { withReferral } from "../app/lib/links";
 import { SectionRenderer } from "../app/components/SectionRenderer";
 import type { PublicSection } from "../app/types";
@@ -19,6 +20,7 @@ function render(sections: PublicSection[]) {
         products,
         isExample,
         blog: emptyBlog(),
+        layout: DEFAULT_LAYOUT,
         href: (path: string) => withReferral(path),
       }}
     >

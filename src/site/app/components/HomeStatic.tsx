@@ -7,6 +7,7 @@ import {
   faqConfig,
   heroConfig,
 } from "../lib/sections";
+import { navHref, type SiteLayout } from "../lib/layout";
 import { Lines } from "./Lines";
 type LinksProps = { href: (path: string) => string };
 
@@ -380,7 +381,14 @@ export function EmptyProducts({ href }: LinksProps) {
   );
 }
 
-export function Footer({ href, year }: LinksProps & { year: number }) {
+export function Footer({
+  href,
+  year,
+  layout,
+}: LinksProps & { year: number; layout: SiteLayout }) {
+  // The copyright line is console copy with one placeholder; the year keeps its
+  // own element so the markup around it is unchanged.
+  const [beforeYear, afterYear] = layout.chrome.copyright.split("{year}");
   return (
     <footer className="site-footer">
       <div className="container">
@@ -400,37 +408,39 @@ export function Footer({ href, year }: LinksProps & { year: number }) {
               />
             </a>
             <p>
-              {"Đội ngũ phát triển sản phẩm số"}
-              <br />
-              {"cho cá nhân, nhóm và doanh nghiệp."}
+              <Lines text={layout.chrome.tagline} />
             </p>
           </div>
-          <div>
-            <h3>{"Khám phá ZUKATEK"}</h3>
-            <a href={href("/#about")}>{"Về ZUKATEK"}</a>
-            <a href={href("/#products")}>{"Sản phẩm"}</a>
-            <a href={href("/#team")}>{"Đội ngũ & kỹ năng"}</a>
-            <a href={href("/blog")}>Blog</a>
-          </div>
-          <div>
-            <h3>{"Mua & sử dụng sản phẩm"}</h3>
-            <a href={href("/#collaboration")}>{"Cách mua sản phẩm"}</a>
-            <a href={href("/#contact")}>{"Liên hệ"}</a>
-          </div>
+          {/* One column per root of the footer menu: the root is the heading,
+              its children are the links under it. */}
+          {layout.footer.map((column, index) => (
+            <div key={index}>
+              <h3>{column.label}</h3>
+              {column.children.map((item, childIndex) => (
+                <a
+                  key={childIndex}
+                  href={navHref(item, href)}
+                  {...(item.newTab
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          ))}
           <div className="footer-message">
-            <h3>{"Con người đứng sau sản phẩm"}</h3>
+            <h3>{layout.chrome.noteTitle}</h3>
             <p>
-              {"Xem đội ngũ phát triển, kỹ năng"}
-              <br />
-              {"và thành viên phụ trách từng sản phẩm."}
+              <Lines text={layout.chrome.noteText} />
             </p>
           </div>
         </div>
         <div className="footer-bottom">
           <span>
-            {"© "}
-            <span id="year">{year}</span>
-            {" ZUKATEK. Cùng tiến về phía trước."}
+            {beforeYear}
+            {afterYear !== undefined && <span id="year">{year}</span>}
+            {afterYear ?? ""}
           </span>
           <a href={href("/#top")}>
             {"Về đầu trang "}

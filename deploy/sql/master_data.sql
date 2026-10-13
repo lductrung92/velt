@@ -26,7 +26,7 @@
 --     a) psql -f ddl.sql -f master_data.sql     schema and data, no app needed
 --     b) api migrate                            the app does both itself
 --   Running (a) and then (b) is safe — every statement here is ON CONFLICT DO
---   NOTHING and goose will see version 40 and skip — but (b) alone is simpler
+--   NOTHING and goose will see version 41 and skip — but (b) alone is simpler
 --   unless you need the database to exist before the app does.
 --
 -- Every statement is idempotent: running this file twice changes nothing.
@@ -191,7 +191,8 @@ SELECT v, true, now()
           (37),
           (38),
           (39),
-          (40)
+          (40),
+          (41)
        ) AS t(v)
  WHERE NOT EXISTS (SELECT 1 FROM public.goose_db_version g WHERE g.version_id = t.v)
  -- ORDER BY is not decoration: goose reports the CURRENT version by reading the
@@ -335,3 +336,83 @@ ON CONFLICT (entity, locale, slug) DO NOTHING;
 INSERT INTO public.published_docs (entity, locale, slug, entity_id, is_current, search_text, body, published_at, written_at)
 VALUES ('page', 'vi', 'trang-chu', '6f6ac11c-85b9-4443-82c5-9e9f84eaf398', 't', 'Trang chủ', '{"seo": {"title": null, "noindex": false, "keywords": null, "nofollow": false, "og_title": null, "description": null, "canonical_url": null, "og_description": null}, "slug": "trang-chu", "title": "Trang chủ", "og_path": null, "template": null, "body_html": null, "landing_id": "7e586b2f-3d33-4478-82bd-c16613d5275a", "inline_widgets": null}'::jsonb, now(), now())
 ON CONFLICT (entity, locale, slug) DO NOTHING;
+
+
+--
+-- THE NAVIGATION.
+--
+-- The site's header and footer are not markup any more: the links are menu
+-- items, the words around them are site.* settings, and both are edited in the
+-- console. A fresh install without these rows still renders a header and a
+-- footer — the site falls back to the copy built into its components — but
+-- nothing in them can be changed without a deploy.
+--
+-- Three slots, because the mockup has three lists:
+--   header          the desktop bar; an item with children is a dropdown
+--   header_mobile   the phone menu, flat, and carrying one entry the desktop
+--                   bar has no room for ("Cách mua sản phẩm")
+--   footer          one root per column; the root is the heading, its children
+--                   are the links under it
+--
+-- The ids are fixed rather than generated, so a second run of this file changes
+-- nothing and a child always finds its parent. Rendered from these rows the two
+-- components produce byte-identical markup to the built-in fallback — that is
+-- how they were checked.
+--
+
+INSERT INTO public.cms_menus (id, name, location) VALUES ('015d00b2-c6b2-4dac-8627-860e4045038d', 'Footer', 'footer')
+ON CONFLICT (location) DO NOTHING;
+INSERT INTO public.cms_menus (id, name, location) VALUES ('b1116a4e-5b94-4481-8b1e-02984c7752e0', 'Header', 'header')
+ON CONFLICT (location) DO NOTHING;
+INSERT INTO public.cms_menus (id, name, location) VALUES ('b8812d1b-e3e5-47bd-918f-e9a501a5aaf0', 'Header (điện thoại)', 'header_mobile')
+ON CONFLICT (location) DO NOTHING;
+
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('569513ef-f1fe-462c-92eb-69099edb0fec', '015d00b2-c6b2-4dac-8627-860e4045038d', NULL, 'Khám phá ZUKATEK', NULL, 'internal', '/', 'f', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('515d8f42-b654-4d8f-a69a-80fd0a51808c', '015d00b2-c6b2-4dac-8627-860e4045038d', NULL, 'Mua & sử dụng sản phẩm', NULL, 'internal', '/', 'f', 1) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('6ceed0ac-e5e5-4319-902a-44c8c6bbf100', '015d00b2-c6b2-4dac-8627-860e4045038d', '515d8f42-b654-4d8f-a69a-80fd0a51808c', 'Cách mua sản phẩm', NULL, 'internal', '/#collaboration', 'f', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('25f8e38c-293a-4fe9-914b-bda04de40262', '015d00b2-c6b2-4dac-8627-860e4045038d', '569513ef-f1fe-462c-92eb-69099edb0fec', 'Về ZUKATEK', NULL, 'internal', '/#about', 'f', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('82fb6df5-e4b0-4c28-8cd8-ee60c610d7ee', '015d00b2-c6b2-4dac-8627-860e4045038d', '515d8f42-b654-4d8f-a69a-80fd0a51808c', 'Liên hệ', NULL, 'internal', '/#contact', 'f', 1) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('40dbc66b-7dd3-4b21-b3e0-ef672d0c6c62', '015d00b2-c6b2-4dac-8627-860e4045038d', '569513ef-f1fe-462c-92eb-69099edb0fec', 'Sản phẩm', NULL, 'internal', '/#products', 'f', 1) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('bfb9d4a8-ffed-445f-95ea-7891c3c8a096', '015d00b2-c6b2-4dac-8627-860e4045038d', '569513ef-f1fe-462c-92eb-69099edb0fec', 'Đội ngũ & kỹ năng', NULL, 'internal', '/#team', 'f', 2) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('42f51025-8af8-469a-ab48-fbae0e80acaa', '015d00b2-c6b2-4dac-8627-860e4045038d', '569513ef-f1fe-462c-92eb-69099edb0fec', 'Blog', NULL, 'internal', '/blog', 'f', 3) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('ea87508e-75d6-4471-aaf4-16fc37cb28b2', 'b1116a4e-5b94-4481-8b1e-02984c7752e0', NULL, 'Khám phá', NULL, 'internal', '/', 'f', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('8e1b15b9-cd81-4991-8d31-b0f26992d206', 'b1116a4e-5b94-4481-8b1e-02984c7752e0', NULL, 'Sản phẩm', NULL, 'internal', '/products', 'f', 1) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('33bea0b9-5334-4655-9b60-82996a76959f', 'b1116a4e-5b94-4481-8b1e-02984c7752e0', NULL, 'Đội ngũ & kỹ năng', NULL, 'internal', '/#team', 'f', 2) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('a824d7a3-70cc-454e-99d9-11d8b1829621', 'b1116a4e-5b94-4481-8b1e-02984c7752e0', NULL, 'Blog', NULL, 'internal', '/blog', 'f', 3) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('74699bed-b2f4-429b-874e-bc5676a3bd50', 'b1116a4e-5b94-4481-8b1e-02984c7752e0', 'ea87508e-75d6-4471-aaf4-16fc37cb28b2', 'Sản phẩm', 'Danh mục, tính năng và bản trải nghiệm', 'internal', '/products', 'f', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('8cf85720-6768-421d-a491-f8b66a328eba', 'b1116a4e-5b94-4481-8b1e-02984c7752e0', 'ea87508e-75d6-4471-aaf4-16fc37cb28b2', 'Đội ngũ & kỹ năng', 'Con người đứng sau ZUKATEK', 'internal', '/#team', 'f', 1) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('e3dc524f-9a01-432a-a97e-4b79335d10b5', 'b8812d1b-e3e5-47bd-918f-e9a501a5aaf0', NULL, 'Sản phẩm', NULL, 'internal', '/products', 'f', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('e069ab0b-e734-4b0d-8e24-c0826f30ce8e', 'b8812d1b-e3e5-47bd-918f-e9a501a5aaf0', NULL, 'Đội ngũ & kỹ năng', NULL, 'internal', '/#team', 'f', 1) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('dc039ce4-4246-45a3-9894-838d5fa0581e', 'b8812d1b-e3e5-47bd-918f-e9a501a5aaf0', NULL, 'Cách mua sản phẩm', NULL, 'internal', '/#collaboration', 'f', 2) ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
+VALUES ('2fb8d37e-e9ac-48b5-8ccb-12177fcb7441', 'b8812d1b-e3e5-47bd-918f-e9a501a5aaf0', NULL, 'Blog', NULL, 'internal', '/blog', 'f', 3) ON CONFLICT (id) DO NOTHING;
+
+
+-- The words beside those links. Empty would mean "use the site's built-in
+-- copy", which is also correct — they are seeded with the real text so the
+-- console shows an editor what the page actually says instead of a blank box.
+INSERT INTO public.system_settings (key, value) VALUES
+  ('site.brand_tagline', '"Đội ngũ phát triển sản phẩm số\ncho cá nhân, nhóm và doanh nghiệp."'::jsonb),
+  ('site.footer_note_title', '"Con người đứng sau sản phẩm"'::jsonb),
+  ('site.footer_note_text', '"Xem đội ngũ phát triển, kỹ năng\nvà thành viên phụ trách từng sản phẩm."'::jsonb),
+  ('site.footer_copyright', '"© {year} ZUKATEK. Cùng tiến về phía trước."'::jsonb),
+  ('site.header_cta_label', '"Liên hệ"'::jsonb),
+  ('site.header_cta_url', '"/#contact"'::jsonb)
+ON CONFLICT (key) DO NOTHING;

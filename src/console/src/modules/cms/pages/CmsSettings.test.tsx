@@ -143,6 +143,41 @@ describe("CmsSettings", () => {
     expect(screen.queryAllByRole("switch")).toHaveLength(0);
   });
 
+  it("site chrome: a changed field is sent, an untouched one is not", async () => {
+    signIn(["cms.settings.read", "cms.settings.manage"]);
+    let putBody: { updates: Record<string, unknown> } | undefined;
+    server.use(
+      http.get(`${API}/cms/settings`, () => HttpResponse.json(cmsView())),
+      http.put(`${API}/cms/settings`, async ({ request }) => {
+        putBody = (await request.json()) as typeof putBody;
+        return HttpResponse.json(cmsView());
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    // The copyright line is a plain string setting; the cache TTL is the one
+    // number on the screen and must not be sent as text.
+    const copyright = await screen.findByLabelText(
+      i18n.t("cms.settings.site.footer_copyright.label"),
+    );
+    // "{{" is user-event's escape for a literal brace; {year} is the
+    // placeholder the site swaps for the current year.
+    await user.type(copyright, "© {{year} ZUKATEK.");
+    const ttl = screen.getByLabelText(
+      i18n.t("cms.settings.site.cache_ttl.label"),
+    );
+    await user.clear(ttl);
+    await user.type(ttl, "120");
+    await user.click(saveButton());
+
+    await waitFor(() => expect(putBody).toBeDefined());
+    expect(putBody?.updates).toEqual({
+      "site.footer_copyright": "© {year} ZUKATEK.",
+      "site.cache_ttl_seconds": 120,
+    });
+  });
+
   it("save 403 → access-denied banner; flags stay dirty", async () => {
     signIn(["cms.settings.read", "cms.settings.manage"]);
     server.use(
@@ -161,7 +196,12 @@ describe("CmsSettings", () => {
     await user.click(switches[NOTIFY_IDX]);
     await user.click(saveButton());
 
-    expect(await screen.findByText(/permission|quyền/i)).toBeInTheDocument();
+    // The exact banner, not a /quyền/ match: the site-chrome fields put that
+    // word on a field label too ("Dòng bản quyền"), and a loose pattern there
+    // would pass on the wrong element.
+    expect(
+      await screen.findByText(i18n.t("errors.access_denied")),
+    ).toBeInTheDocument();
     expect(saveButton()).toBeEnabled(); // still dirty → retryable
   });
 });

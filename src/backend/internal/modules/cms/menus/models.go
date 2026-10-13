@@ -34,9 +34,10 @@ type Menu struct {
 
 // itemRow is a flat cms_menu_items row (assembled into a tree by the service).
 type itemRow struct {
-	ID         uuid.UUID
-	ParentID   *uuid.UUID
-	Label      string
+	ID          uuid.UUID
+	ParentID    *uuid.UUID
+	Label       string
+	Description *string
 	LinkType   string
 	TargetID   *uuid.UUID
 	URL        *string
@@ -47,8 +48,9 @@ type itemRow struct {
 // itemWrite is one node to persist on a tree replace (children nested).
 // sort_order is assigned from slice order by the repo.
 type itemWrite struct {
-	Label      string
-	LinkType   string
+	Label       string
+	Description *string
+	LinkType    string
 	TargetID   *uuid.UUID
 	URL        *string
 	OpenNewTab bool
@@ -71,7 +73,8 @@ type UpdateRequest struct {
 
 // ItemInput is one node in the PUT /menus/{id}/items tree replace.
 type ItemInput struct {
-	Label      string      `json:"label" validate:"required,max=200"`
+	Label       string      `json:"label" validate:"required,max=200"`
+	Description *string     `json:"description" validate:"omitempty,max=300"`
 	LinkType   string      `json:"link_type" validate:"required,oneof=internal external article page category"`
 	TargetID   *uuid.UUID  `json:"target_id"`
 	URL        *string     `json:"url" validate:"omitempty,max=2000"`
@@ -97,8 +100,9 @@ type Response struct {
 
 // ItemNode is a menu item in the detail tree.
 type ItemNode struct {
-	ID         uuid.UUID  `json:"id"`
-	Label      string     `json:"label"`
+	ID          uuid.UUID  `json:"id"`
+	Label       string     `json:"label"`
+	Description *string    `json:"description"`
 	LinkType   string     `json:"link_type"`
 	TargetID   *uuid.UUID `json:"target_id"`
 	URL        *string    `json:"url"`
@@ -127,7 +131,8 @@ func buildItemTree(rows []itemRow) []ItemNode {
 	byID := make(map[uuid.UUID]*node, len(rows))
 	for _, r := range rows {
 		byID[r.ID] = &node{item: ItemNode{
-			ID: r.ID, Label: r.Label, LinkType: r.LinkType, TargetID: r.TargetID,
+			ID: r.ID, Label: r.Label, Description: r.Description,
+			LinkType: r.LinkType, TargetID: r.TargetID,
 			URL: r.URL, OpenNewTab: r.OpenNewTab, SortOrder: r.SortOrder,
 		}}
 	}

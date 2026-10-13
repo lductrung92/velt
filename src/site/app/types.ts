@@ -1,4 +1,5 @@
 import type { BlogState } from "./lib/blog";
+import type { SiteLayout } from "./lib/layout";
 
 export interface Member {
   id: string;
@@ -50,6 +51,21 @@ export interface AppProps {
   data?: SiteContent;
   /** Sections published for this page, if the console has a landing for it. */
   sections?: PublicSection[];
+  /** Header and footer as the console publishes them; absent = the defaults. */
+  layout?: SiteLayout;
+}
+/** One navigation entry, as the backend's menus.PublicItem sends it. The
+ *  values come from the console, so every field is treated as untrusted. */
+export interface PublicMenuItem {
+  label?: string;
+  description?: string | null;
+  link_type?: string;
+  /** internal/external links. */
+  url?: string | null;
+  /** article/page/category links — the site builds the address from it. */
+  slug?: string | null;
+  open_new_tab?: boolean;
+  children?: PublicMenuItem[] | null;
 }
 /** One section of a landing page, as the backend's shared.PublicSection sends
  *  it. config is console input, so it may be missing, partial or malformed. */

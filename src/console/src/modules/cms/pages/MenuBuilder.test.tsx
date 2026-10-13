@@ -42,6 +42,7 @@ function itemNode(id: string, label: string) {
   return {
     id,
     label,
+    description: null,
     link_type: "internal",
     target_id: null,
     url: "/",
@@ -247,6 +248,8 @@ describe("MenuBuilder", () => {
     );
     const labelInput = screen.getAllByRole("textbox")[0];
     await user.type(labelInput, "About");
+    // The second textbox is the optional description — it must reach the PUT.
+    await user.type(screen.getAllByRole("textbox")[1], "Trang gioi thieu");
     // Submit the item form (Enter) → applied to the local draft tree.
     await user.type(
       screen.getByPlaceholderText(t("cms.menus.item.url_internal_ph")),
@@ -263,6 +266,7 @@ describe("MenuBuilder", () => {
     expect(putBody?.items).toEqual([
       {
         label: "About",
+        description: "Trang gioi thieu",
         link_type: "internal",
         target_id: null,
         url: "/about",

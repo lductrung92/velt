@@ -91,7 +91,8 @@ func toItemWrites(items []ItemInput) []itemWrite {
 	out := make([]itemWrite, 0, len(items))
 	for _, it := range items {
 		w := itemWrite{
-			Label: strings.TrimSpace(it.Label), LinkType: it.LinkType,
+			Label: strings.TrimSpace(it.Label), Description: trimmedOrNil(it.Description),
+			LinkType: it.LinkType,
 			TargetID: it.TargetID, URL: it.URL, OpenNewTab: it.OpenNewTab,
 			Children: toItemWrites(it.Children),
 		}
@@ -104,4 +105,17 @@ func toItemWrites(items []ItemInput) []itemWrite {
 		out = append(out, w)
 	}
 	return out
+}
+
+// trimmedOrNil normalises an optional note: blank or whitespace is stored as
+// NULL, so "no description" has one spelling in the database rather than two.
+func trimmedOrNil(s *string) *string {
+	if s == nil {
+		return nil
+	}
+	v := strings.TrimSpace(*s)
+	if v == "" {
+		return nil
+	}
+	return &v
 }

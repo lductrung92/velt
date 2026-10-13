@@ -20,7 +20,7 @@ import (
 type portFake struct {
 	group       []map[string]any
 	lastUpdates map[string]json.RawMessage
-	lastPrefix  string
+	lastPrefixes []string
 	updateErr   error
 }
 
@@ -28,9 +28,9 @@ func (f *portFake) GroupView(_ context.Context, group string) (settingssvc.Group
 	return settingssvc.GroupedView{group: f.group}, nil
 }
 
-func (f *portFake) UpdateScoped(_ context.Context, _ *httpx.Identity, updates map[string]json.RawMessage, allowPrefix string) (settingssvc.GroupedView, error) {
+func (f *portFake) UpdateScoped(_ context.Context, _ *httpx.Identity, updates map[string]json.RawMessage, allowPrefixes ...string) (settingssvc.GroupedView, error) {
 	f.lastUpdates = updates
-	f.lastPrefix = allowPrefix
+	f.lastPrefixes = allowPrefixes
 	if f.updateErr != nil {
 		return nil, f.updateErr
 	}
@@ -87,7 +87,8 @@ func TestUpdateSettings_ForwardsCMSPrefixAndScopesResponse(t *testing.T) {
 
 	view, err := e.svc.UpdateSettings(context.Background(), cmstest.ActorWith(permManage), UpdateRequest{Updates: updates})
 	require.NoError(t, err)
-	require.Equal(t, shared.KeyPrefixCMS, e.port.lastPrefix, "writes must be scoped to the cms. prefix")
+	require.Equal(t, []string{shared.KeyPrefixCMS, shared.KeyPrefixSite}, e.port.lastPrefixes,
+		"writes must stay scoped to the two prefixes this screen owns")
 	require.Equal(t, updates, e.port.lastUpdates)
 	require.Contains(t, view, shared.GroupCMS)
 	require.NotContains(t, view, "storage", "response is scoped to the cms group only")

@@ -62,7 +62,7 @@ func (f *FakeSettings) GroupView(_ context.Context, group string) (settings.Grou
 }
 
 // UpdateScoped records nothing; returns the current group view.
-func (f *FakeSettings) UpdateScoped(_ context.Context, _ *httpx.Identity, _ map[string]json.RawMessage, _ string) (settings.GroupedView, error) {
+func (f *FakeSettings) UpdateScoped(_ context.Context, _ *httpx.Identity, _ map[string]json.RawMessage, _ ...string) (settings.GroupedView, error) {
 	return settings.GroupedView{"cms": f.Group}, nil
 }
 

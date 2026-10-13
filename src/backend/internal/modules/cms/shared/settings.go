@@ -14,6 +14,13 @@ import (
 const (
 	GroupCMS     = "cms"
 	KeyPrefixCMS = "cms."
+	// KeyPrefixSite bounds the site.* keys: what the public site renders
+	// outside the content itself (cache TTL, header/footer copy). They live in
+	// the same group and the same screen as the CMS flags, and are written
+	// under the same cms.settings.manage permission, so the scoped writer must
+	// accept this prefix too — without it site.* keys are readable and
+	// unwritable, which is how the cache TTL shipped uneditable.
+	KeyPrefixSite = "site."
 )
 
 // CMS feature-flag keys (registered in the settings registry, group "cms").
@@ -32,13 +39,27 @@ const (
 	// its own cache before asking again. Public so the web tier reads it
 	// without auth; 0 disables caching, which is what you want while editing.
 	SiteCacheTTL = "site.cache_ttl_seconds"
+
+	// The site's chrome: the text around the navigation, which has no content
+	// record to live in. Links come from the menu builder (cms_menus); these
+	// are the words beside them.
+	//
+	// Every one defaults to "" and "" means "use the copy the site ships
+	// with" — the same contract the landing sections use, so the words have
+	// one home (the site's own components) instead of two that can disagree.
+	SiteBrandTagline    = "site.brand_tagline"
+	SiteFooterNoteTitle = "site.footer_note_title"
+	SiteFooterNoteText  = "site.footer_note_text"
+	SiteFooterCopyright = "site.footer_copyright"
+	SiteHeaderCTALabel  = "site.header_cta_label"
+	SiteHeaderCTAURL    = "site.header_cta_url"
 )
 
 // SettingsPort is the scoped reader/writer for the cms.* feature flags. It is
 // satisfied by the settings service (Redis-cached).
 type SettingsPort interface {
 	GroupView(ctx context.Context, group string) (settings.GroupedView, error)
-	UpdateScoped(ctx context.Context, id *httpx.Identity, updates map[string]json.RawMessage, allowPrefix string) (settings.GroupedView, error)
+	UpdateScoped(ctx context.Context, id *httpx.Identity, updates map[string]json.RawMessage, allowPrefixes ...string) (settings.GroupedView, error)
 	GetInt(ctx context.Context, key string) int
 }
 
@@ -59,6 +80,12 @@ func SettingDefs() []settings.SettingDef {
 		{Key: FlagPublishAllowNow, Group: GroupCMS, Type: settings.TypeBool, Default: true, Description: "ON: only immediate publish (hide scheduling); OFF: also offer scheduled publish"},
 		{Key: HomePageSlug, Group: GroupCMS, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Slug of the published CMS page served as the public homepage; empty → built-in home"},
 		{Key: SiteCacheTTL, Group: GroupCMS, Type: settings.TypeInt, Default: 60, Min: ptr(0), Max: ptr(86400), IsPublic: true, Description: "Seconds the public site may serve a cached page; 0 disables caching"},
+		{Key: SiteBrandTagline, Group: GroupCMS, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Footer line under the logo (newlines kept); empty → the site's built-in copy"},
+		{Key: SiteFooterNoteTitle, Group: GroupCMS, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Heading of the footer's last column; empty → the site's built-in copy"},
+		{Key: SiteFooterNoteText, Group: GroupCMS, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Body of the footer's last column (newlines kept); empty → the site's built-in copy"},
+		{Key: SiteFooterCopyright, Group: GroupCMS, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Copyright line; {year} is replaced by the current year. Empty → the site's built-in copy"},
+		{Key: SiteHeaderCTALabel, Group: GroupCMS, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Label of the header's contact button; empty → the site's built-in copy"},
+		{Key: SiteHeaderCTAURL, Group: GroupCMS, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Target of the header's contact button (a path or URL); empty → the site's built-in target"},
 	}
 }
 

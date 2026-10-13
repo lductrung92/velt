@@ -25,6 +25,7 @@ export const INDENT_WIDTH = 20;
 export interface MenuItemDraft {
   key: string;
   label: string;
+  description: string | null;
   link_type: MenuLinkType;
   target_id: string | null;
   url: string | null;
@@ -54,6 +55,7 @@ export function fromNodes(nodes: MenuItemNode[]): MenuItemDraft[] {
   return nodes.map((n) => ({
     key: n.id,
     label: n.label,
+    description: n.description,
     link_type: n.link_type,
     target_id: n.target_id,
     url: n.url,
@@ -72,6 +74,7 @@ export function toItemsInput(drafts: MenuItemDraft[]): MenuItemInput[] {
       d.link_type === "category";
     return {
       label: d.label,
+      description: d.description,
       link_type: d.link_type,
       target_id: isEntity ? d.target_id : null,
       url: isEntity ? null : d.url,

@@ -5,12 +5,15 @@ import { emptyBlog, type BlogState } from "./lib/blog";
 import { loadBlog, articleRedirect } from "./lib/blog.server";
 import { loadSiteContent } from "./lib/site.server";
 import { loadHomeSections } from "./lib/landing.server";
+import { loadLayout } from "./lib/layout.server";
+import type { SiteLayout } from "./lib/layout";
 
 export function render(
   path: string,
   blog: BlogState = emptyBlog(),
   data?: SiteContent,
   sections?: PublicSection[],
+  layout?: SiteLayout,
 ) {
   const url = new URL(path, "http://site.local"),
     route = resolveRoute(url, data, blog);
@@ -20,6 +23,7 @@ export function render(
     blog,
     data,
     sections,
+    layout,
   };
   const title = route.home
     ? "ZUKATEK — Đội ngũ phát triển & sản phẩm số"
@@ -77,13 +81,15 @@ export async function renderRequest(path: string) {
   // The home page may be driven by a published landing; other routes never are,
   // so they do not pay for the lookup.
   const isHome = url.pathname === "/" || url.pathname === "/index.html";
-  const [blog, site, sections] = await Promise.all([
+  const [blog, site, sections, layout] = await Promise.all([
     needsBlog ? loadBlog(path) : Promise.resolve(emptyBlog()),
     loadSiteContent(),
     isHome ? loadHomeSections() : Promise.resolve([]),
+    // The header and footer are on every route, home or not.
+    loadLayout(),
   ]);
   return {
-    ...render(path, blog, site.content, sections),
+    ...render(path, blog, site.content, sections, layout),
     redirect: url.pathname.startsWith("/blog/")
       ? articleRedirect(path, blog)
       : undefined,

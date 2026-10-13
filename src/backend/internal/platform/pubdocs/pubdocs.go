@@ -232,6 +232,10 @@ func (s *Store) Version(ctx context.Context) (string, error) {
 	// cms_landing_sections, so editing a section changes what visitors see
 	// without writing a published doc. Leaving them out meant a landing edit
 	// never invalidated the site's cache — measured, not theorised.
+	//
+	// The site's header and footer are read live too: their links come from
+	// cms_menus (whose updated_at the item replace bumps, since the items
+	// themselves carry no timestamp) and their text from system_settings.
 	var token string
 	err := s.pool.QueryRow(ctx, `
 		WITH marks AS (
@@ -240,6 +244,10 @@ func (s *Store) Version(ctx context.Context) (string, error) {
 		  SELECT MAX(updated_at), COUNT(*) FROM cms_landing_sections
 		  UNION ALL
 		  SELECT MAX(updated_at), COUNT(*) FROM cms_landing_pages
+		  UNION ALL
+		  SELECT MAX(updated_at), COUNT(*) FROM cms_menus
+		  UNION ALL
+		  SELECT MAX(updated_at), COUNT(*) FROM system_settings
 		)
 		SELECT COALESCE(
 		         to_char(MAX(at) AT TIME ZONE 'UTC', 'YYYYMMDD"T"HH24MISS.US')

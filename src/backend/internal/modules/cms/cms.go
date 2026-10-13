@@ -60,6 +60,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 		w.PublicPages = pages.RegisterPublic(r, resolver, landingPublic, docs)
 		w.PublicArticles = articles.RegisterPublic(r, pool, store, docs)
 		newsletter.RegisterPublic(r, base, pool, limiter, trustProxy)
+		menus.RegisterPublic(r, pool)
 	})
 
 	r.Route("/api/cms", func(r chi.Router) {

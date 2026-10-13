@@ -182,16 +182,17 @@ func (s *Service) GroupView(ctx context.Context, group string) (GroupedView, err
 }
 
 // UpdateScoped applies updates WITHOUT re-checking settings.manage, and ONLY for
-// keys under allowPrefix (e.g. "cms."). It lets a module that gates its own
-// permission (the CMS module gates cms.settings.manage) write its slice of the
-// shared registry without holding the global settings.manage. Keys outside
-// allowPrefix — or unknown to the registry — fail with 422 unknown_setting_key.
+// keys under one of allowPrefixes (e.g. "cms."). It lets a module that gates its
+// own permission (the CMS module gates cms.settings.manage) write its slice of
+// the shared registry without holding the global settings.manage. Keys under no
+// allowed prefix — or unknown to the registry — fail with 422
+// unknown_setting_key. A module owning more than one prefix passes them all.
 //
 // Cross-key validation is intentionally skipped: it only covers the foundation
 // storage keys, and a scoped group (cms.*) carries no inter-key constraints, so
 // running it could spuriously block a flag write when storage is misconfigured.
 // The original Update (gated settings.manage) remains for System Settings.
-func (s *Service) UpdateScoped(ctx context.Context, id *httpx.Identity, updates map[string]json.RawMessage, allowPrefix string) (GroupedView, error) {
+func (s *Service) UpdateScoped(ctx context.Context, id *httpx.Identity, updates map[string]json.RawMessage, allowPrefixes ...string) (GroupedView, error) {
 	if id == nil {
 		return nil, apperr.Unauthorized("unauthorized")
 	}
@@ -205,7 +206,7 @@ func (s *Service) UpdateScoped(ctx context.Context, id *httpx.Identity, updates 
 	fields := make(map[string]string)
 
 	for key, raw := range updates {
-		if !strings.HasPrefix(key, allowPrefix) {
+		if !hasAnyPrefix(key, allowPrefixes) {
 			return nil, unknownKeyErr(key)
 		}
 		def, ok := s.registry.Get(key)
@@ -368,4 +369,15 @@ func validateCrossKey(merged map[string]any) map[string]string {
 func asString(v any) string {
 	s, _ := v.(string)
 	return s
+}
+
+// hasAnyPrefix reports whether key sits under one of the allowed prefixes. No
+// prefixes means nothing is writable, which is the safe reading of "scoped".
+func hasAnyPrefix(key string, prefixes []string) bool {
+	for _, p := range prefixes {
+		if strings.HasPrefix(key, p) {
+			return true
+		}
+	}
+	return false
 }

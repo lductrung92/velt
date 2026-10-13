@@ -1,15 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import { useSite } from "../context";
+import { navHref, navIcon, type NavItem } from "../lib/layout";
 import { Icon } from "./Icon";
 
 export function Header() {
-  const { href, url } = useSite();
+  const { href, url, layout } = useSite();
   const [menuOpen, setMenuOpen] = useState(false),
-    [dropdownOpen, setDropdownOpen] = useState(false);
+    // Which dropdown is open, by position — the menu may define several.
+    [openDropdown, setOpenDropdown] = useState<number | null>(null);
   const header = useRef<HTMLElement>(null),
     menuToggle = useRef<HTMLButtonElement>(null),
-    dropdownToggle = useRef<HTMLButtonElement>(null);
-  const productLink = href(url.pathname === "/" ? "/#products" : "/products");
+    // The toggle that opened the current dropdown, so Escape returns focus to
+    // the button the visitor actually pressed.
+    dropdownToggle = useRef<HTMLButtonElement | null>(null);
+  // On the home page the catalogue link stays an in-page anchor, exactly as the
+  // markup did: "/products" scrolls to the section instead of reloading it.
+  const to = (item: NavItem) =>
+    url.pathname === "/" && item.href === "/products"
+      ? href("/#products")
+      : navHref(item, href);
+  const linkProps = (item: NavItem) =>
+    item.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {};
+  const ctaHref = /^https?:\/\//i.test(layout.chrome.ctaHref)
+    ? layout.chrome.ctaHref
+    : href(layout.chrome.ctaHref);
   useEffect(() => {
     document.body.classList.toggle("menu-open", menuOpen);
     const surfaces = document.querySelectorAll<HTMLElement>(
@@ -32,7 +46,7 @@ export function Header() {
   useEffect(() => {
     const outside = (event: MouseEvent) => {
       if (!(event.target as Element).closest(".nav-dropdown"))
-        setDropdownOpen(false);
+        setOpenDropdown(null);
     };
     const keyboard = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -40,8 +54,8 @@ export function Header() {
           setMenuOpen(false);
           menuToggle.current?.focus();
         }
-        if (dropdownOpen) {
-          setDropdownOpen(false);
+        if (openDropdown !== null) {
+          setOpenDropdown(null);
           dropdownToggle.current?.focus();
         }
       }
@@ -72,7 +86,7 @@ export function Header() {
       document.removeEventListener("keydown", keyboard);
       desktop.removeEventListener("change", resize);
     };
-  }, [menuOpen, dropdownOpen]);
+  }, [menuOpen, openDropdown]);
   return (
     <header className="site-header" ref={header}>
       <div className="nav-container">
@@ -84,55 +98,66 @@ export function Header() {
           <img src="/assets/logo.png" alt="ZUKATEK" width="1222" height="249" />
         </a>
         <nav className="desktop-nav" aria-label="Điều hướng chính">
-          <div className="nav-dropdown">
-            <button
-              ref={dropdownToggle}
-              className="nav-link dropdown-toggle"
-              aria-expanded={dropdownOpen}
-              aria-controls="explore-menu"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-            >
-              Khám phá <Icon name="down" />
-            </button>
-            <div
-              className="dropdown-panel"
-              id="explore-menu"
-              hidden={!dropdownOpen}
-            >
-              <a href={productLink} onClick={() => setDropdownOpen(false)}>
-                <span className="menu-icon">
-                  <Icon name="grid" />
-                </span>
-                <span>
-                  <strong>Sản phẩm</strong>
-                  <small>Danh mục, tính năng và bản trải nghiệm</small>
-                </span>
+          {layout.header.map((item, index) =>
+            item.children.length > 0 ? (
+              <div className="nav-dropdown" key={index}>
+                <button
+                  className="nav-link dropdown-toggle"
+                  aria-expanded={openDropdown === index}
+                  aria-controls={`nav-menu-${index}`}
+                  onClick={(event) => {
+                    dropdownToggle.current = event.currentTarget;
+                    setOpenDropdown(openDropdown === index ? null : index);
+                  }}
+                >
+                  {item.label} <Icon name="down" />
+                </button>
+                <div
+                  className="dropdown-panel"
+                  id={`nav-menu-${index}`}
+                  hidden={openDropdown !== index}
+                >
+                  {item.children.map((child, childIndex) => (
+                    <a
+                      key={childIndex}
+                      href={to(child)}
+                      {...linkProps(child)}
+                      onClick={() => setOpenDropdown(null)}
+                    >
+                      <span className="menu-icon">
+                        <Icon name={navIcon(child.href)} />
+                      </span>
+                      <span>
+                        <strong>{child.label}</strong>
+                        {child.description && (
+                          <small>{child.description}</small>
+                        )}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <a
+                className="nav-link"
+                key={index}
+                href={to(item)}
+                {...linkProps(item)}
+                aria-current={
+                  item.href !== "/" && url.pathname.startsWith(item.href)
+                    ? "page"
+                    : undefined
+                }
+              >
+                {item.label}
               </a>
-              <a href={href("/#team")} onClick={() => setDropdownOpen(false)}>
-                <span className="menu-icon">
-                  <Icon name="users" />
-                </span>
-                <span>
-                  <strong>Đội ngũ & kỹ năng</strong>
-                  <small>Con người đứng sau ZUKATEK</small>
-                </span>
-              </a>
-            </div>
-          </div>
-          <a className="nav-link" href={productLink}>
-            Sản phẩm
-          </a>
-          <a className="nav-link" href={href("/#team")}>
-            Đội ngũ & kỹ năng
-          </a>
+            ),
+          )}
         </nav>
         <div className="nav-right">
-          <a
-            className="button button-small contact-nav"
-            href={href("/#contact")}
-          >
+          <a className="button button-small contact-nav" href={ctaHref}>
             <Icon name="support" />
-            Liên hệ
+            {layout.chrome.ctaLabel}
           </a>
         </div>
         <button
@@ -143,7 +168,7 @@ export function Header() {
           aria-controls="mobile-menu"
           onClick={() => {
             setMenuOpen(!menuOpen);
-            setDropdownOpen(false);
+            setOpenDropdown(null);
           }}
         >
           <span />
@@ -158,18 +183,14 @@ export function Header() {
         hidden={!menuOpen}
         onClick={() => setMenuOpen(false)}
       >
-        <a href={productLink}>
-          Sản phẩm <Icon name="arrow" />
-        </a>
-        <a href={href("/#team")}>
-          Đội ngũ & kỹ năng <Icon name="arrow" />
-        </a>
-        <a href={href("/#collaboration")}>
-          Cách mua sản phẩm <Icon name="arrow" />
-        </a>
-        <a className="button contact-nav" href={href("/#contact")}>
+        {layout.headerMobile.map((item, index) => (
+          <a key={index} href={to(item)} {...linkProps(item)}>
+            {item.label} <Icon name="arrow" />
+          </a>
+        ))}
+        <a className="button contact-nav" href={ctaHref}>
           <Icon name="support" />
-          Liên hệ
+          {layout.chrome.ctaLabel}
         </a>
       </nav>
     </header>

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict jU6HxOvy0K6IX4x4MzPGwv6YY9BCxYpqK8zrRmL7qQuT2MzHzg9kHGe6ABJjbPE
+\restrict xXAtS6d54z1ttJvNn1Y4Vz4z5kiDHbdZLfTY15jfh6Q7w6syWgjT17QK8khdJ1M
 
 -- Dumped from database version 18.6
 -- Dumped by pg_dump version 18.6
@@ -286,6 +286,7 @@ CREATE TABLE public.cms_menu_items (
     url text,
     open_new_tab boolean DEFAULT false NOT NULL,
     sort_order integer DEFAULT 0 NOT NULL,
+    description text,
     CONSTRAINT cms_menu_items_link_type_check CHECK ((link_type = ANY (ARRAY['internal'::text, 'external'::text, 'article'::text, 'page'::text, 'category'::text])))
 );
 
@@ -1760,5 +1761,5 @@ ALTER TABLE ONLY public.user_roles
 -- PostgreSQL database dump complete
 --
 
-\unrestrict jU6HxOvy0K6IX4x4MzPGwv6YY9BCxYpqK8zrRmL7qQuT2MzHzg9kHGe6ABJjbPE
+\unrestrict xXAtS6d54z1ttJvNn1Y4Vz4z5kiDHbdZLfTY15jfh6Q7w6syWgjT17QK8khdJ1M
 

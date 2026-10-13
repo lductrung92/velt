@@ -64,7 +64,7 @@ func (s *Service) UpdateSettings(ctx context.Context, id *httpx.Identity, req Up
 			oldHome = homeSlugFromView(cur)
 		}
 	}
-	view, err := s.port.UpdateScoped(ctx, id, req.Updates, shared.KeyPrefixCMS)
+	view, err := s.port.UpdateScoped(ctx, id, req.Updates, shared.KeyPrefixCMS, shared.KeyPrefixSite)
 	if err != nil {
 		return nil, err
 	}
