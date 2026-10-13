@@ -749,7 +749,12 @@
         "newsletter": "Newsletter",
         "faq": "FAQ",
         "gallery": "Gallery",
-        "html_embed": "HTML embed"
+        "html_embed": "HTML embed",
+        "audience_picker": "Audience picker",
+        "product_grid": "Product grid",
+        "team": "Team",
+        "buying_steps": "Buying steps",
+        "contact_form": "Contact form"
       },
       "form": {
         "upload": "Upload image",
@@ -809,7 +814,15 @@
         "caption": "Caption",
         "html": "HTML code",
         "html_hint": "Only safe HTML + YouTube/Vimeo iframes survive publish; JS/CSS is stripped.",
-        "slides": "Slides"
+        "slides": "Slides",
+        "add_audience": "Add audience",
+        "add_step": "Add step",
+        "category": "Product category",
+        "show_all_label": "Show-all label",
+        "show_all_href": "Show-all link",
+        "email": "Email",
+        "zalo": "Zalo",
+        "note": "Note"
       }
     },
     "menus": {

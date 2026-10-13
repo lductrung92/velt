@@ -797,7 +797,12 @@
         "newsletter": "Đăng ký nhận tin",
         "faq": "Câu hỏi thường gặp",
         "gallery": "Thư viện ảnh",
-        "html_embed": "Nhúng HTML"
+        "html_embed": "Nhúng HTML",
+        "audience_picker": "Đối tượng khách hàng",
+        "product_grid": "Lưới sản phẩm",
+        "team": "Đội ngũ",
+        "buying_steps": "Các bước mua hàng",
+        "contact_form": "Biểu mẫu liên hệ"
       },
       "form": {
         "upload": "Tải ảnh",
@@ -857,7 +862,15 @@
         "caption": "Chú thích",
         "html": "Mã HTML",
         "html_hint": "Chỉ HTML an toàn + iframe YouTube/Vimeo được giữ khi xuất bản; JS/CSS bị lược bỏ.",
-        "slides": "Slide"
+        "slides": "Slide",
+        "add_audience": "Thêm đối tượng",
+        "add_step": "Thêm bước",
+        "category": "Danh mục sản phẩm",
+        "show_all_label": "Nhãn nút xem tất cả",
+        "show_all_href": "Liên kết xem tất cả",
+        "email": "Email",
+        "zalo": "Zalo",
+        "note": "Ghi chú"
       }
     },
     "menus": {

@@ -25,7 +25,7 @@ export default function CodeMirrorEditor({
       theme={dark ? "dark" : "light"}
       height="288px"
       aria-label={ariaLabel}
-      style={{ fontSize: 13 }}
+      style={{ fontSize: "var(--font-size-compact)" }}
     />
   );
 }

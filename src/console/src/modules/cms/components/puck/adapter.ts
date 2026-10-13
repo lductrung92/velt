@@ -16,11 +16,16 @@ import type {
 // edits it through a single custom field bound to that one prop (see puckConfig);
 // `visible` is a sibling custom field mapped to the is_visible column. `id` is
 // reused from the backend section id so a round-trip can reconcile create/update/
-// delete/reorder. All 14 section types round-trip.
+// delete/reorder. All 19 section types round-trip.
 
 type PuckItem = {
   type: string;
-  props: { cfg?: SectionConfig; visible?: boolean; fullWidth?: boolean; id: string };
+  props: {
+    cfg?: SectionConfig;
+    visible?: boolean;
+    fullWidth?: boolean;
+    id: string;
+  };
 };
 
 // sectionsToPuckData maps the landing's ordered sections into Puck content.

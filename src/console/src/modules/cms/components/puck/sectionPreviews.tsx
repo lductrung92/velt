@@ -3,7 +3,8 @@ import { ImageIcon } from "lucide-react";
 import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { SectionConfig, SectionType } from "../../services/landing.service";
+import type { SectionConfig } from "../../services/landing.service";
+import type { BuilderSectionType } from "../landingSections/types";
 
 // In-canvas visual preview for each landing section type. These mirror the
 // public web renderers (web/modules/cms/landing) closely enough for editing —
@@ -31,7 +32,9 @@ const list = (cfg: SectionConfig, k: string): SectionConfig[] =>
 // (e.g. "image_url" / "avatar_url").
 const imgSrc = (cfg: SectionConfig, urlKey: string): string => {
   const pathKey = urlKey.replace(/_url$/, "_path");
-  const pending = cfg[`${pathKey}__pending`] as { dataUrl?: string } | undefined;
+  const pending = cfg[`${pathKey}__pending`] as
+    | { dataUrl?: string }
+    | undefined;
   if (pending?.dataUrl) return pending.dataUrl;
   return str(cfg, urlKey);
 };
@@ -54,10 +57,18 @@ const btnClass = (style?: string): string =>
       : "bg-primary text-primary-foreground";
 
 // Inert button row (preview only — no navigation).
-function Buttons({ items, center }: { items: SectionConfig[]; center: boolean }) {
+function Buttons({
+  items,
+  center,
+}: {
+  items: SectionConfig[];
+  center: boolean;
+}) {
   if (items.length === 0) return null;
   return (
-    <div className={`mt-4 flex flex-wrap gap-3 ${center ? "justify-center" : ""}`}>
+    <div
+      className={`mt-4 flex flex-wrap gap-3 ${center ? "justify-center" : ""}`}
+    >
       {(items as Btn[]).map((b, i) => (
         <span
           key={i}
@@ -113,13 +124,15 @@ function HeroPreview({ cfg }: PreviewProps) {
         }`}
       >
         {str(cfg, "eyebrow") && (
-          <span className="text-sm font-semibold uppercase tracking-wide text-primary">
+          <span className="text-sm font-medium uppercase tracking-wide text-primary">
             {str(cfg, "eyebrow")}
           </span>
         )}
         <h1 className="text-2xl font-extrabold">{str(cfg, "heading")}</h1>
         {str(cfg, "subheading") && (
-          <p className="text-lg text-muted-foreground">{str(cfg, "subheading")}</p>
+          <p className="text-lg text-muted-foreground">
+            {str(cfg, "subheading")}
+          </p>
         )}
         {imgSrc(cfg, "image_url") && (
           <img
@@ -263,11 +276,16 @@ function TestimonialsPreview({ cfg }: PreviewProps) {
           <figure key={i} className="rounded-xl border p-5">
             <blockquote className="text-sm">{str(it, "quote")}</blockquote>
             <figcaption className="mt-4 flex items-center gap-3">
-              <Img url={imgSrc(it, "avatar_url")} className="size-9 rounded-full object-cover" />
+              <Img
+                url={imgSrc(it, "avatar_url")}
+                className="size-9 rounded-full object-cover"
+              />
               <div>
-                <div className="text-sm font-semibold">{str(it, "author")}</div>
+                <div className="text-sm font-medium">{str(it, "author")}</div>
                 {str(it, "role") && (
-                  <div className="text-xs text-muted-foreground">{str(it, "role")}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {str(it, "role")}
+                  </div>
                 )}
               </div>
             </figcaption>
@@ -304,8 +322,12 @@ function StatsPreview({ cfg }: PreviewProps) {
       <div className="grid gap-4 sm:grid-cols-3">
         {items.map((it, i) => (
           <div key={i} className="rounded-xl border p-6 text-center">
-            <div className="text-3xl font-extrabold text-primary">{str(it, "value")}</div>
-            <div className="mt-1 text-sm text-muted-foreground">{str(it, "label")}</div>
+            <div className="text-3xl font-extrabold text-primary">
+              {str(it, "value")}
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              {str(it, "label")}
+            </div>
           </div>
         ))}
       </div>
@@ -345,9 +367,10 @@ function NewsletterPreview({ cfg }: PreviewProps) {
         )}
         <div className="mt-4 flex justify-center gap-2">
           <span className="inline-flex h-11 w-64 items-center rounded-full border border-input bg-background px-4 text-sm text-muted-foreground">
-            {str(cfg, "placeholder") || t("cms.landings.preview.email_placeholder")}
+            {str(cfg, "placeholder") ||
+              t("cms.landings.preview.email_placeholder")}
           </span>
-          <span className="inline-flex h-11 items-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground">
+          <span className="inline-flex h-11 items-center rounded-full bg-primary px-6 text-sm font-medium text-primary-foreground">
             {str(cfg, "button_label") || t("cms.landings.preview.subscribe")}
           </span>
         </div>
@@ -391,7 +414,10 @@ function GalleryPreview({ cfg }: PreviewProps) {
       >
         {items.map((it, i) => (
           <figure key={i}>
-            <Img url={imgSrc(it, "image_url")} className="aspect-video w-full rounded-lg object-cover" />
+            <Img
+              url={imgSrc(it, "image_url")}
+              className="aspect-video w-full rounded-lg object-cover"
+            />
             {str(it, "caption") && (
               <figcaption className="mt-1 text-center text-xs text-muted-foreground">
                 {str(it, "caption")}
@@ -431,20 +457,167 @@ function HtmlEmbedPreview({ cfg }: PreviewProps) {
   );
 }
 
-export const SECTION_PREVIEWS: Record<SectionType, ComponentType<PreviewProps>> =
-  {
-    hero: HeroPreview,
-    slider: SliderPreview,
-    featured_articles: FeaturedArticlesPreview,
-    categories_showcase: CategoriesShowcasePreview,
-    rich_text: RichTextPreview,
-    cta_banner: CtaBannerPreview,
-    testimonials: TestimonialsPreview,
-    logos: LogosPreview,
-    stats: StatsPreview,
-    media_text: MediaTextPreview,
-    newsletter: NewsletterPreview,
-    faq: FaqPreview,
-    gallery: GalleryPreview,
-    html_embed: HtmlEmbedPreview,
-  };
+// ── the 5 home-page previews ──
+// They all lead with a centered title + subtitle, so share one heading.
+function SectionHead({ cfg }: PreviewProps) {
+  const title = str(cfg, "title");
+  const subtitle = str(cfg, "subtitle");
+  if (!title && !subtitle) return null;
+  return (
+    <div className="mb-6 text-center">
+      {title && <h2 className="text-2xl font-bold">{title}</h2>}
+      {subtitle && <p className="mt-2 text-muted-foreground">{subtitle}</p>}
+    </div>
+  );
+}
+
+function AudiencePickerPreview({ cfg }: PreviewProps) {
+  const items = list(cfg, "items");
+  return (
+    <div className="px-4 py-6">
+      <SectionHead cfg={cfg} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((it, i) => (
+          <article key={i} className="rounded-xl border p-5">
+            {str(it, "label") && (
+              <div className="text-xs font-medium uppercase tracking-wide text-primary">
+                {str(it, "label")}
+              </div>
+            )}
+            <h3 className="mt-1 font-semibold">{str(it, "headline")}</h3>
+            {str(it, "body") && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {str(it, "body")}
+              </p>
+            )}
+            {str(it, "cta_label") && (
+              <span className="mt-3 inline-block text-sm font-medium text-primary">
+                {str(it, "cta_label")}
+              </span>
+            )}
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProductGridPreview({ cfg }: PreviewProps) {
+  return (
+    <div className="px-4 py-6">
+      <SectionHead cfg={cfg} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div key={i} className="space-y-2 rounded-xl border p-4">
+            <div className="aspect-video w-full rounded-lg bg-muted" />
+            <div className="h-4 w-3/4 rounded bg-muted" />
+            <div className="h-3 w-full rounded bg-muted" />
+          </div>
+        ))}
+      </div>
+      {str(cfg, "show_all_label") && (
+        <div className="mt-4 text-center">
+          <span className="inline-flex items-center rounded-md border border-input px-4 py-2 text-sm font-medium">
+            {str(cfg, "show_all_label")}
+          </span>
+        </div>
+      )}
+      <DynamicHint />
+    </div>
+  );
+}
+
+function TeamPreview({ cfg }: PreviewProps) {
+  return (
+    <div className="px-4 py-6">
+      <SectionHead cfg={cfg} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div
+            key={i}
+            className="flex flex-col items-center gap-2 rounded-xl border p-5"
+          >
+            <div className="size-14 rounded-full bg-muted" />
+            <div className="h-3 w-20 rounded bg-muted" />
+            <div className="h-3 w-14 rounded bg-muted" />
+          </div>
+        ))}
+      </div>
+      <DynamicHint />
+    </div>
+  );
+}
+
+function BuyingStepsPreview({ cfg }: PreviewProps) {
+  const steps = list(cfg, "steps");
+  return (
+    <div className="px-4 py-6">
+      <SectionHead cfg={cfg} />
+      <div className="grid gap-4 sm:grid-cols-3">
+        {steps.map((it, i) => (
+          <article key={i} className="rounded-xl border p-5">
+            <span className="text-2xl font-extrabold text-primary">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <h3 className="mt-1 font-semibold">{str(it, "title")}</h3>
+            {str(it, "body") && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {str(it, "body")}
+              </p>
+            )}
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ContactFormPreview({ cfg }: PreviewProps) {
+  return (
+    <div className="px-4 py-6">
+      <SectionHead cfg={cfg} />
+      <div className="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2">
+        <div className="space-y-2 text-sm">
+          {str(cfg, "email") && (
+            <div className="text-primary">{str(cfg, "email")}</div>
+          )}
+          {str(cfg, "zalo") && <div>{str(cfg, "zalo")}</div>}
+          {str(cfg, "note") && (
+            <p className="text-muted-foreground">{str(cfg, "note")}</p>
+          )}
+        </div>
+        {/* Inert field shapes — the real form lives on the public page. */}
+        <div className="space-y-3" aria-hidden>
+          <div className="h-9 rounded-md border border-input bg-background" />
+          <div className="h-9 rounded-md border border-input bg-background" />
+          <div className="h-20 rounded-md border border-input bg-background" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const SECTION_PREVIEWS: Record<
+  BuilderSectionType,
+  ComponentType<PreviewProps>
+> = {
+  hero: HeroPreview,
+  slider: SliderPreview,
+  featured_articles: FeaturedArticlesPreview,
+  categories_showcase: CategoriesShowcasePreview,
+  rich_text: RichTextPreview,
+  cta_banner: CtaBannerPreview,
+  testimonials: TestimonialsPreview,
+  logos: LogosPreview,
+  stats: StatsPreview,
+  media_text: MediaTextPreview,
+  newsletter: NewsletterPreview,
+  faq: FaqPreview,
+  gallery: GalleryPreview,
+  html_embed: HtmlEmbedPreview,
+  audience_picker: AudiencePickerPreview,
+  product_grid: ProductGridPreview,
+  team: TeamPreview,
+  buying_steps: BuyingStepsPreview,
+  contact_form: ContactFormPreview,
+};

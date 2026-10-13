@@ -3,9 +3,9 @@ import type { Config, CustomFieldRender } from "@puckeditor/core";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
-import { SECTION_TYPES } from "../../services/landing.service";
-import type { SectionConfig, SectionType } from "../../services/landing.service";
+import type { SectionConfig } from "../../services/landing.service";
 import { defaultSectionConfig, SECTION_FORMS } from "../landingSections/forms";
+import { BUILDER_SECTION_TYPES } from "../landingSections/types";
 import { SECTION_PREVIEWS } from "./sectionPreviews";
 
 type TFn = (k: string) => string;
@@ -25,7 +25,11 @@ export function buildLandingPuckConfig(t: TFn, landingId: string): Config {
   const label = (type: string) => t(`cms.landings.section.${type}`);
   const components: Config["components"] = {};
 
-  const renderVisible: CustomFieldRender<boolean> = ({ value, onChange, id }) => (
+  const renderVisible: CustomFieldRender<boolean> = ({
+    value,
+    onChange,
+    id,
+  }) => (
     <div className="flex items-center gap-2">
       <Switch
         id={`vis-${id}`}
@@ -41,7 +45,11 @@ export function buildLandingPuckConfig(t: TFn, landingId: string): Config {
   // Full-width: the section spans the band (no max-w-7xl content cap on the web).
   // Stored in config.full_width via the adapter; a plain boolean, so it survives
   // sanitize/snapshot untouched.
-  const renderFullWidth: CustomFieldRender<boolean> = ({ value, onChange, id }) => (
+  const renderFullWidth: CustomFieldRender<boolean> = ({
+    value,
+    onChange,
+    id,
+  }) => (
     <div className="flex items-center gap-2">
       <Switch
         id={`fw-${id}`}
@@ -54,9 +62,9 @@ export function buildLandingPuckConfig(t: TFn, landingId: string): Config {
     </div>
   );
 
-  for (const type of SECTION_TYPES) {
+  for (const type of BUILDER_SECTION_TYPES) {
     const Form = SECTION_FORMS[type];
-    const Preview = SECTION_PREVIEWS[type as SectionType];
+    const Preview = SECTION_PREVIEWS[type];
     const renderField: CustomFieldRender<SectionConfig> = ({
       value,
       onChange,
@@ -89,7 +97,7 @@ export function buildLandingPuckConfig(t: TFn, landingId: string): Config {
             className={`relative overflow-hidden rounded-md ${hidden ? "opacity-50" : ""}`}
           >
             {hidden ? (
-              <span className="absolute right-2 top-2 z-10 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
+              <span className="absolute right-2 top-2 z-10 rounded bg-muted px-1.5 py-0.5 text-caption font-medium uppercase text-muted-foreground">
                 {t("cms.landings.builder.hidden")}
               </span>
             ) : null}
