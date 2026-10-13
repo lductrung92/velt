@@ -120,7 +120,14 @@ function RichTextEditorBase({
     content: initialJSON ?? value,
     editable,
     immediatelyRender: false,
-    onUpdate: ({ editor }) => onChange(editor.getHTML(), editor.getJSON()),
+    // An empty document reports as "" rather than Tiptap's "<p></p>".
+    // Those are the same thing to a reader, but not to a form: the editor
+    // emits once as it mounts, and writing "<p></p>" over a default of ""
+    // marked every brand-new record dirty before the user had typed a
+    // character — which made the unsaved-changes prompt fire on a form nobody
+    // had touched.
+    onUpdate: ({ editor }) =>
+      onChange(editor.isEmpty ? "" : editor.getHTML(), editor.getJSON()),
     editorProps: {
       attributes: {
         class:

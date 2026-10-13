@@ -344,6 +344,25 @@ describe("ArticleEditor", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("a brand-new record is not dirty before the user types", async () => {
+    // Guards the whole create path: a pristine form must let you walk away.
+    // NOTE it does NOT catch the Tiptap "<p></p>" regression that caused this
+    // — jsdom never drives that mount emission. RichTextEditor.test.tsx owns
+    // that one.
+    signIn(MANAGER);
+    server.use(...baseHandlers());
+    renderEditor("/cms/articles/new");
+    await screen.findByRole("textbox", { name: BODY() });
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByRole("button", { name: i18n.t("common.back") }),
+    );
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(await screen.findByText("danh sách")).toBeInTheDocument();
+  });
+
   it("Back asks before discarding content and cancel keeps the draft", async () => {
     signIn(MANAGER);
     server.use(...baseHandlers());
