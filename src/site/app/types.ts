@@ -1,3 +1,5 @@
+import type { BlogState } from "./lib/blog";
+
 export interface Member {
   id: string;
   name: string;
@@ -43,4 +45,7 @@ export interface SiteContent {
 export interface AppProps {
   url: string;
   year: number;
+  blog?: BlogState;
+  /** Content the server loaded, serialised so hydration sees the same page. */
+  data?: SiteContent;
 }
