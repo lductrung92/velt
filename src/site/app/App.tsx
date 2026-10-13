@@ -13,8 +13,9 @@ import { ProductDetail, NotFound } from "./pages/ProductDetail";
 import { Blog } from "./pages/Blog";
 import { BlogArticle } from "./pages/BlogArticle";
 import { blogPath, emptyBlog, type BlogState } from "./lib/blog";
-import { DEFAULT_LAYOUT } from "./lib/layout";
+import { defaultLayout } from "./lib/layout";
 import { BASE_LOCALE, withLocale } from "./lib/locales";
+import { translator } from "./lib/i18n";
 
 export function resolveRoute(
   url: URL,
@@ -64,11 +65,15 @@ export function App({
   data = content,
   blog,
   sections,
-  layout = DEFAULT_LAYOUT,
+  layout,
   locale = BASE_LOCALE,
   locales = [],
 }: AppProps & { data?: SiteContent }) {
   const url = useMemo(() => new URL(path, "http://site.local"), [path]);
+  // The site's own words, and the header/footer it falls back to, both follow
+  // the language — so they are resolved once here and handed down.
+  const t = useMemo(() => translator(locale), [locale]);
+  const chrome = useMemo(() => layout ?? defaultLayout(t), [layout, t]);
   const context = useMemo(() => {
     const referrer = data.members.find(
       (member) => member.id === url.searchParams.get("ref"),
@@ -82,9 +87,10 @@ export function App({
       isExample,
       blog: blog || emptyBlog(),
       sections,
-      layout,
+      layout: chrome,
       locale,
       locales,
+      t,
       // One place puts the language into an address, so every link on the page
       // stays in the language the reader is reading — including the ones built
       // from console data.
@@ -101,12 +107,12 @@ export function App({
         return withLocale(withReferral(path, referrer), target);
       },
     };
-  }, [data, url, blog, sections, layout, locale, locales]);
+  }, [data, url, blog, sections, chrome, locale, locales, t]);
   const route = resolveRoute(url, data, blog);
   return (
     <SiteContext value={context}>
       <a className="skip-link" href="#main">
-        Đến nội dung chính
+        {t("a11y.skip")}
       </a>
       <Icons />
       <Header />
@@ -125,12 +131,10 @@ export function App({
                 {context.referrer.name.slice(0, 1)}
               </span>
               <p>
-                Hồ sơ ZUKATEK được giới thiệu bởi{" "}
+                {t("referral.intro")}{" "}
                 <strong>{context.referrer.name}</strong>
               </p>
-              <a href={context.href("/#contact")}>
-                Trao đổi cùng người giới thiệu ↗
-              </a>
+              <a href={context.href("/#contact")}>{t("referral.cta")}</a>
             </div>
           </div>
         )}
@@ -148,7 +152,7 @@ export function App({
           <NotFound />
         )}
       </main>
-      <Footer href={context.href} year={year} layout={layout} />
+      <Footer href={context.href} year={year} layout={chrome} />
       <Chat />
     </SiteContext>
   );

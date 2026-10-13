@@ -153,6 +153,8 @@ func (s *Service) DeleteTag(ctx context.Context, id *httpx.Identity, tagID uuid.
 	if err := s.repo.DeleteTag(ctx, tagID); err != nil {
 		return apperr.Internal()
 	}
+	// Tags are not translatable (nothing public ever showed a translated tag),
+	// but rows written before that was decided are still dropped with the tag.
 	s.purgeTranslations(ctx, EntityTag, tagID)
 	s.Sec(ctx).Info("cms tag deleted", "actor", id.UserID, "tag", tagID)
 	s.Record(ctx, id, taxonomyEntry(actionTagDeleted, EntityTag, tagID, cur.Name, nil))

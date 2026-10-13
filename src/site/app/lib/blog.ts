@@ -47,9 +47,16 @@ export function emptyBlog(): BlogState {
 
 export const blogPath = (slug: string) => `/blog/${encodeURIComponent(slug)}`;
 
-export function blogDate(value: string | null) {
+/**
+ * A publication date, written the way the language being read writes dates.
+ *
+ * Intl wants a BCP 47 tag; the site's codes are already valid ones except for
+ * Vietnamese, where "vi-VN" produces the day-month order a Vietnamese reader
+ * expects rather than the bare-language default.
+ */
+export function blogDate(value: string | null, locale = "vi") {
   if (!value || Number.isNaN(Date.parse(value))) return "";
-  return new Intl.DateTimeFormat("vi-VN", {
+  return new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
     day: "numeric",
     month: "long",
     year: "numeric",

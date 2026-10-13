@@ -181,7 +181,7 @@ func TestUpdate_RequiresManage(t *testing.T) {
 
 func TestGetPublic_OnlyPublicKeys(t *testing.T) {
 	env := newTestSvc(t)
-	out, err := env.svc.GetPublic(context.Background())
+	out, err := env.svc.GetPublic(context.Background(), "")
 	require.NoError(t, err)
 	require.Equal(t, "Zukatek", out["app.name"])
 	require.Contains(t, out, "app.logo_url")

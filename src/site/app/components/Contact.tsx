@@ -1,11 +1,22 @@
 import { Fragment, useState } from "react";
 import type { FormEvent } from "react";
 import { useSite } from "../context";
+import type { MessageKey } from "../lib/i18n";
 import { contactFor, safeExternalUrl } from "../lib/links";
 import { contactConfig } from "../lib/sections";
 import { Lines } from "./Lines";
 import { Icon } from "./Icon";
 import { Modal } from "./Modal";
+
+// The radio group carries a code, not a word: the value travels into the
+// e-mail body and is compared across renders, so it must not change with the
+// language. The words come from the catalogue table, which already names these
+// three audiences.
+const AUDIENCES: { code: string; label: MessageKey }[] = [
+  { code: "individual", label: "catalog.audience.individual" },
+  { code: "team", label: "catalog.audience.team" },
+  { code: "business", label: "catalog.audience.business" },
+];
 
 export function Contact({
   audience,
@@ -16,8 +27,8 @@ export function Contact({
   onAudience: (value: string) => void;
   config?: unknown;
 }) {
-  const { data, products, referrer, url } = useSite();
-  const section = contactConfig(config);
+  const { data, products, referrer, url, t } = useSite();
+  const section = contactConfig(config, t);
   const [person, setPerson] = useState(referrer?.id || ""),
     [brief, setBrief] = useState(""),
     [copyStatus, setCopyStatus] = useState("");
@@ -32,39 +43,63 @@ export function Contact({
       const field = form.querySelector<HTMLInputElement | HTMLTextAreaElement>(
         `#${id}`,
       )!;
-      field.setCustomValidity(
-        field.value.trim() ? "" : "Vui lòng nhập nội dung trước khi tiếp tục.",
-      );
+      field.setCustomValidity(field.value.trim() ? "" : t("contact.required"));
     }
     if (!form.reportValidity()) return;
     const fields = new FormData(form),
       product = products.find((item) => item.id === fields.get("product"));
     const consultant = data.members.find((member) => member.id === person);
+    const chosen = AUDIENCES.find((item) => item.code === audience);
+    // One key per line, joined here: the blank lines are the layout, and a
+    // translator keeps it by translating the lines rather than the message.
     setBrief(
-      `Xin chào ZUKATEK,\n\nTôi là: ${String(fields.get("name")).trim()}\nEmail: ${String(fields.get("email")).trim()}\nMua sản phẩm cho: ${audience}\nSản phẩm quan tâm: ${product ? product.name + (product.example ? " (mẫu minh họa)" : "") : "Cần tư vấn lựa chọn"}\nNgười tư vấn: ${consultant?.name || "Đội ngũ ZUKATEK"}${referrer ? `\nĐược giới thiệu bởi: ${referrer.name}` : ""}\n\nCâu hỏi về sản phẩm:\n${String(fields.get("message")).trim()}\n\nMong nhận được tư vấn về tính năng, giá và cách sử dụng.`,
+      [
+        t("contact.brief.greeting"),
+        "",
+        t("contact.brief.name", { name: String(fields.get("name")).trim() }),
+        t("contact.brief.email", { email: String(fields.get("email")).trim() }),
+        t("contact.brief.audience", {
+          audience: chosen ? t(chosen.label) : audience,
+        }),
+        t("contact.brief.product", {
+          product: product
+            ? product.name +
+              (product.example ? t("contact.brief.product_example") : "")
+            : t("contact.brief.product_any"),
+        }),
+        t("contact.brief.consultant", {
+          name: consultant?.name || t("contact.person_team"),
+        }),
+        ...(referrer
+          ? [t("contact.brief.referrer", { name: referrer.name })]
+          : []),
+        "",
+        t("contact.brief.question"),
+        String(fields.get("message")).trim(),
+        "",
+        t("contact.brief.closing"),
+      ].join("\n"),
     );
     setCopyStatus("");
   }
   async function copy() {
     try {
       await navigator.clipboard.writeText(brief);
-      setCopyStatus("Đã sao chép lời nhắn.");
+      setCopyStatus(t("contact.copied"));
     } catch {
-      setCopyStatus("Bạn có thể chọn nội dung và sao chép thủ công.");
+      setCopyStatus(t("contact.copy_manual"));
     }
   }
   function download() {
     const link = URL.createObjectURL(
-      new Blob(["\ufeff" + brief], { type: "text/plain;charset=utf-8" }),
+      new Blob(["﻿" + brief], { type: "text/plain;charset=utf-8" }),
     );
     const anchor = document.createElement("a");
     anchor.href = link;
     anchor.download = "loi-nhan-zukatek.txt";
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(link), 1000);
-    setCopyStatus(
-      "Đã tải lời nhắn về thiết bị. Nội dung chưa được gửi đến ZUKATEK.",
-    );
+    setCopyStatus(t("contact.downloaded"));
   }
   return (
     <>
@@ -75,7 +110,7 @@ export function Contact({
       >
         <div className="container contact-layout">
           <div className="contact-copy">
-            <span className="eyebrow">TƯ VẤN & MUA SẢN PHẨM</span>
+            <span className="eyebrow">{t("contact.eyebrow")}</span>
             <h2 id="contact-title">
               <Lines text={section.title} />
             </h2>
@@ -89,21 +124,18 @@ export function Contact({
               <div>
                 <strong>
                   {target.personal
-                    ? `Tư vấn cùng ${target.member?.name}`
-                    : "Tư vấn sản phẩm ZUKATEK"}
+                    ? t("contact.channel_member", {
+                        name: target.member?.name || "",
+                      })
+                    : t("contact.channel_team")}
                 </strong>
                 {email && <a href={`mailto:${email}`}>{email}</a>}
                 {zalo && (
                   <a href={zalo} target="_blank" rel="noopener noreferrer">
-                    Liên hệ qua Zalo ↗
+                    {t("contact.zalo")}
                   </a>
                 )}
-                {!email && !zalo && (
-                  <span>
-                    Kênh liên hệ sẽ sớm được cập nhật. Bạn có thể gửi lời nhắn
-                    cho người đã giới thiệu ZUKATEK.
-                  </span>
-                )}
+                {!email && !zalo && <span>{t("contact.channel_pending")}</span>}
               </div>
             </div>
             <div className="contact-decoration" aria-hidden="true">
@@ -116,22 +148,23 @@ export function Contact({
             </div>
           </div>
           <form className="contact-form" id="contact-form" onSubmit={prepare}>
-            <h3>Nhận tư vấn sản phẩm</h3>
+            <h3>{t("contact.form_title")}</h3>
             <p className="form-intro" id="form-intro">
               {email || zalo
-                ? "Cho biết sản phẩm bạn quan tâm và câu hỏi cần tư vấn."
-                : "Chuẩn bị nội dung hỏi mua sản phẩm để gửi cho người đã giới thiệu ZUKATEK."}
+                ? t("contact.form_intro")
+                : t("contact.form_intro_offline")}
             </p>
             <div className="form-row">
               <div className="field">
                 <label htmlFor="contact-name">
-                  Tên của bạn <span>*</span>
+                  {t("contact.name_label")}
+                  <span>*</span>
                 </label>
                 <input
                   id="contact-name"
                   name="name"
                   autoComplete="name"
-                  placeholder="Bạn tên là gì?"
+                  placeholder={t("contact.name_placeholder")}
                   maxLength={100}
                   required
                   onInput={(event) => event.currentTarget.setCustomValidity("")}
@@ -139,7 +172,8 @@ export function Contact({
               </div>
               <div className="field">
                 <label htmlFor="contact-email">
-                  Email <span>*</span>
+                  {t("contact.email_label")}
+                  <span>*</span>
                 </label>
                 <input
                   id="contact-email"
@@ -153,14 +187,16 @@ export function Contact({
               </div>
             </div>
             <div className="field">
-              <label htmlFor="contact-person">Người tư vấn</label>
+              <label htmlFor="contact-person">
+                {t("contact.person_label")}
+              </label>
               <select
                 id="contact-person"
                 name="person"
                 value={person}
                 onChange={(event) => setPerson(event.target.value)}
               >
-                <option value="">Đội ngũ ZUKATEK</option>
+                <option value="">{t("contact.person_team")}</option>
                 {data.members.map((member) => (
                   <option key={member.id} value={member.id}>
                     {member.name}
@@ -169,7 +205,9 @@ export function Contact({
               </select>
             </div>
             <div className="field">
-              <label htmlFor="contact-product">Sản phẩm bạn quan tâm</label>
+              <label htmlFor="contact-product">
+                {t("contact.product_label")}
+              </label>
               <select
                 id="contact-product"
                 name="product"
@@ -179,55 +217,54 @@ export function Contact({
                     : ""
                 }
               >
-                <option value="">Tôi cần tư vấn lựa chọn</option>
+                <option value="">{t("contact.product_any")}</option>
                 {products.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
-                    {item.example ? " · Minh họa" : ""}
+                    {item.example ? t("contact.product_example") : ""}
                   </option>
                 ))}
               </select>
             </div>
             <fieldset className="audience-field">
-              <legend>Bạn mua sản phẩm cho</legend>
+              <legend>{t("contact.audience_legend")}</legend>
               <div className="audience-options">
-                {["Cá nhân", "Nhóm", "Doanh nghiệp"].map((value) => (
-                  <label key={value}>
+                {AUDIENCES.map(({ code, label }) => (
+                  <label key={code}>
                     <input
                       type="radio"
                       name="audience"
-                      value={value}
-                      checked={audience === value}
-                      onChange={() => onAudience(value)}
+                      value={code}
+                      checked={audience === code}
+                      onChange={() => onAudience(code)}
                     />
-                    <span>{value}</span>
+                    <span>{t(label)}</span>
                   </label>
                 ))}
               </div>
             </fieldset>
             <div className="field">
               <label htmlFor="contact-message">
-                Bạn cần tư vấn điều gì? <span>*</span>
+                {t("contact.message_label")}
+                <span>*</span>
               </label>
               <textarea
                 id="contact-message"
                 name="message"
                 rows={4}
                 maxLength={3000}
-                placeholder="Tên sản phẩm, tính năng cần dùng, số người sử dụng hoặc câu hỏi về giá…"
+                placeholder={t("contact.message_placeholder")}
                 required
                 onInput={(event) => event.currentTarget.setCustomValidity("")}
               />
             </div>
             <button className="button form-submit" type="submit">
-              <span id="submit-label">Chuẩn bị lời nhắn</span>
+              <span id="submit-label">{t("contact.submit")}</span>
               <Icon name="arrow" />
             </button>
             <p className="form-note" id="form-note">
               {section.note ||
-                (email
-                  ? "Xem lại lời nhắn rồi gửi qua ứng dụng email. Biểu mẫu không tự gửi."
-                  : "Lời nhắn được tạo trên thiết bị để bạn sao chép hoặc tải về; chưa được gửi đến ZUKATEK.")}
+                (email ? t("contact.note_email") : t("contact.note_offline"))}
             </p>
           </form>
         </div>
@@ -236,16 +273,16 @@ export function Contact({
         <Modal
           id="brief-dialog"
           titleId="brief-title"
-          eyebrow="TƯ VẤN SẢN PHẨM ZUKATEK"
+          eyebrow={t("contact.brief_eyebrow")}
           onClose={() => setBrief("")}
         >
           <h2 id="brief-title" tabIndex={-1}>
-            Lời nhắn của bạn đã sẵn sàng
+            {t("contact.brief_title")}
           </h2>
           <p id="brief-description">
             {email
-              ? "Xem lại nội dung, sau đó chọn gửi qua email. Ứng dụng email sẽ mở để bạn hoàn tất việc gửi."
-              : "Bạn có thể sao chép hoặc tải về. Lời nhắn chưa được gửi đến ZUKATEK."}
+              ? t("contact.brief_intro_email")
+              : t("contact.brief_intro_offline")}
           </p>
           <pre id="brief-text" tabIndex={0}>
             {brief}
@@ -258,7 +295,7 @@ export function Contact({
               onClick={copy}
             >
               <Icon name="copy" />
-              Sao chép
+              {t("contact.copy")}
             </button>
             <button
               className="button button-soft"
@@ -266,15 +303,15 @@ export function Contact({
               type="button"
               onClick={download}
             >
-              Tải lời nhắn
+              {t("contact.download")}
             </button>
             {email && (
               <a
                 className="button"
                 id="email-brief"
-                href={`mailto:${email}?subject=${encodeURIComponent("Tư vấn mua sản phẩm ZUKATEK")}&body=${encodeURIComponent(brief)}`}
+                href={`mailto:${email}?subject=${encodeURIComponent(t("contact.mail_subject"))}&body=${encodeURIComponent(brief)}`}
               >
-                Gửi qua email
+                {t("contact.send_mail")}
               </a>
             )}
           </div>

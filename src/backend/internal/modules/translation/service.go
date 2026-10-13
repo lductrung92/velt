@@ -148,3 +148,28 @@ func (s *Service) Locales(ctx context.Context) []string {
 func (s *Service) Purge(ctx context.Context, entity string, id uuid.UUID) error {
 	return s.store.Purge(ctx, entity, id)
 }
+
+// PublicText is one language's copy of the site chrome, keyed by the SETTINGS
+// key each field overrides (brand_tagline → site.brand_tagline).
+//
+// It is the one read in this module that serves a visitor rather than an
+// editor, which is why it takes no identity: the chrome is public by
+// definition — it is the text around the navigation. A language the console has
+// not configured returns nothing, and nothing means "serve what is stored".
+func (s *Service) PublicText(ctx context.Context, locale string) map[string]any {
+	if !s.Config(ctx).Allows(locale) {
+		return nil
+	}
+	byLocale, err := s.store.Bundle(ctx, EntitySiteChrome, []uuid.UUID{SiteChromeID}, []string{locale})
+	if err != nil {
+		// Serving the stored language is the right answer to a database hiccup
+		// on a read that decorates a page rather than carrying it.
+		return nil
+	}
+	values := byLocale[SiteChromeID][locale]
+	out := make(map[string]any, len(values))
+	for field, value := range values {
+		out["site."+field] = value
+	}
+	return out
+}

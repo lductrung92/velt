@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { render } from "../app/entry-server";
 import { emptyBlog } from "../app/lib/blog";
+import { TABLES } from "../app/lib/i18n";
+import { content } from "../app/data/content";
+import type { SiteContent } from "../app/types";
 import {
   allLocales,
   alternatesFor,
@@ -185,4 +188,65 @@ test("switching language on an article follows its translated slug", () => {
     "the switcher must offer the article's own English address",
   );
   assert.equal(page.canonical, "/blog/xin-chao");
+});
+
+test("nothing the site says in Vietnamese survives into the English page", () => {
+  // The guard against a component that still holds its own words: every value
+  // the dictionary translates must be gone from the English render. Content
+  // from the API is deliberately not checked — an untranslated product keeps
+  // its Vietnamese name, which is the fallback working, not a bug.
+  const { vi, en } = TABLES;
+  const untranslated = (Object.keys(vi) as (keyof typeof vi)[]).filter(
+    (key) =>
+      vi[key] !== en[key] && /[À-ỹ]/.test(vi[key]) && vi[key].trim().length > 3,
+  );
+  assert.ok(
+    untranslated.length > 200,
+    `expected a full dictionary, got ${untranslated.length}`,
+  );
+
+  // Content with no Vietnamese in it, so what remains can only be the site's
+  // own words. The sample catalogue is written in Vietnamese by design, and a
+  // product keeps its name in every language.
+  const data: SiteContent = {
+    ...content,
+    showProductExamples: false,
+    products: [
+      {
+        id: "alpha",
+        name: "Alpha",
+        summary: "A product.",
+        category: "Ops",
+        audience: "Teams",
+        status: "launched",
+        example: false,
+      },
+    ],
+    members: [
+      {
+        id: "ann",
+        name: "Ann Lee",
+        role: "Engineer",
+        bio: "Builds things.",
+        skills: ["Go"],
+        links: [],
+        image: "",
+        color: "blue",
+        email: "",
+        zalo: "",
+      },
+    ],
+  };
+
+  for (const path of ["/", "/products", "/products/alpha", "/blog"]) {
+    const html = render(path, emptyBlog(), data, undefined, undefined, "en", [
+      "en",
+    ]).html;
+    const leaked = untranslated.filter((key) => html.includes(vi[key].trim()));
+    assert.deepEqual(
+      leaked,
+      [],
+      `${path} still shows Vietnamese the dictionary has an English value for`,
+    );
+  }
 });

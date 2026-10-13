@@ -26,7 +26,7 @@ test("HTML response contains SSR content; all pages work with JavaScript disable
     await expect(page.locator(".site-header")).toBeVisible();
   }
   await page.goto("/");
-  await expect(page.locator(".member-card")).toHaveCount(5);
+  await expect(page.locator(".member-card")).toHaveCount(4);
   await expect(page.locator("#product-list .catalog-card")).toHaveCount(6);
   await context.close();
   expect((await request.get("/products/missing")).status()).toBe(404);

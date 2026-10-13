@@ -1,4 +1,5 @@
 // Presentation migrated from the approved mockup. All interaction is owned by React.
+import { useSite } from "../context";
 import { HeroVisual } from "./hero/HeroVisual";
 import { safeUrl } from "../lib/links";
 import {
@@ -83,7 +84,8 @@ export function Icons() {
 }
 
 export function Hero({ href, config }: LinksProps & { config?: unknown }) {
-  const c = heroConfig(config);
+  const { t } = useSite();
+  const c = heroConfig(config, t);
   return (
     <div className="hero-wrap" id="top">
       <section className="hero" aria-labelledby="hero-title">
@@ -96,7 +98,7 @@ export function Hero({ href, config }: LinksProps & { config?: unknown }) {
             <p className="hero-subtitle">{c.subheading}</p>
             <div className="hero-actions">
               <a className="button button-large" href={href("/#products")}>
-                {"Xem sản phẩm "}
+                {t("home.hero_cta")}
                 <svg className="icon">
                   <use href="#i-arrow"></use>
                 </svg>
@@ -106,7 +108,7 @@ export function Hero({ href, config }: LinksProps & { config?: unknown }) {
               <svg className="icon">
                 <use href="#i-bulb"></use>
               </svg>
-              <span>{"Tìm hiểu đội ngũ phát triển sản phẩm"}</span>
+              <span>{t("home.hero_note")}</span>
               <svg className="icon note-arrow">
                 <use href="#i-chevron"></use>
               </svg>
@@ -124,10 +126,8 @@ export function Hero({ href, config }: LinksProps & { config?: unknown }) {
               </svg>
             </span>
             <div>
-              <h2>{"Đội ngũ phát triển"}</h2>
-              <p>
-                {"Tìm hiểu thành viên, kỹ năng và sản phẩm mỗi người tham gia."}
-              </p>
+              <h2>{t("home.benefit.team.title")}</h2>
+              <p>{t("home.benefit.team.body")}</p>
             </div>
           </div>
           <div className="benefit">
@@ -137,8 +137,8 @@ export function Hero({ href, config }: LinksProps & { config?: unknown }) {
               </svg>
             </span>
             <div>
-              <h2>{"Trải nghiệm trước khi mua"}</h2>
-              <p>{"Xem tính năng và dùng thử các sản phẩm có bản demo."}</p>
+              <h2>{t("home.benefit.try.title")}</h2>
+              <p>{t("home.benefit.try.body")}</p>
             </div>
           </div>
           <div className="benefit">
@@ -148,12 +148,8 @@ export function Hero({ href, config }: LinksProps & { config?: unknown }) {
               </svg>
             </span>
             <div>
-              <h2>{"Tư vấn trực tiếp"}</h2>
-              <p>
-                {
-                  "Liên hệ thành viên giới thiệu để được tư vấn lựa chọn sản phẩm."
-                }
-              </p>
+              <h2>{t("home.benefit.advice.title")}</h2>
+              <p>{t("home.benefit.advice.body")}</p>
             </div>
           </div>
         </div>
@@ -163,7 +159,8 @@ export function Hero({ href, config }: LinksProps & { config?: unknown }) {
 }
 
 function AudienceArt({ kind }: { kind: string }) {
-  if (kind === "group")
+  // The CODE is the audience; "art-group" is the class the stylesheet knows.
+  if (kind === "team")
     return (
       <div className="card-art art-group" aria-hidden="true">
         <div className="art-circle"></div>
@@ -235,7 +232,8 @@ export function Audience({
   onAudience: (audience: string) => void;
   config?: unknown;
 }) {
-  const { title, subtitle, items } = audienceConfig(config);
+  const { t } = useSite();
+  const { title, subtitle, items } = audienceConfig(config, t);
   return (
     <section
       className="section audience-section"
@@ -257,8 +255,8 @@ export function Audience({
                 <a
                   className="text-link"
                   href={sectionHref(href, item.cta_href)}
-                  onClick={() => onAudience(item.label)}
-                  data-audience={item.label}
+                  onClick={() => onAudience(item.key)}
+                  data-audience={item.key}
                 >
                   {item.cta_label}
                   <svg className="icon">
@@ -275,7 +273,8 @@ export function Audience({
 }
 
 export function BuyingSteps({ config }: { config?: unknown }) {
-  const { title, subtitle, steps } = buyingStepsConfig(config);
+  const { t } = useSite();
+  const { title, subtitle, steps } = buyingStepsConfig(config, t);
   return (
     <section
       className="section collaboration-section"
@@ -304,7 +303,8 @@ export function BuyingSteps({ config }: { config?: unknown }) {
 }
 
 export function FAQ({ config }: { config?: unknown }) {
-  const c = faqConfig(config);
+  const { t } = useSite();
+  const c = faqConfig(config, t);
   return (
     <section className="section faq-section" aria-labelledby="faq-title">
       <div className="container faq-layout">
@@ -332,6 +332,7 @@ export function FAQ({ config }: { config?: unknown }) {
 }
 
 export function EmptyProducts({ href }: LinksProps) {
+  const { t } = useSite();
   return (
     <div className="product-empty" id="product-empty">
       <div className="product-empty-art" aria-hidden="true">
@@ -359,19 +360,13 @@ export function EmptyProducts({ href }: LinksProps) {
         <span className="empty-cube"></span>
       </div>
       <div className="empty-copy">
-        <span className="tag">{"HÀNH TRÌNH MỚI BẮT ĐẦU"}</span>
+        <span className="tag">{t("home.empty.tag")}</span>
         <h3>
-          {"Danh mục sản phẩm"}
-          <br />
-          {"đang được cập nhật"}
+          <Lines text={t("home.empty.title")} />
         </h3>
-        <p>
-          {
-            "Sản phẩm được công bố sẽ có thông tin tính năng, đường dẫn trải nghiệm và thành viên phụ trách."
-          }
-        </p>
+        <p>{t("home.empty.body")}</p>
         <a className="text-link primary-text" href={href("/#contact")}>
-          {"Nhận tư vấn sản phẩm "}
+          {t("home.empty.cta")}
           <svg className="icon">
             <use href="#i-arrow"></use>
           </svg>
@@ -386,6 +381,7 @@ export function Footer({
   year,
   layout,
 }: LinksProps & { year: number; layout: SiteLayout }) {
+  const { t } = useSite();
   // The copyright line is console copy with one placeholder; the year keeps its
   // own element so the markup around it is unchanged.
   const [beforeYear, afterYear] = layout.chrome.copyright.split("{year}");
@@ -397,7 +393,7 @@ export function Footer({
             <a
               className="brand"
               href={href("/#top")}
-              aria-label="ZUKATEK — về đầu trang"
+              aria-label={t("a11y.brand_home")}
             >
               <img
                 src="/assets/logo.png"
@@ -443,7 +439,7 @@ export function Footer({
             {afterYear ?? ""}
           </span>
           <a href={href("/#top")}>
-            {"Về đầu trang "}
+            {t("layout.back_to_top")}
             <svg className="icon up">
               <use href="#i-arrow"></use>
             </svg>

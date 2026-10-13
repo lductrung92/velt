@@ -38,14 +38,35 @@ func (p ListParams) orderBy() string {
 	}
 }
 
+// live is one row per record: the one in the requested language when it exists,
+// otherwise the one in the base language.
+//
+// Without this a record published before a language was switched on simply does
+// not exist in that language — the list is filtered by locale, so the record is
+// not missing a translation, it is missing. A reader of the English catalogue
+// would see a shorter catalogue, and nothing anywhere would say so. Showing the
+// Vietnamese original is what every CMS worth the name does, and it keeps the
+// two languages the same size, which is what hreflang promises.
+//
+// The free-text filter is applied AFTER this choice, not inside it: a reader
+// searches the words in front of them, so the English text is what an English
+// search matches.
+const liveDocs = `
+	WITH live AS (
+	  SELECT DISTINCT ON (entity_id) body, published_at, search_text
+	    FROM published_docs
+	   WHERE entity = $1 AND locale IN ($2, $3) AND is_current AND body IS NOT NULL
+	   ORDER BY entity_id, (locale = $2) DESC
+	)`
+
 // List returns one page of live documents plus the total match count.
 //
 // The free-text filter runs against search_text, which is indexed with pg_trgm,
 // rather than against the body: digging into JSONB would mean a sequential scan,
 // which is what the public search does today.
 func (s *Store) List(ctx context.Context, p ListParams) ([]json.RawMessage, int, error) {
-	conds := []string{"entity = $1", "locale = $2", "is_current", "body IS NOT NULL"}
-	args := []any{p.Entity, p.Locale}
+	conds := []string{"true"}
+	args := []any{p.Entity, p.Locale, BaseLocale}
 	if q := strings.TrimSpace(p.Query); q != "" {
 		args = append(args, "%"+q+"%")
 		conds = append(conds, fmt.Sprintf("search_text ILIKE $%d", len(args)))
@@ -54,7 +75,7 @@ func (s *Store) List(ctx context.Context, p ListParams) ([]json.RawMessage, int,
 
 	var total int
 	if err := s.pool.QueryRow(ctx,
-		`SELECT count(*) FROM published_docs WHERE `+where, args...).Scan(&total); err != nil {
+		liveDocs+` SELECT count(*) FROM live WHERE `+where, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("pubdocs count: %w", err)
 	}
 	if total == 0 {
@@ -63,7 +84,7 @@ func (s *Store) List(ctx context.Context, p ListParams) ([]json.RawMessage, int,
 
 	args = append(args, p.Limit, p.Offset)
 	rows, err := s.pool.Query(ctx,
-		`SELECT body FROM published_docs WHERE `+where+
+		liveDocs+` SELECT body FROM live WHERE `+where+
 			` ORDER BY `+p.orderBy()+
 			fmt.Sprintf(` LIMIT $%d OFFSET $%d`, len(args)-1, len(args)), args...)
 	if err != nil {

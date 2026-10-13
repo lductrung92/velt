@@ -1,5 +1,6 @@
 import { cached, ttlSeconds } from "./cache.server";
-import { DEFAULT_LAYOUT, resolveLayout, type SiteLayout } from "./layout";
+import { defaultLayout, resolveLayout, type SiteLayout } from "./layout";
+import { translator } from "./i18n";
 import { BASE_LOCALE } from "./locales";
 
 /**
@@ -30,6 +31,7 @@ async function fetchLayout(
   request: typeof fetch,
   locale: string,
 ): Promise<SiteLayout> {
+  const t = translator(locale);
   try {
     const [menus, settings] = await Promise.all([
       readJSON(
@@ -38,9 +40,9 @@ async function fetchLayout(
       ),
       readJSON(request, "/public/settings"),
     ]);
-    return resolveLayout(menus, settings);
+    return resolveLayout(menus, settings, t);
   } catch {
-    return DEFAULT_LAYOUT;
+    return defaultLayout(t);
   }
 }
 

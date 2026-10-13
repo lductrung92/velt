@@ -52,7 +52,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 // defense here, since the endpoint is read-only, public, and typically fronted
 // by a CDN (a per-IP limit would penalize the shared CDN egress IP).
 func (h *Handler) GetPublic(w http.ResponseWriter, r *http.Request) {
-	out, err := h.svc.GetPublic(r.Context())
+	out, err := h.svc.GetPublic(r.Context(), r.URL.Query().Get("locale"))
 	if err != nil {
 		httpx.WriteError(w, err)
 		return

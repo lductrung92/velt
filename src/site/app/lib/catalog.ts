@@ -1,4 +1,5 @@
 import type { Product, SiteContent } from "../types";
+import type { MessageKey, T } from "./i18n";
 import { examples } from "../data/examples";
 
 export interface Filters {
@@ -8,8 +9,34 @@ export interface Filters {
   sort: string;
   page: number;
 }
+/**
+ * The bucket a product with no category of its own falls into.
+ *
+ * A CODE, not a word: this value groups products, fills ?category= in a shared
+ * link and is compared against the selection — all three break the day the
+ * page is read in another language, which is exactly what happened when it was
+ * the Vietnamese label "Khác". The word is chosen where it is shown.
+ */
+export const UNCATEGORIZED = "__other";
+
 export const categoryOf = (product: Product) =>
-  product.category?.trim() || "Khác";
+  product.category?.trim() || UNCATEGORIZED;
+
+/** The word to print for a category code. */
+export const categoryLabel = (t: T, value: string) =>
+  value === UNCATEGORIZED ? t("catalog.other") : value;
+
+/**
+ * A product's lifecycle, as a word and as the class that colours the dot.
+ *
+ * `status` carries the API's code (launched / building / idea). The class names
+ * are the ones the stylesheet already uses and are not translated.
+ */
+export const lifecycleLabel = (t: T, code: string | undefined) =>
+  code ? t(`catalog.lifecycle.${code}` as MessageKey) || code : "";
+
+export const lifecycleTone = (code: string | undefined) =>
+  code === "launched" ? "released" : code === "building" ? "developing" : "idea";
 export const normalizeSearch = (value: string) =>
   value
     .normalize("NFD")

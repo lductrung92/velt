@@ -20,6 +20,7 @@ type Repository interface {
 	UpdateMenu(ctx context.Context, id uuid.UUID, name, location string) (*Menu, error)
 	DeleteMenu(ctx context.Context, id uuid.UUID) error
 	MenuItems(ctx context.Context, menuID uuid.UUID) ([]itemRow, error)
+	ItemExists(ctx context.Context, itemID uuid.UUID) (bool, error)
 	ReplaceMenuItems(ctx context.Context, menuID uuid.UUID, items []itemWrite) error
 }
 
@@ -143,4 +144,17 @@ func insertItems(ctx context.Context, tx pgx.Tx, menuID uuid.UUID, parentID *uui
 		}
 	}
 	return nil
+}
+
+// ItemExists reports whether one menu item is still there. The translation gate
+// asks before storing text against an id, so a mistyped one cannot leave a row
+// belonging to nothing — no delete path would ever reach it.
+func (r *pgxRepository) ItemExists(ctx context.Context, itemID uuid.UUID) (bool, error) {
+	var ok bool
+	err := r.pool.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM cms_menu_items WHERE id = $1)`, itemID).Scan(&ok)
+	if err != nil {
+		return false, fmt.Errorf("menu item exists: %w", err)
+	}
+	return ok, nil
 }

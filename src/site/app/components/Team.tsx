@@ -65,8 +65,8 @@ export function Team({
   config?: unknown;
   members?: Member[];
 }) {
-  const { data, url, referrer } = useSite();
-  const { title, subtitle, limit } = teamConfig(config);
+  const { data, url, referrer, t } = useSite();
+  const { title, subtitle, limit } = teamConfig(config, t);
   const members = sectionMembers ?? data.members;
   const [skill, setSkill] = useState(""),
     [member, setMember] = useState<Member | null>(null),
@@ -100,9 +100,9 @@ export function Team({
     const link = new URL(withReferral("/", member), location.origin).href;
     try {
       await navigator.clipboard.writeText(link);
-      setCopyStatus("Đã sao chép link hồ sơ. Bạn có thể gửi cho khách.");
+      setCopyStatus(t("team.copy_done"));
     } catch {
-      setCopyStatus(`Sao chép link: ${link}`);
+      setCopyStatus(t("team.copy_manual", { link }));
     }
   }
   return (
@@ -117,7 +117,7 @@ export function Team({
             <div>
               <span className="eyebrow">
                 <i aria-hidden="true" />
-                ĐỘI NGŨ ZUKATEK
+                {t("team.eyebrow")}
               </span>
               <h2 id="team-title">{title}</h2>
             </div>
@@ -126,8 +126,8 @@ export function Team({
               <div className="team-count">
                 <span className="team-count-line" aria-hidden="true" />
                 <span>
-                  <strong id="team-member-count">{members.length}</strong> thành
-                  viên
+                  <strong id="team-member-count">{members.length}</strong>
+                  {t("team.member_count")}
                 </span>
               </div>
             </div>
@@ -137,19 +137,18 @@ export function Team({
               members={members}
               activeId={activeId}
               onSelect={openMember}
+              t={t}
             />
             <div className="team-profiles">
               <header className="team-profile-heading">
-                <h3>Gặp gỡ đội ngũ</h3>
-                <p>
-                  Khám phá hồ sơ, kỹ năng và sản phẩm từng thành viên tham gia.
-                </p>
+                <h3>{t("team.profiles_title")}</h3>
+                <p>{t("team.profiles_subtitle")}</p>
               </header>
               <div className="team-tools" hidden={!allSkills.length}>
                 <div
                   className="skill-filter"
                   id="skill-filter"
-                  aria-label="Lọc thành viên theo kỹ năng"
+                  aria-label={t("team.filter_label")}
                 >
                   {["", ...allSkills].map((value) => (
                     <button
@@ -160,7 +159,7 @@ export function Team({
                       aria-pressed={value === skill}
                       onClick={() => setSkill(value)}
                     >
-                      {value || "Tất cả thành viên"}
+                      {value || t("team.filter_all")}
                     </button>
                   ))}
                 </div>
@@ -169,7 +168,7 @@ export function Team({
                 className="team-grid"
                 id="team-list"
                 role="region"
-                aria-label="Danh sách thành viên ZUKATEK"
+                aria-label={t("team.list_label")}
               >
                 {visible.map((person) => {
                   const count = data.products.filter((item) =>
@@ -204,7 +203,7 @@ export function Team({
                           <h3>{person.name}</h3>
                         </div>
                         <p className="member-role">
-                          {person.role || "Chuyên môn đang cập nhật"}
+                          {person.role || t("team.role_pending")}
                         </p>
                         {person.bio && (
                           <p className="member-bio">{person.bio}</p>
@@ -221,7 +220,8 @@ export function Team({
                         )}
                         {!!count && (
                           <span className="member-project-count">
-                            {count} sản phẩm tham gia
+                            {count}
+                            {t("team.product_count")}
                           </span>
                         )}
                       </div>
@@ -229,17 +229,19 @@ export function Team({
                         className="profile-button"
                         type="button"
                         data-member={person.id}
-                        aria-label={`Xem hồ sơ ${person.name}`}
+                        aria-label={t("team.view_profile_of", {
+                          name: person.name,
+                        })}
                         onClick={() => openMember(person)}
                       >
-                        <span>Xem hồ sơ</span>
+                        <span>{t("team.view_profile")}</span>
                         <Icon name="arrow" />
                       </button>
                     </article>
                   );
                 })}
                 {!visible.length && (
-                  <p className="empty-filter">Chưa có thành viên phù hợp.</p>
+                  <p className="empty-filter">{t("team.empty_filter")}</p>
                 )}
               </div>
             </div>
@@ -254,8 +256,8 @@ export function Team({
             <Icon name="user" />
             <span>
               {missingPortrait
-                ? "Tên, chân dung và chuyên môn của từng thành viên đang được cập nhật."
-                : "Thông tin giới thiệu và chuyên môn sẽ được bổ sung trong hồ sơ thành viên."}
+                ? t("team.footnote_portraits")
+                : t("team.footnote_profiles")}
             </span>
           </p>
         </div>
@@ -264,7 +266,7 @@ export function Team({
         <Modal
           id="detail-dialog"
           titleId="detail-title"
-          eyebrow={member ? "ĐỘI NGŨ ZUKATEK" : "SẢN PHẨM ZUKATEK"}
+          eyebrow={t(member ? "team.eyebrow" : "team.product_eyebrow")}
           onClose={close}
         >
           <div id="detail-body">
@@ -275,23 +277,18 @@ export function Team({
                   {member.name}
                 </h2>
                 <p className="member-role">
-                  {member.role || "Hồ sơ sắp cập nhật"}
+                  {member.role || t("team.role_soon")}
                 </p>
-                <p>
-                  {member.bio ||
-                    "Thông tin giới thiệu của thành viên sẽ sớm được bổ sung. Cùng quay lại để khám phá vai trò, góc nhìn và thế mạnh của mỗi người trong ZUKATEK."}
-                </p>
-                <h3 className="detail-heading">Kỹ năng & thế mạnh</h3>
+                <p>{member.bio || t("team.bio_soon")}</p>
+                <h3 className="detail-heading">{t("team.skills_title")}</h3>
                 <div className="detail-skills">
                   {member.skills.length ? (
                     <Skills skills={member.skills} />
                   ) : (
-                    <p className="detail-empty">
-                      Thông tin kỹ năng đang được cập nhật.
-                    </p>
+                    <p className="detail-empty">{t("team.skills_empty")}</p>
                   )}
                 </div>
-                <h3 className="detail-heading">Sản phẩm tham gia</h3>
+                <h3 className="detail-heading">{t("team.products_title")}</h3>
                 <div className="detail-products">
                   {data.products.some((item) =>
                     item.memberIds?.includes(member.id),
@@ -311,9 +308,7 @@ export function Team({
                         </button>
                       ))
                   ) : (
-                    <p className="detail-empty">
-                      Chưa có sản phẩm được công bố.
-                    </p>
+                    <p className="detail-empty">{t("team.products_empty")}</p>
                   )}
                 </div>
                 <div className="member-socials">
@@ -337,7 +332,8 @@ export function Team({
                     data-share-member={member.id}
                     onClick={copyLink}
                   >
-                    Sao chép link giới thiệu của {member.name}
+                    {t("team.copy_link")}
+                    {member.name}
                   </button>
                   <p role="status" aria-live="polite">
                     {copyStatus}
@@ -351,7 +347,7 @@ export function Team({
                     <img
                       className="project-detail-image"
                       src={safeUrl(product.image)}
-                      alt={`Giao diện ${product.name}`}
+                      alt={t("team.product_image_alt", { name: product.name })}
                     />
                   )}
                   {product.status && (
@@ -363,7 +359,9 @@ export function Team({
                   <p>{product.description || product.summary}</p>
                   {!!product.skills?.length && (
                     <>
-                      <h3 className="detail-heading">Kỹ năng trong sản phẩm</h3>
+                      <h3 className="detail-heading">
+                        {t("team.product_skills_title")}
+                      </h3>
                       <div className="detail-skills">
                         <Skills skills={product.skills} />
                       </div>
@@ -396,8 +394,8 @@ export function Team({
                       rel="noopener noreferrer"
                     >
                       {product.demoPlaceholder
-                        ? "Mở link tạm"
-                        : "Trải nghiệm sản phẩm"}{" "}
+                        ? t("team.demo_placeholder")
+                        : t("team.demo_open")}{" "}
                       <Icon name="arrow" />
                     </a>
                   )}

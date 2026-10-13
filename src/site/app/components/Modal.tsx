@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
+import { useSite } from "../context";
 import { Icon } from "./Icon";
 
 export function Modal({
@@ -15,6 +16,7 @@ export function Modal({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const { t } = useSite();
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const active = document.activeElement as HTMLElement | null;
@@ -53,7 +55,7 @@ export function Modal({
         <button
           type="button"
           className="icon-button dialog-close"
-          aria-label="Đóng cửa sổ"
+          aria-label={t("a11y.close_dialog")}
           onClick={onClose}
         >
           <Icon name="close" />

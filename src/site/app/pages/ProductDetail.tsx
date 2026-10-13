@@ -1,5 +1,10 @@
 import { useSite } from "../context";
-import { categoryOf, productPath } from "../lib/catalog";
+import {
+  categoryLabel,
+  categoryOf,
+  lifecycleLabel,
+  productPath,
+} from "../lib/catalog";
 import { demoLink } from "../lib/links";
 import { ProductCard, ProductVisual } from "../components/Products";
 import { Skills } from "../components/Team";
@@ -7,20 +12,20 @@ import { Icon } from "../components/Icon";
 import type { Product } from "../types";
 
 export function NotFound() {
-  const { href } = useSite();
+  const { href, t } = useSite();
   return (
     <div className="container product-not-found">
       <span className="tag">ZUKATEK</span>
-      <h1>Chưa tìm thấy sản phẩm</h1>
-      <p>Sản phẩm có thể chưa được công bố hoặc đường dẫn đã thay đổi.</p>
+      <h1>{t("product.notfound_title")}</h1>
+      <p>{t("product.notfound_body")}</p>
       <a className="button" href={href("/products")}>
-        Về danh mục sản phẩm
+        {t("product.notfound_cta")}
       </a>
     </div>
   );
 }
 export function ProductDetail({ product }: { product: Product }) {
-  const { products, data, referrer, href } = useSite();
+  const { products, data, referrer, href, t } = useSite();
   const people = data.members.filter((member) =>
     product.memberIds?.includes(member.id),
   );
@@ -33,27 +38,29 @@ export function ProductDetail({ product }: { product: Product }) {
   const demo = demoLink(product, referrer);
   return (
     <div className="container" id="product-detail">
-      <nav className="breadcrumbs" aria-label="Đường dẫn">
-        <a href={href("/")}>Trang chủ</a>
+      <nav className="breadcrumbs" aria-label={t("catalog.breadcrumb")}>
+        <a href={href("/")}>{t("catalog.breadcrumb_home")}</a>
         <span aria-hidden="true">/</span>
-        <a href={href("/products")}>Sản phẩm</a>
+        <a href={href("/products")}>{t("catalog.breadcrumb_products")}</a>
         <span aria-hidden="true">/</span>
         <span>{product.name}</span>
       </nav>
       {product.example && (
         <div className="catalog-example-note">
-          <span>Mẫu minh họa</span> Đây là ví dụ bố cục, chưa phải sản phẩm được
-          ZUKATEK công bố.
+          <span>{t("product.example_note_title")}</span>
+          {` ${t("product.example_note_body")}`}
         </div>
       )}
       <div className="product-detail-hero">
         <div>
-          <span className="tag">{categoryOf(product)}</span>
+          <span className="tag">{categoryLabel(t, categoryOf(product))}</span>
           <h1>{product.name}</h1>
           <p>{product.summary}</p>
           <div className="catalog-tags">
             {product.status && (
-              <span className="catalog-status">{product.status}</span>
+              <span className="catalog-status">
+                {lifecycleLabel(t, product.status)}
+              </span>
             )}
             {product.audience && (
               <span className="catalog-audience">{product.audience}</span>
@@ -67,9 +74,11 @@ export function ProductDetail({ product }: { product: Product }) {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {product.demoPlaceholder
-                  ? "Mở link tạm"
-                  : "Trải nghiệm sản phẩm"}{" "}
+                {t(
+                  product.demoPlaceholder
+                    ? "product.demo_placeholder"
+                    : "product.demo",
+                )}{" "}
                 ↗
               </a>
             )}
@@ -77,14 +86,17 @@ export function ProductDetail({ product }: { product: Product }) {
               className="button button-soft"
               href={href(`/?product=${encodeURIComponent(product.id)}#contact`)}
             >
-              Tư vấn mua sản phẩm <Icon name="arrow" />
+              {t("product.contact_cta")}
+              <Icon name="arrow" />
             </a>
           </div>
           <p className="product-purchase-info">
             {product.priceLabel ||
-              (product.example
-                ? "Thông tin mẫu · chưa mở bán"
-                : "Liên hệ để nhận báo giá")}
+              t(
+                product.example
+                  ? "catalog.price_example"
+                  : "catalog.price_contact",
+              )}
           </p>
         </div>
         <ProductVisual product={product} large />
@@ -93,17 +105,18 @@ export function ProductDetail({ product }: { product: Product }) {
         <section>
           <div className="product-demo-panel">
             <h2>
-              {product.demoPlaceholder
-                ? "Liên kết tạm để xem bố cục"
-                : "Trải nghiệm trước khi mua"}
+              {t(
+                product.demoPlaceholder
+                  ? "product.demo_panel_placeholder_title"
+                  : "product.demo_panel_title",
+              )}
             </h2>
             <p>
               {product.demoPlaceholder
-                ? "Đường dẫn example.com chỉ dùng để kiểm tra nút mở trang riêng, chưa phải bản demo của ZUKATEK."
+                ? t("product.demo_panel_placeholder_body")
                 : demo
-                  ? product.demoAccess ||
-                    "Mở trang trải nghiệm riêng để kiểm tra các tính năng của sản phẩm."
-                  : "Sản phẩm này chưa có bản trải nghiệm công khai. Liên hệ ZUKATEK để được tư vấn."}
+                  ? product.demoAccess || t("product.demo_panel_body")
+                  : t("product.demo_panel_none")}
             </p>
             {!!product.demoInstructions?.length && (
               <ol>
@@ -113,13 +126,13 @@ export function ProductDetail({ product }: { product: Product }) {
               </ol>
             )}
           </div>
-          <h2>Về sản phẩm</h2>
+          <h2>{t("product.about_title")}</h2>
           <p className="product-description">
             {product.description || product.summary}
           </p>
           {!!product.skills?.length && (
             <>
-              <h2>Kỹ năng trong sản phẩm</h2>
+              <h2>{t("product.skills_title")}</h2>
               <div className="detail-skills">
                 <Skills skills={product.skills} />
               </div>
@@ -127,7 +140,7 @@ export function ProductDetail({ product }: { product: Product }) {
           )}
         </section>
         <aside>
-          <h2>Thành viên tham gia</h2>
+          <h2>{t("product.members_title")}</h2>
           {people.length ? (
             people.map((member) => (
               <a
@@ -138,16 +151,18 @@ export function ProductDetail({ product }: { product: Product }) {
                 <span>{member.name.slice(0, 1)}</span>
                 <div>
                   <strong>{member.name}</strong>
-                  <small>{member.role || "Thành viên ZUKATEK"}</small>
+                  <small>{member.role || t("product.member_role")}</small>
                 </div>
                 <Icon name="arrow" />
               </a>
             ))
           ) : (
             <p>
-              {product.example
-                ? "Thông tin thành viên sẽ xuất hiện cùng sản phẩm thực tế."
-                : "Thông tin thành viên đang được cập nhật."}
+              {t(
+                product.example
+                  ? "product.members_example"
+                  : "product.members_pending",
+              )}
             </p>
           )}
         </aside>
@@ -155,14 +170,15 @@ export function ProductDetail({ product }: { product: Product }) {
       {!!related.length && (
         <section className="related-products">
           <div className="related-heading">
-            <h2>Khám phá thêm</h2>
+            <h2>{t("product.related_title")}</h2>
             <a
               className="text-link primary-text"
               href={href(
                 `/products?category=${encodeURIComponent(categoryOf(product))}`,
               )}
             >
-              Xem cùng nhóm <Icon name="arrow" />
+              {t("product.related_link")}
+              <Icon name="arrow" />
             </a>
           </div>
           <div className="catalog-grid">

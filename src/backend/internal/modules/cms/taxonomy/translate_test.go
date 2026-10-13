@@ -174,14 +174,12 @@ func TestAuthorizeTranslate_ReusesTheManageGate(t *testing.T) {
 	e := newTestSvc(t)
 	ctx := context.Background()
 	cat := e.repo.seedCategory("Tin Tức", "tin-tuc", nil)
-	tag := e.repo.seedTag("Golang", "golang")
 
+	// Tags have no translation gate: nothing public ever rendered a translated
+	// tag, so the entity is not declared and the route 404s before it gets here.
 	require.NoError(t, e.svc.AuthorizeTranslateCategory(ctx, cmstest.ActorWith(permManage), cat.ID))
-	require.NoError(t, e.svc.AuthorizeTranslateTag(ctx, cmstest.ActorWith(permManage), tag.ID))
 
 	cmstest.AssertAppErr(t, e.svc.AuthorizeTranslateCategory(ctx, cmstest.ActorWith(permView), cat.ID),
-		http.StatusForbidden, "access_denied")
-	cmstest.AssertAppErr(t, e.svc.AuthorizeTranslateTag(ctx, cmstest.ActorWith(permView), tag.ID),
 		http.StatusForbidden, "access_denied")
 	cmstest.AssertAppErr(t, e.svc.AuthorizeTranslateCategory(ctx, cmstest.ActorWith(permManage), uuid.New()),
 		http.StatusNotFound, "not_found")

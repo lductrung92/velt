@@ -62,12 +62,32 @@ var declarations = []Declaration{
 		Fields: []string{"name", "description", "seo"},
 	},
 	{
-		Entity: EntityTag,
-		Fields: []string{"name"},
-	},
-	{
 		Entity: EntityMember,
 		Fields: []string{"role", "bio"},
+	},
+	// The site's navigation. A menu item is a label and, in the header's
+	// dropdown, one line under it. Its target is not translated: an entity link
+	// already resolves to the slug of the language being read, and an internal
+	// path is the same address in every language.
+	{
+		Entity: EntityMenuItem,
+		Fields: []string{"label", "description"},
+	},
+	// The words around that navigation — the footer blurb, the last column, the
+	// copyright line, the header button. They are settings rather than a record,
+	// so they translate as ONE singleton whose id is fixed (see SiteChromeID):
+	// six keys that always travel together, edited on one screen, read on every
+	// page.
+	{
+		Entity: EntitySiteChrome,
+		Fields: []string{
+			"brand_tagline",
+			"footer_note_title",
+			"footer_note_text",
+			"footer_copyright",
+			"header_cta_label",
+			"header_cta_url",
+		},
 	},
 }
 
@@ -79,9 +99,18 @@ const (
 	EntityProduct         = "product"
 	EntityProductCategory = "product_category"
 	EntityCMSCategory     = "cms_category"
-	EntityTag             = "tag"
 	EntityMember          = "member"
+	EntityMenuItem        = "menu_item"
+	EntitySiteChrome      = "site_chrome"
 )
+
+// SiteChromeID is the id every site_chrome translation is stored against.
+//
+// The chrome is one record that happens to live in the settings table, so it
+// has no id of its own; the store's key is (entity, entity_id, locale) and
+// needs one. A fixed uuid is the smallest honest answer: it names the single
+// instance, and an id that is not this one is rejected by the gate.
+var SiteChromeID = uuid.MustParse("00000000-0000-0000-0000-00005174e000")
 
 // Declared returns the declaration for an entity, or false if it is not
 // translatable. To a caller, an undeclared entity does not exist.

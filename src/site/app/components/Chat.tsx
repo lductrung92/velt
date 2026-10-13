@@ -11,6 +11,7 @@ import {
   type ChatMessage,
   type ConversationState,
 } from "../lib/chatApi";
+import type { MessageKey, T } from "../lib/i18n";
 import { Icon } from "./Icon";
 
 // The assistant, wired to the real backend.
@@ -21,29 +22,31 @@ import { Icon } from "./Icon";
 // the data model — and the old "no staff are here" copy becomes false the
 // moment handoff works.
 
-const SUGGESTIONS = [
-  "Tôi cần quản lý công việc nhóm",
-  "Có bản dùng thử không?",
-  "Cho tôi gặp người phụ trách",
+const SUGGESTIONS: MessageKey[] = [
+  "chat.suggestion_team",
+  "chat.suggestion_trial",
+  "chat.suggestion_human",
 ];
 
 /** What the label above a bubble says. `staff` is a real person answering, and
  *  the visitor should be able to tell. */
-function speaker(role: ChatMessage["role"], degraded: boolean): string {
+function speaker(t: T, role: ChatMessage["role"], degraded: boolean): string {
   switch (role) {
     case "visitor":
-      return "Bạn";
+      return t("chat.speaker_visitor");
     case "staff":
-      return "ZUKATEK · Người phụ trách";
+      return t("chat.speaker_staff");
     case "system":
-      return "ZUKATEK";
+      return t("chat.speaker_system");
     default:
-      return degraded ? "ZUKATEK · Trả lời rút gọn" : "Trợ lý ZUKATEK";
+      return t(
+        degraded ? "chat.speaker_assistant_short" : "chat.speaker_assistant",
+      );
   }
 }
 
 export function Chat() {
-  const { data, referrer, url } = useSite();
+  const { data, referrer, url, t } = useSite();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -98,9 +101,7 @@ export function Chat() {
         });
       } catch {
         if (!cancelled) {
-          setNotice(
-            "Chưa kết nối được trợ lý. Bạn có thể liên hệ trực tiếp bên dưới.",
-          );
+          setNotice(t("chat.error_connect"));
         }
       }
     })();
@@ -147,9 +148,11 @@ export function Chat() {
       setDegraded(res.degraded);
     } catch (err) {
       setNotice(
-        err instanceof ChatError && err.key === "turn_limit_reached"
-          ? "Cuộc trò chuyện đã dài. Bạn để lại liên hệ để bên mình chủ động gọi lại nhé."
-          : "Chưa gửi được tin nhắn. Bạn thử lại giúp mình.",
+        t(
+          err instanceof ChatError && err.key === "turn_limit_reached"
+            ? "chat.error_turn_limit"
+            : "chat.error_send",
+        ),
       );
     } finally {
       setSending(false);
@@ -168,9 +171,11 @@ export function Chat() {
       // Nobody on duty is the expected case outside office hours, and saying so
       // beats parking the visitor in a queue that will not move.
       setNotice(
-        err instanceof ChatError && err.key === "no_staff_online"
-          ? "Hiện không có ai trực. Bạn để lại số điện thoại hoặc Zalo, bên mình liên hệ lại sớm."
-          : "Chưa chuyển được. Bạn thử lại hoặc liên hệ trực tiếp bên dưới.",
+        t(
+          err instanceof ChatError && err.key === "no_staff_online"
+            ? "chat.error_no_staff"
+            : "chat.error_handoff",
+        ),
       );
     }
   }
@@ -200,20 +205,22 @@ export function Chat() {
             <Icon name="chat" />
           </span>
           <div className="chat-header-copy">
-            <h2 id="chat-title">Trò chuyện với ZUKATEK</h2>
+            <h2 id="chat-title">{t("chat.title")}</h2>
             <p>
-              {withHuman
-                ? "Bạn đang nói chuyện với người phụ trách"
-                : waiting
-                  ? "Đang chờ người phụ trách…"
-                  : "Tìm sản phẩm phù hợp với bạn"}
+              {t(
+                withHuman
+                  ? "chat.status_human"
+                  : waiting
+                    ? "chat.status_waiting"
+                    : "chat.status_bot",
+              )}
             </p>
           </div>
           <button
             ref={closeButton}
             className="chat-close"
             type="button"
-            aria-label="Thu nhỏ chatbox"
+            aria-label={t("chat.minimize")}
             onClick={() => toggle(false, true)}
           >
             <Icon name="close" />
@@ -222,8 +229,8 @@ export function Chat() {
 
         {degraded && (
           <div className="chat-preview-note">
-            <span>RÚT GỌN</span>
-            <p>Trợ lý đang trả lời rút gọn · Người phụ trách vẫn hỗ trợ được</p>
+            <span>{t("chat.degraded_badge")}</span>
+            <p>{t("chat.degraded_note")}</p>
           </div>
         )}
 
@@ -232,7 +239,7 @@ export function Chat() {
             ref={log}
             className="chat-messages"
             role="log"
-            aria-label="Nội dung trò chuyện"
+            aria-label={t("chat.log_label")}
             aria-live="polite"
             aria-relevant="additions"
           >
@@ -250,7 +257,7 @@ export function Chat() {
                 )}
                 <div className="chat-message-body">
                   <span className="chat-message-label">
-                    {speaker(message.role, degraded)}
+                    {speaker(t, message.role, degraded)}
                   </span>
                   <div className="chat-bubble">{message.content}</div>
                 </div>
@@ -265,7 +272,7 @@ export function Chat() {
                 </span>
                 <div className="chat-message-body">
                   <span className="chat-message-label">
-                    {speaker("assistant", degraded)}
+                    {speaker(t, "assistant", degraded)}
                   </span>
                   <div className="chat-bubble">{streaming}</div>
                 </div>
@@ -273,16 +280,19 @@ export function Chat() {
             )}
           </div>
 
-          <div className="chat-suggestions" aria-label="Câu hỏi gợi ý">
+          <div
+            className="chat-suggestions"
+            aria-label={t("chat.suggestions_label")}
+          >
             {messages.length <= 1 &&
-              SUGGESTIONS.map((text) => (
+              SUGGESTIONS.map((key) => (
                 <button
-                  key={text}
+                  key={key}
                   type="button"
                   disabled={sending || !conversationId.current}
-                  onClick={() => void submit(text)}
+                  onClick={() => void submit(t(key))}
                 >
-                  {text}
+                  {t(key)}
                 </button>
               ))}
           </div>
@@ -298,11 +308,13 @@ export function Chat() {
               onClick={() => void askForHuman()}
             >
               <Icon name="support" />
-              {withHuman
-                ? "Đã có người phụ trách"
-                : waiting
-                  ? "Đang chờ…"
-                  : "Gặp người thật"}
+              {t(
+                withHuman
+                  ? "chat.handoff_joined"
+                  : waiting
+                    ? "chat.handoff_waiting"
+                    : "chat.handoff_ask",
+              )}
             </button>
             <a
               className="chat-contact-link"
@@ -311,7 +323,8 @@ export function Chat() {
               rel={target.zalo ? "noopener noreferrer" : undefined}
               onClick={() => toggle(false)}
             >
-              Liên hệ trực tiếp <Icon name="arrow" />
+              {t("chat.contact_direct")}
+              <Icon name="arrow" />
             </a>
           </div>
         </div>
@@ -324,18 +337,16 @@ export function Chat() {
           }}
         >
           <label className="sr-only" htmlFor="chat-input">
-            Nhập tin nhắn
+            {t("chat.input_label")}
           </label>
           <textarea
             ref={input}
             id="chat-input"
             rows={1}
             maxLength={2000}
-            placeholder={
-              withHuman
-                ? "Nhắn cho người phụ trách…"
-                : "Hỏi ZUKATEK về sản phẩm…"
-            }
+            placeholder={t(
+              withHuman ? "chat.placeholder_human" : "chat.placeholder_bot",
+            )}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
@@ -352,7 +363,7 @@ export function Chat() {
           <button
             className="chat-send"
             type="submit"
-            aria-label="Gửi tin nhắn"
+            aria-label={t("chat.send")}
             disabled={!draft.trim() || sending || !conversationId.current}
           >
             <Icon name="send" />
@@ -361,7 +372,7 @@ export function Chat() {
 
         <div className="chat-footer">
           <Icon name="spark" />
-          <span>Hỗ trợ sản phẩm từ ZUKATEK</span>
+          <span>{t("chat.footer")}</span>
         </div>
       </section>
 
@@ -369,7 +380,7 @@ export function Chat() {
         ref={launcher}
         className="floating-contact chat-launcher"
         type="button"
-        aria-label={open ? "Thu nhỏ chatbox ZUKATEK" : "Mở chatbox ZUKATEK"}
+        aria-label={t(open ? "chat.launcher_close" : "chat.launcher_open")}
         aria-controls="zukatek-chat"
         aria-expanded={open}
         onClick={() => toggle(!open, open)}

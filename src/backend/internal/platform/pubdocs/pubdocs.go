@@ -69,15 +69,29 @@ type Store struct{ pool *pgxpool.Pool }
 // New builds the store over a pgx pool.
 func New(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 
+// BaseLocale is the language every record is authored in, and the one a reader
+// falls back to when their own has no copy of a record yet.
+const BaseLocale = "vi"
+
+
 // Get resolves one URL. A retired slug is not an error: it comes back with
 // IsCurrent false so the caller can answer 301 rather than 404.
+//
+// A record with no copy in the requested language is served in the base
+// language at the SAME address, for the same reason the list falls back: the
+// list now offers these records, and an entry that leads to a 404 is worse than
+// one that leads to the original. A slug that belongs to another language
+// entirely still goes through the cross-locale redirect — the fallback only
+// catches the untranslated case, where the base language owns this very slug.
 func (s *Store) Get(ctx context.Context, entity, locale, slug string) (*Found, error) {
 	var f Found
 	err := s.pool.QueryRow(ctx,
 		`SELECT body, is_current, entity_id, published_at
 		   FROM published_docs
-		  WHERE entity = $1 AND locale = $2 AND slug = $3`,
-		entity, locale, slug).
+		  WHERE entity = $1 AND locale IN ($2, $4) AND slug = $3
+		  ORDER BY (locale = $2) DESC
+		  LIMIT 1`,
+		entity, locale, slug, BaseLocale).
 		Scan(&f.Body, &f.IsCurrent, &f.EntityID, &f.PublishedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -103,10 +117,15 @@ func (s *Store) Get(ctx context.Context, entity, locale, slug string) (*Found, e
 
 func (s *Store) currentSlug(ctx context.Context, entity string, id uuid.UUID, locale string) (string, error) {
 	var slug string
+	// Same fallback as Get: a record whose requested language has no live row
+	// still has one in the base language, and a retired slug has to point
+	// somewhere rather than 404.
 	err := s.pool.QueryRow(ctx,
 		`SELECT slug FROM published_docs
-		  WHERE entity = $1 AND entity_id = $2 AND locale = $3 AND is_current`,
-		entity, id, locale).Scan(&slug)
+		  WHERE entity = $1 AND entity_id = $2 AND locale IN ($3, $4) AND is_current
+		  ORDER BY (locale = $3) DESC
+		  LIMIT 1`,
+		entity, id, locale, BaseLocale).Scan(&slug)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNotFound
 	}

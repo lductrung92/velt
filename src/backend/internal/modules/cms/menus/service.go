@@ -167,3 +167,19 @@ func mapWriteErr(err error) error {
 	}
 	return apperr.Internal()
 }
+
+// AuthorizeTranslate gates editing a menu item's translated label, on the same
+// permission as editing the menu itself: translating a link is editing the menu.
+func (s *Service) AuthorizeTranslate(ctx context.Context, id *httpx.Identity, itemID uuid.UUID) error {
+	if err := s.Require(ctx, id, permManage); err != nil {
+		return err
+	}
+	ok, err := s.repo.ItemExists(ctx, itemID)
+	if err != nil {
+		return apperr.Internal()
+	}
+	if !ok {
+		return apperr.NotFound("not_found")
+	}
+	return nil
+}

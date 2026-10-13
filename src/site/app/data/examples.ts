@@ -105,7 +105,8 @@ export const examples: Product[] = [
   summary,
   audience,
   description: `${summary} Đây là dữ liệu minh họa cho bố cục danh mục nhiều sản phẩm, chưa phải sản phẩm được ZUKATEK công bố.`,
-  status: ["Đã ra mắt", "Đang phát triển", "Ý tưởng"][index % 3],
+  // Lifecycle CODES, as the API sends them — the card picks the word.
+  status: ["launched", "building", "idea"][index % 3],
   featured: index < 6,
   example: true,
   skills: [],

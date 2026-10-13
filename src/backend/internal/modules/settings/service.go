@@ -44,6 +44,9 @@ type Service struct {
 	// acts is wired after construction (see activity.go) and is allowed to stay
 	// nil, which means nothing is recorded.
 	acts activity.Recorder
+	// text is wired after construction too and may stay nil: without it the
+	// public read serves every setting in the language it was typed in.
+	text TranslatedTextPort
 }
 
 // NewService wires the settings service.
@@ -75,7 +78,12 @@ func (s *Service) GetAll(ctx context.Context, id *httpx.Identity) (GroupedView, 
 }
 
 // GetPublic returns only is_public keys' effective values (no auth required).
-func (s *Service) GetPublic(ctx context.Context) (map[string]any, error) {
+//
+// `locale` picks the language of the keys that carry words rather than
+// configuration — the site's header and footer copy. Everything else is the
+// same in every language, and an empty locale, an unknown one, or a key with no
+// translation all leave the stored value standing.
+func (s *Service) GetPublic(ctx context.Context, locale string) (map[string]any, error) {
 	snap, err := s.loadSnapshot(ctx)
 	if err != nil {
 		return nil, apperr.Internal()
@@ -88,7 +96,33 @@ func (s *Service) GetPublic(ctx context.Context) (map[string]any, error) {
 		}
 		out[key] = s.effectiveValue(def, snap)
 	}
+	s.overlayTranslations(ctx, out, locale)
 	return out, nil
+}
+
+// TranslatedTextPort hands back one language's copy of the translatable public
+// settings, keyed by SETTINGS KEY. It is satisfied by the translation module and
+// may be nil — nil, like a locale with nothing stored, means "serve what is
+// stored", which is the base language.
+type TranslatedTextPort interface {
+	PublicText(ctx context.Context, locale string) map[string]any
+}
+
+// SetTranslatedText wires that port (called once at startup).
+func (s *Service) SetTranslatedText(p TranslatedTextPort) { s.text = p }
+
+func (s *Service) overlayTranslations(ctx context.Context, out map[string]any, locale string) {
+	if s.text == nil || strings.TrimSpace(locale) == "" {
+		return
+	}
+	for key, value := range s.text.PublicText(ctx, locale) {
+		if _, ok := out[key]; !ok {
+			continue // never introduce a key the registry does not publish
+		}
+		if text, ok := value.(string); ok && strings.TrimSpace(text) != "" {
+			out[key] = text
+		}
+	}
 }
 
 // auditEntry records one applied change for the security log (never secret values).

@@ -1,6 +1,7 @@
 // Defaults for the home sections. Every value here is the copy the component
 // used to hard-code, so a section with no config renders exactly as before.
 import type { Member, Product, PublicSection } from "../types";
+import type { T } from "./i18n";
 
 export interface AudienceItem {
   key: string;
@@ -45,86 +46,58 @@ export interface ContactConfig {
   note: string;
 }
 
-export const audienceDefaults: AudienceConfig = {
-  title: "Sản phẩm phù hợp với nhu cầu của bạn",
-  subtitle:
-    "Sản phẩm số cho công việc cá nhân, phối hợp trong nhóm và vận hành doanh nghiệp.",
-  items: [
-    {
-      key: "individual",
-      label: "Cá nhân",
-      headline: "Dành cho cá nhân",
-      body: "Khám phá các công cụ phục vụ công việc hằng ngày: ghi chú, sắp xếp thông tin và quản lý công việc cá nhân.",
-      // The trailing space separates the label from the arrow icon.
-      cta_label: "Tư vấn cho cá nhân ",
-      cta_href: "/#contact",
-    },
-    {
-      key: "group",
-      label: "Nhóm",
-      headline: "Dành cho nhóm",
-      body: "Tìm sản phẩm giúp nhóm tổ chức công việc, chia sẻ tài liệu và theo dõi tiến độ trong cùng một không gian.",
-      cta_label: "Tư vấn cho nhóm ",
-      cta_href: "/#contact",
-    },
-    {
-      key: "business",
-      label: "Doanh nghiệp",
-      headline: "Dành cho doanh nghiệp",
-      body: "Xem các sản phẩm phục vụ quản lý và vận hành. Tìm hiểu tính năng, phạm vi sử dụng và chi phí trước khi mua.",
-      cta_label: "Tư vấn cho doanh nghiệp ",
-      cta_href: "/#contact",
-    },
-  ],
-};
+// The trailing space in each cta label separates it from the arrow icon.
+export const audienceDefaults = (t: T): AudienceConfig => ({
+  title: t("audience.title"),
+  subtitle: t("audience.subtitle"),
+  // These keys are CODES, shared with the contact form and with the API's own
+  // audience vocabulary — never words. The artwork and the message tables both
+  // look themselves up by them.
+  items: (["individual", "team", "business"] as const).map((key) => ({
+    key,
+    label: t(`audience.${key}.label`),
+    headline: t(`audience.${key}.headline`),
+    body: t(`audience.${key}.body`),
+    cta_label: t(`audience.${key}.cta`),
+    cta_href: "/#contact",
+  })),
+});
 
-export const productGridDefaults: ProductGridConfig = {
-  title: "Sản phẩm của ZUKATEK",
-  subtitle:
-    "Khám phá tính năng, mở bản demo và nhận tư vấn về sản phẩm bạn quan tâm.",
+export const productGridDefaults = (t: T): ProductGridConfig => ({
+  title: t("product_grid.title"),
+  subtitle: t("product_grid.subtitle"),
   limit: 6,
   category: "",
-  show_all_label: "Xem tất cả sản phẩm ",
+  show_all_label: t("product_grid.show_all"),
   show_all_href: "/products",
-};
+});
 
 // limit 0 keeps today's behaviour: the team section shows every member.
-export const teamDefaults: TeamConfig = {
-  title: "Đội ngũ phát triển",
-  subtitle: "Những người trực tiếp xây dựng và phát triển sản phẩm Zukatek.",
+export const teamDefaults = (t: T): TeamConfig => ({
+  title: t("team.title"),
+  subtitle: t("team.subtitle"),
   limit: 0,
-};
+});
 
-export const buyingStepsDefaults: BuyingStepsConfig = {
-  title: "Chọn mua sản phẩm ZUKATEK",
-  subtitle: "Ba bước để chọn mua sản phẩm phù hợp với nhu cầu của bạn.",
-  steps: [
-    {
-      title: "Chọn sản phẩm",
-      body: "Xem danh mục, tính năng và đối tượng sử dụng để tìm sản phẩm phù hợp.",
-    },
-    {
-      title: "Trải nghiệm bản demo",
-      body: "Mở bản trải nghiệm riêng của sản phẩm và kiểm tra các tính năng bạn cần.",
-    },
-    {
-      title: "Liên hệ mua sản phẩm",
-      body: "Nhận tư vấn về giá, phạm vi sử dụng và cách triển khai từ người giới thiệu hoặc ZUKATEK.",
-    },
-  ],
-};
+export const buyingStepsDefaults = (t: T): BuyingStepsConfig => ({
+  title: t("steps.title"),
+  subtitle: t("steps.subtitle"),
+  steps: (["one", "two", "three"] as const).map((step) => ({
+    title: t(`steps.${step}.title`),
+    body: t(`steps.${step}.body`),
+  })),
+});
 
 // A newline is the line break the heading and the paragraph already render.
 // email, zalo and note stay empty because today those come from site data and
 // from whether a contact channel exists; empty keeps that logic untouched.
-export const contactDefaults: ContactConfig = {
-  title: "Cần tư vấn sản phẩm?\nLiên hệ ZUKATEK.",
-  subtitle:
-    "Nhận tư vấn về tính năng, giá và cách triển khai\ntừ người giới thiệu hoặc đội ngũ ZUKATEK.",
+export const contactDefaults = (t: T): ContactConfig => ({
+  title: t("contact_section.title"),
+  subtitle: t("contact_section.subtitle"),
   email: "",
   zalo: "",
   note: "",
-};
+});
 
 const fields = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value)
@@ -159,12 +132,13 @@ function entries<T>(
   );
 }
 
-export function audienceConfig(config?: unknown): AudienceConfig {
+export function audienceConfig(config: unknown, t: T): AudienceConfig {
   const raw = fields(config);
+  const d = audienceDefaults(t);
   return {
-    title: text(raw.title, audienceDefaults.title),
-    subtitle: text(raw.subtitle, audienceDefaults.subtitle),
-    items: entries(raw.items, audienceDefaults.items, (item, base) => ({
+    title: text(raw.title, d.title),
+    subtitle: text(raw.subtitle, d.subtitle),
+    items: entries(raw.items, d.items, (item, base) => ({
       key: text(item.key, base.key),
       label: text(item.label, base.label),
       headline: text(item.headline, base.headline),
@@ -175,50 +149,51 @@ export function audienceConfig(config?: unknown): AudienceConfig {
   };
 }
 
-export function productGridConfig(config?: unknown): ProductGridConfig {
+export function productGridConfig(config: unknown, t: T): ProductGridConfig {
   const raw = fields(config);
+  const d = productGridDefaults(t);
   return {
-    title: text(raw.title, productGridDefaults.title),
-    subtitle: text(raw.subtitle, productGridDefaults.subtitle),
-    limit: count(raw.limit, productGridDefaults.limit),
-    category: text(raw.category, productGridDefaults.category),
-    show_all_label: text(
-      raw.show_all_label,
-      productGridDefaults.show_all_label,
-    ),
-    show_all_href: text(raw.show_all_href, productGridDefaults.show_all_href),
+    title: text(raw.title, d.title),
+    subtitle: text(raw.subtitle, d.subtitle),
+    limit: count(raw.limit, d.limit),
+    category: text(raw.category, d.category),
+    show_all_label: text(raw.show_all_label, d.show_all_label),
+    show_all_href: text(raw.show_all_href, d.show_all_href),
   };
 }
 
-export function teamConfig(config?: unknown): TeamConfig {
+export function teamConfig(config: unknown, t: T): TeamConfig {
   const raw = fields(config);
+  const d = teamDefaults(t);
   return {
-    title: text(raw.title, teamDefaults.title),
-    subtitle: text(raw.subtitle, teamDefaults.subtitle),
-    limit: count(raw.limit, teamDefaults.limit),
+    title: text(raw.title, d.title),
+    subtitle: text(raw.subtitle, d.subtitle),
+    limit: count(raw.limit, d.limit),
   };
 }
 
-export function buyingStepsConfig(config?: unknown): BuyingStepsConfig {
+export function buyingStepsConfig(config: unknown, t: T): BuyingStepsConfig {
   const raw = fields(config);
+  const d = buyingStepsDefaults(t);
   return {
-    title: text(raw.title, buyingStepsDefaults.title),
-    subtitle: text(raw.subtitle, buyingStepsDefaults.subtitle),
-    steps: entries(raw.steps, buyingStepsDefaults.steps, (step, base) => ({
+    title: text(raw.title, d.title),
+    subtitle: text(raw.subtitle, d.subtitle),
+    steps: entries(raw.steps, d.steps, (step, base) => ({
       title: text(step.title, base.title),
       body: text(step.body, base.body),
     })),
   };
 }
 
-export function contactConfig(config?: unknown): ContactConfig {
+export function contactConfig(config: unknown, t: T): ContactConfig {
   const raw = fields(config);
+  const d = contactDefaults(t);
   return {
-    title: text(raw.title, contactDefaults.title),
-    subtitle: text(raw.subtitle, contactDefaults.subtitle),
-    email: text(raw.email, contactDefaults.email),
-    zalo: text(raw.zalo, contactDefaults.zalo),
-    note: text(raw.note, contactDefaults.note),
+    title: text(raw.title, d.title),
+    subtitle: text(raw.subtitle, d.subtitle),
+    email: text(raw.email, d.email),
+    zalo: text(raw.zalo, d.zalo),
+    note: text(raw.note, d.note),
   };
 }
 
@@ -249,12 +224,11 @@ export interface HeroConfig {
  * always there, so a one-line heading typed in the console just renders on one
  * line.
  */
-export const heroDefaults: HeroConfig = {
-  eyebrow: "HỆ SINH THÁI SẢN PHẨM ZUKATEK",
-  heading: "Sản phẩm số\ncho công việc của bạn.",
-  subheading:
-    "ZUKATEK phát triển và cung cấp sản phẩm số cho cá nhân, nhóm, hộ kinh doanh và doanh nghiệp. Xem tính năng, trải nghiệm sản phẩm và nhận tư vấn để chọn giải pháp phù hợp.",
-};
+export const heroDefaults = (t: T): HeroConfig => ({
+  eyebrow: t("hero.eyebrow"),
+  heading: t("hero.heading"),
+  subheading: t("hero.subheading"),
+});
 
 export interface FAQItem {
   question: string;
@@ -268,50 +242,34 @@ export interface FAQConfig {
   items: FAQItem[];
 }
 
-export const faqDefaults: FAQConfig = {
-  eyebrow: "TÌM HIỂU THÊM",
-  title: "Câu hỏi thường gặp",
-  subtitle: "Những thông tin cần biết trước khi chọn mua sản phẩm.",
-  items: [
-    {
-      question: "Sản phẩm của ZUKATEK dành cho ai?",
-      answer_html:
-        "ZUKATEK cung cấp sản phẩm số cho cá nhân, nhóm và doanh nghiệp. Mỗi sản phẩm có đối tượng sử dụng, tính năng và phạm vi riêng để bạn lựa chọn.",
-    },
-    {
-      question: "Tôi có thể trải nghiệm trước khi mua không?",
-      answer_html:
-        "Sản phẩm có bản demo sẽ có nút “Trải nghiệm” mở trang riêng. Hướng dẫn dùng thử được ghi trong trang chi tiết. Hiện danh mục dùng dữ liệu mẫu và link tạm để xem bố cục.",
-    },
-    {
-      question: "Làm thế nào để tìm hiểu kỹ năng của team?",
-      answer_html:
-        "Mỗi thành viên có một hồ sơ riêng trong mục “Đội ngũ & kỹ năng”. Thông tin về vai trò, kỹ năng và sản phẩm đã tham gia sẽ được bổ sung tại đó.",
-    },
-    {
-      question: "Tôi liên hệ ai để hỏi giá hoặc mua sản phẩm?",
-      answer_html:
-        "Bạn có thể liên hệ người đã gửi hồ sơ ZUKATEK cho bạn hoặc kênh chung của ZUKATEK. Hãy cho biết sản phẩm quan tâm, số người sử dụng và nhu cầu triển khai để được tư vấn.",
-    },
-  ],
-};
+export const faqDefaults = (t: T): FAQConfig => ({
+  eyebrow: t("faq.eyebrow"),
+  title: t("faq.title"),
+  subtitle: t("faq.subtitle"),
+  items: (["one", "two", "three", "four"] as const).map((item) => ({
+    question: t(`faq.${item}.question`),
+    answer_html: t(`faq.${item}.answer`),
+  })),
+});
 
-export function heroConfig(config?: unknown): HeroConfig {
+export function heroConfig(config: unknown, t: T): HeroConfig {
   const raw = fields(config);
+  const d = heroDefaults(t);
   return {
-    eyebrow: text(raw.eyebrow, heroDefaults.eyebrow),
-    heading: text(raw.heading, heroDefaults.heading),
-    subheading: text(raw.subheading, heroDefaults.subheading),
+    eyebrow: text(raw.eyebrow, d.eyebrow),
+    heading: text(raw.heading, d.heading),
+    subheading: text(raw.subheading, d.subheading),
   };
 }
 
-export function faqConfig(config?: unknown): FAQConfig {
+export function faqConfig(config: unknown, t: T): FAQConfig {
   const raw = fields(config);
+  const d = faqDefaults(t);
   return {
-    eyebrow: text(raw.eyebrow, faqDefaults.eyebrow),
-    title: text(raw.title, faqDefaults.title),
-    subtitle: text(raw.subtitle, faqDefaults.subtitle),
-    items: entries(raw.items, faqDefaults.items, (item, base) => ({
+    eyebrow: text(raw.eyebrow, d.eyebrow),
+    title: text(raw.title, d.title),
+    subtitle: text(raw.subtitle, d.subtitle),
+    items: entries(raw.items, d.items, (item, base) => ({
       question: text(item.question, base.question),
       answer_html: text(item.answer_html, base.answer_html),
     })),

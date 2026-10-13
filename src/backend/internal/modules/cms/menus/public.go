@@ -36,6 +36,11 @@ import (
 // Vietnamese address — rather than vanishing from the menu.
 const baseLocale = "vi"
 
+// entityMenuItem is this module's key in the translation store
+// (translation.EntityMenuItem). An item with no translated label keeps the one
+// it was typed with — the rule every translated field follows.
+const entityMenuItem = "menu_item"
+
 // PublicItem is one navigation entry as the site reads it. URL is set for
 // internal/external links, Slug for article/page/category ones.
 type PublicItem struct {
@@ -65,11 +70,16 @@ func NewPublicRepository(pool *pgxpool.Pool) *PublicRepo { return &PublicRepo{po
 // (preferring the requested language, falling back to the base one) and a
 // category target straight from the taxonomy, which has no published copy.
 const publicQuery = `
-	SELECT m.location, i.id, i.parent_id, i.label, i.description, i.link_type,
+	SELECT m.location, i.id, i.parent_id,
+	       COALESCE(NULLIF(tr.values ->> 'label', ''), i.label),
+	       COALESCE(NULLIF(tr.values ->> 'description', ''), i.description),
+	       i.link_type,
 	       i.target_id, i.url, i.open_new_tab, i.sort_order,
 	       COALESCE(doc.slug, cat.slug)
 	  FROM cms_menus m
 	  JOIN cms_menu_items i ON i.menu_id = m.id
+	  LEFT JOIN translations tr
+	         ON tr.entity = $4 AND tr.entity_id = i.id AND tr.locale = $1
 	  LEFT JOIN LATERAL (
 	       SELECT pd.slug
 	         FROM published_docs pd
@@ -83,7 +93,7 @@ const publicQuery = `
 
 // All returns every menu item of every slot, ordered by slot then sibling order.
 func (r *PublicRepo) All(ctx context.Context, locale string) ([]publicRow, error) {
-	rows, err := r.pool.Query(ctx, publicQuery, locale, baseLocale, LinkCategory)
+	rows, err := r.pool.Query(ctx, publicQuery, locale, baseLocale, LinkCategory, entityMenuItem)
 	if err != nil {
 		return nil, fmt.Errorf("public menus: %w", err)
 	}

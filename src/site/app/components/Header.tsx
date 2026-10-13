@@ -5,7 +5,7 @@ import { allLocales, localeLabel } from "../lib/locales";
 import { Icon } from "./Icon";
 
 export function Header() {
-  const { href, url, layout, locale, locales, localeHref } = useSite();
+  const { href, url, layout, locale, locales, localeHref, t } = useSite();
   const [menuOpen, setMenuOpen] = useState(false),
     // Which dropdown is open — a position in the menu, or the language one.
     [openDropdown, setOpenDropdown] = useState<number | "lang" | null>(null);
@@ -94,11 +94,11 @@ export function Header() {
         <a
           className="brand"
           href={href("/#top")}
-          aria-label="ZUKATEK — về đầu trang"
+          aria-label={t("a11y.brand_home")}
         >
           <img src="/assets/logo.png" alt="ZUKATEK" width="1222" height="249" />
         </a>
-        <nav className="desktop-nav" aria-label="Điều hướng chính">
+        <nav className="desktop-nav" aria-label={t("a11y.nav_main")}>
           {layout.header.map((item, index) =>
             item.children.length > 0 ? (
               <div className="nav-dropdown" key={index}>
@@ -162,7 +162,9 @@ export function Header() {
                 className="nav-link dropdown-toggle lang-toggle"
                 aria-expanded={openDropdown === "lang"}
                 aria-controls="lang-menu"
-                aria-label={`${localeLabel(locale)} — chọn ngôn ngữ`}
+                aria-label={t("a11y.language", {
+                  language: localeLabel(locale),
+                })}
                 onClick={(event) => {
                   dropdownToggle.current = event.currentTarget;
                   setOpenDropdown(openDropdown === "lang" ? null : "lang");
@@ -198,7 +200,7 @@ export function Header() {
         <button
           ref={menuToggle}
           className="menu-toggle icon-button"
-          aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
+          aria-label={menuOpen ? t("a11y.menu_close") : t("a11y.menu_open")}
           aria-expanded={menuOpen}
           aria-controls="mobile-menu"
           onClick={() => {
@@ -214,7 +216,7 @@ export function Header() {
       <nav
         className="mobile-menu"
         id="mobile-menu"
-        aria-label="Điều hướng trên điện thoại"
+        aria-label={t("a11y.nav_mobile")}
         hidden={!menuOpen}
         onClick={() => setMenuOpen(false)}
       >

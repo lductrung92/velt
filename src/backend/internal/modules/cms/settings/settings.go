@@ -9,10 +9,13 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
+	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/cms/shared"
 	settingssvc "github.com/velt/backend/internal/modules/settings"
+	"github.com/velt/backend/internal/modules/translation"
 )
 
 const (
@@ -156,8 +159,24 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 
 // Register builds the settings service/handler and mounts its routes on the
 // already-grouped, auth-protected /api/cms router.
-func Register(r chi.Router, base *shared.Base, port shared.SettingsPort) {
-	h := NewHandler(NewService(base, port))
+func Register(r chi.Router, base *shared.Base, port shared.SettingsPort) *Service {
+	svc := NewService(base, port)
+	h := NewHandler(svc)
 	r.Get("/settings", h.GetSettings)
 	r.Put("/settings", h.UpdateSettings)
+	return svc
+}
+
+// AuthorizeTranslate gates editing the site chrome's translated copy. The
+// chrome is a settings record, so the gate is the settings permission; the id
+// must be the one instance that exists, because any other id would store text
+// against nothing.
+func (s *Service) AuthorizeTranslate(ctx context.Context, id *httpx.Identity, entityID uuid.UUID) error {
+	if err := s.Require(ctx, id, permManage); err != nil {
+		return err
+	}
+	if entityID != translation.SiteChromeID {
+		return apperr.NotFound("not_found")
+	}
+	return nil
 }

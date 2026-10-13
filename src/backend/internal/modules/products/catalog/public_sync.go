@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -134,11 +135,25 @@ func (s *Service) translatedDocs(ctx context.Context, p *Product, base map[strin
 		s.Sec(ctx).Error("products: load translations", "product_id", p.ID, "err", err)
 		return nil
 	}
+	// The snapshot carries each category's NAME, frozen in Vietnamese at publish
+	// time, and the card prints it. Without this the English catalogue shows
+	// every product under a Vietnamese category — translations an editor had
+	// already written and nothing ever read.
+	catByLocale := map[uuid.UUID]map[string]map[string]any{}
+	if ids := categoryIDs(base); len(ids) > 0 {
+		if loaded, cerr := s.tr.Bundle(ctx, entityProductCategory, ids, locales); cerr == nil {
+			catByLocale = loaded
+		} else {
+			s.Sec(ctx).Warn("products: load category translations",
+				"product_id", p.ID, "err", cerr)
+		}
+	}
 
 	out := make([]pubdocs.Doc, 0, len(locales))
 	for _, locale := range locales {
 		values := byLocale[p.ID][locale]
 		body := pubdocs.Overlay(base, values)
+		translateCategories(body, catByLocale, locale)
 		// A language with no translated slug still gets a page, under the base
 		// slug. hreflang only counts when every version points at the others, so
 		// an ugly URL beats a missing one.
@@ -186,4 +201,48 @@ func (s *Service) AuthorizeTranslate(ctx context.Context, id *httpx.Identity, pr
 		return s.MapRepoErr(ctx, "authorize translate", err)
 	}
 	return nil
+}
+
+// entityProductCategory is the translation key the product-categories module
+// owns (categories.EntityCategory). It is spelled out here rather than imported
+// because catalog must not depend on that package.
+const entityProductCategory = "product_category"
+
+// categoryIDs reads the ids of the categories a snapshot froze.
+func categoryIDs(base map[string]any) []uuid.UUID {
+	list, _ := base["categories"].([]any)
+	out := make([]uuid.UUID, 0, len(list))
+	for _, entry := range list {
+		item, _ := entry.(map[string]any)
+		raw, _ := item["id"].(string)
+		if id, err := uuid.Parse(raw); err == nil {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// translateCategories renames a document's categories into one language, in
+// place. A category with no translation keeps the name it was published under,
+// which is the same rule every other field follows.
+func translateCategories(
+	body map[string]any,
+	byLocale map[uuid.UUID]map[string]map[string]any,
+	locale string,
+) {
+	list, _ := body["categories"].([]any)
+	for _, entry := range list {
+		item, _ := entry.(map[string]any)
+		if item == nil {
+			continue
+		}
+		id, err := uuid.Parse(fmt.Sprint(item["id"]))
+		if err != nil {
+			continue
+		}
+		name, _ := byLocale[id][locale]["name"].(string)
+		if strings.TrimSpace(name) != "" {
+			item["name"] = name
+		}
+	}
 }

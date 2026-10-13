@@ -81,6 +81,17 @@ func (r *fakeRepo) DeleteMenu(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (r *fakeRepo) ItemExists(_ context.Context, itemID uuid.UUID) (bool, error) {
+	for _, items := range r.menuItems {
+		for _, it := range items {
+			if it.ID == itemID {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
 func (r *fakeRepo) MenuItems(_ context.Context, menuID uuid.UUID) ([]itemRow, error) {
 	rows := append([]itemRow(nil), r.menuItems[menuID]...)
 	sort.Slice(rows, func(i, j int) bool { return rows[i].SortOrder < rows[j].SortOrder })

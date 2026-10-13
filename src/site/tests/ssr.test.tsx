@@ -13,6 +13,10 @@ test("server renders real page content, filters and metadata without browser glo
   assert.equal(home.status, 200);
   assert.match(home.html, /Đội ngũ phát triển/);
   assert.match(home.html, /Thành viên 01/);
+  assert.match(home.html, /data-globe-motion="static"/);
+  assert.match(home.html, /data-globe-frame="0"/);
+  assert.equal((home.html.match(/data-globe-member=/g) || []).length, 4);
+  assert.match(home.html, /Mở hồ sơ Thành viên 04 trên địa cầu/);
   assert.equal((home.html.match(/class="catalog-card"/g) || []).length, 6);
   const catalog = render("/products?q=so%20ghi%20chu&ref=member-1");
   assert.equal((catalog.html.match(/class="catalog-card"/g) || []).length, 1);
@@ -23,6 +27,18 @@ test("server renders real page content, filters and metadata without browser glo
   assert.equal(render("/products/missing").status, 404);
   assert.equal(render("/unknown-page").status, 404);
   assert.equal(render("/product.html?id=example-1").status, 200);
+});
+
+test("hero SSR keeps the independent-product illustration and all four audiences before hydration", () => {
+  const { html } = render("/");
+  assert.match(html, /data-hero-motion="static"/);
+  assert.match(html, /data-hero-frame="0"/);
+  for (const audience of ["Cá nhân", "Nhóm", "Hộ kinh doanh", "Doanh nghiệp"]) {
+    assert.ok(html.includes(audience));
+  }
+  assert.match(html, /Mỗi sản phẩm, một trải nghiệm riêng/);
+  assert.match(html, /Minh họa hệ sinh thái sản phẩm Zukatek/);
+  assert.doesNotMatch(html, /<audio|<video/);
 });
 
 test("100 real products replace examples and SSR pagination clamps malformed queries", () => {

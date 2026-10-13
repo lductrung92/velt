@@ -1,4 +1,5 @@
 import type { PublicMenuItem } from "../types";
+import type { T } from "./i18n";
 
 /**
  * The site's chrome — the header and the footer — as data.
@@ -58,67 +59,69 @@ function nav(
   };
 }
 
-export const DEFAULT_HEADER: NavItem[] = [
-  nav("Khám phá", "/", {
+export const defaultHeader = (t: T): NavItem[] => [
+  nav(t("layout.nav.explore"), "/", {
     children: [
-      nav("Sản phẩm", "/products", {
-        description: "Danh mục, tính năng và bản trải nghiệm",
+      nav(t("layout.nav.products"), "/products", {
+        description: t("layout.nav.products_desc"),
       }),
-      nav("Đội ngũ & kỹ năng", "/#team", {
-        description: "Con người đứng sau ZUKATEK",
+      nav(t("layout.nav.team"), "/#team", {
+        description: t("layout.nav.team_desc"),
       }),
     ],
   }),
-  nav("Sản phẩm", "/products"),
-  nav("Đội ngũ & kỹ năng", "/#team"),
-  nav("Blog", "/blog"),
+  nav(t("layout.nav.products"), "/products"),
+  nav(t("layout.nav.team"), "/#team"),
+  nav(t("layout.nav.blog"), "/blog"),
 ];
 
 // The phone menu is its own list on purpose: it is flat, and it carries one
 // entry ("Cách mua sản phẩm") the desktop bar has no room for. A site that
 // configures only the desktop menu gets this list derived from that one.
-export const DEFAULT_HEADER_MOBILE: NavItem[] = [
-  nav("Sản phẩm", "/products"),
-  nav("Đội ngũ & kỹ năng", "/#team"),
-  nav("Cách mua sản phẩm", "/#collaboration"),
-  nav("Blog", "/blog"),
+export const defaultHeaderMobile = (t: T): NavItem[] => [
+  nav(t("layout.nav.products"), "/products"),
+  nav(t("layout.nav.team"), "/#team"),
+  nav(t("layout.nav.how_to_buy"), "/#collaboration"),
+  nav(t("layout.nav.blog"), "/blog"),
 ];
 
 // A root is a column heading (its own href is never rendered); its children are
 // the links inside that column.
-export const DEFAULT_FOOTER: NavItem[] = [
-  nav("Khám phá ZUKATEK", "/", {
+export const defaultFooter = (t: T): NavItem[] => [
+  nav(t("layout.footer.explore"), "/", {
     children: [
-      nav("Về ZUKATEK", "/#about"),
-      nav("Sản phẩm", "/#products"),
-      nav("Đội ngũ & kỹ năng", "/#team"),
-      nav("Blog", "/blog"),
+      nav(t("layout.footer.about"), "/#about"),
+      nav(t("layout.nav.products"), "/#products"),
+      nav(t("layout.nav.team"), "/#team"),
+      nav(t("layout.nav.blog"), "/blog"),
     ],
   }),
-  nav("Mua & sử dụng sản phẩm", "/", {
+  nav(t("layout.footer.buy"), "/", {
     children: [
-      nav("Cách mua sản phẩm", "/#collaboration"),
-      nav("Liên hệ", "/#contact"),
+      nav(t("layout.nav.how_to_buy"), "/#collaboration"),
+      nav(t("layout.footer.contact"), "/#contact"),
     ],
   }),
 ];
 
-export const DEFAULT_CHROME: SiteChrome = {
-  tagline: "Đội ngũ phát triển sản phẩm số\ncho cá nhân, nhóm và doanh nghiệp.",
-  noteTitle: "Con người đứng sau sản phẩm",
-  noteText:
-    "Xem đội ngũ phát triển, kỹ năng\nvà thành viên phụ trách từng sản phẩm.",
-  copyright: "© {year} ZUKATEK. Cùng tiến về phía trước.",
-  ctaLabel: "Liên hệ",
-  ctaHref: "/#contact",
-};
+/** Where the header's button points when nothing else says otherwise. */
+const DEFAULT_CTA_HREF = "/#contact";
 
-export const DEFAULT_LAYOUT: SiteLayout = {
-  header: DEFAULT_HEADER,
-  headerMobile: DEFAULT_HEADER_MOBILE,
-  footer: DEFAULT_FOOTER,
-  chrome: DEFAULT_CHROME,
-};
+export const defaultChrome = (t: T): SiteChrome => ({
+  tagline: t("layout.chrome.tagline"),
+  noteTitle: t("layout.chrome.note_title"),
+  noteText: t("layout.chrome.note_text"),
+  copyright: t("layout.chrome.copyright"),
+  ctaLabel: t("layout.chrome.cta_label"),
+  ctaHref: DEFAULT_CTA_HREF,
+});
+
+export const defaultLayout = (t: T): SiteLayout => ({
+  header: defaultHeader(t),
+  headerMobile: defaultHeaderMobile(t),
+  footer: defaultFooter(t),
+  chrome: defaultChrome(t),
+});
 
 /** A setting read as text; anything that is not a non-blank string is absent. */
 function str(value: unknown): string {
@@ -215,7 +218,7 @@ function slot(menus: unknown, location: string): unknown {
 function ctaHref(value: unknown): string {
   const raw = str(value).trim();
   if (raw.startsWith("/") || /^https?:\/\//i.test(raw)) return raw;
-  return DEFAULT_CHROME.ctaHref;
+  return DEFAULT_CTA_HREF;
 }
 
 /**
@@ -224,7 +227,11 @@ function ctaHref(value: unknown): string {
  * Every branch here answers the same question the same way: if the console has
  * not said otherwise, show what the page already showed.
  */
-export function resolveLayout(menus: unknown, settings: unknown): SiteLayout {
+export function resolveLayout(
+  menus: unknown,
+  settings: unknown,
+  t: T,
+): SiteLayout {
   const values = (
     settings && typeof settings === "object" ? settings : {}
   ) as Record<string, unknown>;
@@ -234,22 +241,21 @@ export function resolveLayout(menus: unknown, settings: unknown): SiteLayout {
   const mobile = toNav(slot(menus, "header_mobile"), homeSlug);
   const footer = toNav(slot(menus, "footer"), homeSlug);
 
+  const shipped = defaultChrome(t);
   return {
-    header: header.length ? header : DEFAULT_HEADER,
+    header: header.length ? header : defaultHeader(t),
     headerMobile: mobile.length
       ? mobile
       : header.length
         ? flatten(header)
-        : DEFAULT_HEADER_MOBILE,
-    footer: footer.length ? footer : DEFAULT_FOOTER,
+        : defaultHeaderMobile(t),
+    footer: footer.length ? footer : defaultFooter(t),
     chrome: {
-      tagline: str(values["site.brand_tagline"]) || DEFAULT_CHROME.tagline,
-      noteTitle:
-        str(values["site.footer_note_title"]) || DEFAULT_CHROME.noteTitle,
-      noteText: str(values["site.footer_note_text"]) || DEFAULT_CHROME.noteText,
-      copyright:
-        str(values["site.footer_copyright"]) || DEFAULT_CHROME.copyright,
-      ctaLabel: str(values["site.header_cta_label"]) || DEFAULT_CHROME.ctaLabel,
+      tagline: str(values["site.brand_tagline"]) || shipped.tagline,
+      noteTitle: str(values["site.footer_note_title"]) || shipped.noteTitle,
+      noteText: str(values["site.footer_note_text"]) || shipped.noteText,
+      copyright: str(values["site.footer_copyright"]) || shipped.copyright,
+      ctaLabel: str(values["site.header_cta_label"]) || shipped.ctaLabel,
       ctaHref: ctaHref(values["site.header_cta_url"]),
     },
   };

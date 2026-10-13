@@ -6,7 +6,10 @@ import { content } from "../app/data/content";
 import { getCatalog } from "../app/lib/catalog";
 import { emptyBlog } from "../app/lib/blog";
 import { BASE_LOCALE } from "../app/lib/locales";
-import { DEFAULT_LAYOUT } from "../app/lib/layout";
+import { translator } from "../app/lib/i18n";
+
+const t = translator(BASE_LOCALE);
+import { defaultLayout } from "../app/lib/layout";
 import { withReferral } from "../app/lib/links";
 import { SectionRenderer } from "../app/components/SectionRenderer";
 import type { PublicSection } from "../app/types";
@@ -21,10 +24,11 @@ function render(sections: PublicSection[]) {
         products,
         isExample,
         blog: emptyBlog(),
-        layout: DEFAULT_LAYOUT,
+        layout: defaultLayout(t),
         locale: BASE_LOCALE,
         locales: [],
         localeHref: (code: string) => `/${code}`,
+        t,
         href: (path: string) => withReferral(path),
       }}
     >
@@ -54,9 +58,9 @@ const defaults: Record<string, string[]> = {
     'class="card-art art-group"',
     'class="card-art art-business"',
     'href="/#contact"',
-    'data-audience="Cá nhân"',
-    'data-audience="Nhóm"',
-    'data-audience="Doanh nghiệp"',
+    'data-audience="individual"',
+    'data-audience="team"',
+    'data-audience="business"',
     "Tư vấn cho cá nhân ",
     "Tư vấn cho nhóm ",
     "Tư vấn cho doanh nghiệp ",
@@ -123,7 +127,10 @@ test("a partial config overrides only the fields it names", () => {
     ),
   );
   assert.ok(audience.includes('class="card-art art-individual"'));
-  assert.ok(audience.includes('data-audience="Cá nhân"'));
+  // The picker hands the contact form a code, not a word — the form compares
+  // it, and a comparison against a translated word breaks in the second
+  // language.
+  assert.ok(audience.includes('data-audience="individual"'));
   assert.ok(
     audience.includes(
       "Sản phẩm số cho công việc cá nhân, phối hợp trong nhóm và vận hành doanh nghiệp.",

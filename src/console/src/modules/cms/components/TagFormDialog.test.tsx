@@ -86,17 +86,18 @@ beforeEach(() => signIn());
 afterEach(() => useAuthStore.getState().clear());
 
 describe("TagFormDialog translations", () => {
-  it("edit: the translated name is written before the tag itself", async () => {
+  it("edit: a tag is saved on its own — it has no translated copy", async () => {
+    // Tags were translatable and nothing ever displayed the result: the site
+    // renders no tags and the public article payload carries none. The entity
+    // is gone from the translation module, so this dialog must not ask for a
+    // language, and must not call a route that now answers 404.
     const calls: string[] = [];
-    let putBody: Record<string, unknown> | undefined;
     server.use(
       translationOn(true),
       settingsHandler(),
-      http.get(`${API}/translations/tag/t1`, () => HttpResponse.json(trView())),
-      http.put(`${API}/translations/tag/t1/en`, async ({ request }) => {
+      http.get(`${API}/translations/tag/t1`, () => {
         calls.push("translation");
-        putBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(trView({ name: "Go" }));
+        return HttpResponse.json(trView());
       }),
       http.patch(`${API}/cms/tags/t1`, () => {
         calls.push("record");
@@ -106,21 +107,18 @@ describe("TagFormDialog translations", () => {
     renderDialog(tag());
 
     const dialog = await screen.findByRole("dialog");
-    await userEvent.type(
-      await within(dialog).findByLabelText(
-        i18n.t("cms.tags.translate.heading"),
-      ),
-      "Go",
-    );
+    await within(dialog).findByText(i18n.t("cms.tags.col.name"));
+    expect(
+      within(dialog).queryByText(i18n.t("cms.tags.translate.heading")),
+    ).not.toBeInTheDocument();
+
     await userEvent.click(
       within(dialog).getByRole("button", { name: i18n.t("common.save") }),
     );
-
-    await waitFor(() => expect(calls).toEqual(["translation", "record"]));
-    expect(putBody).toMatchObject({ values: { name: "Go" } });
+    await waitFor(() => expect(calls).toEqual(["record"]));
   });
 
-  it("create: nothing to translate until the tag exists", async () => {
+  it("create: the dialog is the same two fields", async () => {
     server.use(translationOn(true), settingsHandler());
     renderDialog(null);
 

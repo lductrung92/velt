@@ -81,8 +81,21 @@ func publicSortClause(sort string) string {
 // audience, platform, curation order), which the shared list helper does not
 // take. The visibility predicate is the shared one — a live row with a body.
 func (r *PublicRepository) ListPublished(ctx context.Context, p PublicListParams) ([]json.RawMessage, int, error) {
-	conds := []string{"entity = $1", "locale = $2", "is_current", "body IS NOT NULL"}
-	args := []any{EntityProduct, p.Locale}
+	// One row per product: its copy in the language asked for, or the base one.
+	// A product published before a language was switched on has no row in that
+	// language, and without this it would simply be absent from the catalogue —
+	// not untranslated, gone. Same rule as pubdocs.Store.List; the filters below
+	// then run on whichever copy was chosen, which is the copy the reader sees.
+	const live = `
+		WITH live AS (
+		  SELECT DISTINCT ON (entity_id) body, published_at, search_text
+		    FROM published_docs
+		   WHERE entity = $1 AND locale IN ($2, $3)
+		     AND is_current AND body IS NOT NULL
+		   ORDER BY entity_id, (locale = $2) DESC
+		)`
+	conds := []string{"true"}
+	args := []any{EntityProduct, p.Locale, pubdocs.BaseLocale}
 	add := func(tmpl string, val any) {
 		args = append(args, val)
 		conds = append(conds, fmt.Sprintf(tmpl, len(args)))
@@ -115,13 +128,13 @@ func (r *PublicRepository) ListPublished(ctx context.Context, p PublicListParams
 
 	var total int
 	if err := r.pool.QueryRow(ctx,
-		`SELECT count(*) FROM published_docs WHERE `+where, args...).Scan(&total); err != nil {
+		live+` SELECT count(*) FROM live WHERE `+where, args...).Scan(&total); err != nil {
 		return nil, 0, shared.Wrap("count published products", err)
 	}
 
 	args = append(args, p.PageSize, (p.Page-1)*p.PageSize)
 	rows, err := r.pool.Query(ctx,
-		`SELECT body FROM published_docs WHERE `+where+
+		live+` SELECT body FROM live WHERE `+where+
 			` ORDER BY `+publicSortClause(p.Sort)+
 			fmt.Sprintf(` LIMIT $%d OFFSET $%d`, len(args)-1, len(args)), args...)
 	if err != nil {

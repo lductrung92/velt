@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { loadSiteContent } from "../app/lib/site.server";
+import { lifecycleLabel } from "../app/lib/catalog";
+import { translator } from "../app/lib/i18n";
 import { purge } from "../app/lib/cache.server";
 
 const product = {
@@ -54,7 +56,11 @@ test("API codes become the words the console shows", async () => {
   const [p] = content.products;
   assert.equal(p.id, "kho-gon");
   assert.equal(p.audience, "Doanh nghiệp");
-  assert.equal(p.status, "Đã ra mắt");
+  // The lifecycle stays a CODE on the product: the card compares it to choose
+  // a colour, and the word is picked where it is shown, in the right language.
+  assert.equal(p.status, "launched");
+  assert.equal(lifecycleLabel(translator("vi"), p.status), "Đã ra mắt");
+  assert.equal(lifecycleLabel(translator("en"), p.status), "Launched");
   assert.deepEqual(p.skills, ["Web", "Android"]);
   assert.equal(p.category, "Vận hành");
   assert.match(p.image ?? "", /^https?:\/\/.*\/api\/files\/cover\.png$/);

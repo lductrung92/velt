@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 import type { Member, Product, PublicSection, SiteContent } from "./types";
 import type { SiteLayout } from "./lib/layout";
+import type { T } from "./lib/i18n";
 import type { BlogState } from "./lib/blog";
 
 export interface SiteContextValue {
@@ -21,6 +22,8 @@ export interface SiteContextValue {
   href: (path: string) => string;
   /** This same page in another language, for the switcher. */
   localeHref: (locale: string) => string;
+  /** The site's own words in the language being rendered. */
+  t: T;
 }
 export const SiteContext = createContext<SiteContextValue | null>(null);
 export function useSite() {

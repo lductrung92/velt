@@ -1,6 +1,12 @@
 import type { Product } from "../types";
 import { useSite } from "../context";
-import { categoryOf, productPath } from "../lib/catalog";
+import {
+  categoryLabel,
+  categoryOf,
+  lifecycleLabel,
+  lifecycleTone,
+  productPath,
+} from "../lib/catalog";
 import { demoLink, safeUrl } from "../lib/links";
 import { Icon } from "./Icon";
 
@@ -11,7 +17,7 @@ export function ProductVisual({
   product: Product;
   large?: boolean;
 }) {
-  const { products } = useSite();
+  const { products, t } = useSite();
   const image = safeUrl(product.image);
   const tones = ["blue", "purple", "green", "orange"];
   const categories = [...new Set(products.map(categoryOf))];
@@ -22,7 +28,11 @@ export function ProductVisual({
       aria-hidden={!image}
     >
       {image ? (
-        <img src={image} alt={`Giao diện ${product.name}`} loading="lazy" />
+        <img
+          src={image}
+          alt={t("catalog.visual_alt", { name: product.name })}
+          loading="lazy"
+        />
       ) : (
         <>
           <div className="catalog-mockup">
@@ -60,16 +70,11 @@ export function ProductVisual({
   );
 }
 export function ProductCard({ product }: { product: Product }) {
-  const { data, referrer, href } = useSite();
+  const { data, referrer, href, t } = useSite();
   const people = data.members.filter((member) =>
     product.memberIds?.includes(member.id),
   );
-  const status =
-    product.status === "Đã ra mắt"
-      ? "released"
-      : product.status === "Đang phát triển"
-        ? "developing"
-        : "idea";
+  const status = lifecycleTone(product.status);
   const detail = href(productPath(product)),
     demo = demoLink(product, referrer);
   return (
@@ -77,8 +82,12 @@ export function ProductCard({ product }: { product: Product }) {
       <ProductVisual product={product} />
       <div className="catalog-card-body">
         <div className="catalog-meta">
-          <span className="catalog-category">{categoryOf(product)}</span>
-          {product.example && <span className="example-label">Minh họa</span>}
+          <span className="catalog-category">
+            {categoryLabel(t, categoryOf(product))}
+          </span>
+          {product.example && (
+            <span className="example-label">{t("catalog.card_example")}</span>
+          )}
         </div>
         <h3>
           <a href={detail}>{product.name}</a>
@@ -88,7 +97,7 @@ export function ProductCard({ product }: { product: Product }) {
           {product.status && (
             <span className={`catalog-status ${status}`}>
               <i />
-              {product.status}
+              {lifecycleLabel(t, product.status)}
             </span>
           )}
           {product.audience && (
@@ -108,9 +117,11 @@ export function ProductCard({ product }: { product: Product }) {
         )}
         <div className="product-purchase-info">
           {product.priceLabel ||
-            (product.example
-              ? "Thông tin mẫu · chưa mở bán"
-              : "Liên hệ để nhận báo giá")}
+            t(
+              product.example
+                ? "catalog.price_example"
+                : "catalog.price_contact",
+            )}
         </div>
         <div className="catalog-card-actions">
           {demo ? (
@@ -119,24 +130,37 @@ export function ProductCard({ product }: { product: Product }) {
               href={demo}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`${product.demoPlaceholder ? "Mở link tạm cho" : "Trải nghiệm"} ${product.name}`}
+              aria-label={t(
+                product.demoPlaceholder
+                  ? "catalog.card_demo_placeholder_aria"
+                  : "catalog.card_demo_aria",
+                { name: product.name },
+              )}
             >
-              {product.demoPlaceholder ? "Mở link tạm" : "Trải nghiệm"} ↗
+              {t(
+                product.demoPlaceholder
+                  ? "catalog.card_demo_placeholder"
+                  : "catalog.card_demo",
+              )}
+              {" ↗"}
             </a>
           ) : (
-            <span className="demo-unavailable">Chưa có bản demo</span>
+            <span className="demo-unavailable">
+              {t("catalog.card_no_demo")}
+            </span>
           )}
           <a
             className="text-link product-button"
             href={detail}
-            aria-label={`Xem ${product.name}`}
+            aria-label={t("catalog.card_view_aria", { name: product.name })}
           >
-            Chi tiết <Icon name="arrow" />
+            {t("catalog.card_detail")}
+            <Icon name="arrow" />
           </a>
         </div>
         {demo && (
           <small className="demo-access-note">
-            {product.demoAccess || "Mở bản trải nghiệm trong tab mới"}
+            {product.demoAccess || t("catalog.card_demo_note")}
           </small>
         )}
       </div>
@@ -152,6 +176,7 @@ export function Categories({
   selected: string;
   onChange: (category: string) => void;
 }) {
+  const { t } = useSite();
   const categories = [...new Set(products.map(categoryOf))];
   return (
     <>
@@ -164,7 +189,7 @@ export function Categories({
           aria-pressed={category === selected}
           onClick={() => onChange(category)}
         >
-          {category || "Tất cả"}
+          {category ? categoryLabel(t, category) : t("catalog.categories_all")}
           <span>
             {category
               ? products.filter((product) => categoryOf(product) === category)

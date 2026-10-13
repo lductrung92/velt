@@ -1,6 +1,7 @@
 import { content as fallbackContent } from "../data/content";
 import { cached, ttlSeconds } from "./cache.server";
 import { BASE_LOCALE } from "./locales";
+import { translator, type MessageKey, type T } from "./i18n";
 import type { Member, Product, SiteContent } from "../types";
 
 /**
@@ -52,34 +53,19 @@ interface ApiList<T> {
 }
 
 /*
- * The API speaks codes; the site shows Vietnamese. These three tables are the
- * translation, and they are copied VERBATIM from the console's own locale file
- * (products.lifecycle / products.audience / products.platform) so one product
- * is never called two different things depending on which screen you read it
- * on. If the console's wording changes, change it here too.
+ * The API speaks codes — launched, individual, ios. The site shows a word for
+ * each, and which word depends on the language being served, so the lookup goes
+ * through the site's own message tables (catalog.*). A code the tables do not
+ * know is shown as-is rather than as a blank: an unknown platform is better
+ * read than invisible.
  */
-const LIFECYCLE_LABEL: Record<string, string> = {
-  idea: "Ý tưởng",
-  building: "Đang phát triển",
-  launched: "Đã ra mắt",
-};
-const AUDIENCE_LABEL: Record<string, string> = {
-  individual: "Cá nhân",
-  team: "Nhóm",
-  business: "Doanh nghiệp",
-};
-const PLATFORM_LABEL: Record<string, string> = {
-  web: "Web",
-  ios: "iOS",
-  android: "Android",
-  desktop: "Desktop",
-};
-
-const label = (table: Record<string, string>, code: string | undefined) =>
-  (code && table[code]) || code || "";
-
 /** The four accent colours the team grid cycles through. */
 const MEMBER_COLORS = ["blue", "purple", "orange", "green"];
+
+const coded = (t: T, group: string, code: string | undefined) => {
+  if (!code) return "";
+  return t(`catalog.${group}.${code}` as MessageKey) || code;
+};
 
 function absolute(url: string | null | undefined): string {
   if (!url) return "";
@@ -92,18 +78,21 @@ function absolute(url: string | null | undefined): string {
   }
 }
 
-function toProduct(p: ApiProduct): Product {
+function toProduct(p: ApiProduct, t: T): Product {
   return {
     id: p.slug,
     name: p.name,
     summary: p.summary ?? "",
     // The list endpoint carries no body; the detail page fetches its own.
     category: p.categories?.[0]?.name ?? "",
-    audience: label(AUDIENCE_LABEL, p.audience?.[0]),
-    status: label(LIFECYCLE_LABEL, p.lifecycle),
+    audience: coded(t, "audience", p.audience?.[0]),
+    // The LIFECYCLE CODE, not a word for it: the card compares this value to
+    // pick its colour, and a comparison against a translated word is a bug
+    // waiting for the second language.
+    status: p.lifecycle,
     featured: p.is_featured,
     image: absolute(p.cover_url),
-    skills: (p.platforms ?? []).map((c) => label(PLATFORM_LABEL, c)),
+    skills: (p.platforms ?? []).map((c) => coded(t, "platform", c)),
   };
 }
 
@@ -163,6 +152,7 @@ async function fetchSiteContent(
   request: typeof fetch,
   locale: string,
 ): Promise<LoadResult> {
+  const t = translator(locale);
   try {
     const [products, members, settings] = await Promise.all([
       getJSON<ApiList<ApiProduct>>(
@@ -178,7 +168,7 @@ async function fetchSiteContent(
     const loaded: SiteContent = {
       ...fallbackContent,
       brand: String(settings["app.name"] || fallbackContent.brand),
-      products: (products.items ?? []).map(toProduct),
+      products: (products.items ?? []).map((p) => toProduct(p, t)),
       members: (members.items ?? []).map(toMember),
       // The mock fills an empty catalogue with sample cards. Real content never
       // wants that: an empty catalogue means "nothing published yet", and

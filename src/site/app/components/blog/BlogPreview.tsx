@@ -3,7 +3,7 @@ import { PostCard } from "./BlogCard";
 import { Icon } from "../Icon";
 
 export function BlogPreview({ limit }: { limit?: number } = {}) {
-  const { blog, href } = useSite();
+  const { blog, href, t } = useSite();
   // The articles already come from the published feed; the section only says
   // how many of them to show.
   const count =
@@ -18,14 +18,12 @@ export function BlogPreview({ limit }: { limit?: number } = {}) {
         <div className="blog-section-heading">
           <div>
             <span className="blog-eyebrow">ZUKATEK JOURNAL</span>
-            <h2 id="blog-home-title">Góc nhìn từ Zukatek</h2>
-            <p>
-              Kiến thức, kinh nghiệm và những câu chuyện trong hành trình làm
-              sản phẩm.
-            </p>
+            <h2 id="blog-home-title">{t("blog.masthead_title")}</h2>
+            <p>{t("blog.home_lead")}</p>
           </div>
           <a className="text-link primary-text" href={href("/blog")}>
-            Khám phá Blog <Icon name="arrow" />
+            {t("blog.home_cta")}
+            <Icon name="arrow" />
           </a>
         </div>
         {blog.items.length ? (
@@ -40,11 +38,12 @@ export function BlogPreview({ limit }: { limit?: number } = {}) {
           <div className="blog-home-empty">
             <span>
               {blog.status === "unavailable"
-                ? "Chưa thể tải bài viết lúc này. Bạn có thể thử lại tại Blog."
-                : "Những câu chuyện từ Zukatek sẽ được chia sẻ tại đây."}
+                ? t("blog.home_unavailable")
+                : t("blog.home_empty")}
             </span>
             <a href={href("/blog")}>
-              Ghé thăm Blog <Icon name="arrow" />
+              {t("blog.home_visit")}
+              <Icon name="arrow" />
             </a>
           </div>
         )}

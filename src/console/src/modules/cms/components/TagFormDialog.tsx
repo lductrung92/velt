@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -23,9 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { TextField } from "@/components/ui/text-field";
-import { useEntityTranslation } from "@/modules/translation/hooks/useEntityTranslation";
 import { parseApiError } from "@/utils/apiError";
 
 import { useCmsSettings } from "../hooks/useCmsSettings";
@@ -40,10 +38,6 @@ import type {
   Tag,
   UpdateTagBody,
 } from "../services/tags.service";
-
-function str(v: unknown): string {
-  return typeof v === "string" ? v : "";
-}
 
 // Create/edit dialog for a tag. `tag` present = edit, absent = create. Slug is
 // optional — blank lets the backend derive it from the name.
@@ -109,22 +103,11 @@ function TagForm({
   });
 
   /*
-   * A dialog this size has no room for the editor screens' tab strip, and a tag
-   * has exactly one translatable field — so the other languages appear as one
-   * more box in the same column, with a small switch picking which language it
-   * holds. One field at a time keeps the dialog two fields tall whatever the
-   * site is configured with, and the switch says which language is in the box
-   * without a second set of labels.
+   * A tag has no translated copy. Nothing public ever rendered one — the site
+   * shows no tags, the public article payload carries none — so the entity is
+   * not declared in the translation module and this dialog does not offer a
+   * language the reader will never see.
    */
-  const tr = useEntityTranslation("tag", tag?.id);
-  const others = tr.tabs.filter((l) => l !== tr.baseLocale);
-  const first = others[0];
-  const { isBase, setLocale } = tr;
-  useEffect(() => {
-    // The source-language name is the field above, so the switch opens on the
-    // first language that is not it.
-    if (first && isBase) setLocale(first);
-  }, [first, isBase, setLocale]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     const name = values.name.trim();
@@ -133,11 +116,7 @@ function TagForm({
         const body: UpdateTagBody = { name };
         if (allowSlugEdit) body.slug = values.slug.trim() || undefined;
         else if (regenerate) body.regenerate_slug = true;
-        // Translations first, so one Save stores both halves of the record and
-        // the re-read below reports what the server now holds.
-        await tr.flush(tag.id);
         await update.mutateAsync({ id: tag.id, body });
-        await tr.refresh();
         toast.success(t("cms.tags.toast.update_success"));
       } else {
         const body: CreateTagBody = { name };
@@ -161,9 +140,6 @@ function TagForm({
   });
 
   const saving = create.isPending || update.isPending;
-  // Nothing to translate before the tag exists: the record has no id to store a
-  // translation against.
-  const showTranslations = tr.enabled && isEdit && others.length > 0;
 
   return (
     <Form {...form}>
@@ -181,42 +157,6 @@ function TagForm({
             </FormItem>
           )}
         />
-        {showTranslations && (
-          <div className="space-y-2 rounded-md border bg-muted/20 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="tag-tr-name">
-                {t("cms.tags.translate.heading")}
-              </Label>
-              <div
-                className="flex gap-1"
-                role="group"
-                aria-label={t("tr.tabs")}
-              >
-                {others.map((loc) => (
-                  <Button
-                    key={loc}
-                    type="button"
-                    size="sm"
-                    variant={loc === tr.locale ? "secondary" : "ghost"}
-                    aria-pressed={loc === tr.locale}
-                    onClick={() => tr.setLocale(loc)}
-                  >
-                    {loc.toUpperCase()}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <TextField
-              id="tag-tr-name"
-              maxLength={80}
-              value={str(tr.values.name)}
-              onChange={(e) => tr.setField("name", e.target.value)}
-            />
-            <p className="text-xs leading-5 text-muted-foreground">
-              {t("cms.tags.translate.hint")}
-            </p>
-          </div>
-        )}
         {allowSlugEdit && (
           <FormField
             control={form.control}

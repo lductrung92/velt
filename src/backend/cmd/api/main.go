@@ -297,17 +297,23 @@ func run() error {
 				return cmsWiring.Pages.AuthorizeTranslate(ctx, id, entityID)
 			case translation.EntityCMSCategory:
 				return cmsWiring.Taxonomy.AuthorizeTranslateCategory(ctx, id, entityID)
-			case translation.EntityTag:
-				return cmsWiring.Taxonomy.AuthorizeTranslateTag(ctx, id, entityID)
 			case translation.EntityProduct:
 				return productsWiring.Catalog.AuthorizeTranslate(ctx, id, entityID)
 			case translation.EntityProductCategory:
 				return productsWiring.Categories.AuthorizeTranslate(ctx, id, entityID)
 			case translation.EntityMember:
 				return membersSvc.AuthorizeTranslate(ctx, id, entityID)
+			case translation.EntityMenuItem:
+				return cmsWiring.Menus.AuthorizeTranslate(ctx, id, entityID)
+			case translation.EntitySiteChrome:
+				return cmsWiring.Settings.AuthorizeTranslate(ctx, id, entityID)
 			}
 			return apperr.NotFound("not_found")
 		})
+	// The public settings read serves the site's header and footer copy, so it
+	// has to be able to answer in the language being read.
+	settingsSvc.SetTranslatedText(translationSvc)
+
 	// One recorder per bounded context: every feature inside it shares the same
 	// spine, so this is the whole write side of the activity log.
 	adminBase.SetActivity(acts)

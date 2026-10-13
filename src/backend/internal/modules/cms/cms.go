@@ -69,11 +69,11 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 		w.Taxonomy = taxonomy.Register(r, base, pool)
 		w.Pages = pages.Register(r, base, pool, landing.NewPagesPort(landing.NewRepository(pool), store))
 		w.Articles = articles.Register(r, base, pool, store)
-		menus.Register(r, base, pool)
+		w.Menus = menus.Register(r, base, pool)
 		landing.Register(r, base, pool, store)
 		comments.Register(r, base, pool)
 		newsletter.Register(r, base, pool)
-		cmssettings.Register(r, base, settings)
+		w.Settings = cmssettings.Register(r, base, settings)
 	})
 
 	w.Articles.SetPublicDocs(docs)
@@ -93,6 +93,10 @@ type Wiring struct {
 	Pages          *pages.Service
 	PublicPages    *pages.PublicService
 	Taxonomy       *taxonomy.Service
+	// Menus and Settings are handed back for one reason each: both gate a
+	// translation route (a menu item's label, the site chrome's copy).
+	Menus    *menus.Service
+	Settings *cmssettings.Service
 }
 
 // SettingDefs returns the CMS feature-flag definitions for the settings registry

@@ -14,8 +14,8 @@ import { Contact } from "./Contact";
 import { Icon } from "./Icon";
 
 function ProductGrid({ config, data }: { config?: unknown; data?: unknown }) {
-  const { products: catalog, isExample, href } = useSite();
-  const section = productGridConfig(config);
+  const { products: catalog, isExample, href, t } = useSite();
+  const section = productGridConfig(config, t);
   const products = sectionList<Product>(data) ?? catalog;
   const [category, setCategory] = useState(section.category);
   const selected = selectProducts(products, { category });
@@ -36,8 +36,8 @@ function ProductGrid({ config, data }: { config?: unknown; data?: unknown }) {
         </header>
         {isExample && (
           <div className="catalog-example-note" id="home-example-note">
-            <span>Danh mục minh họa</span> Tên và nội dung đang là mẫu thiết kế.
-            Nút “Mở link tạm” dẫn đến example.com, chưa phải demo của ZUKATEK.
+            <span>{t("home.example_badge")}</span>
+            {" " + t("home.example_note")}
           </div>
         )}
         {products.length ? (
@@ -45,7 +45,7 @@ function ProductGrid({ config, data }: { config?: unknown; data?: unknown }) {
             <div
               className="category-list home-categories"
               id="home-product-categories"
-              aria-label="Nhóm sản phẩm"
+              aria-label={t("home.categories_label")}
             >
               <Categories
                 products={products}
@@ -56,8 +56,8 @@ function ProductGrid({ config, data }: { config?: unknown; data?: unknown }) {
             <div className="home-product-summary">
               <p id="home-product-count" role="status" aria-live="polite">
                 {Math.min(section.limit, selected.length)} / {selected.length}{" "}
-                {isExample ? "mẫu minh họa" : "sản phẩm"} ·{" "}
-                {category || "Tuyển chọn để khám phá"}
+                {t(isExample ? "home.sample_unit" : "home.product_unit")} ·{" "}
+                {category || t("home.category_all")}
               </p>
               <a
                 className="text-link primary-text"
@@ -75,7 +75,8 @@ function ProductGrid({ config, data }: { config?: unknown; data?: unknown }) {
             </div>
             <div className="home-catalog-cta" id="home-catalog-cta">
               <a className="button button-soft" href={href("/products")}>
-                Khám phá toàn bộ danh mục <Icon name="arrow" />
+                {t("home.browse_all")}
+                <Icon name="arrow" />
               </a>
             </div>
           </>
@@ -89,7 +90,8 @@ function ProductGrid({ config, data }: { config?: unknown; data?: unknown }) {
 
 export function SectionRenderer({ sections }: { sections: PublicSection[] }) {
   const { href } = useSite();
-  const [audience, setAudience] = useState("Cá nhân");
+  // The contact form stores the audience as a code, not as the word it shows.
+  const [audience, setAudience] = useState("individual");
   const ordered = (Array.isArray(sections) ? [...sections] : []).sort(
     (a, b) => (Number(a?.sort_order) || 0) - (Number(b?.sort_order) || 0),
   );

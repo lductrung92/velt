@@ -50,16 +50,6 @@ func (s *Service) AuthorizeTranslateCategory(ctx context.Context, id *httpx.Iden
 	return mapExists(err)
 }
 
-// AuthorizeTranslateTag gates editing a tag's translated text, on the same
-// permission as renaming it.
-func (s *Service) AuthorizeTranslateTag(ctx context.Context, id *httpx.Identity, tagID uuid.UUID) error {
-	if err := s.Require(ctx, id, permManage); err != nil {
-		return err
-	}
-	_, err := s.repo.GetTag(ctx, tagID)
-	return mapExists(err)
-}
-
 func mapExists(err error) error {
 	switch {
 	case errors.Is(err, shared.ErrNotFound):

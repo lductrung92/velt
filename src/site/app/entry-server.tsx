@@ -14,6 +14,7 @@ import {
   splitLocale,
   withLocale,
 } from "./lib/locales";
+import { translator } from "./lib/i18n";
 
 export function render(
   path: string,
@@ -27,6 +28,7 @@ export function render(
   // `path` is already stripped of its language prefix: the router matches the
   // same routes in every language, and the prefix is put back by every link
   // the page writes (see App's href).
+  const t = translator(locale);
   const url = new URL(path, "http://site.local"),
     route = resolveRoute(url, data, blog);
   const props: AppProps = {
@@ -40,24 +42,26 @@ export function render(
     locales,
   };
   const title = route.home
-    ? "ZUKATEK — Đội ngũ phát triển & sản phẩm số"
+    ? t("seo.home_title")
     : route.blogList
-      ? "Blog — Góc nhìn từ Zukatek"
+      ? t("seo.blog_title")
       : route.blogDetail && blog.article
-        ? blog.article.seo?.title || `${blog.article.title} — Zukatek Journal`
+        ? blog.article.seo?.title ||
+          t("seo.article_title", { title: blog.article.title })
         : route.catalog
-          ? "Sản phẩm — ZUKATEK"
+          ? t("seo.catalog_title")
           : route.product
-            ? `${route.product.name} — ZUKATEK${route.product.example ? " · Minh họa" : ""}`
-            : "Không tìm thấy — ZUKATEK";
+            ? t("seo.product_title", { name: route.product.name }) +
+              (route.product.example ? t("seo.product_example_suffix") : "")
+            : t("seo.notfound_title");
   const description =
     (route.blogDetail
       ? blog.article?.seo?.description || blog.article?.excerpt
       : route.blogList
-        ? "Kiến thức, kinh nghiệm và những câu chuyện trong hành trình xây dựng sản phẩm số của Zukatek."
+        ? t("seo.blog_description")
         : undefined) ||
     route.product?.summary ||
-    "ZUKATEK cung cấp sản phẩm số cho cá nhân, nhóm và doanh nghiệp. Xem đội ngũ, khám phá sản phẩm và liên hệ tư vấn trước khi mua.";
+    t("seo.default_description");
   return {
     html: renderToString(<App {...props} />),
     props,
@@ -68,6 +72,9 @@ export function render(
     ogDescription: blog.article?.seo?.og_description || description,
     ogType: route.blogDetail && blog.article ? "article" : "website",
     lang: locale,
+    // The server writes the <noscript> note, so it is handed the sentence
+    // rather than keeping a second copy of it in another language.
+    noscript: t("noscript.note"),
     // Every page says which languages it exists in, itself included, and which
     // one answers for a reader whose language is not among them. A set that
     // does not reference back is ignored, so this is built from one list.

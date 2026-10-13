@@ -1,12 +1,12 @@
 import { Fragment, useEffect, useState } from "react";
 import { useSite } from "../context";
-import { readFilters, selectProducts } from "../lib/catalog";
+import { lifecycleLabel, readFilters, selectProducts } from "../lib/catalog";
 import type { Filters } from "../lib/catalog";
 import { Categories, ProductCard } from "../components/Products";
 import { Icon } from "../components/Icon";
 
 export function Catalog() {
-  const { products, isExample, url, href, referrer } = useSite();
+  const { products, isExample, url, href, referrer, t } = useSite();
   const [filters, setFilters] = useState(() => readFilters(url, products));
   const results = selectProducts(products, filters),
     totalPages = Math.max(1, Math.ceil(results.length / 9));
@@ -57,26 +57,24 @@ export function Catalog() {
     <>
       <section className="catalog-hero">
         <div className="container">
-          <nav className="breadcrumbs" aria-label="Đường dẫn">
-            <a href={href("/")}>Trang chủ</a>
+          <nav className="breadcrumbs" aria-label={t("catalog.breadcrumb")}>
+            <a href={href("/")}>{t("catalog.breadcrumb_home")}</a>
             <span aria-hidden="true">/</span>
-            <span>Sản phẩm</span>
+            <span>{t("catalog.breadcrumb_products")}</span>
           </nav>
-          <span className="tag">HỆ SINH THÁI ZUKATEK</span>
-          <h1>Khám phá sản phẩm ZUKATEK</h1>
-          <p>
-            Xem tính năng, mở bản trải nghiệm và liên hệ tư vấn trước khi mua.
-          </p>
+          <span className="tag">{t("catalog.hero_eyebrow")}</span>
+          <h1>{t("catalog.hero_title")}</h1>
+          <p>{t("catalog.hero_body")}</p>
           <label className="catalog-search">
             <svg viewBox="0 0 24 24" className="icon" aria-hidden="true">
               <circle cx="10.5" cy="10.5" r="6.5" />
               <path d="m16 16 5 5" />
             </svg>
-            <span className="sr-only">Tìm sản phẩm</span>
+            <span className="sr-only">{t("catalog.search_label")}</span>
             <input
               id="product-search"
               type="search"
-              placeholder="Tìm tên sản phẩm, nhu cầu, kỹ năng…"
+              placeholder={t("catalog.search_placeholder")}
               autoComplete="off"
               maxLength={200}
               value={filters.query}
@@ -85,7 +83,7 @@ export function Catalog() {
             <button
               type="button"
               id="clear-search"
-              aria-label="Xóa tìm kiếm"
+              aria-label={t("catalog.search_clear")}
               hidden={!filters.query}
               onClick={() => {
                 change({ query: "" });
@@ -103,14 +101,14 @@ export function Catalog() {
         <div className="container">
           {isExample && (
             <div className="catalog-example-note" id="catalog-example-note">
-              <span>Danh mục minh họa</span> Các mẫu dùng để giới thiệu bố cục,
-              chưa phải sản phẩm được ZUKATEK công bố.
+              <span>{t("catalog.example_note_title")}</span>
+              {` ${t("catalog.example_note_body")}`}
             </div>
           )}
           <div
             className="category-list"
             id="catalog-categories"
-            aria-label="Lọc theo nhóm sản phẩm"
+            aria-label={t("catalog.categories_label")}
           >
             <Categories
               products={products}
@@ -126,35 +124,44 @@ export function Catalog() {
               tabIndex={-1}
             >
               {results.length
-                ? `Hiển thị ${start + 1}–${Math.min(start + 9, results.length)} trong ${results.length} ${isExample ? "mẫu minh họa" : "sản phẩm"}`
-                : "0 sản phẩm phù hợp"}
+                ? t(
+                    isExample
+                      ? "catalog.showing_examples"
+                      : "catalog.showing_products",
+                    {
+                      from: start + 1,
+                      to: Math.min(start + 9, results.length),
+                      total: results.length,
+                    },
+                  )
+                : t("catalog.no_matches")}
             </p>
             <div className="catalog-selects">
               <label>
-                <span>Trạng thái</span>
+                <span>{t("catalog.status_label")}</span>
                 <select
                   id="product-status"
                   value={filters.status}
                   onChange={(event) => change({ status: event.target.value })}
                 >
-                  <option value="">Tất cả trạng thái</option>
+                  <option value="">{t("catalog.status_all")}</option>
                   {statuses.map((status) => (
                     <option key={status} value={status}>
-                      {status}
+                      {lifecycleLabel(t, status)}
                     </option>
                   ))}
                 </select>
               </label>
               <label>
-                <span>Sắp xếp</span>
+                <span>{t("catalog.sort_label")}</span>
                 <select
                   id="product-sort"
                   value={filters.sort}
                   onChange={(event) => change({ sort: event.target.value })}
                 >
-                  <option value="featured">Ưu tiên nổi bật</option>
-                  <option value="newest">Mới nhất</option>
-                  <option value="name">Tên A → Z</option>
+                  <option value="featured">{t("catalog.sort_featured")}</option>
+                  <option value="newest">{t("catalog.sort_newest")}</option>
+                  <option value="name">{t("catalog.sort_name")}</option>
                 </select>
               </label>
             </div>
@@ -167,8 +174,8 @@ export function Catalog() {
           {!results.length && (
             <div className="catalog-no-results" id="catalog-no-results">
               <Icon name="grid" />
-              <h2>Chưa tìm thấy sản phẩm phù hợp</h2>
-              <p>Thử một từ khóa khác hoặc bỏ bớt bộ lọc.</p>
+              <h2>{t("catalog.empty_title")}</h2>
+              <p>{t("catalog.empty_body")}</p>
               <button
                 className="button button-soft"
                 id="reset-filters"
@@ -184,20 +191,20 @@ export function Catalog() {
                     ?.focus();
                 }}
               >
-                Xóa bộ lọc
+                {t("catalog.empty_reset")}
               </button>
             </div>
           )}
           <nav
             className="catalog-pagination"
             id="catalog-pagination"
-            aria-label="Trang danh mục sản phẩm"
+            aria-label={t("catalog.pagination_label")}
             hidden={totalPages <= 1}
           >
             <button
               type="button"
               disabled={page === 1}
-              aria-label="Trang trước"
+              aria-label={t("catalog.page_previous")}
               onClick={() => navigatePage(page - 1)}
             >
               ‹
@@ -210,7 +217,7 @@ export function Catalog() {
                 <button
                   type="button"
                   aria-current={value === page ? "page" : undefined}
-                  aria-label={`Trang ${value}`}
+                  aria-label={t("catalog.page_number", { n: value })}
                   onClick={() => navigatePage(value)}
                 >
                   {value}
@@ -220,7 +227,7 @@ export function Catalog() {
             <button
               type="button"
               disabled={page === totalPages}
-              aria-label="Trang sau"
+              aria-label={t("catalog.page_next")}
               onClick={() => navigatePage(page + 1)}
             >
               ›
@@ -228,12 +235,12 @@ export function Catalog() {
           </nav>
           <div className="catalog-help">
             <div>
-              <h2>Chưa tìm được điều bạn cần?</h2>
-              <p>Hỏi ZUKATEK về tính năng, giá và cách sử dụng sản phẩm.</p>
+              <h2>{t("catalog.help_title")}</h2>
+              <p>{t("catalog.help_body")}</p>
             </div>
             <a className="button contact-nav" href={href("/#contact")}>
               <Icon name="support" />
-              Liên hệ
+              {t("catalog.help_cta")}
             </a>
           </div>
         </div>

@@ -6,9 +6,12 @@ import { content } from "../app/data/content";
 import { getCatalog } from "../app/lib/catalog";
 import { emptyBlog } from "../app/lib/blog";
 import { BASE_LOCALE } from "../app/lib/locales";
+import { translator } from "../app/lib/i18n";
+
+const t = translator(BASE_LOCALE);
 import { withReferral } from "../app/lib/links";
 import {
-  DEFAULT_LAYOUT,
+  defaultLayout,
   resolveLayout,
   type SiteLayout,
 } from "../app/lib/layout";
@@ -33,6 +36,7 @@ function render(layout: SiteLayout, path = "/") {
         locale: BASE_LOCALE,
         locales: [],
         localeHref: (code: string) => `/${code}`,
+        t,
       }}
     >
       <Header />
@@ -83,13 +87,13 @@ const SHIPPED = [
 ];
 
 test("with nothing published, the chrome is the markup the site shipped", () => {
-  const html = render(DEFAULT_LAYOUT);
+  const html = render(defaultLayout(t));
   for (const expected of SHIPPED) {
     assert.ok(html.includes(expected), `lost shipped markup: ${expected}`);
   }
   // An API that answered nothing at all must reach exactly the same place.
-  assert.deepEqual(resolveLayout(null, null), DEFAULT_LAYOUT);
-  assert.deepEqual(resolveLayout({}, {}), DEFAULT_LAYOUT);
+  assert.deepEqual(resolveLayout(null, null, t), defaultLayout(t));
+  assert.deepEqual(resolveLayout({}, {}, t), defaultLayout(t));
 });
 
 test("a published menu replaces the links, keeping the markup around them", () => {
@@ -116,6 +120,7 @@ test("a published menu replaces the links, keeping the markup around them", () =
       ],
     },
     {},
+    t,
   );
   const html = render(layout);
 
@@ -164,6 +169,7 @@ test("entity links become the site's own addresses", () => {
       ],
     },
     { "cms.home_page_slug": "trang-chu" },
+    t,
   );
   assert.deepEqual(
     layout.header.map((i) => i.href),
@@ -190,6 +196,7 @@ test("an item with nowhere to go is dropped, a heading without one is kept", () 
       ],
     },
     {},
+    t,
   );
   assert.deepEqual(
     layout.header.map((i) => i.label),
@@ -214,8 +221,8 @@ test("a malformed payload falls back instead of blanking or throwing", () => {
   ];
   for (const menus of junk) {
     for (const settings of junk) {
-      const layout = resolveLayout(menus, settings);
-      assert.deepEqual(layout, DEFAULT_LAYOUT, JSON.stringify({ menus }));
+      const layout = resolveLayout(menus, settings, t);
+      assert.deepEqual(layout, defaultLayout(t), JSON.stringify({ menus }));
       assert.ok(render(layout).includes("Cùng tiến về phía trước."));
     }
   }
@@ -232,6 +239,7 @@ test("the settings replace the words around the navigation", () => {
       "site.header_cta_label": "Gọi ngay",
       "site.header_cta_url": "/#goi",
     },
+    t,
   );
   const html = render(layout);
   assert.ok(html.includes("Một dòng<br/>Hai dòng"));
@@ -247,17 +255,18 @@ test("the settings replace the words around the navigation", () => {
   const bad = resolveLayout(
     {},
     { "site.header_cta_url": "javascript:alert(1)" },
+    t,
   );
   assert.equal(bad.chrome.ctaHref, "/#contact");
   assert.ok(!render(bad).includes("javascript:"));
 
   // A copyright line without the placeholder simply shows no year.
-  const noYear = resolveLayout({}, { "site.footer_copyright": "ZUKATEK" });
+  const noYear = resolveLayout({}, { "site.footer_copyright": "ZUKATEK" }, t);
   assert.ok(!render(noYear).includes('id="year"'));
 });
 
 test("on the home page the catalogue link stays an in-page anchor", () => {
-  assert.ok(render(DEFAULT_LAYOUT, "/").includes('href="/#products"'));
-  const away = render(DEFAULT_LAYOUT, "/blog");
+  assert.ok(render(defaultLayout(t), "/").includes('href="/#products"'));
+  const away = render(defaultLayout(t), "/blog");
   assert.ok(away.includes('class="nav-link" href="/products"'));
 });
