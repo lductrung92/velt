@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { Member, Product, PublicSection } from "../types";
 import { useSite } from "../context";
 import { selectProducts } from "../lib/catalog";
-import { productGridConfig, sectionList } from "../lib/sections";
+import { productGridConfig, sectionLimit, sectionList } from "../lib/sections";
 import { Audience, BuyingSteps, EmptyProducts, FAQ, Hero } from "./HomeStatic";
 import { Categories, ProductCard } from "./Products";
 import { Team } from "./Team";
@@ -125,16 +125,15 @@ export function SectionRenderer({ sections }: { sections: PublicSection[] }) {
             );
           case "buying_steps":
             return <BuyingSteps key={key} config={section.config} />;
-          // Three sections the page already had that map onto section types the
-          // builder already knew. They carry no config yet — their copy is
-          // still the component's own — so they take none here either; adding
-          // one later changes this file and nothing else.
           case "hero":
-            return <Hero key={key} href={href} />;
+            return <Hero key={key} href={href} config={section.config} />;
+          // The article feed is already live; the section only chooses how many.
           case "featured_articles":
-            return <BlogPreview key={key} />;
+            return (
+              <BlogPreview key={key} limit={sectionLimit(section.config)} />
+            );
           case "faq":
-            return <FAQ key={key} />;
+            return <FAQ key={key} config={section.config} />;
           case "contact_form":
             return (
               <Contact

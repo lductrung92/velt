@@ -3,23 +3,9 @@ import type { FormEvent } from "react";
 import { useSite } from "../context";
 import { contactFor, safeExternalUrl } from "../lib/links";
 import { contactConfig } from "../lib/sections";
+import { Lines } from "./Lines";
 import { Icon } from "./Icon";
 import { Modal } from "./Modal";
-
-// Headings here break across two lines; a newline in the config does the same.
-function Lines({ text }: { text: string }) {
-  const parts = text.split("\n");
-  return (
-    <>
-      {parts.map((line, index) => (
-        <Fragment key={index}>
-          {index > 0 && <br />}
-          {line}
-        </Fragment>
-      ))}
-    </>
-  );
-}
 
 export function Contact({
   audience,

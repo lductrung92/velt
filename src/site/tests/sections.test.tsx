@@ -217,3 +217,36 @@ test("sections render in sort_order and an unknown type renders nothing", () => 
   );
   assert.equal(render([]), "");
 });
+
+test("hero and faq take their copy from a config, and fall back when it is absent", () => {
+  // These two were wired last: they rendered their own hard-coded copy and
+  // silently ignored the console's form, which is worse than having no form.
+  const withConfig = render([
+    {
+      type: "hero",
+      sort_order: 0,
+      config: { eyebrow: "NHÃN RIÊNG", heading: "Trên\nDưới" },
+      data: null,
+    },
+    {
+      type: "faq",
+      sort_order: 1,
+      config: {
+        title: "Hỏi riêng",
+        items: [{ question: "Câu hỏi riêng?", answer_html: "Trả lời." }],
+      },
+      data: null,
+    },
+  ]);
+  assert.match(withConfig, /NHÃN RIÊNG/);
+  assert.match(withConfig, /Trên<br\/>Dưới/); // a newline becomes the <br /> the markup had
+  assert.match(withConfig, /Hỏi riêng/);
+  assert.match(withConfig, /Câu hỏi riêng\?/);
+
+  const bare = render([
+    { type: "hero", sort_order: 0, config: null, data: null },
+    { type: "faq", sort_order: 1, config: "rác", data: null },
+  ]);
+  assert.match(bare, /HỆ SINH THÁI SẢN PHẨM ZUKATEK/);
+  assert.match(bare, /Câu hỏi thường gặp/);
+});

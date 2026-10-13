@@ -1,7 +1,13 @@
 // Presentation migrated from the approved mockup. All interaction is owned by React.
 import { HeroVisual } from "./hero/HeroVisual";
 import { safeUrl } from "../lib/links";
-import { audienceConfig, buyingStepsConfig } from "../lib/sections";
+import {
+  audienceConfig,
+  buyingStepsConfig,
+  faqConfig,
+  heroConfig,
+} from "../lib/sections";
+import { Lines } from "./Lines";
 type LinksProps = { href: (path: string) => string };
 
 // href() only knows in-site paths; a link typed in the console may be absolute.
@@ -75,25 +81,18 @@ export function Icons() {
   );
 }
 
-export function Hero({ href }: LinksProps) {
+export function Hero({ href, config }: LinksProps & { config?: unknown }) {
+  const c = heroConfig(config);
   return (
     <div className="hero-wrap" id="top">
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-inner">
           <div className="hero-copy">
-            <span className="hero-eyebrow">
-              {"HỆ SINH THÁI SẢN PHẨM ZUKATEK"}
-            </span>
+            <span className="hero-eyebrow">{c.eyebrow}</span>
             <h1 id="hero-title">
-              {"Sản phẩm số"}
-              <br />
-              {"cho công việc của bạn."}
+              <Lines text={c.heading} />
             </h1>
-            <p className="hero-subtitle">
-              {
-                "ZUKATEK phát triển và cung cấp sản phẩm số cho cá nhân, nhóm, hộ kinh doanh và doanh nghiệp. Xem tính năng, trải nghiệm sản phẩm và nhận tư vấn để chọn giải pháp phù hợp."
-              }
-            </p>
+            <p className="hero-subtitle">{c.subheading}</p>
             <div className="hero-actions">
               <a className="button button-large" href={href("/#products")}>
                 {"Xem sản phẩm "}
@@ -303,60 +302,28 @@ export function BuyingSteps({ config }: { config?: unknown }) {
   );
 }
 
-export function FAQ() {
+export function FAQ({ config }: { config?: unknown }) {
+  const c = faqConfig(config);
   return (
     <section className="section faq-section" aria-labelledby="faq-title">
       <div className="container faq-layout">
         <header className="faq-heading">
-          <span className="tag">{"TÌM HIỂU THÊM"}</span>
-          <h2 id="faq-title">{"Câu hỏi thường gặp"}</h2>
-          <p>{"Những thông tin cần biết trước khi chọn mua sản phẩm."}</p>
+          <span className="tag">{c.eyebrow}</span>
+          <h2 id="faq-title">{c.title}</h2>
+          <p>{c.subtitle}</p>
         </header>
         <div className="faq-list">
-          <details open>
-            <summary>
-              {"Sản phẩm của ZUKATEK dành cho ai?"}
-              <span className="faq-plus"></span>
-            </summary>
-            <p>
-              {
-                "ZUKATEK cung cấp sản phẩm số cho cá nhân, nhóm và doanh nghiệp. Mỗi sản phẩm có đối tượng sử dụng, tính năng và phạm vi riêng để bạn lựa chọn."
-              }
-            </p>
-          </details>
-          <details>
-            <summary>
-              {"Tôi có thể trải nghiệm trước khi mua không?"}
-              <span className="faq-plus"></span>
-            </summary>
-            <p>
-              {
-                "Sản phẩm có bản demo sẽ có nút “Trải nghiệm” mở trang riêng. Hướng dẫn dùng thử được ghi trong trang chi tiết. Hiện danh mục dùng dữ liệu mẫu và link tạm để xem bố cục."
-              }
-            </p>
-          </details>
-          <details>
-            <summary>
-              {"Làm thế nào để tìm hiểu kỹ năng của team?"}
-              <span className="faq-plus"></span>
-            </summary>
-            <p>
-              {
-                "Mỗi thành viên có một hồ sơ riêng trong mục “Đội ngũ & kỹ năng”. Thông tin về vai trò, kỹ năng và sản phẩm đã tham gia sẽ được bổ sung tại đó."
-              }
-            </p>
-          </details>
-          <details>
-            <summary>
-              {"Tôi liên hệ ai để hỏi giá hoặc mua sản phẩm?"}
-              <span className="faq-plus"></span>
-            </summary>
-            <p>
-              {
-                "Bạn có thể liên hệ người đã gửi hồ sơ ZUKATEK cho bạn hoặc kênh chung của ZUKATEK. Hãy cho biết sản phẩm quan tâm, số người sử dụng và nhu cầu triển khai để được tư vấn."
-              }
-            </p>
-          </details>
+          {c.items.map((item, index) => (
+            // The first entry stays open, as it always has: an accordion whose
+            // every panel is shut reads as an empty section.
+            <details key={`${item.question}-${index}`} open={index === 0}>
+              <summary>
+                {item.question}
+                <span className="faq-plus"></span>
+              </summary>
+              <p>{item.answer_html}</p>
+            </details>
+          ))}
         </div>
       </div>
     </section>

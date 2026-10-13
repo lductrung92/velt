@@ -237,6 +237,87 @@ export const sectionList = <T extends Member | Product>(
  * page a visitor sees until somebody publishes a landing for it, and it is the
  * baseline the pixel comparison is run against.
  */
+export interface HeroConfig {
+  eyebrow: string;
+  heading: string;
+  subheading: string;
+}
+
+/**
+ * The hero's copy as the page shipped it. `heading` carries the newline where
+ * the headline breaks; the component turns it back into the <br /> that was
+ * always there, so a one-line heading typed in the console just renders on one
+ * line.
+ */
+export const heroDefaults: HeroConfig = {
+  eyebrow: "HỆ SINH THÁI SẢN PHẨM ZUKATEK",
+  heading: "Sản phẩm số\ncho công việc của bạn.",
+  subheading:
+    "ZUKATEK phát triển và cung cấp sản phẩm số cho cá nhân, nhóm, hộ kinh doanh và doanh nghiệp. Xem tính năng, trải nghiệm sản phẩm và nhận tư vấn để chọn giải pháp phù hợp.",
+};
+
+export interface FAQItem {
+  question: string;
+  answer_html: string;
+}
+
+export interface FAQConfig {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  items: FAQItem[];
+}
+
+export const faqDefaults: FAQConfig = {
+  eyebrow: "TÌM HIỂU THÊM",
+  title: "Câu hỏi thường gặp",
+  subtitle: "Những thông tin cần biết trước khi chọn mua sản phẩm.",
+  items: [
+    {
+      question: "Sản phẩm của ZUKATEK dành cho ai?",
+      answer_html:
+        "ZUKATEK cung cấp sản phẩm số cho cá nhân, nhóm và doanh nghiệp. Mỗi sản phẩm có đối tượng sử dụng, tính năng và phạm vi riêng để bạn lựa chọn.",
+    },
+    {
+      question: "Tôi có thể trải nghiệm trước khi mua không?",
+      answer_html:
+        "Sản phẩm có bản demo sẽ có nút “Trải nghiệm” mở trang riêng. Hướng dẫn dùng thử được ghi trong trang chi tiết. Hiện danh mục dùng dữ liệu mẫu và link tạm để xem bố cục.",
+    },
+    {
+      question: "Làm thế nào để tìm hiểu kỹ năng của team?",
+      answer_html:
+        "Mỗi thành viên có một hồ sơ riêng trong mục “Đội ngũ & kỹ năng”. Thông tin về vai trò, kỹ năng và sản phẩm đã tham gia sẽ được bổ sung tại đó.",
+    },
+    {
+      question: "Tôi liên hệ ai để hỏi giá hoặc mua sản phẩm?",
+      answer_html:
+        "Bạn có thể liên hệ người đã gửi hồ sơ ZUKATEK cho bạn hoặc kênh chung của ZUKATEK. Hãy cho biết sản phẩm quan tâm, số người sử dụng và nhu cầu triển khai để được tư vấn.",
+    },
+  ],
+};
+
+export function heroConfig(config?: unknown): HeroConfig {
+  const raw = fields(config);
+  return {
+    eyebrow: text(raw.eyebrow, heroDefaults.eyebrow),
+    heading: text(raw.heading, heroDefaults.heading),
+    subheading: text(raw.subheading, heroDefaults.subheading),
+  };
+}
+
+export function faqConfig(config?: unknown): FAQConfig {
+  const raw = fields(config);
+  return {
+    eyebrow: text(raw.eyebrow, faqDefaults.eyebrow),
+    title: text(raw.title, faqDefaults.title),
+    subtitle: text(raw.subtitle, faqDefaults.subtitle),
+    items: entries(raw.items, faqDefaults.items, (item, base) => ({
+      question: text(item.question, base.question),
+      answer_html: text(item.answer_html, base.answer_html),
+    })),
+  };
+}
+
 export const DEFAULT_HOME_SECTIONS: PublicSection[] = [
   "hero",
   "audience_picker",
@@ -247,3 +328,12 @@ export const DEFAULT_HOME_SECTIONS: PublicSection[] = [
   "faq",
   "contact_form",
 ].map((type, i) => ({ type, sort_order: i, config: null, data: null }));
+
+/** Reads a section's `limit`, ignoring anything that is not a usable count. */
+export function sectionLimit(config?: unknown): number | undefined {
+  const raw = fields(config).limit;
+  const n = typeof raw === "string" ? Number(raw) : raw;
+  return typeof n === "number" && Number.isInteger(n) && n > 0 && n <= 999
+    ? n
+    : undefined;
+}
