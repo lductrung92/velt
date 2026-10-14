@@ -10,6 +10,7 @@ import { translator } from "../app/lib/i18n";
 
 const t = translator(BASE_LOCALE);
 import { defaultLayout } from "../app/lib/layout";
+import { emptySlots } from "../app/lib/regions";
 import { withReferral } from "../app/lib/links";
 import { SectionRenderer } from "../app/components/SectionRenderer";
 import type { PublicSection } from "../app/types";
@@ -25,6 +26,7 @@ function render(sections: PublicSection[]) {
         isExample,
         blog: emptyBlog(),
         layout: defaultLayout(t),
+        regions: emptySlots(),
         locale: BASE_LOCALE,
         locales: [],
         localeHref: (code: string) => `/${code}`,

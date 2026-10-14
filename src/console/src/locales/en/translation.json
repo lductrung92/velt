@@ -232,7 +232,8 @@
     "ai": "AI assistant",
     "chat": "Inbox",
     "leads": "Customers",
-    "settings": "Settings"
+    "settings": "Settings",
+    "cms_appearance": "Appearance"
   },
   "auth": {
     "login": {
@@ -1068,6 +1069,54 @@
         "published_hint": "Live on the site"
       },
       "one": "article"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "subtitle": "Drag widgets and menus into the regions of the public site.",
+      "one": "appearance",
+      "settings": "Settings",
+      "settings_hint": "Pick a block in the middle to edit its settings.",
+      "which_menu": "Menu shown",
+      "menu_block": "Menu: {{name}}",
+      "menu_missing": "Menu deleted",
+      "drop_here": "Drag a block here",
+      "count": "{{n}} blocks",
+      "count_empty": "empty",
+      "reorder": "Drag to reorder",
+      "hide": "Hide {{label}}",
+      "show": "Show {{label}}",
+      "remove": "Remove {{label}}",
+      "palette": {
+        "widgets": "Blocks",
+        "menus": "Menus",
+        "no_menus": "No menus to add yet."
+      },
+      "toast": {
+        "saved": "Appearance saved"
+      },
+      "groups_title": "Page groups",
+      "grouping_only": "(group)",
+      "inherited_from": "Inherited from {{group}}",
+      "override": "Override for this group",
+      "use_inherited": "Go back to the parent's",
+      "group": {
+        "common": "Common",
+        "home": "Home",
+        "products": "Products",
+        "product_list": "Product list",
+        "product_detail": "Product detail",
+        "blog": "Blog",
+        "blog_list": "Blog list",
+        "blog_detail": "Blog article",
+        "not_found": "Not found (404)"
+      },
+      "slot": {
+        "header": "Header",
+        "footer": "Footer",
+        "sidebar_left": "Left column",
+        "after_article": "Below the article",
+        "aside": "Side column"
+      }
     }
   },
   "errors": {

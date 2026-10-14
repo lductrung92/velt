@@ -15,10 +15,13 @@ import {
   resolveLayout,
   type SiteLayout,
 } from "../app/lib/layout";
+import { slotsForGroup } from "../app/lib/regions";
+import { pageGroup, resolveRoute } from "../app/App";
 import { Header } from "../app/components/Header";
 import { Footer } from "../app/components/HomeStatic";
 
 function render(layout: SiteLayout, path = "/") {
+  const url = new URL(path, "http://site.local");
   const { products, isExample } = getCatalog(content);
   const href = (p: string) => withReferral(p);
   // React writes a <!-- --> marker between adjacent text and elements; it is
@@ -27,11 +30,14 @@ function render(layout: SiteLayout, path = "/") {
     <SiteContext
       value={{
         data: content,
-        url: new URL(path, "http://site.local"),
+        url,
         products,
         isExample,
         blog: emptyBlog(),
         layout,
+        // The same walk App does, so the slots these components are handed
+        // are the ones a real page of this path would hand them.
+        regions: slotsForGroup(layout.regions, pageGroup(resolveRoute(url))),
         href,
         locale: BASE_LOCALE,
         locales: [],
@@ -92,8 +98,8 @@ test("with nothing published, the chrome is the markup the site shipped", () => 
     assert.ok(html.includes(expected), `lost shipped markup: ${expected}`);
   }
   // An API that answered nothing at all must reach exactly the same place.
-  assert.deepEqual(resolveLayout(null, null, t), defaultLayout(t));
-  assert.deepEqual(resolveLayout({}, {}, t), defaultLayout(t));
+  assert.deepEqual(resolveLayout(null, null, null, t), defaultLayout(t));
+  assert.deepEqual(resolveLayout({}, {}, null, t), defaultLayout(t));
 });
 
 test("a published menu replaces the links, keeping the markup around them", () => {
@@ -120,6 +126,7 @@ test("a published menu replaces the links, keeping the markup around them", () =
       ],
     },
     {},
+    null,
     t,
   );
   const html = render(layout);
@@ -169,6 +176,7 @@ test("entity links become the site's own addresses", () => {
       ],
     },
     { "cms.home_page_slug": "trang-chu" },
+    null,
     t,
   );
   assert.deepEqual(
@@ -196,6 +204,7 @@ test("an item with nowhere to go is dropped, a heading without one is kept", () 
       ],
     },
     {},
+    null,
     t,
   );
   assert.deepEqual(
@@ -221,7 +230,7 @@ test("a malformed payload falls back instead of blanking or throwing", () => {
   ];
   for (const menus of junk) {
     for (const settings of junk) {
-      const layout = resolveLayout(menus, settings, t);
+      const layout = resolveLayout(menus, settings, null, t);
       assert.deepEqual(layout, defaultLayout(t), JSON.stringify({ menus }));
       assert.ok(render(layout).includes("Cùng tiến về phía trước."));
     }
@@ -239,6 +248,7 @@ test("the settings replace the words around the navigation", () => {
       "site.header_cta_label": "Gọi ngay",
       "site.header_cta_url": "/#goi",
     },
+    null,
     t,
   );
   const html = render(layout);
@@ -255,13 +265,14 @@ test("the settings replace the words around the navigation", () => {
   const bad = resolveLayout(
     {},
     { "site.header_cta_url": "javascript:alert(1)" },
+    null,
     t,
   );
   assert.equal(bad.chrome.ctaHref, "/#contact");
   assert.ok(!render(bad).includes("javascript:"));
 
   // A copyright line without the placeholder simply shows no year.
-  const noYear = resolveLayout({}, { "site.footer_copyright": "ZUKATEK" }, t);
+  const noYear = resolveLayout({}, { "site.footer_copyright": "ZUKATEK" }, null, t);
   assert.ok(!render(noYear).includes('id="year"'));
 });
 
@@ -294,6 +305,7 @@ test("every setting on the screen changes something on the page", () => {
       "site.blog_page_size": 12,
       "site.products_page_size": 48,
     },
+    null,
     t,
   );
 
@@ -333,6 +345,7 @@ test("a value that is not a usable setting is ignored, not rendered", () => {
       "site.products_page_size": "many",
       "seo.noindex_all": "yes",
     },
+    null,
     t,
   );
   assert.equal(layout.chrome.logoUrl, "", "an unusable logo falls back");

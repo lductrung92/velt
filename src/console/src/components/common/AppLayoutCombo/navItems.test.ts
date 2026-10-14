@@ -32,7 +32,10 @@ describe("visibleNavSections", () => {
   it("shows the cms branch under overview only with a cms permission", () => {
     const overview = sec(["cms.menu.manage"]).find((s) => s.key === "overview");
     const cms = overview?.items.find((i) => i.key === "cms");
-    expect(cms?.children?.map((c) => c.path)).toEqual(["/cms/menus"]);
+    expect(cms?.children?.map((c) => c.path)).toEqual([
+      "/cms/menus",
+      "/cms/giao-dien",
+    ]);
   });
 
   it("keeps the dashboard available without module permissions", () => {

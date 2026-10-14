@@ -19,6 +19,7 @@ import (
 	"github.com/velt/backend/internal/modules/cms/menus"
 	"github.com/velt/backend/internal/modules/cms/newsletter"
 	"github.com/velt/backend/internal/modules/cms/pages"
+	"github.com/velt/backend/internal/modules/cms/regions"
 	cmssettings "github.com/velt/backend/internal/modules/cms/settings"
 	"github.com/velt/backend/internal/modules/cms/shared"
 	"github.com/velt/backend/internal/modules/cms/taxonomy"
@@ -45,6 +46,9 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 	// A page may attach a landing; its published sections resolve in-process.
 	landingPublic := landing.NewPublicService(landing.NewRepository(pool), resolver, store)
 	w.PublicLanding = landingPublic
+	// A chrome region may hold a menu; it resolves through the navigation read
+	// itself, so the header's menu and the navigation cannot drift apart.
+	menusPublic := menus.NewPublicService(menus.NewPublicRepository(pool))
 	r.Route("/api/public/cms", func(r chi.Router) {
 		// A token that moves on every publish. The public site polls it and
 		// drops its cache when it changes, so an edit is visible immediately
@@ -62,6 +66,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 		w.PublicArticles = articles.RegisterPublic(r, pool, store, docs)
 		newsletter.RegisterPublic(r, base, pool, limiter, trustProxy)
 		menus.RegisterPublic(r, pool)
+		regions.RegisterPublic(r, pool, resolver, menusPublic, log)
 	})
 
 	r.Route("/api/cms", func(r chi.Router) {
@@ -71,6 +76,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 		w.Pages = pages.Register(r, base, pool, landing.NewPagesPort(landing.NewRepository(pool), store))
 		w.Articles = articles.Register(r, base, pool, store)
 		w.Menus = menus.Register(r, base, pool)
+		regions.Register(r, base, pool)
 		w.Landing = landing.Register(r, base, pool, store)
 		comments.Register(r, base, pool)
 		newsletter.Register(r, base, pool)

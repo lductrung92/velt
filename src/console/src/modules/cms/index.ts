@@ -1,5 +1,6 @@
 // Public entry point for the cms module (architecture.md: cross-module code
 // imports only via this file).
+export { default as Appearance } from "./pages/Appearance";
 export { default as ArticleEditor } from "./pages/ArticleEditor";
 export { default as ArticleList } from "./pages/ArticleList";
 export { default as CategoryEditor } from "./pages/CategoryEditor";

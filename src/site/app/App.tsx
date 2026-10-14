@@ -14,6 +14,7 @@ import { Blog } from "./pages/Blog";
 import { BlogArticle } from "./pages/BlogArticle";
 import { blogPath, emptyBlog, type BlogState } from "./lib/blog";
 import { defaultLayout } from "./lib/layout";
+import { slotsForGroup, type PageGroup } from "./lib/regions";
 import { BASE_LOCALE, withLocale } from "./lib/locales";
 import { translator } from "./lib/i18n";
 
@@ -59,6 +60,28 @@ export function resolveRoute(
           : 404,
   };
 }
+
+/**
+ * Which kind of page this is, for the console's region blocks.
+ *
+ * Read off the route resolveRoute already worked out, in the order the App
+ * renders them below, so the group always names the component actually on
+ * screen. A second matcher would be a second opinion on "what kind of page is
+ * this", and the symptom of the two drifting is a block appearing somewhere
+ * nobody configured it — a bug nobody would think to go looking for.
+ *
+ * `products` and `blog` are never returned: they are grouping nodes, there to
+ * be inherited from, not to match a page.
+ */
+export function pageGroup(route: ReturnType<typeof resolveRoute>): PageGroup {
+  if (route.home) return "home";
+  if (route.catalog) return "product_list";
+  if (route.blogList) return "blog_list";
+  if (route.blogDetail) return "blog_detail";
+  if (route.product) return "product_detail";
+  return "not_found";
+}
+
 export function App({
   url: path,
   year,
@@ -74,6 +97,8 @@ export function App({
   // the language — so they are resolved once here and handed down.
   const t = useMemo(() => translator(locale), [locale]);
   const chrome = useMemo(() => layout ?? defaultLayout(t), [layout, t]);
+  const route = resolveRoute(url, data, blog);
+  const group = pageGroup(route);
   const context = useMemo(() => {
     const referrer = data.members.find(
       (member) => member.id === url.searchParams.get("ref"),
@@ -88,6 +113,9 @@ export function App({
       blog: blog || emptyBlog(),
       sections,
       layout: chrome,
+      // Walked here, once, rather than in each slot: every component below
+      // asks for the same page's slots.
+      regions: slotsForGroup(chrome.regions, group),
       locale,
       locales,
       t,
@@ -107,8 +135,7 @@ export function App({
         return withLocale(withReferral(path, referrer), target);
       },
     };
-  }, [data, url, blog, sections, chrome, locale, locales, t]);
-  const route = resolveRoute(url, data, blog);
+  }, [data, url, blog, sections, chrome, group, locale, locales, t]);
   return (
     <SiteContext value={context}>
       <a className="skip-link" href="#main">

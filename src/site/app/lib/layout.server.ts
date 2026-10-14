@@ -33,7 +33,7 @@ async function fetchLayout(
 ): Promise<SiteLayout> {
   const t = translator(locale);
   try {
-    const [menus, settings] = await Promise.all([
+    const [menus, settings, regions] = await Promise.all([
       readJSON(
         request,
         `/public/cms/menus?locale=${encodeURIComponent(locale)}`,
@@ -45,8 +45,12 @@ async function fetchLayout(
         request,
         `/public/settings?locale=${encodeURIComponent(locale)}`,
       ),
+      readJSON(
+        request,
+        `/public/cms/regions?locale=${encodeURIComponent(locale)}`,
+      ),
     ]);
-    return resolveLayout(menus, settings, t);
+    return resolveLayout(menus, settings, regions, t);
   } catch {
     return defaultLayout(t);
   }

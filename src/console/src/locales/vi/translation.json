@@ -232,7 +232,8 @@
     "ai": "Trợ lý AI",
     "chat": "Hộp thư",
     "leads": "Khách hàng",
-    "settings": "Cài đặt"
+    "settings": "Cài đặt",
+    "cms_appearance": "Giao diện"
   },
   "auth": {
     "login": {
@@ -1116,6 +1117,54 @@
         "published_hint": "Đang hiển thị công khai"
       },
       "one": "bài viết"
+    },
+    "appearance": {
+      "title": "Giao diện",
+      "subtitle": "Kéo khối và menu vào các vùng của trang công khai.",
+      "one": "giao diện",
+      "settings": "Thiết lập",
+      "settings_hint": "Chọn một khối ở giữa để chỉnh thiết lập của nó.",
+      "which_menu": "Menu hiển thị",
+      "menu_block": "Menu: {{name}}",
+      "menu_missing": "Menu đã bị xoá",
+      "drop_here": "Kéo khối vào đây",
+      "count": "{{n}} khối",
+      "count_empty": "trống",
+      "reorder": "Kéo để sắp xếp",
+      "hide": "Ẩn {{label}}",
+      "show": "Hiện {{label}}",
+      "remove": "Xoá {{label}}",
+      "palette": {
+        "widgets": "Khối",
+        "menus": "Menu",
+        "no_menus": "Chưa có menu nào để thêm."
+      },
+      "toast": {
+        "saved": "Đã lưu giao diện"
+      },
+      "groups_title": "Nhóm trang",
+      "grouping_only": "(gộp)",
+      "inherited_from": "Kế thừa từ {{group}}",
+      "override": "Ghi đè ở nhóm này",
+      "use_inherited": "Dùng lại của nhóm cha",
+      "group": {
+        "common": "Chung",
+        "home": "Trang chủ",
+        "products": "Sản phẩm",
+        "product_list": "Danh sách sản phẩm",
+        "product_detail": "Chi tiết sản phẩm",
+        "blog": "Blog",
+        "blog_list": "Danh sách bài viết",
+        "blog_detail": "Chi tiết bài viết",
+        "not_found": "Không tìm thấy (404)"
+      },
+      "slot": {
+        "header": "Header",
+        "footer": "Footer",
+        "sidebar_left": "Cột trái",
+        "after_article": "Dưới bài viết",
+        "aside": "Cột phụ"
+      }
     }
   },
   "errors": {

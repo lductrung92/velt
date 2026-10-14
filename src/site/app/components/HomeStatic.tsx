@@ -10,6 +10,7 @@ import {
 } from "../lib/sections";
 import { navHref, type SiteLayout } from "../lib/layout";
 import { Lines } from "./Lines";
+import { RegionSlot } from "./RegionSlot";
 type LinksProps = { href: (path: string) => string };
 
 // href() only knows in-site paths; a link typed in the console may be absolute.
@@ -389,7 +390,7 @@ export function Footer({
   year,
   layout,
 }: LinksProps & { year: number; layout: SiteLayout }) {
-  const { t } = useSite();
+  const { regions, t } = useSite();
   // The copyright line is console copy with one placeholder; the year keeps its
   // own element so the markup around it is unchanged.
   const [beforeYear, afterYear] = layout.chrome.copyright.split("{year}");
@@ -466,6 +467,9 @@ export function Footer({
             </p>
           </div>
         </div>
+        {/* Its own row, not a fifth column: .footer-grid is a FIXED four-track
+            template, so a block added here used to push the note below it. */}
+        <RegionSlot name="footer" blocks={regions.footer} />
         <div className="footer-bottom">
           <span>
             {beforeYear}

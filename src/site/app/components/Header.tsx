@@ -3,9 +3,11 @@ import { useSite } from "../context";
 import { navHref, navIcon, type NavItem } from "../lib/layout";
 import { allLocales, localeLabel } from "../lib/locales";
 import { Icon } from "./Icon";
+import { RegionSlot } from "./RegionSlot";
 
 export function Header() {
-  const { href, url, layout, locale, locales, localeHref, t } = useSite();
+  const { href, url, layout, regions, locale, locales, localeHref, t } =
+    useSite();
   const [menuOpen, setMenuOpen] = useState(false),
     // Which dropdown is open — a position in the menu, or the language one.
     [openDropdown, setOpenDropdown] = useState<number | "lang" | null>(null);
@@ -160,6 +162,7 @@ export function Header() {
             ),
           )}
         </nav>
+        <RegionSlot name="header" blocks={regions.header} />
         <div className="nav-right">
           {locales.length > 0 && (
             <div className="nav-dropdown lang-switch">

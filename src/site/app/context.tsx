@@ -3,6 +3,7 @@ import type { Member, Product, PublicSection, SiteContent } from "./types";
 import type { SiteLayout } from "./lib/layout";
 import type { T } from "./lib/i18n";
 import type { BlogState } from "./lib/blog";
+import type { RegionSlots } from "./lib/regions";
 
 export interface SiteContextValue {
   data: SiteContent;
@@ -15,6 +16,9 @@ export interface SiteContextValue {
   sections?: PublicSection[];
   /** The header/footer the console published, or the site's own defaults. */
   layout: SiteLayout;
+  /** The console's blocks for THIS page, after the group walk; empty lists
+   *  render nothing. */
+  regions: RegionSlots;
   /** The language being rendered. */
   locale: string;
   /** Languages besides the base one, as configured. */

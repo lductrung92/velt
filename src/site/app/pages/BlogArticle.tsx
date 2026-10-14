@@ -3,10 +3,11 @@ import { useSite } from "../context";
 import { articleOutline, blogDate, blogPath } from "../lib/blog";
 import { BlogCover, PostCard } from "../components/blog/BlogCard";
 import { Icon } from "../components/Icon";
+import { RegionSlot } from "../components/RegionSlot";
 import { BlogEmpty } from "./Blog";
 
 export function BlogArticle() {
-  const { blog, href, locale, t } = useSite();
+  const { blog, href, regions, locale, t } = useSite();
   const post = blog.article;
   const [share, setShare] = useState<"idle" | "copied" | "failed">("idle");
   if (blog.status === "unavailable")
@@ -73,6 +74,7 @@ export function BlogArticle() {
         </div>
         <div className="blog-reading-layout">
           <aside className="blog-reading-sidebar">
+            <RegionSlot name="sidebar_left" blocks={regions.sidebar_left} />
             {headings.length > 1 && (
               <details className="blog-toc" open>
                 <summary>{t("blog.article.toc_title")}</summary>
@@ -122,6 +124,10 @@ export function BlogArticle() {
               <p>{t("blog.article.signoff")}</p>
               <a href={href("/blog")}>{t("blog.article.back_link")}</a>
             </div>
+            <RegionSlot
+              name="after_article"
+              blocks={regions.after_article}
+            />
           </div>
         </div>
         {blog.items.length > 0 && (

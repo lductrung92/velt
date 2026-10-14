@@ -1,5 +1,6 @@
 import type { PublicMenuItem } from "../types";
 import type { T } from "./i18n";
+import { emptyRegions, resolveRegions, type SiteRegions } from "./regions";
 
 /**
  * The site's chrome — the header and the footer — as data.
@@ -73,6 +74,8 @@ export interface SiteLayout {
   footer: NavItem[];
   chrome: SiteChrome;
   head: SiteHead;
+  /** Blocks the console placed in the chrome; empty lists render nothing. */
+  regions: SiteRegions;
 }
 
 function nav(
@@ -171,6 +174,7 @@ export const defaultLayout = (t: T): SiteLayout => ({
   footer: defaultFooter(t),
   chrome: defaultChrome(t),
   head: DEFAULT_HEAD,
+  regions: emptyRegions(),
 });
 
 /** A setting read as text; anything that is not a non-blank string is absent. */
@@ -280,6 +284,7 @@ function ctaHref(value: unknown): string {
 export function resolveLayout(
   menus: unknown,
   settings: unknown,
+  regions: unknown,
   t: T,
 ): SiteLayout {
   const values = (
@@ -328,6 +333,7 @@ export function resolveLayout(
       blogPageSize: count(values["site.blog_page_size"], 3, 24, 9),
       productsPageSize: count(values["site.products_page_size"], 3, 48, 9),
     },
+    regions: resolveRegions(regions),
   };
 }
 

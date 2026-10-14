@@ -142,3 +142,44 @@ func TestIT_SearchMatchesTheLanguageTheReaderSees(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, none)
 }
+
+// The site's chrome is read live, never published: a widget or a menu placed
+// in the header changes what every visitor sees without writing a single
+// published doc. A version token that ignored cms_region_blocks would leave
+// the site serving the header it cached before the edit.
+func TestIT_VersionMovesWhenTheChromeChanges(t *testing.T) {
+	pool := requireDB(t)
+	store := New(pool)
+	ctx := context.Background()
+	t.Cleanup(func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM cms_region_blocks WHERE region LIKE 'pubdocsit-%'`)
+	})
+
+	before, err := store.Version(ctx)
+	require.NoError(t, err)
+
+	region := "pubdocsit-" + uuid.NewString()[:8]
+	var blockID uuid.UUID
+	require.NoError(t, pool.QueryRow(ctx, `
+		INSERT INTO cms_region_blocks (region, kind, widget_type, config)
+		VALUES ($1, 'widget', 'team', '{}') RETURNING id`, region).Scan(&blockID))
+
+	placed, err := store.Version(ctx)
+	require.NoError(t, err)
+	require.NotEqual(t, before, placed, "placing a block in a region must move the token")
+
+	_, err = pool.Exec(ctx,
+		`UPDATE cms_region_blocks SET config = '{"limit": 4}', updated_at = now() WHERE id = $1`, blockID)
+	require.NoError(t, err)
+
+	edited, err := store.Version(ctx)
+	require.NoError(t, err)
+	require.NotEqual(t, placed, edited, "editing a block's config must move it too")
+
+	_, err = pool.Exec(ctx, `DELETE FROM cms_region_blocks WHERE id = $1`, blockID)
+	require.NoError(t, err)
+
+	removed, err := store.Version(ctx)
+	require.NoError(t, err)
+	require.NotEqual(t, edited, removed, "removing the last block must move it as well")
+}

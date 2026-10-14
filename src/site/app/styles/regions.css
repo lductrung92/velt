@@ -1,0 +1,144 @@
+/*
+ * Blocks the console placed in the chrome.
+ *
+ * Deliberately quiet: these sit inside a header, a footer column and an
+ * article sidebar that already have a voice, so a block inherits the type
+ * scale and colour around it and adds only the spacing it needs. Nothing here
+ * paints a background or a border — a block that announced itself would make
+ * every page look like it had grown a widget.
+ */
+
+.region {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.site-header .region {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Sits under .footer-grid as its own row, so the four-track template above is
+   untouched and a footer with no block is unchanged to the pixel. */
+.site-footer .region {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 40px;
+  padding-bottom: 48px;
+}
+.site-footer .region > * {
+  flex: 1 1 14rem;
+}
+
+.region-title {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: inherit;
+}
+
+/* A menu block is a row in the header and a column everywhere else, matching
+   the navigation it sits beside in each place. */
+.region-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.site-header .region-menu {
+  flex-direction: row;
+  gap: 16px;
+}
+.region-menu-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.region-menu-group + .region-menu-group {
+  margin-top: 12px;
+}
+
+.region-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.region-chips {
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  gap: 8px !important;
+}
+.region-chips a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.region-chips span {
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.region-richtext > :first-child {
+  margin-top: 0;
+}
+.region-richtext > :last-child {
+  margin-bottom: 0;
+}
+.region-width-narrow {
+  max-width: 32ch;
+}
+.region-width-wide {
+  max-width: 72ch;
+}
+
+.region-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.region-align-center {
+  align-items: center;
+  text-align: center;
+}
+.region-align-left {
+  align-items: flex-start;
+  text-align: left;
+}
+.region-cta p {
+  margin: 0;
+}
+.region-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.region-cta-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.region-cta-button.is-primary {
+  background: var(--primary, #0061fd);
+  color: #fff;
+}
+.region-cta-button.is-secondary {
+  border: 1px solid currentColor;
+}
+
+/* The desktop navigation itself hides at 1023px (styles.css); the slot has to
+   go at the same width or it hangs in a bar with nothing beside it. */
+@media (max-width: 1023px) {
+  .site-header .region {
+    display: none;
+  }
+}

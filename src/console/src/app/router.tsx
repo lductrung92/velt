@@ -28,6 +28,7 @@ import {
   ResetPassword,
 } from "@/modules/auth";
 import {
+  Appearance,
   ArticleEditor,
   ArticleList,
   CategoryEditor,
@@ -335,6 +336,14 @@ export const router = createBrowserRouter([
         element: (
           <RequirePermission permission="cms.menu.manage">
             <MenuBuilder />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: "/cms/giao-dien",
+        element: (
+          <RequirePermission permission="cms.menu.manage">
+            <Appearance />
           </RequirePermission>
         ),
       },

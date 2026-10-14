@@ -137,6 +137,37 @@ func (s *PublicService) Menus(ctx context.Context, locale string) (map[string][]
 	return menusByLocation(rows), nil
 }
 
+// ItemsByMenu returns every menu's item tree keyed by menu id — the same
+// resolution Menus performs (translated labels, resolved slugs, unresolvable
+// links dropped), minus the one-menu-per-location rule, which exists only
+// because that map is keyed by location. A caller naming a menu by id has
+// already said which one it means.
+//
+// It answers `any` rather than []PublicItem because its caller is another CMS
+// feature, which must not import this package; the value is forwarded straight
+// to JSON, so the shape still belongs here. A menu with nothing to render is
+// absent, exactly as its location would be.
+func (s *PublicService) ItemsByMenu(ctx context.Context, locale string) (map[uuid.UUID]any, error) {
+	if locale == "" {
+		locale = baseLocale
+	}
+	rows, err := s.repo.All(ctx, locale)
+	if err != nil {
+		return nil, apperr.Internal()
+	}
+	byMenu := map[uuid.UUID][]publicRow{}
+	for _, r := range rows {
+		byMenu[r.MenuID] = append(byMenu[r.MenuID], r)
+	}
+	out := make(map[uuid.UUID]any, len(byMenu))
+	for id, items := range byMenu {
+		if tree := buildPublicTree(items); len(tree) > 0 {
+			out[id] = tree
+		}
+	}
+	return out, nil
+}
+
 // menusByLocation turns the flat rows into one tree per slot, rendering a
 // single menu per location.
 func menusByLocation(rows []publicRow) map[string][]PublicItem {

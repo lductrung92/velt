@@ -184,3 +184,34 @@ func TestIT_MenuItemsKeepTheirIDsAcrossSaves(t *testing.T) {
 	require.Len(t, theirs, 1)
 	require.NotEqual(t, parent.ID, theirs[0].ID)
 }
+
+// Keyed by id, both menus at a location are there: oldest-wins exists only
+// because the location map can hold one of them, and a caller naming a menu by
+// id has already said which one it means.
+func TestIT_ItemsByMenuAnswersForEveryMenuNotOnePerLocation(t *testing.T) {
+	pool := cmstest.RequireDB(t)
+	repo := NewRepository(pool)
+	ctx := context.Background()
+	t.Cleanup(func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM cms_menus WHERE location LIKE 'cmsit-%'`)
+	})
+
+	loc := "cmsit-" + uuid.NewString()[:8]
+	first, err := repo.CreateMenu(ctx, "First", loc)
+	require.NoError(t, err)
+	second, err := repo.CreateMenu(ctx, "Second", loc)
+	require.NoError(t, err)
+	empty, err := repo.CreateMenu(ctx, "Empty", "cmsit-"+uuid.NewString()[:8])
+	require.NoError(t, err)
+
+	require.NoError(t, repo.ReplaceMenuItems(ctx, first.ID,
+		[]itemWrite{{Label: "One", LinkType: LinkInternal, URL: strptr("/one")}}))
+	require.NoError(t, repo.ReplaceMenuItems(ctx, second.ID,
+		[]itemWrite{{Label: "Two", LinkType: LinkInternal, URL: strptr("/two")}}))
+
+	out, err := NewPublicService(NewPublicRepository(pool)).ItemsByMenu(ctx, baseLocale)
+	require.NoError(t, err)
+	require.Equal(t, []string{"One"}, publicLabels(out[first.ID].([]PublicItem)))
+	require.Equal(t, []string{"Two"}, publicLabels(out[second.ID].([]PublicItem)))
+	require.NotContains(t, out, empty.ID, "a menu with nothing to render is absent, like its location")
+}

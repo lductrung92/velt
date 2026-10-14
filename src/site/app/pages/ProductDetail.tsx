@@ -9,6 +9,7 @@ import { demoLink } from "../lib/links";
 import { ProductCard, ProductVisual } from "../components/Products";
 import { Skills } from "../components/Team";
 import { Icon } from "../components/Icon";
+import { RegionSlot } from "../components/RegionSlot";
 import type { Product } from "../types";
 
 export function NotFound() {
@@ -25,7 +26,7 @@ export function NotFound() {
   );
 }
 export function ProductDetail({ product }: { product: Product }) {
-  const { products, data, referrer, href, t } = useSite();
+  const { products, data, referrer, href, regions, t } = useSite();
   const people = data.members.filter((member) =>
     product.memberIds?.includes(member.id),
   );
@@ -165,6 +166,7 @@ export function ProductDetail({ product }: { product: Product }) {
               )}
             </p>
           )}
+          <RegionSlot name="aside" blocks={regions.aside} />
         </aside>
       </div>
       {!!related.length && (
