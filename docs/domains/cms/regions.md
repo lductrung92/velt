@@ -11,6 +11,24 @@ dựng khung trang.
 
 ---
 
+## 0. Trạng thái
+
+Đã chạy (commit `6f3c1c1`): bảng `cms_region_blocks` với `page_group`, module
+`cms/regions`, màn hình `/cms/giao-dien`, và năm chỗ gắn trên site. Mọi điều
+dưới đây mô tả **thứ đang chạy**, trừ chỗ nói rõ là đích đến.
+
+Ba thứ tài liệu này mô tả mà **chưa làm**, vì cả ba phụ thuộc vào định tuyến
+chưa đổi (§3.1):
+
+| Chưa có | Vì |
+|---|---|
+| nhóm `page_detail` | route `/{slug}` chưa tồn tại |
+| `product_detail` khớp `/product/{slug}` | site vẫn ở `/products/{slug}` số nhiều |
+| vị trí `before_content` / `after_content` | chưa có markup nào để bám |
+
+Mở từng cái ra khi làm phần định tuyến, không sớm hơn: một vị trí không chỗ vẽ
+là lời mời đặt khối vào hư không.
+
 ## 1. Phạm vi
 
 **Trong phạm vi:** phần khung bao quanh nội dung — thanh header, chân trang, cột
@@ -100,20 +118,29 @@ vì sao, chứ không để người ta phát hiện bằng cách bấm vào lin
 
 ## 4. Cây nhóm trang
 
+Đang chạy — luật khớp lấy thẳng từ `resolveRoute`:
+
 ```
 common                                     khớp mọi trang
-├─ home              = /
+├─ home              = / | /index.html
 ├─ products          (nút gộp, không tự khớp)
-│  ├─ product_list   = /products
-│  └─ product_detail ^ /product/{slug}
+│  ├─ product_list   = /products | /products/ | /products.html
+│  └─ product_detail ^ /products/  | = /product.html
 ├─ blog              (nút gộp, không tự khớp)
-│  ├─ blog_list      = /blog
-│  └─ blog_detail    ^ /blog/{slug}
-├─ page_detail       = /{slug}   ← thử cuối cùng, cần tra dữ liệu
+│  ├─ blog_list      = /blog | /blog/
+│  └─ blog_detail    ^ /blog/
 └─ not_found         không giải được
 ```
 
 `=` khớp chính xác, `^` khớp tiền tố. Thử theo đúng thứ tự trên.
+
+Khi định tuyến đổi theo §3, `product_detail` chuyển sang `^ /product/` và
+`page_detail = /{slug}` chen vào ngay trước `not_found`. Không còn gì khác phải
+đổi: cây là dữ liệu, không phải mã rải rác.
+
+Một hệ quả đáng biết: `/products/slug-khong-co` render `NotFound`, và
+`resolveRoute` để `product` là undefined, nên nó thuộc nhóm `not_found` — đúng
+cái trang khách thật sự nhận được, không phải cái họ gõ.
 
 **Nút gộp** (`products`, `blog`) không khớp trang nào của riêng nó. Nó tồn tại để
 trả lời "mọi trang sản phẩm" — khối đặt ở đó hiện trên cả danh sách lẫn chi tiết.
@@ -122,9 +149,9 @@ xoá.
 
 ### 4.1 Cây là thứ bậc BIÊN TẬP, không phải thứ bậc URL
 
-Chỗ này quan trọng và dễ hiểu nhầm. `/products` và `/product/{slug}` **không
-chung tiền tố** — một cái số nhiều, một cái số ít. Vậy mà chúng vẫn là hai con
-của cùng một nút `products`.
+Chỗ này quan trọng và dễ hiểu nhầm. Theo định tuyến ở §3, `/products` và
+`/product/{slug}` **không chung tiền tố** — một cái số nhiều, một cái số ít. Vậy
+mà chúng vẫn phải là hai con của cùng một nút `products`.
 
 Chúng cùng nhóm vì người biên tập nghĩ về chúng như một ("mọi trang sản phẩm"),
 không phải vì URL của chúng giống nhau. Nếu suy cây từ tiền tố, định tuyến này
@@ -148,16 +175,20 @@ việc đi tìm.
 Một vị trí là một chỗ vật lý trong bố cục. Danh sách này **bị giới hạn bởi
 markup hiện tại**, không phải bởi mong muốn.
 
-| Vị trí | Nhóm | Chỗ thật trong mã | Ghi chú |
+| Vị trí | Có ở nhóm | Chỗ thật trong mã | Ghi chú |
 |---|---|---|---|
-| `header` | common | `Header.tsx:164`, giữa nav và cụm ngôn ngữ/CTA | hàng ngang, chật |
-| `footer` | common | `HomeStatic.tsx:463`, một cột của `.footer-grid` | xem §8, lưới cố định |
-| `before_content` | common | **chưa có** — ngay sau `<main>` | cần thêm markup |
-| `after_content` | common | **chưa có** — cuối `<main>`, trên footer | cần thêm markup |
-| `sidebar_left` | blog_detail | `aside.blog-reading-sidebar`, `BlogArticle.tsx:76` | rộng **13rem** |
-| `after_article` | blog_detail | sau `.blog-article-signoff`, `BlogArticle.tsx:122` | trong cột chính |
-| `aside` | product_detail | `aside` trong `.product-detail-body`, `ProductDetail.tsx:142` | đang chứa thành viên |
-| `after_content` | page_detail | **chưa có** — trang CMS chưa có route | xem §3.1 |
+| `header` | mọi nhóm | `Header.tsx:164`, giữa nav và cụm ngôn ngữ/CTA | hàng ngang, chật |
+| `footer` | mọi nhóm | dưới `.footer-grid`, hàng riêng | xem §8 |
+| `sidebar_left` | blog_detail | `aside.blog-reading-sidebar`, `BlogArticle.tsx` | rộng **13rem** |
+| `after_article` | blog_detail | sau `.blog-article-signoff` | trong cột chính |
+| `aside` | product_detail | `aside` của `.product-detail-body` | đang chứa thành viên |
+
+Mọi nhóm đều có `header` và `footer` vì mọi trang đều có hai thứ đó — kể cả 404.
+Ba vị trí còn lại chỉ mở ở nhóm có chỗ vẽ chúng.
+
+Cặp (nhóm, vị trí) ngoài bảng này là **422**, kiểm ở đường ghi. Không kiểm thì
+sẽ có khối nằm trong DB mà không trang nào vẽ, và không ai hiểu tại sao nó không
+hiện. `PUT /regions/home/sidebar_left/blocks` trả `{"slot":"unknown"}`.
 
 Ba loại trang **không có cột phụ nào**: trang chủ, danh sách sản phẩm, danh sách
 blog. Cả ba là một cột toàn chiều rộng (`Home.tsx`, `Catalog.tsx:60`,
@@ -194,9 +225,26 @@ chép lại danh sách chung — và màn hình quản trị phải làm cái gi
 
 Không có nút đó thì người dùng sẽ tự chép tay và quên mất một mục.
 
+### 6.1 Ghi đè là CHÉP, không phải DỜI
+
+Khối chép xuống phải là **hàng mới** — id mới, do server cấp lúc lưu. Giữ id của
+cha thì lần lưu sau không chép mà **dời**: hàng biến mất khỏi nhóm cha và mọi
+trang anh em mất khối đó, im lặng.
+
+Đã chứng minh trên DB: ghi đè `common/footer` xuống `blog_detail` rồi lưu, cha
+vẫn giữ hàng `f860aced` còn con nhận hàng mới `756118b3`.
+
+### 6.2 Kéo khối vào ô đang kế thừa thì chép danh sách cha xuống trước
+
+Người ta muốn "thêm cái này nữa", không phải "vứt mấy cái kia đi". Nếu chỉ ghi
+đúng khối vừa thả, mấy khối đang kế thừa sẽ biến mất mà màn hình không nói gì.
+
+Vẫn là ghi đè — nhóm con sau đó sở hữu cả danh sách — chỉ là điểm khởi đầu đúng
+với điều người dùng vừa làm.
+
 ## 7. Mô hình dữ liệu
 
-Bảng `cms_region_blocks` đã có (migration `0043`). Thay đổi cần thiết:
+`cms_region_blocks` ra đời ở migration `0043`; `0044` thêm nhóm trang:
 
 ```sql
 ALTER TABLE cms_region_blocks
@@ -207,21 +255,22 @@ CREATE INDEX idx_cms_region_blocks_slot
   ON cms_region_blocks (page_group, region, sort_order);
 ```
 
+`DELETE` và `UPDATE` trong repo khoá theo **cả** `page_group` lẫn `region`, nên
+một id lạc không kéo được khối sang nhóm khác.
+
 Cột `region` giữ nguyên tên nhưng đổi nghĩa: nó là **vị trí**, không còn là vùng.
 Đổi tên cột sẽ đụng mọi câu truy vấn để đổi lấy một từ chính xác hơn — không
 đáng, miễn là chỗ khai báo nói rõ.
 
-**Không cần di trú dữ liệu.** Tính năng chưa commit và bảng trên máy dev đang
-rỗng. Nếu đã có dữ liệu thì `DEFAULT 'common'` cũng xếp đúng cho `header` và
-`footer`, chỉ `sidebar` phải chuyển tay sang `blog_detail`.
+**Không cần di trú dữ liệu**: `0043` và `0044` đi liền nhau trong cùng một đợt,
+bảng chưa từng có hàng nào ngoài máy dev, và `DEFAULT 'common'` xếp đúng cho
+`header`/`footer` kể cả khi có.
 
 Từ vựng nhóm và vị trí sống trong **mã Go**, không phải CHECK trong DB — giống
 cách `widgets` khai báo loại widget. Một CHECK nghĩa là mỗi lần site mọc thêm
 một chỗ lại phải có migration, trong khi đường ghi là lối vào duy nhất.
 
-Cặp `(nhóm, vị trí)` phải được **kiểm tra chéo**: `sidebar_left` chỉ hợp lệ ở
-`blog_detail`. Gửi `('home', 'sidebar_left')` là 422. Không kiểm thì sẽ có khối
-nằm trong DB mà không trang nào vẽ, và không ai hiểu tại sao nó không hiện.
+Cặp `(nhóm, vị trí)` được kiểm tra chéo ở đường ghi; xem bảng ở §5.
 
 ## 8. Hai lỗi đã sửa, và lý do ghi lại
 
@@ -266,6 +315,25 @@ PUT /api/cms/regions/{nhóm}/{vị trí}/blocks       → thay cả danh sách
 Thay cả danh sách và **giữ nguyên id** mà body gửi lên, như `menus` làm — id là
 mỏ neo, mất nó là mất thứ gắn vào nó.
 
+### 9.1 `GET /cms/regions` là nguồn duy nhất của từ vựng
+
+Nó trả về, cho từng nhóm: tên nhóm, **cha** của nó, và danh sách vị trí nhóm đó
+được phép lấp.
+
+```json
+[{ "group": "blog_detail", "parent": "blog",
+   "slots": [{ "slot": "header", "blocks": [] }, …] }]
+```
+
+Console **không giữ bản sao nào** của cây nhóm hay ma trận vị trí: nó dựng cây,
+dựng danh sách ô, và đi ngược kế thừa hoàn toàn từ câu trả lời này. Giữ bản sao
+nghĩa là backend mở thêm một vị trí mà console âm thầm giấu đi — một lỗi không
+báo gì, chỉ là thiếu.
+
+Thứ duy nhất console còn khai là union type của tên nhóm và tên vị trí, để khoá
+`cms.appearance.group.<g>` được kiểm lúc biên dịch. Một nhóm backend thêm mà
+console chưa đặt tên sẽ hiện ra khoá thô, và test của màn hình bắt được.
+
 ## 10. Việc không làm
 
 - **Không dựng cột phụ cho trang chủ, danh sách blog, danh sách sản phẩm.** Cả
@@ -273,16 +341,39 @@ mỏ neo, mất nó là mất thứ gắn vào nó.
 - **Không đụng landing section.** Trang chủ vẫn do Puck dựng.
 - **Không làm vùng theo từng bản ghi** ("bài viết này có sidebar riêng"). Chưa ai
   cần, và nó biến vùng thành một trường của bài viết.
+- **Không làm phẳng kế thừa ở server.** Site sở hữu việc phân loại trang; server
+  làm phẳng nghĩa là server phải biết trang nào thuộc nhóm nào, tức là bản sao
+  thứ hai của `resolveRoute` — đúng thứ §4.2 nói đừng làm.
 
 ## 11. Ghi chú đã phát hiện khi khảo sát
 
 - Site **chưa** định tuyến trang CMS, dù spec nói `/{slug}`.
   `/public/cms/pages/{slug}` hiện chỉ được đọc đúng một lần, ở
   `landing.server.ts:41`, để lấy `sections` cho trang chủ. Mọi trang CMS khác
-  trả 404. Nhóm `page_detail` ở §4 mô tả đích đến, không phải hiện trạng.
+  trả 404. Nhóm `page_detail` chưa tồn tại trong mã; xem §0.
 - `cms_pages.template` là **cột chết** — không chỗ nào trong `src/site/` đọc nó.
 - `widgets/registry.go:17` trỏ tới `docs/domains/cms/widgets.md`, file **chưa
   tồn tại**.
 - Loại `categories_showcase`, `rich_text`, `cta_banner` tồn tại **hai lần** —
   vừa là widget vừa là landing section, hai form cấu hình riêng. Comment trong
   `widgets/registry.go:5-6` đã ghi "có thể hợp nhất sau" từ lâu.
+- Hai vị trí mới `after_article` và `aside` đang dùng CSS chung của `.region`;
+  chưa ai nhìn chúng trên trình duyệt với nội dung thật.
+- Site không có renderer cho widget nào trước đợt này. Năm renderer trong
+  `RegionSlot.tsx` là mới; `product_grid` và `team` vẫn chỉ là landing section,
+  không đặt vào vùng được.
+
+## 12. Kiểm chứng đã làm
+
+Ghi lại để lần sau khỏi làm lại từ đầu, và để biết cái gì đã được chứng minh
+chứ không chỉ được tin.
+
+- **Vùng rỗng thì site không đổi một pixel.** Chụp header và footer trang chủ,
+  gieo một khối, xoá, chụp lại, so SHA256 — trùng. Hàng gieo vào giữa chứng
+  minh phép so sánh có nhạy.
+- **Ghi đè chép chứ không dời.** Xem §6.1.
+- **Ma trận (nhóm, vị trí) chặn thật.** `home/sidebar_left`,
+  `blog_detail/sidebar` (tên cũ) và `page_detail/footer` đều 422.
+- **Kế thừa là ghi đè, không trộn.** Phá hàm kế thừa cho nó trộn — test đỏ ở cả
+  console lẫn site. Phá hàm ghi đè cho dùng lại id của cha — test **xanh**, tức
+  là test chưa đủ; siết lại rồi phá lần nữa mới đỏ.
