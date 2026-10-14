@@ -87,6 +87,30 @@ export function toItemsInput(drafts: MenuItemDraft[]): MenuItemInput[] {
   });
 }
 
+// Pair every draft node with the saved node that came back in its place.
+//
+// An item added in this session has no id until the PUT assigns one, so
+// anything held against its `tmp-` key — a translation typed before the menu
+// was saved — needs that id to be written. The PUT replaces the tree wholesale
+// and echoes it back in the order it was sent, so walking both in lockstep is
+// the correspondence; there is nothing else to match on.
+export function pairSavedIDs(
+  drafts: MenuItemDraft[],
+  saved: MenuItemNode[],
+): Array<[key: string, id: string]> {
+  const pairs: Array<[string, string]> = [];
+  const walk = (d: MenuItemDraft[], s: MenuItemNode[]) => {
+    d.forEach((node, index) => {
+      const match = s[index];
+      if (!match) return;
+      pairs.push([node.key, match.id]);
+      walk(node.children, match.children);
+    });
+  };
+  walk(drafts, saved);
+  return pairs;
+}
+
 // Content fingerprint (ignores identity) — two trees are equal iff every node's
 // content + order + nesting match. Used for the dirty check, which asks "is
 // there anything to write", not "are these the same rows": the `id` the PUT

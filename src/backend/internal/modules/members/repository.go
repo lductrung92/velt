@@ -75,6 +75,16 @@ func (r *pgxRepository) List(ctx context.Context, p ListParams) ([]Member, int, 
 	if p.ActiveOnly {
 		where = append(where, "is_active")
 	}
+	// CreatedTo is already midnight after the requested day, so < keeps that
+	// whole day in range; see httpx.QueryDateRange.
+	if p.CreatedFrom != nil {
+		args = append(args, *p.CreatedFrom)
+		where = append(where, fmt.Sprintf("created_at >= $%d", len(args)))
+	}
+	if p.CreatedTo != nil {
+		args = append(args, *p.CreatedTo)
+		where = append(where, fmt.Sprintf("created_at < $%d", len(args)))
+	}
 	clause := ""
 	if len(where) > 0 {
 		clause = " WHERE " + strings.Join(where, " AND ")

@@ -485,7 +485,7 @@
 
 .dashboard-daily-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.7fr);
+  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.8fr);
   gap: 18px;
 }
 .dashboard-calendar-day {
@@ -522,6 +522,26 @@
 .dashboard-calendar-day-outside {
   opacity: 0.4;
 }
+.dashboard-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--muted) / 0.5);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  /* The width of a digit must not depend on the digit, or the whole line
+     shuffles sideways every second. */
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.dashboard-clock-seconds {
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+}
 .dashboard-weather {
   display: flex;
   flex-direction: column;
@@ -551,7 +571,7 @@
 }
 @media (max-width: 1199px) {
   .dashboard-daily-grid {
-    grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.3fr);
+    grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.85fr);
   }
   .dashboard-weather-forecast {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -568,8 +588,10 @@
   .dashboard-weather-current {
     padding: 16px;
   }
-  .dashboard-weather-details {
+  .dashboard .dashboard-weather-details {
     gap: 8px;
+    /* No slack left in the row at this width, so the strip takes a line. */
+    flex-basis: 100%;
   }
 }
 @media (max-width: 359px) {
@@ -585,6 +607,9 @@
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr);
     gap: 12px;
+  }
+  .dashboard .dashboard-weather-details {
+    grid-column: 1 / -1;
   }
   .dashboard .dashboard-weather-range {
     grid-column: 1 / -1;

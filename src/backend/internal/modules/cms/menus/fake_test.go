@@ -43,19 +43,7 @@ func (r *fakeRepo) GetMenu(_ context.Context, id uuid.UUID) (*Menu, error) {
 	return &cp, nil
 }
 
-func (r *fakeRepo) locationTaken(location string, exclude uuid.UUID) bool {
-	for _, m := range r.menus {
-		if m.Location == location && m.ID != exclude {
-			return true
-		}
-	}
-	return false
-}
-
 func (r *fakeRepo) CreateMenu(_ context.Context, name, location string) (*Menu, error) {
-	if r.locationTaken(location, uuid.Nil) {
-		return nil, shared.ErrConflict
-	}
 	m := &Menu{ID: uuid.New(), Name: name, Location: location, CreatedAt: r.now, UpdatedAt: r.now}
 	r.menus[m.ID] = m
 	cp := *m
@@ -66,9 +54,6 @@ func (r *fakeRepo) UpdateMenu(_ context.Context, id uuid.UUID, name, location st
 	m, ok := r.menus[id]
 	if !ok {
 		return nil, shared.ErrNotFound
-	}
-	if r.locationTaken(location, id) {
-		return nil, shared.ErrConflict
 	}
 	m.Name, m.Location, m.UpdatedAt = name, location, r.now.Add(time.Second)
 	cp := *m

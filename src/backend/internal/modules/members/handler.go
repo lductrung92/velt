@@ -61,13 +61,30 @@ func listParams(r *http.Request) ListParams {
 	}
 }
 
+// staffListParams adds the console-only created-at range on top of the params
+// the public roster shares. The range stays out of listParams so ListPublic
+// keeps exactly the contract it had.
+func staffListParams(r *http.Request) (ListParams, error) {
+	p := listParams(r)
+	var err error
+	if p.CreatedFrom, p.CreatedTo, err = httpx.QueryDateRange(r, "created_from", "created_to"); err != nil {
+		return ListParams{}, err
+	}
+	return p, nil
+}
+
 // List handles GET /api/members.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	id, ok := identity(w, r)
 	if !ok {
 		return
 	}
-	res, err := h.svc.List(r.Context(), id, listParams(r))
+	p, err := staffListParams(r)
+	if err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
+	res, err := h.svc.List(r.Context(), id, p)
 	if err != nil {
 		httpx.WriteError(w, err)
 		return

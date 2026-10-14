@@ -1,11 +1,10 @@
 import { Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { EmptyState } from "@/components/common/EmptyState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePermission } from "@/modules/auth";
@@ -23,8 +22,10 @@ import {
 } from "../hooks/useCmsMenus";
 import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import { useMenuDraft } from "../hooks/useMenuDraft";
+import { translationService } from "@/modules/translation/services/translation.service";
+
 import type { MenuSlot } from "../services/menus.service";
-import { toItemsInput } from "../utils/menuTree";
+import { pairSavedIDs, toItemsInput } from "../utils/menuTree";
 
 export default function MenuBuilder() {
   const { t } = useTranslation();
@@ -50,6 +51,13 @@ export default function MenuBuilder() {
   // the browser's back button. The in-page slot switch below stays local: it
   // is not a navigation, so the router's blocker never sees it.
   useUnsavedChanges({ when: draft.dirty, what: t("cms.menus.one") });
+
+  // Landing on nothing made the right half a placeholder the reader then had
+  // to dismiss by clicking the row they were going to click anyway.
+  useEffect(() => {
+    const first = menus.data?.[0];
+    if (first && !selectedId) setSelectedId(first.id);
+  }, [menus.data, selectedId]);
 
   function selectSlot(id: string) {
     if (id === selectedId) return;
@@ -85,10 +93,19 @@ export default function MenuBuilder() {
   async function handleSave() {
     if (!selectedId) return;
     try {
+      const before = draft.draft;
+      const pending = draft.takePendingTranslations();
       const res = await save.mutateAsync({
         id: selectedId,
         body: { items: toItemsInput(draft.draft) },
       });
+      // Only now does an item added in this session have an address to store a
+      // translation against, so the ones typed in the dialog are written here.
+      for (const [key, id] of pairSavedIDs(before, res.items)) {
+        for (const [locale, values] of Object.entries(pending[key] ?? {})) {
+          await translationService.put("menu_item", id, locale, values);
+        }
+      }
       draft.rebase(res.items);
       toast.success(t("cms.menus.toast.items_saved"));
     } catch (err) {
@@ -124,12 +141,7 @@ export default function MenuBuilder() {
           />
 
           <div className="space-y-4">
-            {!selectedId ? (
-              <EmptyState
-                title={t("cms.menus.placeholder_title")}
-                description={t("cms.menus.placeholder_desc")}
-              />
-            ) : detail.isLoading ? (
+            {!selectedId || detail.isLoading ? (
               <div className="space-y-2">
                 {Array.from({ length: 4 }, (_, i) => (
                   <Skeleton key={i} className="h-10 w-full" />

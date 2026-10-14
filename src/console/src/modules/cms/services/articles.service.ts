@@ -118,6 +118,9 @@ export interface ArticleListParams {
   page?: number;
   page_size?: number;
   sort?: string;
+  /** ISO day (YYYY-MM-DD), Vietnam time; the whole `created_to` day counts. */
+  created_from?: string;
+  created_to?: string;
 }
 
 export interface ArticleListResult {

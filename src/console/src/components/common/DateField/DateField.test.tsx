@@ -42,6 +42,21 @@ async function pickDay(user: ReturnType<typeof userEvent.setup>, day: string) {
   await user.click(cell.querySelector("button") ?? cell);
 }
 
+/** Pick an option out of one of the calendar header's Selects. */
+async function choose(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+  option: string,
+) {
+  await user.click(screen.getByRole("combobox", { name }));
+  await user.click(await screen.findByRole("option", { name: option }));
+}
+
+const monthName = (month: number) =>
+  new Intl.DateTimeFormat(i18n.language, { month: "long" }).format(
+    new Date(2026, month),
+  );
+
 describe("DateField", () => {
   it("emits the day the user clicked", async () => {
     const user = userEvent.setup();
@@ -86,6 +101,20 @@ describe("DateField", () => {
     expect(screen.getByTestId("value")).toHaveTextContent("2026-10-20T00:00");
   });
 
+  it("jumps to the month and the year chosen in the header", async () => {
+    // The point of the dropdowns: two clicks instead of thirty-one ‹.
+    const user = userEvent.setup();
+    const year = new Date().getFullYear() - 2;
+    render(<Single initial="2026-10-13" />);
+
+    await user.click(screen.getByRole("button", { name: /2026/ }));
+    await choose(user, t("common.date.month"), monthName(2));
+    await choose(user, t("common.date.year"), String(year));
+    await pickDay(user, "5");
+
+    expect(screen.getByTestId("value")).toHaveTextContent(`${year}-03-05`);
+  });
+
   it("clears to an empty string, and offers nothing to clear when empty", async () => {
     const user = userEvent.setup();
     render(<Single initial="2026-10-13" />);
@@ -125,6 +154,23 @@ describe("DateRangeField", () => {
 
     expect(screen.getByTestId("value")).toHaveTextContent(
       "2026-10-05|2026-10-09",
+    );
+  });
+
+  it("jumps the visible month from the header dropdowns", async () => {
+    const user = userEvent.setup();
+    render(<Range />);
+
+    await user.click(
+      screen.getByRole("button", { name: t("common.date.pick_range") }),
+    );
+    await choose(user, t("common.date.month"), monthName(2));
+    await choose(user, t("common.date.year"), "2024");
+    await pickDay(user, "5");
+    await pickDay(user, "9");
+
+    expect(screen.getByTestId("value")).toHaveTextContent(
+      "2024-03-05|2024-03-09",
     );
   });
 

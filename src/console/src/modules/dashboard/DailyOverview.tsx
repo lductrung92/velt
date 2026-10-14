@@ -3,6 +3,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Cloud,
   CloudFog,
   CloudMoon,
@@ -20,7 +21,7 @@ import {
   Wind,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,13 @@ function WeatherIcon({
   );
 }
 
-function CalendarPanel({ today }: { today: string }) {
+// Memoised: the header clock re-renders this section every second, and the
+// lunar grid is far too expensive to rebuild at that rate.
+const CalendarPanel = memo(function CalendarPanel({
+  today,
+}: {
+  today: string;
+}) {
   const { t, i18n } = useTranslation();
   const [selected, setSelected] = useState<string | null>(null);
   const [month, setMonth] = useState<string | null>(null);
@@ -94,6 +101,14 @@ function CalendarPanel({ today }: { today: string }) {
       ...options,
       timeZone: VIETNAM_TIMEZONE,
     }).format(dateFromKey(key));
+  const months = Array.from({ length: 12 }, (_, index) =>
+    String(index + 1).padStart(2, "0"),
+  );
+  // A window around today rather than the whole 1900–2099 range the arrows
+  // reach: a list that long is scrolled, not chosen from.
+  const years = Array.from({ length: 11 }, (_, index) =>
+    String(Number(today.slice(0, 4)) - 5 + index),
+  );
   return (
     <section
       className="dashboard-panel dashboard-calendar rounded-lg border bg-background p-5"
@@ -150,9 +165,45 @@ function CalendarPanel({ today }: { today: string }) {
         >
           <ChevronLeft aria-hidden />
         </Button>
-        <p aria-live="polite" className="text-xs font-medium capitalize">
-          {format(`${monthKey}-01`, { month: "long", year: "numeric" })}
-        </p>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="w-28">
+            <Select
+              aria-label={t("dashboard.daily.choose_month")}
+              className="h-8 text-xs capitalize"
+              isSearchable={false}
+              isClearable={false}
+              value={{
+                value: monthKey.slice(5),
+                label: format(`${monthKey}-01`, { month: "long" }),
+              }}
+              options={months.map((value) => ({
+                value,
+                label: format(`${monthKey.slice(0, 4)}-${value}-01`, {
+                  month: "long",
+                }),
+              }))}
+              onChange={(option) =>
+                option && setMonth(`${monthKey.slice(0, 4)}-${option.value}`)
+              }
+            />
+          </div>
+          <div className="w-24">
+            <Select
+              aria-label={t("dashboard.daily.choose_year")}
+              className="h-8 text-xs tabular-nums"
+              isSearchable={false}
+              isClearable={false}
+              value={{
+                value: monthKey.slice(0, 4),
+                label: monthKey.slice(0, 4),
+              }}
+              options={years.map((value) => ({ value, label: value }))}
+              onChange={(option) =>
+                option && setMonth(`${option.value}-${monthKey.slice(5)}`)
+              }
+            />
+          </div>
+        </div>
         <Button
           variant="ghost"
           size="icon"
@@ -210,12 +261,12 @@ function CalendarPanel({ today }: { today: string }) {
       </p>
     </section>
   );
-}
+});
 
 const number = (value: number | null | undefined, suffix: string) =>
   value == null ? "—" : `${Math.round(value)}${suffix}`;
 
-function WeatherPanel({ today }: { today: string }) {
+const WeatherPanel = memo(function WeatherPanel({ today }: { today: string }) {
   const { t, i18n } = useTranslation();
   const [location, setLocation] = useState<WeatherLocation>(() => {
     try {
@@ -405,11 +456,18 @@ function WeatherPanel({ today }: { today: string }) {
                   })}
                 </p>
               </div>
-              <span className="rounded-md bg-background/70 px-2 py-1 text-xs text-muted-foreground">
-                {t("dashboard.daily.current")}
-              </span>
+              <div className="text-right">
+                <span className="rounded-md bg-background/70 px-2 py-1 text-xs text-muted-foreground">
+                  {t("dashboard.daily.current")}
+                </span>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {t("dashboard.daily.updated_at", {
+                    time: weather.current.time.slice(11, 16),
+                  })}
+                </p>
+              </div>
             </div>
-            <div className="dashboard-weather-temperature my-5 flex items-center gap-5">
+            <div className="dashboard-weather-temperature my-5 flex flex-wrap items-center gap-5">
               <WeatherIcon
                 code={weather.current.weather_code}
                 night={!weather.current.is_day}
@@ -428,6 +486,36 @@ function WeatherPanel({ today }: { today: string }) {
                   )}
                 </p>
               </div>
+              {/* The detail strip sits in the row's slack rather than in a band
+                  of its own: as a band it left the middle of the block empty. */}
+              <div className="dashboard-weather-details grid flex-1 basis-60 grid-cols-3 gap-3 text-xs">
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    {t("dashboard.daily.feels_like")}
+                  </p>
+                  <p className="mt-1.5 font-medium">
+                    {number(weather.current.apparent_temperature, "°C")}
+                  </p>
+                </div>
+                <div>
+                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Droplets className="size-3" aria-hidden />
+                    {t("dashboard.daily.humidity")}
+                  </p>
+                  <p className="mt-1.5 font-medium">
+                    {number(weather.current.relative_humidity_2m, "%")}
+                  </p>
+                </div>
+                <div>
+                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Wind className="size-3" aria-hidden />
+                    {t("dashboard.daily.wind")}
+                  </p>
+                  <p className="mt-1.5 font-medium">
+                    {number(weather.current.wind_speed_10m, " km/h")}
+                  </p>
+                </div>
+              </div>
               <p className="dashboard-weather-range ml-auto text-right text-xs leading-6 text-muted-foreground">
                 <span className="block">
                   {t("dashboard.daily.high")}{" "}
@@ -442,34 +530,6 @@ function WeatherPanel({ today }: { today: string }) {
                   </strong>
                 </span>
               </p>
-            </div>
-            <div className="dashboard-weather-details grid grid-cols-3 gap-3 border-t border-primary/10 pt-4 text-xs">
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  {t("dashboard.daily.feels_like")}
-                </p>
-                <p className="mt-1.5 font-medium">
-                  {number(weather.current.apparent_temperature, "°C")}
-                </p>
-              </div>
-              <div>
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Droplets className="size-3" aria-hidden />
-                  {t("dashboard.daily.humidity")}
-                </p>
-                <p className="mt-1.5 font-medium">
-                  {number(weather.current.relative_humidity_2m, "%")}
-                </p>
-              </div>
-              <div>
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Wind className="size-3" aria-hidden />
-                  {t("dashboard.daily.wind")}
-                </p>
-                <p className="mt-1.5 font-medium">
-                  {number(weather.current.wind_speed_10m, " km/h")}
-                </p>
-              </div>
             </div>
           </div>
           <h4 className="mb-3 mt-5 text-sm font-medium">
@@ -524,23 +584,8 @@ function WeatherPanel({ today }: { today: string }) {
               );
             })}
           </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-            <a
-              href="https://open-meteo.com/"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-primary-ink hover:underline"
-            >
-              {t("dashboard.daily.source")}
-            </a>
-            <span>
-              {t("dashboard.daily.updated_at", {
-                time: weather.current.time.slice(11, 16),
-              })}
-            </span>
-          </div>
           {query.isError && (
-            <p role="alert" className="mt-2 text-xs text-destructive-ink">
+            <p role="alert" className="mt-4 text-xs text-destructive-ink">
               {t("dashboard.daily.stale_weather")}
             </p>
           )}
@@ -548,31 +593,49 @@ function WeatherPanel({ today }: { today: string }) {
       )}
     </section>
   );
-}
+});
+
+// A clock is read as digits, not as prose, so the pattern stays 24-hour whatever
+// the interface language is.
+const clockFormat = new Intl.DateTimeFormat("en-GB", {
+  timeZone: VIETNAM_TIMEZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
 
 export function DailyOverview() {
   const { t } = useTranslation();
-  const [today, setToday] = useState(() => vietnamDateKey());
+  // The one tick serves both the clock and the date rollover; `today` keeps the
+  // same value all day, which is what holds the memoised panels out of it.
+  const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const interval = window.setInterval(
-      () => setToday(vietnamDateKey()),
-      60_000,
-    );
+    const interval = window.setInterval(() => setNow(new Date()), 1_000);
     return () => window.clearInterval(interval);
   }, []);
+  const today = vietnamDateKey(now);
+  const [hours, minutes, seconds] = clockFormat.format(now).split(":");
   return (
     <section className="space-y-3" aria-labelledby="dashboard-daily-title">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="dashboard-daily-title" className="text-base font-medium">
           {t("dashboard.daily.title")}
         </h2>
-        <span className="text-xs text-muted-foreground">
-          {t("dashboard.daily.timezone")}
-        </span>
+        <p className="dashboard-clock" title={t("dashboard.daily.timezone")}>
+          <Clock className="size-3.5 text-primary-ink" aria-hidden />
+          {/* A label, not an aria-label: the latter would replace the digits
+              instead of introducing them. */}
+          <span className="sr-only">{t("dashboard.daily.timezone")}</span>
+          <span>
+            {hours}:{minutes}
+          </span>
+          <span className="dashboard-clock-seconds">{seconds}</span>
+        </p>
       </div>
       <div className="dashboard-daily-grid">
-        <CalendarPanel today={today} />
         <WeatherPanel today={today} />
+        <CalendarPanel today={today} />
       </div>
     </section>
   );

@@ -56,6 +56,20 @@ type Page struct {
 	UpdatedAt         time.Time
 }
 
+// PageListParams narrows the page tree. CreatedFrom/CreatedTo are the
+// half-open instant bounds resolved by httpx.QueryDateRange — CreatedTo is
+// midnight after the requested day, so the repository compares it with <.
+//
+// Filtering happens on the flat rows, before the tree is assembled: a page
+// inside the range whose parent falls outside it surfaces as a root rather
+// than disappearing, so the node count always equals the number of matching
+// rows. That is what keeps the dashboard's page count and the page list it
+// sits above telling the same story.
+type PageListParams struct {
+	CreatedFrom *time.Time
+	CreatedTo   *time.Time
+}
+
 // pageWrite is the full mutable working state persisted on create/update (PATCH
 // merged onto the current row → plain full-row UPDATE). Status / published_at /
 // snapshot change ONLY via publish/unpublish, never here.

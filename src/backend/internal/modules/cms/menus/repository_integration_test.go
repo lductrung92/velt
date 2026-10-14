@@ -14,7 +14,7 @@ import (
 func strptr(s string) *string         { return &s }
 func ptrUUID(id uuid.UUID) *uuid.UUID { return &id }
 
-func TestIT_MenuCRUDAndLocationUnique(t *testing.T) {
+func TestIT_MenuCRUDAndSharedLocation(t *testing.T) {
 	pool := cmstest.RequireDB(t)
 	repo := NewRepository(pool)
 	ctx := context.Background()
@@ -27,8 +27,12 @@ func TestIT_MenuCRUDAndLocationUnique(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, loc, m.Location)
 
-	_, err = repo.CreateMenu(ctx, "Dup", loc) // location UNIQUE
-	require.ErrorIs(t, err, shared.ErrConflict)
+	// A location holds as many menus as the editor wants (0042 dropped the
+	// UNIQUE); the public read picks one of them, the database does not.
+	second, err := repo.CreateMenu(ctx, "Second", loc)
+	require.NoError(t, err)
+	require.Equal(t, loc, second.Location)
+	require.NotEqual(t, m.ID, second.ID)
 
 	upd, err := repo.UpdateMenu(ctx, m.ID, "Renamed", loc)
 	require.NoError(t, err)
@@ -37,6 +41,36 @@ func TestIT_MenuCRUDAndLocationUnique(t *testing.T) {
 	require.NoError(t, repo.DeleteMenu(ctx, m.ID))
 	_, err = repo.GetMenu(ctx, m.ID)
 	require.ErrorIs(t, err, shared.ErrNotFound)
+}
+
+// Two menus at one location, and the public read has one entry for it: the
+// older menu is the one the site is handed. The younger menu was inserted
+// first, so a reader going by insertion order would hand over the wrong one.
+func TestIT_PublicMenusRendersTheOldestAtALocation(t *testing.T) {
+	pool := cmstest.RequireDB(t)
+	repo := NewRepository(pool)
+	ctx := context.Background()
+	t.Cleanup(func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM cms_menus WHERE location LIKE 'cmsit-%'`)
+	})
+
+	loc := "cmsit-" + uuid.NewString()[:8]
+	young, err := repo.CreateMenu(ctx, "Inserted first", loc)
+	require.NoError(t, err)
+	old, err := repo.CreateMenu(ctx, "Inserted second", loc)
+	require.NoError(t, err)
+	_, err = pool.Exec(ctx,
+		`UPDATE cms_menus SET created_at = created_at - interval '1 day' WHERE id = $1`, old.ID)
+	require.NoError(t, err)
+
+	require.NoError(t, repo.ReplaceMenuItems(ctx, young.ID,
+		[]itemWrite{{Label: "Young", LinkType: LinkInternal, URL: strptr("/young")}}))
+	require.NoError(t, repo.ReplaceMenuItems(ctx, old.ID,
+		[]itemWrite{{Label: "Old", LinkType: LinkInternal, URL: strptr("/old")}}))
+
+	out, err := NewPublicService(NewPublicRepository(pool)).Menus(ctx, baseLocale)
+	require.NoError(t, err)
+	require.Equal(t, []string{"Old"}, publicLabels(out[loc]))
 }
 
 func TestIT_MenuReplaceItemsTreeAndCascade(t *testing.T) {

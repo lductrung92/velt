@@ -21,21 +21,35 @@ type Handler struct {
 // NewHandler builds the articles HTTP handler.
 func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 
+func articleListParams(r *http.Request) (ArticleListParams, error) {
+	createdFrom, createdTo, err := httpx.QueryDateRange(r, "created_from", "created_to")
+	if err != nil {
+		return ArticleListParams{}, err
+	}
+	return ArticleListParams{
+		Query:       r.URL.Query().Get("q"),
+		Status:      r.URL.Query().Get("status"),
+		Tag:         r.URL.Query().Get("tag"),
+		Sort:        r.URL.Query().Get("sort"),
+		CategoryID:  shared.QueryUUID(r, "category_id"),
+		AuthorID:    shared.QueryUUID(r, "author_id"),
+		CreatedFrom: createdFrom,
+		CreatedTo:   createdTo,
+		Page:        shared.QueryInt(r, "page", 1),
+		PageSize:    shared.QueryInt(r, "page_size", 20),
+	}, nil
+}
+
 // GetArticles handles GET /api/cms/articles (paginated; editor ABAC).
 func (h *Handler) GetArticles(w http.ResponseWriter, r *http.Request) {
 	id, ok := shared.Identity(w, r)
 	if !ok {
 		return
 	}
-	p := ArticleListParams{
-		Query:      r.URL.Query().Get("q"),
-		Status:     r.URL.Query().Get("status"),
-		Tag:        r.URL.Query().Get("tag"),
-		Sort:       r.URL.Query().Get("sort"),
-		CategoryID: shared.QueryUUID(r, "category_id"),
-		AuthorID:   shared.QueryUUID(r, "author_id"),
-		Page:       shared.QueryInt(r, "page", 1),
-		PageSize:   shared.QueryInt(r, "page_size", 20),
+	p, err := articleListParams(r)
+	if err != nil {
+		httpx.WriteError(w, err)
+		return
 	}
 	res, err := h.svc.ListArticles(r.Context(), id, p)
 	if err != nil {

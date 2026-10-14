@@ -188,6 +188,12 @@ func (r *fakeRepo) ListArticles(_ context.Context, p ArticleListParams) ([]artic
 		if p.Query != "" && !strings.Contains(strings.ToLower(a.Title), strings.ToLower(p.Query)) {
 			continue
 		}
+		if p.CreatedFrom != nil && a.CreatedAt.Before(*p.CreatedFrom) {
+			continue
+		}
+		if p.CreatedTo != nil && !a.CreatedAt.Before(*p.CreatedTo) {
+			continue
+		}
 		matched = append(matched, a)
 	}
 	sort.Slice(matched, func(i, j int) bool { return matched[i].Title < matched[j].Title })

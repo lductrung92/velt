@@ -67,22 +67,14 @@ func (r *pgxRepository) GetMenu(ctx context.Context, id uuid.UUID) (*Menu, error
 }
 
 func (r *pgxRepository) CreateMenu(ctx context.Context, name, location string) (*Menu, error) {
-	m, err := scanMenu(r.pool.QueryRow(ctx,
+	return scanMenu(r.pool.QueryRow(ctx,
 		`INSERT INTO cms_menus (name, location) VALUES ($1, $2) RETURNING `+menuColumns, name, location))
-	if err != nil && shared.IsUniqueViolation(err) {
-		return nil, shared.ErrConflict // location taken
-	}
-	return m, err
 }
 
 func (r *pgxRepository) UpdateMenu(ctx context.Context, id uuid.UUID, name, location string) (*Menu, error) {
-	m, err := scanMenu(r.pool.QueryRow(ctx,
+	return scanMenu(r.pool.QueryRow(ctx,
 		`UPDATE cms_menus SET name=$2, location=$3, updated_at=now() WHERE id=$1 RETURNING `+menuColumns,
 		id, name, location))
-	if err != nil && shared.IsUniqueViolation(err) {
-		return nil, shared.ErrConflict
-	}
-	return m, err
 }
 
 func (r *pgxRepository) DeleteMenu(ctx context.Context, id uuid.UUID) error {

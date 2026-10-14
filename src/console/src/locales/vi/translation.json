@@ -51,6 +51,8 @@
       "leap": "(nhuận)",
       "previous_month": "Tháng trước",
       "next_month": "Tháng sau",
+      "choose_month": "Chọn tháng",
+      "choose_year": "Chọn năm",
       "select_date": "Chọn ngày {{solar}}, âm lịch {{lunar}}",
       "calendar_hint": "Số lớn: ngày dương · Số nhỏ: ngày âm",
       "choose_location": "Chọn địa điểm thời tiết",
@@ -68,7 +70,6 @@
       "wind": "Gió",
       "next_seven": "7 ngày tiếp theo",
       "rain_chance": "Khả năng mưa {{value}}",
-      "source": "Dữ liệu: Open-Meteo",
       "updated_at": "Dữ liệu lúc {{time}} · UTC+7",
       "conditions": {
         "clear": "Trời quang",
@@ -81,6 +82,9 @@
         "storm": "Dông",
         "unknown": "Chưa xác định"
       }
+    },
+    "range": {
+      "label": "Lọc theo khoảng ngày tạo"
     }
   },
   "common": {
@@ -139,6 +143,8 @@
       "pick": "Chọn ngày",
       "pick_range": "Chọn khoảng ngày",
       "clear": "Xoá ngày đã chọn",
+      "month": "Chọn tháng",
+      "year": "Chọn năm",
       "time": "Giờ"
     },
     "unsaved": {
@@ -867,8 +873,6 @@
         "links": "Thêm các liên kết",
         "arrange": "Sắp xếp và lưu menu"
       },
-      "placeholder_title": "Chọn một menu",
-      "placeholder_desc": "Chọn một menu ở bên trái để bắt đầu chỉnh sửa các mục.",
       "field": {
         "name": "Tên",
         "location": "Vị trí",
@@ -903,7 +907,8 @@
         "open_new_tab": "Mở trong tab mới",
         "reorder": "Kéo để sắp xếp",
         "translate_heading": "Bản dịch của liên kết",
-        "translate_hint": "Để trống thì site hiển thị nhãn gốc tiếng Việt."
+        "translate_hint": "Để trống thì site hiển thị nhãn gốc tiếng Việt.",
+        "translate_hint_new": "Bản dịch sẽ được lưu cùng lúc bạn lưu menu. Để trống thì site hiển thị nhãn gốc tiếng Việt."
       },
       "toast": {
         "create_success": "Đã tạo menu",

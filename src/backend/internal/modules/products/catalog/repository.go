@@ -137,6 +137,14 @@ func (r *pgxRepository) List(ctx context.Context, p ListParams) ([]Product, int,
 	if p.Featured != nil {
 		add("p.is_featured = $%d", *p.Featured)
 	}
+	// CreatedTo is already midnight after the requested day, so < keeps that
+	// whole day in range; see httpx.QueryDateRange.
+	if p.CreatedFrom != nil {
+		add("p.created_at >= $%d", *p.CreatedFrom)
+	}
+	if p.CreatedTo != nil {
+		add("p.created_at < $%d", *p.CreatedTo)
+	}
 	clause := ""
 	if len(where) > 0 {
 		clause = " WHERE " + strings.Join(where, " AND ")

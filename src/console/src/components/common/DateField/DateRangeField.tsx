@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+import { useMonthDropdowns } from "./DateField";
+
 function parse(value: string): Date | undefined {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!m) return undefined;
@@ -71,6 +73,7 @@ export function DateRangeField({
     const end = parse(to);
     return start || end ? { from: start, to: end } : undefined;
   }, [from, to]);
+  const dropdowns = useMonthDropdowns(selected?.from, selected?.to);
 
   const fmt = React.useMemo(
     () => new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium" }),
@@ -149,6 +152,7 @@ export function DateRangeField({
               range?.to ? format(range.to) : "",
             );
           }}
+          {...dropdowns}
         />
       </PopoverContent>
     </Popover>

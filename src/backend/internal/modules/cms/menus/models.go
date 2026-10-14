@@ -61,7 +61,7 @@ type itemWrite struct {
 
 // --- Requests ---
 
-// CreateRequest creates a navigation slot. location is UNIQUE.
+// CreateRequest creates a navigation slot. Several slots may share a location.
 type CreateRequest struct {
 	Name     string `json:"name" validate:"required,max=200"`
 	Location string `json:"location" validate:"required,max=100"`

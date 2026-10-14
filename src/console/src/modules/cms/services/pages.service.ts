@@ -76,9 +76,20 @@ export interface UpdatePageBody {
   regenerate_slug?: boolean;
 }
 
+/**
+ * The pages list is a TREE, so a range filters the rows underneath it: a page
+ * inside the range whose parent is outside surfaces as a root rather than
+ * disappearing, which keeps the node count equal to the number of matches.
+ */
+export interface PageListParams {
+  /** ISO day (YYYY-MM-DD), Vietnam time; the whole `created_to` day counts. */
+  created_from?: string;
+  created_to?: string;
+}
+
 export const pagesService = {
-  async list(): Promise<PageNode[]> {
-    const { data } = await api.get<PageNode[]>("/cms/pages");
+  async list(params?: PageListParams): Promise<PageNode[]> {
+    const { data } = await api.get<PageNode[]>("/cms/pages", { params });
     return data;
   },
   async get(id: string): Promise<PageDetail> {

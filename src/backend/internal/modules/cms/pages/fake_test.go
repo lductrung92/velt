@@ -43,9 +43,15 @@ func (r *fakeRepo) seedPage(title, slug string, parent *uuid.UUID, status string
 	return p
 }
 
-func (r *fakeRepo) ListPages(_ context.Context) ([]Page, error) {
+func (r *fakeRepo) ListPages(_ context.Context, lp PageListParams) ([]Page, error) {
 	out := make([]Page, 0, len(r.pages))
 	for _, p := range r.pages {
+		if lp.CreatedFrom != nil && p.CreatedAt.Before(*lp.CreatedFrom) {
+			continue
+		}
+		if lp.CreatedTo != nil && !p.CreatedAt.Before(*lp.CreatedTo) {
+			continue
+		}
 		out = append(out, *p)
 	}
 	sort.Slice(out, func(i, j int) bool {

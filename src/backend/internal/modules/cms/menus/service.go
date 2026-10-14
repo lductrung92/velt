@@ -51,7 +51,8 @@ func (s *Service) GetMenu(ctx context.Context, id *httpx.Identity, menuID uuid.U
 	return s.menuDetail(ctx, *m)
 }
 
-// CreateMenu creates a navigation slot. Requires cms.menu.manage. location UNIQUE.
+// CreateMenu creates a navigation slot. Requires cms.menu.manage. Several slots
+// may share a location; which one the site renders is menus.oldestMenu.
 func (s *Service) CreateMenu(ctx context.Context, id *httpx.Identity, req CreateRequest) (Response, error) {
 	if err := s.Require(ctx, id, permManage); err != nil {
 		return Response{}, err
@@ -159,9 +160,6 @@ func mapGetErr(err error) error {
 }
 
 func mapWriteErr(err error) error {
-	if errors.Is(err, shared.ErrConflict) {
-		return apperr.Unprocessable("location_already_exists")
-	}
 	if errors.Is(err, shared.ErrNotFound) {
 		return apperr.NotFound("not_found")
 	}

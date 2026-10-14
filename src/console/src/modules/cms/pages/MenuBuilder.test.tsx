@@ -113,6 +113,28 @@ describe("MenuBuilder", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("opens the first menu by itself, without a click", async () => {
+    signIn(MANAGE);
+    server.use(
+      http.get(`${API}/cms/menus`, () =>
+        HttpResponse.json([
+          slot("m1", "Header", "header"),
+          slot("m2", "Footer", "footer"),
+        ]),
+      ),
+      http.get(`${API}/cms/menus/m1`, () =>
+        HttpResponse.json({
+          ...slot("m1", "Header", "header"),
+          items: [itemNode("i1", "Home")],
+        }),
+      ),
+    );
+    renderPage();
+
+    // The first slot's items, with nothing clicked.
+    expect(await screen.findByText("Home")).toBeInTheDocument();
+  });
+
   it("loads slots and shows a selected menu's items", async () => {
     signIn(MANAGE);
     server.use(
@@ -179,18 +201,23 @@ describe("MenuBuilder", () => {
     );
   });
 
-  it("location conflict (409) shows inline on the location field", async () => {
+  it("lets a second menu take an occupied location", async () => {
+    // A location used to be UNIQUE and a second menu there was a 422. Several
+    // may share one now, and which of them the site renders is a separate
+    // decision — the dialog must simply not stand in the way.
     signIn(MANAGE);
+    let postBody: { location?: string } | undefined;
     server.use(
       http.get(`${API}/cms/menus`, () =>
         HttpResponse.json([slot("m1", "Header", "header")]),
       ),
-      http.post(`${API}/cms/menus`, () =>
-        HttpResponse.json(
-          { error: { code: 409, message: "conflict" } },
-          { status: 409 },
-        ),
+      http.get(`${API}/cms/menus/m1`, () =>
+        HttpResponse.json({ ...slot("m1", "Header", "header"), items: [] }),
       ),
+      http.post(`${API}/cms/menus`, async ({ request }) => {
+        postBody = (await request.json()) as { location?: string };
+        return HttpResponse.json(slot("m2", "Header B", "header"));
+      }),
     );
     const user = userEvent.setup();
     renderPage();
@@ -200,7 +227,7 @@ describe("MenuBuilder", () => {
       screen.getByRole("button", { name: t("cms.menus.create") }),
     );
     const dialog = await screen.findByRole("dialog");
-    await user.type(within(dialog).getAllByRole("textbox")[0], "Dup");
+    await user.type(within(dialog).getAllByRole("textbox")[0], "Header B");
     await user.click(within(dialog).getByRole("combobox"));
     await user.click(
       await screen.findByRole("option", {
@@ -211,9 +238,8 @@ describe("MenuBuilder", () => {
       within(dialog).getByRole("button", { name: t("common.save") }),
     );
 
-    expect(
-      await within(dialog).findByText(t("errors.conflict")),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(postBody).toBeDefined());
+    expect(postBody?.location).toBe("header");
   });
 
   it("add an item then save replaces the whole tree (PUT items)", async () => {
@@ -274,6 +300,65 @@ describe("MenuBuilder", () => {
         children: [],
       },
     ]);
+  });
+
+  it("writes a translation typed before the item had an id", async () => {
+    // The boxes are offered while the item is still local, so what is typed
+    // has nowhere to go until the PUT hands out ids. Losing it silently is
+    // what makes a person retype the same label twice.
+    signIn(MANAGE);
+    const written: Array<{ url: string; body: unknown }> = [];
+    server.use(
+      http.get(`${API}/public/settings`, () =>
+        HttpResponse.json({
+          "translation.enabled": true,
+          "translation.locales": "en",
+        }),
+      ),
+      http.get(`${API}/cms/menus`, () =>
+        HttpResponse.json([slot("m1", "Header", "header")]),
+      ),
+      http.get(`${API}/cms/menus/m1`, () =>
+        HttpResponse.json({ ...slot("m1", "Header", "header"), items: [] }),
+      ),
+      http.put(`${API}/cms/menus/m1/items`, () =>
+        HttpResponse.json({
+          ...slot("m1", "Header", "header"),
+          items: [itemNode("i9", "Gioi thieu")],
+        }),
+      ),
+      http.put(`${API}/translations/menu_item/:id/:locale`, async (ctx) => {
+        written.push({ url: ctx.request.url, body: await ctx.request.json() });
+        return HttpResponse.json({});
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole("button", { name: t("common.add_new") }),
+    );
+    await user.type(screen.getAllByRole("textbox")[0], "Gioi thieu");
+    await user.type(
+      screen.getByPlaceholderText(t("cms.menus.item.url_internal_ph")),
+      "/about",
+    );
+    // The English box only exists because the dialog no longer waits for an id.
+    const english = await screen.findByPlaceholderText(
+      t("cms.menus.item.label"),
+    );
+    await user.type(english, "About");
+    await user.click(screen.getByRole("button", { name: t("common.save") }));
+
+    await user.click(
+      await screen.findByRole("button", { name: t("cms.menus.save") }),
+    );
+
+    // Two round trips away (the item PUT has to answer first), so the default
+    // one-second budget is not enough here.
+    await waitFor(() => expect(written).toHaveLength(1), { timeout: 3000 });
+    expect(written[0].url).toContain("/translations/menu_item/i9/en");
+    expect(written[0].body).toMatchObject({ values: { label: "About" } });
   });
 
   it("save: an item that already exists keeps its id", async () => {

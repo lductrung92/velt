@@ -31,6 +31,9 @@ export interface MemberListParams {
   active?: boolean;
   page?: number;
   page_size?: number;
+  /** ISO day (YYYY-MM-DD), Vietnam time; the whole `created_to` day counts. */
+  created_from?: string;
+  created_to?: string;
 }
 
 export interface MemberListResult {

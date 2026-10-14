@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -11,13 +12,17 @@ import (
 	"github.com/velt/backend/internal/modules/cms/shared/cmstest"
 )
 
-func TestMenus_CreateAndLocationUnique(t *testing.T) {
+// A location holds as many menus as the editor wants: the second header is how
+// a replacement is prepared before it goes live.
+func TestMenus_CreateSharesALocation(t *testing.T) {
 	e := newTestSvc(t)
 	m, err := e.svc.CreateMenu(context.Background(), cmstest.ActorWith(permManage), CreateRequest{Name: "Header", Location: "header"})
 	require.NoError(t, err)
 	require.Equal(t, "header", m.Location)
-	_, err = e.svc.CreateMenu(context.Background(), cmstest.ActorWith(permManage), CreateRequest{Name: "Header 2", Location: "header"})
-	cmstest.AssertAppErr(t, err, http.StatusUnprocessableEntity, "location_already_exists")
+	second, err := e.svc.CreateMenu(context.Background(), cmstest.ActorWith(permManage), CreateRequest{Name: "Header 2", Location: "header"})
+	require.NoError(t, err)
+	require.Equal(t, "header", second.Location)
+	require.NotEqual(t, m.ID, second.ID)
 }
 
 func TestMenus_CreatePermissionDenied(t *testing.T) {
@@ -32,15 +37,16 @@ func TestMenus_GetNotFound(t *testing.T) {
 	cmstest.AssertAppErr(t, err, http.StatusNotFound, "not_found")
 }
 
-func TestMenus_UpdateRenameAndConflict(t *testing.T) {
+func TestMenus_UpdateRenameAndMoveOntoAnOccupiedLocation(t *testing.T) {
 	e := newTestSvc(t)
 	a, _ := e.svc.CreateMenu(context.Background(), cmstest.ActorWith(permManage), CreateRequest{Name: "Header", Location: "header"})
 	_, _ = e.svc.CreateMenu(context.Background(), cmstest.ActorWith(permManage), CreateRequest{Name: "Footer", Location: "footer"})
 	upd, err := e.svc.UpdateMenu(context.Background(), cmstest.ActorWith(permManage), a.ID, UpdateRequest{Name: cmstest.Strptr("Top")})
 	require.NoError(t, err)
 	require.Equal(t, "Top", upd.Name)
-	_, err = e.svc.UpdateMenu(context.Background(), cmstest.ActorWith(permManage), a.ID, UpdateRequest{Location: cmstest.Strptr("footer")})
-	cmstest.AssertAppErr(t, err, http.StatusUnprocessableEntity, "location_already_exists")
+	moved, err := e.svc.UpdateMenu(context.Background(), cmstest.ActorWith(permManage), a.ID, UpdateRequest{Location: cmstest.Strptr("footer")})
+	require.NoError(t, err, "a menu may move onto a location another menu already occupies")
+	require.Equal(t, "footer", moved.Location)
 }
 
 func TestMenus_DeleteCascadesItems(t *testing.T) {
@@ -136,4 +142,63 @@ func TestBuildItemTree_NestsAndPromotesOrphans(t *testing.T) {
 	require.Equal(t, "Child", tree[0].Children[0].Label)
 	require.Equal(t, "Orphan", tree[1].Label)
 	require.Empty(t, tree[1].Children)
+}
+
+// publicLabels flattens one slot's root labels, in the order the site gets them.
+func publicLabels(items []PublicItem) []string {
+	out := make([]string, 0, len(items))
+	for _, it := range items {
+		out = append(out, it.Label)
+	}
+	return out
+}
+
+// Several menus may share a location, but the public response has one entry per
+// location: the oldest menu is rendered and the rest are ignored. The choice
+// must not depend on the order the query happened to return the rows in, or the
+// site would flip between menus between reads. See oldestMenu.
+func TestMenusByLocation_OldestMenuAtALocationWins(t *testing.T) {
+	born := time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC)
+	live, draft := uuid.New(), uuid.New()
+	row := func(menu uuid.UUID, created time.Time, label string) publicRow {
+		return publicRow{
+			itemRow:       itemRow{ID: uuid.New(), Label: label, LinkType: LinkInternal, URL: cmstest.Strptr("/")},
+			Location:      "header",
+			MenuID:        menu,
+			MenuCreatedAt: created,
+		}
+	}
+	home := row(live, born, "Home")
+	blog := row(live, born, "Blog")
+	replacement := row(draft, born.Add(time.Hour), "Replacement")
+
+	for name, rows := range map[string][]publicRow{
+		"replacement first":   {replacement, home, blog},
+		"replacement between": {home, replacement, blog},
+		"replacement last":    {home, blog, replacement},
+	} {
+		t.Run(name, func(t *testing.T) {
+			out := menusByLocation(rows)
+			require.Len(t, out, 1)
+			require.Equal(t, []string{"Home", "Blog"}, publicLabels(out["header"]))
+		})
+	}
+}
+
+// Two menus created in the same instant still have to resolve to one of them.
+func TestMenusByLocation_SameInstantBreaksTheTieOnID(t *testing.T) {
+	born := time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC)
+	a := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+	b := uuid.MustParse("22222222-2222-2222-2222-222222222222")
+	row := func(menu uuid.UUID, label string) publicRow {
+		return publicRow{
+			itemRow:       itemRow{ID: uuid.New(), Label: label, LinkType: LinkInternal, URL: cmstest.Strptr("/")},
+			Location:      "footer",
+			MenuID:        menu,
+			MenuCreatedAt: born,
+		}
+	}
+	first, second := row(a, "First"), row(b, "Second")
+	require.Equal(t, []string{"First"}, publicLabels(menusByLocation([]publicRow{first, second})["footer"]))
+	require.Equal(t, []string{"First"}, publicLabels(menusByLocation([]publicRow{second, first})["footer"]))
 }

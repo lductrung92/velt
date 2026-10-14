@@ -1,7 +1,9 @@
-import { CalendarDays, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
 import * as React from "react";
+import type { DayPickerProps, DropdownProps } from "react-day-picker";
 import { useTranslation } from "react-i18next";
 
+import { Select } from "@/components/common/Select";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -32,6 +34,117 @@ function format(date: Date, withTime: boolean): string {
     : day;
 }
 
+// react-day-picker hands this the props of the <select> it would have rendered
+// itself, so the console's own Select has to post the choice back as the change
+// event the library's handler expects — it only ever reads `target.value`.
+function CalendarDropdown({
+  options,
+  value,
+  onChange,
+  disabled,
+  label,
+  width,
+}: DropdownProps & { label: string; width: string }) {
+  const current = options?.find((option) => option.value === value);
+  return (
+    <div className={width}>
+      <Select
+        aria-label={label}
+        isClearable={false}
+        isSearchable={false}
+        isDisabled={disabled}
+        // h-7 is the height the caption label already had. The range popover
+        // is 630px tall on a phone before anything is added to it (bug-125),
+        // so the header is the one row that must not grow.
+        className="h-7 px-2 pr-7"
+        value={
+          current
+            ? { value: String(current.value), label: current.label }
+            : null
+        }
+        options={(options ?? []).map((option) => ({
+          value: String(option.value),
+          label: option.label,
+        }))}
+        onChange={(option) =>
+          option &&
+          onChange?.({
+            target: { value: option.value },
+          } as React.ChangeEvent<HTMLSelectElement>)
+        }
+      />
+    </div>
+  );
+}
+
+function MonthsDropdown(props: DropdownProps) {
+  const { t } = useTranslation();
+  // Wide enough for "December"; the Vietnamese names are "Tháng 12".
+  return (
+    <CalendarDropdown
+      {...props}
+      label={t("common.date.month")}
+      width="w-[6.25rem]"
+    />
+  );
+}
+
+function YearsDropdown(props: DropdownProps) {
+  const { t } = useTranslation();
+  return (
+    <CalendarDropdown
+      {...props}
+      label={t("common.date.year")}
+      width="w-[4.75rem]"
+    />
+  );
+}
+
+const dropdownComponents: DayPickerProps["components"] = {
+  // Handing DayPicker a `components` map replaces Calendar's own outright, so
+  // the arrow chevron has to come along or it falls back to the library's
+  // unstyled 24px svg inside a 28px button.
+  Chevron: ({ orientation, ...rest }) =>
+    orientation === "left" ? (
+      <ChevronLeft className="size-4" {...rest} />
+    ) : (
+      <ChevronRight className="size-4" {...rest} />
+    ),
+  MonthsDropdown,
+  YearsDropdown,
+};
+
+/**
+ * Month and year dropdowns for the calendar header, as props to spread onto
+ * `<Calendar>`. Stepping to March 2024 with the ‹ arrow alone is a dozen
+ * clicks; the arrows still work, and they and the dropdowns move the same
+ * month. Shared with DateRangeField, where each of the two visible months
+ * carries its own pair and changing either slides the whole window.
+ *
+ * Pass the dates the field already holds: the year list has to be bounded for
+ * the library to offer one at all, and a stored date from outside the window
+ * would otherwise be both unreachable and un-displayable.
+ */
+export function useMonthDropdowns(...held: (Date | undefined)[]) {
+  const { i18n } = useTranslation();
+  const month = React.useMemo(
+    () => new Intl.DateTimeFormat(i18n.language, { month: "long" }),
+    [i18n.language],
+  );
+  const now = new Date().getFullYear();
+  const years = held.filter((d): d is Date => !!d).map((d) => d.getFullYear());
+  return {
+    captionLayout: "dropdown",
+    startMonth: new Date(Math.min(now - 5, ...years), 0),
+    endMonth: new Date(Math.max(now + 5, ...years), 11),
+    classNames: { dropdowns: "flex items-center gap-1" },
+    // The library's own label is date-fns' "LLLL" — "Tháng Mười Hai", too long
+    // to sit between the arrows. Intl's month name is "Tháng 12".
+    formatters: { formatMonthDropdown: (date: Date) => month.format(date) },
+    components: dropdownComponents,
+  } as const;
+}
+
 /**
  * A date (optionally date + time) picker on react-day-picker, for the places
  * that used `<input type="date">`. Value in, value out, in the API's own string
@@ -57,6 +170,7 @@ export const DateField = React.forwardRef<
   const { t, i18n } = useTranslation();
   const [open, setOpen] = React.useState(false);
   const selected = parse(value);
+  const dropdowns = useMonthDropdowns(selected);
 
   const label = selected
     ? new Intl.DateTimeFormat(i18n.language, {
@@ -121,6 +235,7 @@ export const DateField = React.forwardRef<
           selected={selected}
           defaultMonth={selected}
           onSelect={pick}
+          {...dropdowns}
         />
         {withTime && (
           <div className="flex items-center gap-2 border-t p-3">

@@ -56,7 +56,10 @@ export function ItemFormDialog({
 }: {
   open: boolean;
   node: MenuItemDraft | null;
-  onApply: (values: MenuItemFormValues) => void;
+  onApply: (
+    values: MenuItemFormValues,
+    translations?: Record<string, Record<string, unknown>>,
+  ) => void;
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
@@ -96,15 +99,16 @@ export function ItemFormDialog({
   /*
    * The other languages of this link.
    *
-   * Only an item that already exists on the server can have them: a translation
-   * is stored against the item's id, and an item added in this session has
-   * none until the menu is saved. The boxes appear the next time it is opened —
-   * the same rule the tag dialog used to follow, for the same reason.
+   * A translation is stored against the item's id, and an item added in this
+   * session has none until the menu is saved — so for a new item the boxes are
+   * still offered and what is typed goes back to the caller, which writes it
+   * once the save hands out ids. Waiting until the item existed meant the
+   * person had to find it again to finish the job they were already doing.
    */
   const itemId = node && !node.key.startsWith("tmp-") ? node.key : undefined;
   const tr = useEntityTranslation("menu_item", itemId);
   const others = tr.tabs.filter((locale) => locale !== tr.baseLocale);
-  const showTranslations = tr.enabled && !!itemId && others.length > 0;
+  const showTranslations = tr.enabled && others.length > 0;
   const { isBase, setLocale } = tr;
   const first = others[0];
   useEffect(() => {
@@ -114,10 +118,14 @@ export function ItemFormDialog({
   }, [first, isBase, setLocale]);
 
   const onSubmit = form.handleSubmit(async (values) => {
-    // Unlike the item itself, a translation has its own endpoint and is stored
-    // now; the menu's Save writes the tree it belongs to.
-    if (itemId) await tr.flush(itemId);
-    onApply(values);
+    // An existing item has its own endpoint, so its translation is stored now;
+    // a new one has no address yet and travels with the values instead.
+    if (itemId) {
+      await tr.flush(itemId);
+      onApply(values);
+      return;
+    }
+    onApply(values, tr.pending);
   });
 
   const linkOptions = MENU_LINK_TYPES.map((type) => ({
@@ -301,7 +309,9 @@ export function ItemFormDialog({
                   onChange={(e) => tr.setField("description", e.target.value)}
                 />
                 <p className="text-xs leading-5 text-muted-foreground">
-                  {t("cms.menus.item.translate_hint")}
+                  {itemId
+                    ? t("cms.menus.item.translate_hint")
+                    : t("cms.menus.item.translate_hint_new")}
                 </p>
               </div>
             )}

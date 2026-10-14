@@ -19,13 +19,27 @@ type Handler struct {
 // NewHandler builds the pages HTTP handler.
 func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 
-// GetPages handles GET /api/cms/pages (full tree).
+func pageListParams(r *http.Request) (PageListParams, error) {
+	createdFrom, createdTo, err := httpx.QueryDateRange(r, "created_from", "created_to")
+	if err != nil {
+		return PageListParams{}, err
+	}
+	return PageListParams{CreatedFrom: createdFrom, CreatedTo: createdTo}, nil
+}
+
+// GetPages handles GET /api/cms/pages (full tree, optionally narrowed to a
+// created-at range).
 func (h *Handler) GetPages(w http.ResponseWriter, r *http.Request) {
 	id, ok := shared.Identity(w, r)
 	if !ok {
 		return
 	}
-	res, err := h.svc.ListPages(r.Context(), id)
+	p, err := pageListParams(r)
+	if err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
+	res, err := h.svc.ListPages(r.Context(), id, p)
 	if err != nil {
 		httpx.WriteError(w, err)
 		return

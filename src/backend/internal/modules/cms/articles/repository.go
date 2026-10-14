@@ -130,6 +130,14 @@ func (r *pgxRepository) ListArticles(ctx context.Context, p ArticleListParams) (
 	if p.Tag != "" {
 		add("EXISTS (SELECT 1 FROM cms_article_tags xt JOIN cms_tags t ON t.id = xt.tag_id WHERE xt.article_id = a.id AND t.slug = $%d)", p.Tag)
 	}
+	// CreatedTo is already midnight after the requested day, so < keeps that
+	// whole day in range; see httpx.QueryDateRange.
+	if p.CreatedFrom != nil {
+		add("a.created_at >= $%d", *p.CreatedFrom)
+	}
+	if p.CreatedTo != nil {
+		add("a.created_at < $%d", *p.CreatedTo)
+	}
 	where := strings.Join(conds, " AND ")
 
 	var total int

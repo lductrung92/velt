@@ -15,7 +15,7 @@ import (
 
 func TestListPages_RequiresViewPermission(t *testing.T) {
 	e := newTestSvc(t)
-	_, err := e.svc.ListPages(context.Background(), cmstest.ActorWith())
+	_, err := e.svc.ListPages(context.Background(), cmstest.ActorWith(), PageListParams{})
 	cmstest.AssertAppErr(t, err, http.StatusForbidden, "access_denied")
 }
 
@@ -23,7 +23,7 @@ func TestListPages_Tree(t *testing.T) {
 	e := newTestSvc(t)
 	root := e.repo.seedPage("About", "about", nil, PageStatusPublished)
 	e.repo.seedPage("Team", "team", &root.ID, PageStatusDraft)
-	tree, err := e.svc.ListPages(context.Background(), cmstest.ActorWith(permView))
+	tree, err := e.svc.ListPages(context.Background(), cmstest.ActorWith(permView), PageListParams{})
 	require.NoError(t, err)
 	require.Len(t, tree, 1)
 	require.Equal(t, root.ID, tree[0].ID)
@@ -268,7 +268,7 @@ func TestUnpublishPage_NotPublished(t *testing.T) {
 
 func TestUnauthenticatedPages(t *testing.T) {
 	e := newTestSvc(t)
-	_, err := e.svc.ListPages(context.Background(), nil)
+	_, err := e.svc.ListPages(context.Background(), nil, PageListParams{})
 	cmstest.AssertAppErr(t, err, http.StatusUnauthorized, "unauthorized")
 }
 

@@ -187,17 +187,21 @@ type UpdateRequest struct {
 	SEO              *SEO            `json:"seo"`
 }
 
-// ListParams is the resolved console-list query.
+// ListParams is the resolved console-list query. CreatedFrom/CreatedTo are the
+// half-open instant bounds resolved by httpx.QueryDateRange — CreatedTo is
+// midnight after the requested day, so the repository compares it with <.
 type ListParams struct {
-	Query     string
-	Status    string
-	Lifecycle string
-	Platform  string
-	Audience  string
-	Featured  *bool
-	Sort      string
-	Page      int
-	PageSize  int
+	Query       string
+	Status      string
+	Lifecycle   string
+	Platform    string
+	Audience    string
+	Featured    *bool
+	CreatedFrom *time.Time
+	CreatedTo   *time.Time
+	Sort        string
+	Page        int
+	PageSize    int
 }
 
 // --- Response DTOs ---

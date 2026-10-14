@@ -1,6 +1,5 @@
 import {
   ArrowRight,
-  CalendarDays,
   Sparkles,
   FileStack,
   FileText,
@@ -10,10 +9,11 @@ import {
   Users2,
   type LucideIcon,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
+import { DateRangeField } from "@/components/common/DateField";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,7 +26,7 @@ import {
 import { useAuthStore } from "@/store/auth.store";
 import { formatDateTime } from "@/utils/format";
 
-import { countPages, useDashboardData } from "./useDashboardData";
+import { countPages, useDashboardData, type DateRange } from "./useDashboardData";
 import { DashboardArtwork } from "./DashboardArtwork";
 import { DailyOverview } from "./DailyOverview";
 import "./dashboard.css";
@@ -186,7 +186,10 @@ export default function Dashboard() {
     pages: hasPermission("cms.page.view"),
     members: hasPermission("members.view"),
   };
-  const data = useDashboardData(access);
+  // The counts and the recent lists answer for this window; the calendar and
+  // the weather below are about today and ignore it.
+  const [range, setRange] = useState<DateRange>({ from: "", to: "" });
+  const data = useDashboardData(access, range);
   const stats = [
     {
       key: "products",
@@ -254,17 +257,12 @@ export default function Dashboard() {
         title={t("dashboard.title")}
         actions={
           <div className="flex items-center gap-3">
-            <time
-              className="flex items-center gap-2 text-xs text-muted-foreground"
-              dateTime={new Date().toISOString()}
-            >
-              <CalendarDays className="size-3.5" aria-hidden />
-              {new Intl.DateTimeFormat(i18n.resolvedLanguage || "vi", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              }).format(new Date())}
-            </time>
+            <DateRangeField
+              from={range.from}
+              to={range.to}
+              aria-label={t("dashboard.range.label")}
+              onChange={(from, to) => setRange({ from, to })}
+            />
             {stats.length > 0 && (
               <Button
                 type="button"

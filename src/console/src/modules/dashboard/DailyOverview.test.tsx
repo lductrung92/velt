@@ -149,6 +149,24 @@ describe("Calendar and weather overview", () => {
     ).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("jumps the calendar to a year picked from the dropdown", async () => {
+    server.use(http.get(WEATHER_ENDPOINT, () => HttpResponse.json(forecast)));
+    const user = userEvent.setup();
+    const { container } = renderOverview();
+    await screen.findByText("27°");
+    const year = String(Number(vietnamDateKey().slice(0, 4)) + 2);
+    const picker = screen.getByRole("combobox", {
+      name: t("dashboard.daily.choose_year"),
+    });
+    await user.click(picker);
+    await user.click(await screen.findByRole("option", { name: year }));
+    expect(picker).toHaveTextContent(year);
+    const inMonth = container.querySelector(
+      ".dashboard-calendar-day:not(.dashboard-calendar-day-outside)",
+    )!;
+    expect(inMonth.getAttribute("aria-label")).toContain(year);
+  });
+
   it("shows a recoverable error without invented temperatures", async () => {
     server.use(
       http.get(WEATHER_ENDPOINT, () => HttpResponse.json({}, { status: 503 })),

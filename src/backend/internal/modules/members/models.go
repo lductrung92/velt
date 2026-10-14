@@ -111,8 +111,13 @@ type ReorderRequest struct {
 type ListParams struct {
 	Query      string
 	ActiveOnly bool
-	Page       int
-	PageSize   int
+	// CreatedFrom/CreatedTo are the half-open instant bounds resolved by
+	// httpx.QueryDateRange — CreatedTo is midnight after the requested day, so
+	// the repository compares it with <.
+	CreatedFrom *time.Time
+	CreatedTo   *time.Time
+	Page        int
+	PageSize    int
 	// Locale is the requested language of the public roster; empty, unknown or
 	// "vi" all mean the Vietnamese columns as stored. The console list ignores
 	// it — an editor works in the source language.

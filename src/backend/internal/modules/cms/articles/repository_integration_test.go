@@ -177,3 +177,85 @@ func TestIT_ArticleSortByStatus(t *testing.T) {
 	}
 	require.Equal(t, reversed, statuses("-status"))
 }
+
+// --- created_at range filter ---
+
+// vnZone is the Vietnam offset the console works in; the created_at fixtures
+// below are written as the wall-clock times an editor in Hanoi would have seen.
+var vnZone = time.FixedZone("+07", 7*60*60)
+
+func itDayVN(t *testing.T, day string) *time.Time {
+	t.Helper()
+	d, err := time.ParseInLocation("2006-01-02", day, vnZone)
+	require.NoError(t, err)
+	return &d
+}
+
+// itEndOfDayVN is the exclusive upper bound httpx.QueryDateRange produces for
+// created_to=day: midnight at the start of the following day.
+func itEndOfDayVN(t *testing.T, day string) *time.Time {
+	t.Helper()
+	end := itDayVN(t, day).AddDate(0, 0, 1)
+	return &end
+}
+
+// itRangeFixture seeds three articles sharing a per-run title token, so a
+// Query on that token narrows both the rows AND the total to this run.
+func itRangeFixture(t *testing.T) (Repository, string, func(name string, createdAt time.Time)) {
+	t.Helper()
+	repo, pool := articlesDB(t)
+	author := itUser(t, pool)
+	token := "cmsit-" + uuid.NewString()[:8]
+	seed := func(name string, createdAt time.Time) {
+		t.Helper()
+		_, err := pool.Exec(context.Background(),
+			`INSERT INTO cms_articles (title, slug, author_id, created_at) VALUES ($1, $2, $3, $4)`,
+			token+"-"+name, token+"-"+name, author, createdAt)
+		require.NoError(t, err)
+	}
+	return repo, token, seed
+}
+
+func itListTitles(t *testing.T, repo Repository, p ArticleListParams) ([]string, int) {
+	t.Helper()
+	p.Page, p.PageSize = 1, 100
+	rows, total, err := repo.ListArticles(context.Background(), p)
+	require.NoError(t, err)
+	out := []string{}
+	for _, r := range rows {
+		out = append(out, r.Title)
+	}
+	return out, total
+}
+
+func TestIT_ArticleCreatedRangeIncludesAndExcludes(t *testing.T) {
+	repo, token, seed := itRangeFixture(t)
+	seed("before", time.Date(2026, 10, 9, 23, 59, 59, 0, vnZone))
+	seed("inside", time.Date(2026, 10, 11, 9, 0, 0, 0, vnZone))
+	seed("after", time.Date(2026, 10, 14, 0, 0, 0, 0, vnZone))
+
+	titles, total := itListTitles(t, repo, ArticleListParams{
+		Query:       token,
+		CreatedFrom: itDayVN(t, "2026-10-10"),
+		CreatedTo:   itEndOfDayVN(t, "2026-10-13"),
+	})
+	require.Equal(t, []string{token + "-inside"}, titles)
+	// The count the dashboard reads must agree with the rows under it.
+	require.Equal(t, 1, total)
+}
+
+// The last second of created_to is inside the range: "to 13 Oct" means through
+// the end of 13 Oct, Vietnam time.
+func TestIT_ArticleCreatedToIsInclusiveOfTheWholeDay(t *testing.T) {
+	repo, token, seed := itRangeFixture(t)
+	seed("lastsecond", time.Date(2026, 10, 13, 23, 59, 59, 0, vnZone))
+	seed("nextmidnight", time.Date(2026, 10, 14, 0, 0, 0, 0, vnZone))
+
+	titles, total := itListTitles(t, repo, ArticleListParams{
+		Query:       token,
+		CreatedFrom: itDayVN(t, "2026-10-13"),
+		CreatedTo:   itEndOfDayVN(t, "2026-10-13"),
+	})
+	require.Equal(t, []string{token + "-lastsecond"}, titles)
+	require.Equal(t, 1, total)
+}

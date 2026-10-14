@@ -8,6 +8,7 @@ import {
   flattenTree,
   fromNodes,
   getDescendantKeys,
+  pairSavedIDs,
   getProjection,
   removeDescendants,
   removeNode,
@@ -227,5 +228,36 @@ describe("fromNodes", () => {
     const draft = fromNodes(server);
     expect(draft[0].key).toBe("s1");
     expect(draft[0].label).toBe("Home");
+  });
+});
+
+describe("pairSavedIDs", () => {
+  const node = (id: string, children: MenuItemNode[] = []): MenuItemNode => ({
+    id,
+    label: id,
+    description: null,
+    link_type: "internal",
+    target_id: null,
+    url: "/",
+    open_new_tab: false,
+    sort_order: 0,
+    children,
+  });
+
+  it("matches a nested draft to the tree the save returned", () => {
+    const drafts = fromNodes([node("tmp-1", [node("tmp-2")]), node("s3")]);
+    const saved = [node("a", [node("b")]), node("c")];
+    expect(pairSavedIDs(drafts, saved)).toEqual([
+      ["tmp-1", "a"],
+      ["tmp-2", "b"],
+      ["s3", "c"],
+    ]);
+  });
+
+  it("stops at the shorter side instead of pairing a node with nothing", () => {
+    // A server that drops a node would otherwise hand the next one's id to the
+    // wrong draft, and a translation would land on someone else's link.
+    const drafts = fromNodes([node("tmp-1"), node("tmp-2")]);
+    expect(pairSavedIDs(drafts, [node("a")])).toEqual([["tmp-1", "a"]]);
   });
 });

@@ -129,3 +129,4 @@ deploy/sql/_data_raw.sql
 deploy/**/.env
 deploy/**/*.local.env
 deploy/**/secrets.*
+bugs/

@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/velt/backend/internal/apperr"
@@ -15,7 +17,11 @@ import (
 // The public (no-auth) read of the navigation: every slot, its item tree, and
 // each entity link resolved to the slug it currently lives at.
 //
-// Three decisions shape the shape of this response.
+// Four decisions shape the shape of this response.
+//
+// A location may hold several menus, but this map has one entry per location,
+// so exactly one of them is rendered: the oldest (see oldestMenu, which also
+// says why that rule is temporary).
 //
 // It does NOT build URLs for article/page/category links. The site owns its URL
 // layout (/blog/{slug} today) and guessing a prefix here would be a second place
@@ -53,11 +59,14 @@ type PublicItem struct {
 	Children    []PublicItem `json:"children"`
 }
 
-// publicRow is one item row plus the slot it belongs to and its resolved slug.
+// publicRow is one item row plus the menu it belongs to, that menu's slot and
+// age, and its resolved slug.
 type publicRow struct {
 	itemRow
-	Location string
-	Slug     *string
+	Location      string
+	MenuID        uuid.UUID
+	MenuCreatedAt time.Time
+	Slug          *string
 }
 
 // PublicRepo reads the whole navigation in one query.
@@ -70,7 +79,7 @@ func NewPublicRepository(pool *pgxpool.Pool) *PublicRepo { return &PublicRepo{po
 // (preferring the requested language, falling back to the base one) and a
 // category target straight from the taxonomy, which has no published copy.
 const publicQuery = `
-	SELECT m.location, i.id, i.parent_id,
+	SELECT m.location, m.id, m.created_at, i.id, i.parent_id,
 	       COALESCE(NULLIF(tr.values ->> 'label', ''), i.label),
 	       COALESCE(NULLIF(tr.values ->> 'description', ''), i.description),
 	       i.link_type,
@@ -101,7 +110,7 @@ func (r *PublicRepo) All(ctx context.Context, locale string) ([]publicRow, error
 	out := []publicRow{}
 	for rows.Next() {
 		var x publicRow
-		if err := rows.Scan(&x.Location, &x.ID, &x.ParentID, &x.Label, &x.Description,
+		if err := rows.Scan(&x.Location, &x.MenuID, &x.MenuCreatedAt, &x.ID, &x.ParentID, &x.Label, &x.Description,
 			&x.LinkType, &x.TargetID, &x.URL, &x.OpenNewTab, &x.SortOrder, &x.Slug); err != nil {
 			return nil, fmt.Errorf("scan public menu item: %w", err)
 		}
@@ -125,17 +134,51 @@ func (s *PublicService) Menus(ctx context.Context, locale string) (map[string][]
 	if err != nil {
 		return nil, apperr.Internal()
 	}
+	return menusByLocation(rows), nil
+}
+
+// menusByLocation turns the flat rows into one tree per slot, rendering a
+// single menu per location.
+func menusByLocation(rows []publicRow) map[string][]PublicItem {
 	byLocation := map[string][]publicRow{}
 	for _, r := range rows {
 		byLocation[r.Location] = append(byLocation[r.Location], r)
 	}
 	out := make(map[string][]PublicItem, len(byLocation))
 	for location, items := range byLocation {
-		if tree := buildPublicTree(items); len(tree) > 0 {
+		if tree := buildPublicTree(oldestMenu(items)); len(tree) > 0 {
 			out[location] = tree
 		}
 	}
-	return out, nil
+	return out
+}
+
+// oldestMenu keeps the rows of one menu only: the one created first, with the
+// id as tiebreak when two were created in the same instant.
+//
+// STOPGAP. A location was UNIQUE until 0042, so the map keyed by it could never
+// collide. Now that several menus may share one, the loser's rows would land in
+// the same map entry and the site would render whichever menu the query handed
+// over last — an arbitrary choice that changes under the editor's feet. Oldest
+// wins is not the right answer, only a stable and explicable one.
+//
+// The right answer is an explicit "this menu is the live one" switch, being
+// designed with the new drag-and-drop layout screen. Delete this when it lands.
+func oldestMenu(rows []publicRow) []publicRow {
+	win := rows[0] // a location exists in the map only because a row put it there
+	for _, r := range rows[1:] {
+		if r.MenuCreatedAt.Before(win.MenuCreatedAt) ||
+			(r.MenuCreatedAt.Equal(win.MenuCreatedAt) && r.MenuID.String() < win.MenuID.String()) {
+			win = r
+		}
+	}
+	out := make([]publicRow, 0, len(rows))
+	for _, r := range rows {
+		if r.MenuID == win.MenuID {
+			out = append(out, r)
+		}
+	}
+	return out
 }
 
 // buildPublicTree nests one slot's rows and drops every entity link that did not

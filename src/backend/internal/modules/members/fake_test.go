@@ -43,6 +43,12 @@ func (r *fakeRepo) List(_ context.Context, p ListParams) ([]Member, int, error) 
 		if p.Query != "" && !strings.Contains(strings.ToLower(m.FullName), strings.ToLower(p.Query)) {
 			continue
 		}
+		if p.CreatedFrom != nil && m.CreatedAt.Before(*p.CreatedFrom) {
+			continue
+		}
+		if p.CreatedTo != nil && !m.CreatedAt.Before(*p.CreatedTo) {
+			continue
+		}
 		all = append(all, *m)
 	}
 	sort.Slice(all, func(i, j int) bool {

@@ -85,8 +85,8 @@ export function MenuBuilderPane({
       <ItemFormDialog
         open={draft.editing !== null}
         node={draft.selectedNode}
-        onApply={(values) => {
-          draft.applyForm(values);
+        onApply={(values, translations) => {
+          draft.applyForm(values, translations);
           draft.cancelEdit();
         }}
         onCancel={draft.cancelEdit}

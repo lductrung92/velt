@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,7 +16,7 @@ import (
 
 // Repository is the data-access contract for static pages.
 type Repository interface {
-	ListPages(ctx context.Context) ([]Page, error)
+	ListPages(ctx context.Context, p PageListParams) ([]Page, error)
 	GetPage(ctx context.Context, id uuid.UUID) (*Page, error)
 	CreatePage(ctx context.Context, w pageWrite) (*Page, error)
 	UpdatePage(ctx context.Context, id uuid.UUID, w pageWrite, expectedUpdatedAt time.Time, recheckCycle bool) (*Page, error)
@@ -69,8 +70,23 @@ func scanPage(row pgx.Row) (*Page, error) {
 	return &p, nil
 }
 
-func (r *pgxRepository) ListPages(ctx context.Context) ([]Page, error) {
-	rows, err := r.pool.Query(ctx, `SELECT `+pageColumns+` FROM cms_pages ORDER BY sort_order, title`)
+func (r *pgxRepository) ListPages(ctx context.Context, p PageListParams) ([]Page, error) {
+	conds := []string{"1=1"}
+	args := []any{}
+	add := func(tmpl string, val any) {
+		args = append(args, val)
+		conds = append(conds, fmt.Sprintf(tmpl, len(args)))
+	}
+	// CreatedTo is already midnight after the requested day, so < keeps that
+	// whole day in range; see httpx.QueryDateRange.
+	if p.CreatedFrom != nil {
+		add("created_at >= $%d", *p.CreatedFrom)
+	}
+	if p.CreatedTo != nil {
+		add("created_at < $%d", *p.CreatedTo)
+	}
+	rows, err := r.pool.Query(ctx, `SELECT `+pageColumns+` FROM cms_pages WHERE `+
+		strings.Join(conds, " AND ")+` ORDER BY sort_order, title`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list pages: %w", err)
 	}

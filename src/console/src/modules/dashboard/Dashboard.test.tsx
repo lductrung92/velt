@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
@@ -141,5 +142,48 @@ describe("Dashboard", () => {
     expect(
       screen.queryByRole("heading", { name: t("dashboard.quick_title") }),
     ).not.toBeInTheDocument();
+  });
+
+  it("asks all four endpoints for the window the reader picked", async () => {
+    // One control over four lists, and the headline numbers come from the same
+    // responses — so a range that reaches only some of them would put a count
+    // and the list beneath it out of step.
+    const asked: Record<string, string | null> = {};
+    const record = (name: string) => (ctx: { request: Request }) => {
+      const q = new URL(ctx.request.url).searchParams;
+      asked[name] = `${q.get("created_from")}..${q.get("created_to")}`;
+      return HttpResponse.json({ total: 0, items: [] });
+    };
+    server.use(
+      http.get(`${API}/products`, record("products")),
+      http.get(`${API}/cms/articles`, record("articles")),
+      http.get(`${API}/members`, record("members")),
+      http.get(`${API}/cms/pages`, (ctx) => {
+        const q = new URL(ctx.request.url).searchParams;
+        asked.pages = `${q.get("created_from")}..${q.get("created_to")}`;
+        return HttpResponse.json([]);
+      }),
+    );
+    const user = userEvent.setup();
+    renderDashboard(["*"]);
+
+    // Unfiltered first: the params must be absent, not empty strings.
+    await waitFor(() => expect(asked.products).toBe("null..null"));
+
+    await user.click(
+      // The field appends its current value to the label it was given.
+      screen.getByRole("button", {
+        name: new RegExp(t("dashboard.range.label")),
+      }),
+    );
+    const grid = await screen.findByRole("grid");
+    await user.click(within(grid).getAllByRole("button")[0]);
+
+    await waitFor(() =>
+      expect(asked.products).toMatch(/^\d{4}-\d{2}-\d{2}\.\./),
+    );
+    expect(asked.articles).toBe(asked.products);
+    expect(asked.pages).toBe(asked.products);
+    expect(asked.members).toBe(asked.products);
   });
 });

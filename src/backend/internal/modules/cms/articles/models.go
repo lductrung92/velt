@@ -134,9 +134,14 @@ type ArticleListParams struct {
 	CategoryID *uuid.UUID
 	Tag        string // tag slug
 	AuthorID   *uuid.UUID
-	Page       int
-	PageSize   int
-	Sort       string
+	// CreatedFrom/CreatedTo are the half-open instant bounds resolved by
+	// httpx.QueryDateRange — CreatedTo is midnight after the requested day, so
+	// the repository compares it with <.
+	CreatedFrom *time.Time
+	CreatedTo   *time.Time
+	Page        int
+	PageSize    int
+	Sort        string
 }
 
 // --- Response DTOs (article-owned, resolved by SQL join) ---

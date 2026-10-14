@@ -15,6 +15,9 @@ import {
   type MenuItemDraft,
 } from "../utils/menuTree";
 
+/** Translations typed for one item, by locale, as the dialog handed them over. */
+export type DraftTranslations = Record<string, Record<string, unknown>>;
+
 export type MenuEditing =
   | { mode: "new" }
   | { mode: "edit"; key: string }
@@ -42,6 +45,10 @@ export function useMenuDraft(detail: MenuDetail | undefined) {
   const baselineRef = useRef<MenuItemDraft[]>([]);
   const [editing, setEditing] = useState<MenuEditing>(null);
   const loadedId = useRef<string | null>(null);
+  // A translation is stored against the item's id, and an item added here has
+  // none until the PUT assigns one. So it waits in a ref keyed by the draft
+  // key, and the caller writes it once the save hands back the real ids.
+  const pendingTr = useRef<Record<string, DraftTranslations>>({});
 
   // Resync to the server tree when a different slot loads. Edits to the SAME
   // slot's draft are preserved across background refetches (only an id change or
@@ -50,6 +57,7 @@ export function useMenuDraft(detail: MenuDetail | undefined) {
     if (!detail) {
       loadedId.current = null;
       baselineRef.current = [];
+      pendingTr.current = {};
       setDraft([]);
       setEditing(null);
       return;
@@ -58,6 +66,7 @@ export function useMenuDraft(detail: MenuDetail | undefined) {
       loadedId.current = detail.id;
       const items = fromNodes(detail.items);
       baselineRef.current = items;
+      pendingTr.current = {};
       setDraft(items);
       setEditing(null);
     }
@@ -79,17 +88,19 @@ export function useMenuDraft(detail: MenuDetail | undefined) {
   const cancelEdit = useCallback(() => setEditing(null), []);
 
   const applyForm = useCallback(
-    (values: MenuItemFormValues) => {
+    (values: MenuItemFormValues, translations?: DraftTranslations) => {
       const fields = toNodeFields(values);
       // Branch on `editing` OUTSIDE the state updaters: nesting setDraft (and
       // newItemKey) inside a setEditing updater made it impure, so StrictMode's
       // double-invocation appended the new item TWICE (duplicate bug).
       if (editing?.mode === "edit") {
         const key = editing.key;
+        if (translations) pendingTr.current[key] = translations;
         setDraft((d) => updateNode(d, key, fields));
         return;
       }
       const key = newItemKey();
+      if (translations) pendingTr.current[key] = translations;
       setDraft((d) => appendNode(d, { key, children: [], ...fields }));
       setEditing({ mode: "edit", key });
     },
@@ -97,6 +108,7 @@ export function useMenuDraft(detail: MenuDetail | undefined) {
   );
 
   const deleteItem = useCallback((key: string) => {
+    delete pendingTr.current[key];
     setDraft((d) => removeNode(d, key));
     setEditing((cur) => (cur?.mode === "edit" && cur.key === key ? null : cur));
   }, []);
@@ -108,6 +120,7 @@ export function useMenuDraft(detail: MenuDetail | undefined) {
   );
 
   const reset = useCallback(() => {
+    pendingTr.current = {};
     setDraft(baselineRef.current);
     setEditing(null);
   }, []);
@@ -115,9 +128,13 @@ export function useMenuDraft(detail: MenuDetail | undefined) {
   const rebase = useCallback((items: MenuItemNode[]) => {
     const d = fromNodes(items);
     baselineRef.current = d;
+    pendingTr.current = {};
     setDraft(d);
     setEditing(null);
   }, []);
+
+  /** What still has to be written once the save hands back real ids. */
+  const takePendingTranslations = useCallback(() => pendingTr.current, []);
 
   return {
     draft,
@@ -132,5 +149,6 @@ export function useMenuDraft(detail: MenuDetail | undefined) {
     moveItem,
     reset,
     rebase,
+    takePendingTranslations,
   };
 }

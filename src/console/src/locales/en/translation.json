@@ -51,6 +51,8 @@
       "leap": "(leap month)",
       "previous_month": "Previous month",
       "next_month": "Next month",
+      "choose_month": "Choose month",
+      "choose_year": "Choose year",
       "select_date": "Select {{solar}}, lunar date {{lunar}}",
       "calendar_hint": "Large number: solar day · Small number: lunar day",
       "choose_location": "Choose weather location",
@@ -68,7 +70,6 @@
       "wind": "Wind",
       "next_seven": "Next 7 days",
       "rain_chance": "Chance of rain {{value}}",
-      "source": "Weather by Open-Meteo",
       "updated_at": "Data at {{time}} · UTC+7",
       "conditions": {
         "clear": "Clear sky",
@@ -81,6 +82,9 @@
         "storm": "Thunderstorm",
         "unknown": "Unavailable"
       }
+    },
+    "range": {
+      "label": "Filter by creation date range"
     }
   },
   "common": {
@@ -139,6 +143,8 @@
       "pick": "Pick a date",
       "pick_range": "Pick a date range",
       "clear": "Clear the selected date",
+      "month": "Choose month",
+      "year": "Choose year",
       "time": "Time"
     },
     "unsaved": {
@@ -819,8 +825,6 @@
         "links": "Add your links",
         "arrange": "Arrange and save the menu"
       },
-      "placeholder_title": "Select a menu",
-      "placeholder_desc": "Pick a menu on the left to start editing its items.",
       "field": {
         "name": "Name",
         "location": "Location",
@@ -855,7 +859,8 @@
         "open_new_tab": "Open in new tab",
         "reorder": "Drag to reorder",
         "translate_heading": "This link in another language",
-        "translate_hint": "Leave a box empty and the site shows the Vietnamese original."
+        "translate_hint": "Leave a box empty and the site shows the Vietnamese original.",
+        "translate_hint_new": "Translations are written when you save the menu. Left empty, the site shows the Vietnamese label."
       },
       "toast": {
         "create_success": "Menu created",

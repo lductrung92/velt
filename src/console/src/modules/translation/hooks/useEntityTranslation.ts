@@ -81,6 +81,8 @@ export interface EntityTranslation {
   /** Draft values of the active language, edited in place. */
   values: Record<string, unknown>;
   setField: (field: string, value: unknown) => void;
+  /** Typed values a record with no id yet must have written on its behalf. */
+  pending: Record<string, Record<string, unknown>>;
   dirty: boolean;
   progress: (locale: string) => LocaleProgress;
   requiresRepublish: boolean;
@@ -183,6 +185,18 @@ export function useEntityTranslation(
     [edits, stored, valuesOf],
   );
 
+  // What a caller must write for itself. A record created in the same session
+  // has no id yet, so `flush` has nothing to address: the screen holding the
+  // unsaved record takes these, and writes them once its save assigns one.
+  const pending = useMemo(
+    () =>
+      Object.fromEntries(changed.map((loc) => [loc, valuesOf(loc)])) as Record<
+        string,
+        Record<string, unknown>
+      >,
+    [changed, valuesOf],
+  );
+
   const flush = useCallback(
     async (id: string) => {
       if (!enabled || changed.length === 0) return;
@@ -213,6 +227,7 @@ export function useEntityTranslation(
     values: valuesOf(locale),
     setField,
     dirty: changed.length > 0,
+    pending,
     progress,
     requiresRepublish: query.data?.requires_republish ?? false,
     flush,

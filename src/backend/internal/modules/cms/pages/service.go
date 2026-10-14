@@ -44,12 +44,13 @@ func NewService(base *shared.Base, repo Repository, landing LandingAdminPort) *S
 	return &Service{Base: base, repo: repo, landing: landing}
 }
 
-// ListPages returns the full page tree (no pagination). Requires cms.page.view.
-func (s *Service) ListPages(ctx context.Context, id *httpx.Identity) ([]PageResponse, error) {
+// ListPages returns the page tree (no pagination), optionally narrowed to a
+// created-at range. Requires cms.page.view.
+func (s *Service) ListPages(ctx context.Context, id *httpx.Identity, p PageListParams) ([]PageResponse, error) {
 	if err := s.Require(ctx, id, permView); err != nil {
 		return nil, err
 	}
-	rows, err := s.repo.ListPages(ctx)
+	rows, err := s.repo.ListPages(ctx, p)
 	if err != nil {
 		return nil, apperr.Internal()
 	}

@@ -45,7 +45,7 @@ func pathID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	return id, true
 }
 
-func listParams(r *http.Request) ListParams {
+func listParams(r *http.Request) (ListParams, error) {
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))
 	size, _ := strconv.Atoi(q.Get("page_size"))
@@ -54,17 +54,23 @@ func listParams(r *http.Request) ListParams {
 		b := v == "true"
 		featured = &b
 	}
-	return ListParams{
-		Query:     strings.TrimSpace(q.Get("q")),
-		Status:    q.Get("status"),
-		Lifecycle: q.Get("lifecycle"),
-		Platform:  q.Get("platform"),
-		Audience:  q.Get("audience"),
-		Featured:  featured,
-		Sort:      q.Get("sort"),
-		Page:      page,
-		PageSize:  size,
+	createdFrom, createdTo, err := httpx.QueryDateRange(r, "created_from", "created_to")
+	if err != nil {
+		return ListParams{}, err
 	}
+	return ListParams{
+		Query:       strings.TrimSpace(q.Get("q")),
+		Status:      q.Get("status"),
+		Lifecycle:   q.Get("lifecycle"),
+		Platform:    q.Get("platform"),
+		Audience:    q.Get("audience"),
+		Featured:    featured,
+		CreatedFrom: createdFrom,
+		CreatedTo:   createdTo,
+		Sort:        q.Get("sort"),
+		Page:        page,
+		PageSize:    size,
+	}, nil
 }
 
 // List handles GET /api/products.
@@ -73,7 +79,12 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	res, err := h.svc.List(r.Context(), id, listParams(r))
+	p, err := listParams(r)
+	if err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
+	res, err := h.svc.List(r.Context(), id, p)
 	if err != nil {
 		httpx.WriteError(w, err)
 		return
