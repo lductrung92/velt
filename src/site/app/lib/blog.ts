@@ -3,6 +3,9 @@ export interface BlogCard {
   title: string;
   excerpt: string | null;
   cover_url: string | null;
+  /** The cover's INTRINSIC size; absent for an image with no `files` row. */
+  cover_width?: number;
+  cover_height?: number;
   published_at: string | null;
 }
 

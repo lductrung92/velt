@@ -1,7 +1,7 @@
 // Package activity is the read side of the activity log: who did what to what,
-// and when. It is read-only by design — nothing here writes the table. The
-// recorder lives in internal/platform/activity and is called by the modules
-// that change state.
+// and when. Nothing here WRITES a row — the recorder lives in
+// internal/platform/activity and is called by the modules that change state —
+// but it does own the one way rows leave: the retention purge.
 //
 // Rows are read WITHOUT a join. actor_label and entity_label are snapshots
 // taken at write time precisely so a hard-deleted user or a deleted record is
@@ -16,7 +16,12 @@ import (
 	"github.com/google/uuid"
 )
 
-const permRead = "activity.read"
+const (
+	permRead = "activity.read"
+	// Purging is its own permission: emptying the record of what everyone did
+	// is not something a reader of that record may do.
+	permPurge = "activity.purge"
+)
 
 const (
 	defaultPageSize = 20
@@ -77,6 +82,18 @@ type ListResponse struct {
 	// caller gave no date range. Reported rather than applied silently: a
 	// search that quietly ignores last year's rows is a wrong answer.
 	SearchFrom *time.Time `json:"search_from,omitempty"`
+}
+
+// PurgeRequest asks for everything older than a retention window to be
+// deleted. OlderThan is a window code from platform/retention ("3d", "1y",
+// "all"), never an instant: the server dates the cutoff from its own clock.
+type PurgeRequest struct {
+	OlderThan string `json:"older_than" validate:"required"`
+}
+
+// PurgeResponse reports how many rows went, so the console can say so.
+type PurgeResponse struct {
+	Deleted int64 `json:"deleted"`
 }
 
 // ActionsResponse lists the action codes actually present in the log, so the

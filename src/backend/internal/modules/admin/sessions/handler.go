@@ -2,6 +2,7 @@ package sessions
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -61,6 +62,25 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusNoContent, nil)
+}
+
+// PurgeSessions handles POST /api/admin/sessions/purge.
+func (h *Handler) PurgeSessions(w http.ResponseWriter, r *http.Request) {
+	id, ok := shared.Identity(w, r)
+	if !ok {
+		return
+	}
+	var req PurgeRequest
+	if err := httpx.DecodeAndValidate(r, &req); err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
+	res, err := h.svc.PurgeSessions(r.Context(), id, strings.TrimSpace(req.OlderThan))
+	if err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, res)
 }
 
 // GetUserSessions handles GET /api/admin/users/{id}/sessions.

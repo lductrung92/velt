@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save, X } from "lucide-react";
+import { Pencil, Plus, Save, X } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -7,15 +7,10 @@ import { toast } from "sonner";
 
 import { Select } from "@/components/common/Select";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { ModalHeader } from "@/components/common/ModalHeader";
 import { Button } from "@/components/ui/button";
 import { useDialogDismissGuard } from "@/hooks/useDialogDismissGuard";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -122,13 +117,15 @@ export function CreateMenuDialog({
   return (
     <Dialog open={open} {...dialogProps}>
       <DialogContent closeLabel={t("common.close")}>
-        <DialogHeader>
-          <DialogTitle>
-            {isEdit
+        <ModalHeader
+          icon={isEdit ? Pencil : Plus}
+          title={
+            isEdit
               ? t("cms.menus.dialog.edit_title")
-              : t("cms.menus.dialog.new_title")}
-          </DialogTitle>
-        </DialogHeader>
+              : t("cms.menus.dialog.new_title")
+          }
+          subject={slot ? slot.name : t("cms.menus.title")}
+        />
         <Form {...form}>
           <form onSubmit={onSubmit} noValidate className="space-y-4">
             <FormField

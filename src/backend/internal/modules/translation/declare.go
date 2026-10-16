@@ -81,6 +81,15 @@ var declarations = []Declaration{
 		Entity: EntityLandingSection,
 		Fields: []string{"config"},
 	},
+	// A chrome region block's text, on the same terms as a landing section's:
+	// the block holds a widget config whose shape depends on the widget type, so
+	// the unit is the config object and the public read overlays it field by
+	// field. A menu block has no config of its own — its labels are translated
+	// as menu items, where they are written.
+	{
+		Entity: EntityRegionBlock,
+		Fields: []string{"config"},
+	},
 	// The words around that navigation — the footer blurb, the last column, the
 	// copyright line, the header button. They are settings rather than a record,
 	// so they translate as ONE singleton whose id is fixed (see SiteChromeID):
@@ -110,6 +119,7 @@ const (
 	EntityMember          = "member"
 	EntityMenuItem        = "menu_item"
 	EntityLandingSection  = "landing_section"
+	EntityRegionBlock     = "region_block"
 	EntitySiteChrome      = "site_chrome"
 )
 

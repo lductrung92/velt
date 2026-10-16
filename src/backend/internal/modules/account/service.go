@@ -14,6 +14,7 @@ import (
 	"github.com/velt/backend/internal/platform/activity"
 	"github.com/velt/backend/internal/platform/authpolicy"
 	"github.com/velt/backend/internal/platform/crypto"
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/ratelimit"
 	"github.com/velt/backend/internal/platform/storage"
 	"github.com/velt/backend/internal/platform/token"
@@ -60,6 +61,9 @@ type Service struct {
 	// acts is wired after construction (see activity.go) and is allowed to stay
 	// nil, which means nothing is recorded.
 	acts activity.Recorder
+	// media mints the public slug for an uploaded avatar and forgets it again
+	// when the avatar is replaced or removed; nil before it is wired.
+	media media.Keeper
 
 	accessTTL     time.Duration
 	refreshTTL    time.Duration

@@ -69,6 +69,7 @@ type resolvedWidget struct {
 
 // publicRow is one visible block, without the fields only the editor needs.
 type publicRow struct {
+	ID         uuid.UUID
 	Group      string
 	Region     string
 	Kind       string
@@ -86,7 +87,7 @@ func NewPublicRepository(pool *pgxpool.Pool) *PublicRepo { return &PublicRepo{po
 // Visible returns every visible block of every (group, slot), in render order.
 func (r *PublicRepo) Visible(ctx context.Context) ([]publicRow, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT page_group, region, kind, widget_type, menu_id, config
+		SELECT id, page_group, region, kind, widget_type, menu_id, config
 		  FROM cms_region_blocks WHERE is_visible
 		 ORDER BY page_group, region, sort_order, id`)
 	if err != nil {
@@ -96,7 +97,7 @@ func (r *PublicRepo) Visible(ctx context.Context) ([]publicRow, error) {
 	out := []publicRow{}
 	for rows.Next() {
 		var x publicRow
-		if err := rows.Scan(&x.Group, &x.Region, &x.Kind, &x.WidgetType, &x.MenuID, &x.Config); err != nil {
+		if err := rows.Scan(&x.ID, &x.Group, &x.Region, &x.Kind, &x.WidgetType, &x.MenuID, &x.Config); err != nil {
 			return nil, fmt.Errorf("scan public region block: %w", err)
 		}
 		out = append(out, x)
@@ -110,6 +111,7 @@ type PublicService struct {
 	resolver *widgets.Resolver
 	menus    MenuPort
 	log      *slog.Logger
+	tr       Translator
 }
 
 // NewPublicService builds the public chrome read service over the widget
@@ -138,8 +140,12 @@ func (s *PublicService) Chrome(ctx context.Context, locale string) (map[string]m
 			return nil, apperr.Internal()
 		}
 	}
+	// The words in a block's config, in the language being read. The admin read
+	// keeps serving what was typed; only a visitor ever sees the overlay.
+	text := s.blockTranslations(ctx, rows, locale)
 	out := map[string]map[string][]any{}
 	for _, r := range rows {
+		r.Config = translatedConfig(r.Config, text[r.ID])
 		block, ok := s.resolve(ctx, r, items, locale)
 		if !ok {
 			continue
@@ -180,6 +186,38 @@ func (s *PublicService) resolve(ctx context.Context, r publicRow, items map[uuid
 	}, true
 }
 
+// blockTranslations loads one language's copy of every block on the page, in
+// one query. A failure is not an error: the chrome is served as it was typed.
+func (s *PublicService) blockTranslations(ctx context.Context, rows []publicRow, locale string) map[uuid.UUID]map[string]any {
+	if s.tr == nil || locale == "" {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		// A menu block carries no config; its labels are translated as menu
+		// items and arrive already resolved through the menu port.
+		if r.Kind == KindWidget {
+			ids = append(ids, r.ID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	bundle, err := s.tr.Bundle(ctx, EntityRegionBlock, ids, []string{locale})
+	if err != nil {
+		s.log.Warn("public chrome served untranslated: translation read failed",
+			"locale", locale, "error", err)
+		return nil
+	}
+	out := make(map[uuid.UUID]map[string]any, len(bundle))
+	for id, byLocale := range bundle {
+		if values := byLocale[locale]; len(values) > 0 {
+			out[id] = values
+		}
+	}
+	return out
+}
+
 // PublicHandler is the HTTP layer for the public chrome read.
 type PublicHandler struct{ svc *PublicService }
 
@@ -193,8 +231,10 @@ func (h *PublicHandler) GetRegions(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
-// RegisterPublic mounts the public (no-auth) chrome read.
-func RegisterPublic(r chi.Router, pool *pgxpool.Pool, resolver *widgets.Resolver, menus MenuPort, log *slog.Logger) {
-	h := &PublicHandler{svc: NewPublicService(NewPublicRepository(pool), resolver, menus, log)}
-	r.Get("/regions", h.GetRegions)
+// RegisterPublic mounts the public (no-auth) chrome read and hands the service
+// back, so the application can wire the translation port into it.
+func RegisterPublic(r chi.Router, pool *pgxpool.Pool, resolver *widgets.Resolver, menus MenuPort, log *slog.Logger) *PublicService {
+	svc := NewPublicService(NewPublicRepository(pool), resolver, menus, log)
+	r.Get("/regions", (&PublicHandler{svc: svc}).GetRegions)
+	return svc
 }

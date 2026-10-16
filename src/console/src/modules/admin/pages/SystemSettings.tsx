@@ -1,16 +1,20 @@
 import {
   Bot,
   Building2,
+  DatabaseZap,
   FileText,
   Globe,
   HardDrive,
   Languages,
+  ListOrdered,
   Mail,
   RotateCw,
   Save,
   Search,
   Settings2,
   SlidersHorizontal,
+  Timer,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -35,7 +39,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
-import { usePages, type PageNode } from "@/modules/cms";
+import { usePageOptions } from "@/modules/cms";
 import { useEntityTranslation } from "@/modules/translation/hooks/useEntityTranslation";
 import { parseApiError } from "@/utils/apiError";
 
@@ -43,6 +47,7 @@ import { AiExtras } from "../components/AiExtras";
 import { SettingRow, SettingsSection } from "../components/SettingsSection";
 import {
   useSettingsAccess,
+  usePurgeCache,
   useSystemSettings,
   useTestEmail,
   useUpdateSystemSettings,
@@ -71,6 +76,7 @@ import type {
 /** Tab order, and the icon each one wears. Unknown groups come last, plainly. */
 const GROUPS: { key: string; icon: LucideIcon }[] = [
   { key: "general", icon: SlidersHorizontal },
+  { key: "cache", icon: DatabaseZap },
   { key: "site", icon: Globe },
   { key: "seo", icon: Search },
   { key: "cms", icon: FileText },
@@ -97,12 +103,33 @@ const SECTIONS: Record<
     {
       id: "brand",
       icon: Building2,
-      keys: ["app.name", "app.logo_url", "app.favicon_url", "app.primary_color"],
+      keys: [
+        "app.name",
+        "app.logo_url",
+        "app.favicon_url",
+        "app.primary_color",
+      ],
     },
     {
       id: "console",
       icon: SlidersHorizontal,
       keys: ["app.default_locale", "app.language_switcher_enabled"],
+    },
+    {
+      id: "pagination",
+      icon: ListOrdered,
+      keys: ["app.page_size", "app.pagination_template"],
+    },
+  ],
+  cache: [
+    {
+      id: "ttl",
+      icon: Timer,
+      keys: [
+        "site.cache_ttl_seconds",
+        "cache.public_max_age_seconds",
+        "cache.console_refresh_seconds",
+      ],
     },
   ],
   site: [
@@ -142,11 +169,7 @@ const SECTIONS: Record<
     {
       id: "display",
       icon: Settings2,
-      keys: [
-        "site.blog_page_size",
-        "site.products_page_size",
-        "site.cache_ttl_seconds",
-      ],
+      keys: ["site.blog_page_size", "site.products_page_size"],
     },
   ],
   seo: [
@@ -231,7 +254,13 @@ const SECTIONS: Record<
     {
       id: "connection",
       icon: Bot,
-      keys: ["ai.enabled", "ai.provider", "ai.base_url", "ai.api_key", "ai.model"],
+      keys: [
+        "ai.enabled",
+        "ai.provider",
+        "ai.base_url",
+        "ai.api_key",
+        "ai.model",
+      ],
     },
     {
       id: "behaviour",
@@ -287,7 +316,9 @@ export default function SystemSettings() {
     <div className="space-y-6">
       <PageHeader
         title={t("settings.title")}
-        subtitle={scoped ? t("settings.subtitle_scoped") : t("settings.subtitle")}
+        subtitle={
+          scoped ? t("settings.subtitle_scoped") : t("settings.subtitle")
+        }
         breadcrumbs={[{ labelKey: "nav.settings" }]}
       />
       {!canRead ? (
@@ -473,6 +504,8 @@ function SettingsBody({ data }: { data: SettingsView }) {
             footer={
               section.id === "smtp" ? (
                 <EmailTest disabled={update.isPending} />
+              ) : section.id === "ttl" ? (
+                <CachePurge disabled={update.isPending} />
               ) : undefined
             }
           >
@@ -633,15 +666,13 @@ function HomePagePicker({
   disabled: boolean;
 }) {
   const { t } = useTranslation();
-  const pages = usePages();
-  const options = useMemo(() => {
-    const walk = (nodes: PageNode[] | undefined, depth = 0): SelectOption[] =>
-      (nodes ?? []).flatMap((p: PageNode) => [
-        { value: p.slug, label: "— ".repeat(depth) + p.title },
-        ...walk(p.children, depth + 1),
-      ]);
-    return walk(pages.data);
-  }, [pages.data]);
+  // Every page, not one page of the list: this picker is how the homepage gets
+  // chosen, and a missing option reads as "that page cannot be the homepage".
+  const pages = usePageOptions();
+  const options = useMemo<SelectOption[]>(
+    () => (pages.data ?? []).map((p) => ({ value: p.slug, label: p.title })),
+    [pages.data],
+  );
   const selected =
     options.find((o) => o.value === value) ??
     (value ? { value, label: value } : null);
@@ -666,6 +697,42 @@ function HomePagePicker({
  * unsaved values tells you nothing about the configuration the application
  * will actually use.
  */
+/**
+ * "Clear it now" for the three delays above.
+ *
+ * The settings in this section decide how long something MAY be stale; this
+ * ends the current wait without changing any of them. It drops the snapshot the
+ * API holds and moves the token the public site polls, which is what tells the
+ * site to throw away the pages it has already rendered.
+ */
+function CachePurge({ disabled }: { disabled: boolean }) {
+  const { t } = useTranslation();
+  const purge = usePurgeCache();
+  return (
+    <SettingRow
+      id="set-cache-purge"
+      label={t("settings.cache_purge.label")}
+      help={t("settings.cache_purge.help")}
+    >
+      <Button
+        type="button"
+        variant="outline"
+        loading={purge.isPending}
+        disabled={disabled}
+        onClick={() =>
+          purge.mutate(undefined, {
+            onSuccess: () => toast.success(t("settings.cache_purge.ok")),
+            onError: (err) => toast.error(parseApiError(err, t).message),
+          })
+        }
+      >
+        <Trash2 className="size-4" />
+        {t("settings.cache_purge.run")}
+      </Button>
+    </SettingRow>
+  );
+}
+
 function EmailTest({ disabled }: { disabled: boolean }) {
   const { t } = useTranslation();
   const [to, setTo] = useState("");

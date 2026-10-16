@@ -9,12 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/velt/backend/internal/modules/cms/shared/cmstest"
+	"github.com/velt/backend/internal/platform/media"
 )
 
 func TestResolveConfigMediaURLs_NestedAndIntPrecision(t *testing.T) {
 	store := cmstest.NewFakeStore()
 	raw := json.RawMessage(`{"image_path":"media/hero.png","limit":1000000000000000,"items":[{"image_path":"media/g1.png"}]}`)
-	out := resolveConfigMediaURLs(context.Background(), store, raw)
+	out := resolveConfigMediaURLs(context.Background(), store, nil, raw)
 
 	var m map[string]any
 	require.NoError(t, json.Unmarshal(out, &m))
@@ -23,6 +24,41 @@ func TestResolveConfigMediaURLs_NestedAndIntPrecision(t *testing.T) {
 	require.Equal(t, "https://cdn.test/media/g1.png", item0["image_url"])
 	// UseNumber keeps the integer exact (no float64 "1e+15" reformatting).
 	require.Contains(t, string(out), "1000000000000000")
+	// Nothing was resolved, so nothing claims a size.
+	require.NotContains(t, string(out), "image_width")
+}
+
+func TestResolveConfigMediaURLs_BackfilledImagesCarryTheirSize(t *testing.T) {
+	store := cmstest.NewFakeStore()
+	raw := json.RawMessage(`{"image_path":"media/hero.png","items":[{"image_path":"media/g1.png"}]}`)
+	// hero has a files row; g1 has not been backfilled.
+	found := map[string]media.Image{
+		"media/hero.png": {URL: "https://img.test/img/hero-9f3c21aa.png", Width: 1920, Height: 820},
+	}
+	out := resolveConfigMediaURLs(context.Background(), store, found, raw)
+
+	var m map[string]any
+	require.NoError(t, json.Unmarshal(out, &m))
+	require.Equal(t, "https://img.test/img/hero-9f3c21aa.png", m["image_url"])
+	require.EqualValues(t, 1920, m["image_width"])
+	require.EqualValues(t, 820, m["image_height"])
+
+	// The one with no row keeps the URL this response always sent, and says
+	// nothing about its size.
+	item0 := m["items"].([]any)[0].(map[string]any)
+	require.Equal(t, "https://cdn.test/media/g1.png", item0["image_url"])
+	require.NotContains(t, item0, "image_width")
+}
+
+func TestConfigMediaPathsCollectsEverySectionOnce(t *testing.T) {
+	// One lookup for the page: the same image used twice is asked about once.
+	paths := configMediaPaths([]json.RawMessage{
+		json.RawMessage(`{"image_path":"media/hero.png"}`),
+		json.RawMessage(`{"items":[{"image_path":"media/hero.png"},{"image_path":"media/g1.png"}]}`),
+		json.RawMessage(`not json`),
+		nil,
+	})
+	require.ElementsMatch(t, []string{"media/hero.png", "media/g1.png"}, paths)
 }
 
 func TestSanitizeSectionConfig_MediaTextBodyHTML(t *testing.T) {

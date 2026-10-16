@@ -95,6 +95,8 @@ function renderAt(path: string) {
       <QueryClientProvider client={qc}>
         <MemoryRouter initialEntries={[path]}>
           <Routes>
+            {/* The list is a marker: deleting a product lands on it. */}
+            <Route path="/products" element={<p>danh sách</p>} />
             <Route path="/products/new" element={<ProductEditor />} />
             <Route path="/products/:id" element={<ProductEditor />} />
           </Routes>
@@ -367,6 +369,37 @@ describe("ProductEditor", () => {
     expect(patched.mock.calls[1][0]).toMatchObject({ slug: "bang-viec" });
   });
 
+  it("sends the removal when the cover is taken off", async () => {
+    // The PATCH has to SAY the cover is gone: a field left out means "I did
+    // not touch it", so the stored path survives and the image comes back.
+    signIn(AUTHOR);
+    const patched = vi.fn();
+    server.use(
+      http.get(`${API}/products/p1`, () =>
+        HttpResponse.json(
+          product({ cover_url: "/api/files/products/p1/cover-1.png" }),
+        ),
+      ),
+      http.patch(`${API}/products/p1`, async ({ request }) => {
+        const body = await request.json();
+        patched(body);
+        return HttpResponse.json({ ...product(), ...(body as object) });
+      }),
+    );
+    renderAt("/products/p1");
+
+    await screen.findByText("bang-cong-viec");
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("image.upload.remove") }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
+
+    await waitFor(() => expect(patched).toHaveBeenCalled());
+    expect(patched.mock.calls[0][0]).toMatchObject({ cover_path: "" });
+  });
+
   it("stores a translation before the product write, so one Save publishes it", async () => {
     signIn(AUTHOR);
     const calls: string[] = [];
@@ -433,7 +466,7 @@ describe("ProductEditor", () => {
     ).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("hides the publishing menu from an author without products.publish", async () => {
+  it("hides the status select from an author without products.publish", async () => {
     // Authoring and publishing are separate permissions on purpose.
     signIn(AUTHOR);
     server.use(
@@ -443,19 +476,24 @@ describe("ProductEditor", () => {
 
     await screen.findByLabelText(/Tên sản phẩm/);
     expect(
-      screen.queryByRole("button", {
-        name: i18n.t("products.transition.menu"),
-      }),
+      screen.queryByRole("combobox", { name: i18n.t("products.col.status") }),
     ).not.toBeInTheDocument();
   });
 
-  it("shows the publishing menu to a publisher and calls the endpoint", async () => {
+  it("applies the status picked in the select when Save is pressed", async () => {
     signIn(PUBLISHER);
-    const published = vi.fn();
+    const calls: string[] = [];
     server.use(
       http.get(`${API}/products/p1`, () => HttpResponse.json(product())),
+      http.patch(`${API}/products/p1`, async ({ request }) => {
+        calls.push("patch");
+        return HttpResponse.json({
+          ...product(),
+          ...((await request.json()) as object),
+        });
+      }),
       http.post(`${API}/products/p1/publish`, () => {
-        published();
+        calls.push("publish");
         return HttpResponse.json(product({ status: "published" }));
       }),
     );
@@ -463,16 +501,99 @@ describe("ProductEditor", () => {
 
     await screen.findByLabelText(/Tên sản phẩm/);
     await userEvent.click(
-      screen.getByRole("button", { name: i18n.t("products.transition.menu") }),
+      screen.getByRole("combobox", { name: i18n.t("products.col.status") }),
     );
-    // The trigger and the first item share the word "Xuất bản" (per the design),
-    // so match on role rather than text.
     await userEvent.click(
-      await screen.findByRole("menuitem", {
-        name: i18n.t("products.transition.publish"),
+      await screen.findByRole("option", {
+        name: i18n.t("products.status.published"),
       }),
     );
-    await waitFor(() => expect(published).toHaveBeenCalled());
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
+
+    // The snapshot the publish freezes has to contain the fields just saved,
+    // so the status moves AFTER the product write, never before it.
+    await waitFor(() => expect(calls).toEqual(["patch", "publish"]));
+  });
+
+  it("leaves the status alone when the select was not touched", async () => {
+    signIn(PUBLISHER);
+    const patched = vi.fn();
+    const published = vi.fn();
+    server.use(
+      http.get(`${API}/products/p1`, () => HttpResponse.json(product())),
+      http.patch(`${API}/products/p1`, () => {
+        patched();
+        return HttpResponse.json(product());
+      }),
+      http.post(`${API}/products/p1/unpublish`, () => {
+        published();
+        return HttpResponse.json(product());
+      }),
+    );
+    renderAt("/products/p1");
+
+    await screen.findByLabelText(/Tên sản phẩm/);
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
+    await waitFor(() => expect(patched).toHaveBeenCalled());
+    // A draft saved as a draft must not go near /unpublish: the endpoint
+    // answers 409 for a status that is already set.
+    expect(published).not.toHaveBeenCalled();
+  });
+
+  it("offers no delete before the product exists", async () => {
+    signIn([...AUTHOR, "products.delete"]);
+    renderAt("/products/new");
+
+    await screen.findByLabelText(/Tên sản phẩm/);
+    expect(
+      screen.queryByRole("button", { name: i18n.t("common.delete") }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides delete from someone without products.delete", async () => {
+    signIn(AUTHOR);
+    server.use(
+      http.get(`${API}/products/p1`, () => HttpResponse.json(product())),
+    );
+    renderAt("/products/p1");
+
+    await screen.findByLabelText(/Tên sản phẩm/);
+    expect(
+      screen.queryByRole("button", { name: i18n.t("common.delete") }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("deletes after a confirmation and goes back to the list", async () => {
+    signIn([...AUTHOR, "products.delete"]);
+    const deleted = vi.fn();
+    server.use(
+      http.get(`${API}/products/p1`, () => HttpResponse.json(product())),
+      http.delete(`${API}/products/p1`, () => {
+        deleted();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderAt("/products/p1");
+
+    await screen.findByLabelText(/Tên sản phẩm/);
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.delete") }),
+    );
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText(i18n.t("products.delete.title")),
+    ).toBeInTheDocument();
+    expect(deleted).not.toHaveBeenCalled(); // the prompt alone deletes nothing
+
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: i18n.t("common.delete") }),
+    );
+    await waitFor(() => expect(deleted).toHaveBeenCalled());
+    expect(await screen.findByText("danh sách")).toBeInTheDocument();
   });
 
   it("sends the edited fields and the seo block on save", async () => {

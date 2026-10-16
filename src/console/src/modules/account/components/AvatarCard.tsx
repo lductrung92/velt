@@ -54,6 +54,7 @@ export function AvatarCard() {
         ) : (
           <ImageUpload
             type="circle"
+            subject={t("account.profile.avatar_alt")}
             radius={56}
             value={avatarValue}
             onChange={handleChange}

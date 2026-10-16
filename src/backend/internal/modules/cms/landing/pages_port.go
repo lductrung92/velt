@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/velt/backend/internal/modules/cms/shared"
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/storage"
 )
 
@@ -19,12 +20,18 @@ import (
 type PagesPort struct {
 	repo  Repository
 	files storage.Storage // reclaim section/og media on delete + publish
+	// forget drops the public identity of the media it reclaims. It may stay
+	// nil, which is the shape this port had before the `files` table existed.
+	forget media.Forgetter
 }
 
 // NewPagesPort builds the pages-facing admin port.
 func NewPagesPort(repo Repository, files storage.Storage) *PagesPort {
 	return &PagesPort{repo: repo, files: files}
 }
+
+// SetMediaForget wires the files-table forgetter (called once at startup).
+func (p *PagesPort) SetMediaForget(f media.Forgetter) { p.forget = f }
 
 // CreateDraft creates an empty draft landing for a page (name = page title,
 // key derived from the page slug). Landing keys are globally UNIQUE while page
@@ -50,7 +57,7 @@ func (p *PagesPort) Delete(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("delete landing for page: %w", err)
 	}
 	// Landing (+ its snapshot) is gone → reclaim its whole media folder.
-	_ = shared.PurgeMediaTree(ctx, p.files, "cms/landing/"+id.String()+"/")
+	_ = shared.PurgeMediaTree(ctx, p.files, p.forget, "cms/landing/"+id.String()+"/")
 	return nil
 }
 
@@ -83,7 +90,7 @@ func (p *PagesPort) Publish(ctx context.Context, id uuid.UUID) error {
 	}
 	// Reclaim media that dropped out of the snapshot since the last publish, but
 	// keep anything still referenced by a current (incl. hidden) section or og_path.
-	gcDroppedMedia(ctx, p.files, landingMediaPrefix(id), cur.PublishedSnapshot,
+	gcDroppedMedia(ctx, p.files, p.forget, landingMediaPrefix(id), cur.PublishedSnapshot,
 		liveMediaPaths(snap, sections, cur.OGPath))
 	return nil
 }

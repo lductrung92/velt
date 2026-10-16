@@ -5,6 +5,7 @@ import axios, {
 } from "axios";
 import axiosRetry from "axios-retry";
 
+import i18n from "@/app/i18n";
 import { useAuthStore, type SessionResponse } from "@/store/auth.store";
 import { ApiError, type ApiErrorBody } from "@/types/errors";
 
@@ -41,6 +42,17 @@ function isAuthFlowEndpoint(url: string | undefined): boolean {
 
 api.interceptors.request.use((config) => {
   config.headers["X-Correlation-ID"] = crypto.randomUUID();
+  // The language the console is being read in. Lists answer with the
+  // translation of a title where somebody has written one, so the screen is in
+  // one language rather than two. Read off i18n at request time, not at
+  // import: the switcher changes it without a reload.
+  //
+  // A caller that set the header itself keeps it: a form hydrated from a list
+  // must ask for the source language, or its next save writes the translation
+  // back into the record it was translated from.
+  if (!config.headers["Accept-Language"]) {
+    config.headers["Accept-Language"] = i18n.language || "vi";
+  }
   const token = useAuthStore.getState().accessToken;
   if (token && !config.headers["Authorization"]) {
     config.headers["Authorization"] = `Bearer ${token}`;

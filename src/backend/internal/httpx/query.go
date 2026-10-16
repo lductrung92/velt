@@ -58,3 +58,30 @@ func QueryDateRange(r *http.Request, fromName, toName string) (from, to *time.Ti
 	}
 	return from, to, nil
 }
+
+// Locale is the language the caller is reading in, from Accept-Language.
+//
+// The console sends the language its own interface is in, so a list can answer
+// with the translation of a title where one exists. Only the primary subtag is
+// kept ("en-GB" → "en"): translations are stored per language, not per region.
+// An absent or unparseable header is "", which every caller reads as "the
+// source language" and leaves its rows exactly as they are.
+func Locale(r *http.Request) string {
+	raw := r.Header.Get("Accept-Language")
+	if raw == "" {
+		return ""
+	}
+	// "en-GB,en;q=0.9,vi;q=0.8" — the first tag is the one that was asked for.
+	first := strings.TrimSpace(strings.Split(raw, ",")[0])
+	first = strings.TrimSpace(strings.Split(first, ";")[0])
+	primary := strings.ToLower(strings.TrimSpace(strings.Split(first, "-")[0]))
+	if len(primary) < 2 || len(primary) > 8 {
+		return ""
+	}
+	for _, c := range primary {
+		if c < 'a' || c > 'z' {
+			return ""
+		}
+	}
+	return primary
+}

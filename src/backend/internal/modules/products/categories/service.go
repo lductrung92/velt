@@ -9,6 +9,7 @@ import (
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/products/shared"
+	"github.com/velt/backend/internal/platform/localize"
 	"github.com/velt/backend/internal/platform/slug"
 )
 
@@ -27,17 +28,41 @@ func NewService(base *shared.Base, repo Repository) *Service {
 // --- Reads ---
 
 // List returns the whole taxonomy for the console. Requires products.view.
-func (s *Service) List(ctx context.Context, id *httpx.Identity) (ListResponse, error) {
+//
+// locale is the language the console is reading in (Accept-Language), "" for
+// the source language: the names come back translated where somebody has
+// written a translation, and in Vietnamese where nobody has.
+//
+// status narrows the list to one status; empty means the whole taxonomy.
+func (s *Service) List(ctx context.Context, id *httpx.Identity, locale, status string) (ListResponse, error) {
 	if err := s.Require(ctx, id, permView); err != nil {
 		return ListResponse{}, err
 	}
-	return s.list(ctx)
+	if status != "" && !validStatus[status] {
+		return ListResponse{}, apperr.Validation(map[string]string{"status": "invalid_value"})
+	}
+	res, err := s.list(ctx, status)
+	if err != nil {
+		return ListResponse{}, err
+	}
+	ids := make([]uuid.UUID, 0, len(res.Items))
+	for _, c := range res.Items {
+		ids = append(ids, c.ID)
+	}
+	// One lookup for the whole taxonomy, however long it is. The translation
+	// lands in NameDisplay and never in Name — see the field's own comment.
+	tr := localize.Fields(ctx, s.tr, EntityCategory, locale, ids)
+	for i := range res.Items {
+		res.Items[i].NameDisplay = localize.Str(
+			tr[res.Items[i].ID], "name", res.Items[i].Name)
+	}
+	return res, nil
 }
 
 // list is the shared read. Every caller must gate it first — List does, and
 // nothing in this package exposes it without an identity.
-func (s *Service) list(ctx context.Context) (ListResponse, error) {
-	rows, err := s.repo.List(ctx)
+func (s *Service) list(ctx context.Context, status string) (ListResponse, error) {
+	rows, err := s.repo.List(ctx, status)
 	if err != nil {
 		return ListResponse{}, s.MapRepoErr(ctx, "list categories", err)
 	}
@@ -67,6 +92,7 @@ func (s *Service) Create(ctx context.Context, id *httpx.Identity, req CreateRequ
 		Slug:        resolved,
 		Name:        name,
 		Description: trimPtr(req.Description),
+		Status:      derefStatus(req.Status),
 		SortOrder:   req.SortOrder, // nil → repository appends to the end
 	}
 	applySEO(&w, req.SEO)
@@ -108,10 +134,15 @@ func (s *Service) Update(ctx context.Context, id *httpx.Identity, catID uuid.UUI
 	if req.SortOrder != nil {
 		sortOrder = *req.SortOrder
 	}
+	status := cur.Status
+	if req.Status != nil {
+		status = *req.Status
+	}
 	w := write{
 		Slug:           resolved,
 		Name:           name,
 		Description:    cur.Description,
+		Status:         status,
 		SEOTitle:       cur.SEOTitle,
 		SEODescription: cur.SEODescription,
 		SEOKeywords:    cur.SEOKeywords,
@@ -215,8 +246,12 @@ func applySEO(w *write, seo *CategorySEO) {
 
 func toResponse(c Category) Response {
 	return Response{
-		ID: c.ID, Slug: c.Slug, Name: c.Name, Description: c.Description,
-		SortOrder: c.SortOrder, ProductCount: c.ProductCount,
+		// NameDisplay starts as the stored name: a response that is never
+		// localized — a create, an update — still has something to show, and a
+		// caller reading only the display field is never handed a blank.
+		ID: c.ID, Slug: c.Slug, Name: c.Name, NameDisplay: c.Name,
+		Description: c.Description,
+		SortOrder:   c.SortOrder, Status: c.Status, ProductCount: c.ProductCount,
 		SEO: CategorySEO{
 			Title:       c.SEOTitle,
 			Description: c.SEODescription,
@@ -224,6 +259,16 @@ func toResponse(c Category) Response {
 		},
 		CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
 	}
+}
+
+// derefStatus is the create-time status: what was asked for, or published —
+// a category that has just been made is in use, which is also what every row
+// that predates the status column means.
+func derefStatus(v *string) string {
+	if v == nil {
+		return StatusPublished
+	}
+	return *v
 }
 
 func trimPtr(v *string) *string {

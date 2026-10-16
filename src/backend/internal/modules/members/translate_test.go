@@ -168,3 +168,77 @@ func TestAuthorizeTranslate_ReusesTheManageGate(t *testing.T) {
 	require.Equal(t, 403, status(t, svc.AuthorizeTranslate(ctx, viewer(), created.ID)))
 	require.Equal(t, 404, status(t, svc.AuthorizeTranslate(ctx, manager(), uuid.New())))
 }
+
+// --- Console list ---
+
+// The console list answers in the language the console is read in. Only role
+// and bio take part: a name is the person's, in every language.
+func TestList_TranslatesRoleAndBioButNeverTheName(t *testing.T) {
+	svc, _, tr := newTranslatedSvc(t)
+	ctx := context.Background()
+	one, err := svc.Create(ctx, manager(), CreateRequest{
+		FullName: "Trần An", Role: str("Kỹ sư"), Bio: str("Tiểu sử"),
+	})
+	require.NoError(t, err)
+	two, err := svc.Create(ctx, manager(), CreateRequest{
+		FullName: "Lê Bình", Role: str("Thiết kế"),
+	})
+	require.NoError(t, err)
+	// full_name is not declared translatable; a stored value for it is noise
+	// the overlay must ignore rather than trust.
+	tr.values[one.ID] = map[string]any{
+		"role": "Engineer", "bio": "Biography", "full_name": "Tran An",
+	}
+
+	res, err := svc.List(ctx, manager(), ListParams{Locale: "en"})
+	require.NoError(t, err)
+	require.Equal(t, 1, tr.calls, "one bundle for the whole page, not one per row")
+
+	byID := map[uuid.UUID]Response{}
+	for _, m := range res.Items {
+		byID[m.ID] = m
+	}
+	require.Equal(t, "Engineer", *byID[one.ID].Role)
+	require.Equal(t, "Biography", *byID[one.ID].Bio)
+	require.Equal(t, "Trần An", byID[one.ID].FullName)
+	// No translation written → the Vietnamese row, not a blank.
+	require.Equal(t, "Thiết kế", *byID[two.ID].Role)
+	require.Equal(t, "Lê Bình", byID[two.ID].FullName)
+}
+
+func TestList_SourceLanguageLooksNothingUp(t *testing.T) {
+	for _, locale := range []string{"", "vi"} {
+		svc, _, tr := newTranslatedSvc(t)
+		ctx := context.Background()
+		created, err := svc.Create(ctx, manager(), CreateRequest{
+			FullName: "Trần An", Role: str("Kỹ sư"),
+		})
+		require.NoError(t, err)
+		tr.values[created.ID] = map[string]any{"role": "Engineer"}
+
+		res, err := svc.List(ctx, manager(), ListParams{Locale: locale})
+		require.NoError(t, err)
+		require.Zero(t, tr.calls, "locale %q must not reach the translation store", locale)
+		require.Equal(t, "Kỹ sư", *res.Items[0].Role)
+	}
+}
+
+// The editor reads Get, and Get has no language: it must keep handing the form
+// the Vietnamese row, or the next save writes English into it.
+func TestGet_IsNeverTranslated(t *testing.T) {
+	svc, _, tr := newTranslatedSvc(t)
+	ctx := context.Background()
+	created, err := svc.Create(ctx, manager(), CreateRequest{
+		FullName: "Trần An", Role: str("Kỹ sư"),
+	})
+	require.NoError(t, err)
+	tr.values[created.ID] = map[string]any{"role": "Engineer"}
+
+	list, err := svc.List(ctx, manager(), ListParams{Locale: "en"})
+	require.NoError(t, err)
+	require.Equal(t, "Engineer", *list.Items[0].Role)
+
+	got, err := svc.Get(ctx, manager(), created.ID)
+	require.NoError(t, err)
+	require.Equal(t, "Kỹ sư", *got.Role)
+}

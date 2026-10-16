@@ -61,7 +61,7 @@ func TestPublicPage_ResolvesInlineWidgets(t *testing.T) {
 		Title:    "Inline",
 		BodyHTML: ptr(`<p>Hi</p><div data-kd-widget="w1"></div>`),
 		BodyJSON: json.RawMessage(`{"type":"doc","content":[
-			{"type":"widget","attrs":{"wid":"w1","wtype":"games_list","config":{"limit":4}}}
+			{"type":"widget","attrs":{"wid":"w1","wtype":"articles_list","config":{"limit":4}}}
 		]}`),
 	})
 	require.NoError(t, err)
@@ -76,7 +76,7 @@ func TestPublicPage_ResolvesInlineWidgets(t *testing.T) {
 	require.Len(t, page.InlineWidgets, 1)
 	w, ok := page.InlineWidgets["w1"]
 	require.True(t, ok, "placeholder id w1 must be resolved")
-	require.Equal(t, "games_list", w.Type)
+	require.Equal(t, "articles_list", w.Type)
 	require.NotNil(t, w.Data, "nil ports resolve to an empty (non-nil) result")
 }
 

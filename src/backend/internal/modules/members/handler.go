@@ -66,6 +66,9 @@ func listParams(r *http.Request) ListParams {
 // keeps exactly the contract it had.
 func staffListParams(r *http.Request) (ListParams, error) {
 	p := listParams(r)
+	// The console has no ?locale= switch: the language it is read in arrives as
+	// Accept-Language, and that is what its list answers in.
+	p.Locale = httpx.Locale(r)
 	var err error
 	if p.CreatedFrom, p.CreatedTo, err = httpx.QueryDateRange(r, "created_from", "created_to"); err != nil {
 		return ListParams{}, err

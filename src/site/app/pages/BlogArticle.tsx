@@ -70,7 +70,11 @@ export function BlogArticle() {
           </div>
         </header>
         <div className="blog-article-cover">
-          <BlogCover post={post} priority />
+          <BlogCover
+            post={post}
+            sizes="(min-width: 1088px) 1024px, calc(100vw - 48px)"
+            priority
+          />
         </div>
         <div className="blog-reading-layout">
           <aside className="blog-reading-sidebar">

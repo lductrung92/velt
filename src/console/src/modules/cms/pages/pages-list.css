@@ -28,7 +28,7 @@
   background: hsl(var(--success-ink));
 }
 [data-list="pages"] .list-tabs button[data-status="archived"] i {
-  background: hsl(var(--muted-foreground));
+  background: hsl(var(--earth-ink));
 }
 
 /* The title column takes the slack; the rest keep their natural width. */
@@ -45,22 +45,6 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-}
-/* Depth is an inline style on the row, because it comes from the data rather
-   than from a fixed set of levels. */
-.page-title[data-depth="0"] > .page-branch {
-  display: none;
-}
-/* The elbow that makes a child read as a child. Drawn rather than indented
-   with whitespace so the relationship survives a narrow column. */
-.page-branch {
-  flex-shrink: 0;
-  width: 14px;
-  height: 14px;
-  margin-left: 2px;
-  border-left: 1px solid hsl(var(--border));
-  border-bottom: 1px solid hsl(var(--border));
-  border-bottom-left-radius: 4px;
 }
 .page-title > a {
   font-size: var(--font-size-sm);
@@ -86,12 +70,6 @@
   color: hsl(var(--purple-ink));
   white-space: nowrap;
 }
-.page-children {
-  flex-shrink: 0;
-  font-size: var(--font-size-xs);
-  color: hsl(var(--muted-foreground));
-  white-space: nowrap;
-}
 /* The slug is the public URL; monospace so a stray character is visible. */
 .page-path {
   display: inline-block;
@@ -102,13 +80,6 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-/* A flat list is a deliberate state, not a glitch — say so once, above the
-   table, rather than letting the missing hierarchy look like a bug. */
-.page-flat-notice {
-  padding: 10px 20px 0;
-  font-size: var(--font-size-xs);
-  color: hsl(var(--muted-foreground));
 }
 
 /*
@@ -139,8 +110,5 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 14px;
-  }
-  .page-flat-notice {
-    padding: 10px 14px 0;
   }
 }

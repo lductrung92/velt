@@ -43,13 +43,24 @@ func (r *fakeRepo) seedPage(title, slug string, parent *uuid.UUID, status string
 	return p
 }
 
-func (r *fakeRepo) ListPages(_ context.Context, lp PageListParams) ([]Page, error) {
+func (r *fakeRepo) ListPages(_ context.Context, lp PageListParams) ([]Page, int, error) {
 	out := make([]Page, 0, len(r.pages))
 	for _, p := range r.pages {
 		if lp.CreatedFrom != nil && p.CreatedAt.Before(*lp.CreatedFrom) {
 			continue
 		}
 		if lp.CreatedTo != nil && !p.CreatedAt.Before(*lp.CreatedTo) {
+			continue
+		}
+		if lp.Status != "" && p.Status != lp.Status {
+			continue
+		}
+		if lp.LandingOnly && p.LandingID == nil {
+			continue
+		}
+		if q := strings.ToLower(lp.Query); q != "" &&
+			!strings.Contains(strings.ToLower(p.Title), q) &&
+			!strings.Contains(strings.ToLower(p.Slug), q) {
 			continue
 		}
 		out = append(out, *p)
@@ -60,6 +71,24 @@ func (r *fakeRepo) ListPages(_ context.Context, lp PageListParams) ([]Page, erro
 		}
 		return out[i].Title < out[j].Title
 	})
+	total := len(out)
+	from := (lp.Page - 1) * lp.PageSize
+	if from > total {
+		from = total
+	}
+	to := from + lp.PageSize
+	if lp.PageSize <= 0 || to > total {
+		to = total
+	}
+	return out[from:to], total, nil
+}
+
+func (r *fakeRepo) ListPageOptions(context.Context) ([]PageOption, error) {
+	out := make([]PageOption, 0, len(r.pages))
+	for _, p := range r.pages {
+		out = append(out, PageOption{ID: p.ID, Title: p.Title, Slug: p.Slug, Status: p.Status})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Title < out[j].Title })
 	return out, nil
 }
 
@@ -98,22 +127,10 @@ func (r *fakeRepo) CreatePage(_ context.Context, w pageWrite) (*Page, error) {
 	return &cp, nil
 }
 
-func (r *fakeRepo) UpdatePage(_ context.Context, id uuid.UUID, w pageWrite, expectedUpdatedAt time.Time, recheckCycle bool) (*Page, error) {
+func (r *fakeRepo) UpdatePage(_ context.Context, id uuid.UUID, w pageWrite, expectedUpdatedAt time.Time) (*Page, error) {
 	p, ok := r.pages[id]
 	if !ok {
 		return nil, shared.ErrNotFound
-	}
-	if recheckCycle && w.ParentID != nil {
-		for cur := w.ParentID; cur != nil; {
-			if *cur == id {
-				return nil, shared.ErrPageCycle
-			}
-			n, ok := r.pages[*cur]
-			if !ok {
-				break
-			}
-			cur = n.ParentID
-		}
 	}
 	if !p.UpdatedAt.Equal(expectedUpdatedAt) {
 		return nil, shared.ErrOptLock
@@ -135,40 +152,18 @@ func (r *fakeRepo) UpdatePage(_ context.Context, id uuid.UUID, w pageWrite, expe
 }
 
 func (r *fakeRepo) DeletePage(_ context.Context, id uuid.UUID) error {
-	for _, p := range r.pages {
-		if p.ParentID != nil && *p.ParentID == id {
-			return shared.ErrInUse
+	p, ok := r.pages[id]
+	if !ok {
+		return shared.ErrNotFound
+	}
+	for _, other := range r.pages {
+		if other.ParentID != nil && *other.ParentID == id {
+			other.ParentID = nil
 		}
 	}
-	if p, ok := r.pages[id]; ok {
-		delete(r.pageKeys, pageKey(p.ParentID, p.Slug))
-	}
+	delete(r.pageKeys, pageKey(p.ParentID, p.Slug))
 	delete(r.pages, id)
 	return nil
-}
-
-func (r *fakeRepo) PageHasChildren(_ context.Context, id uuid.UUID) (bool, error) {
-	for _, p := range r.pages {
-		if p.ParentID != nil && *p.ParentID == id {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (r *fakeRepo) PageCreatesCycle(_ context.Context, node, newParent uuid.UUID) (bool, error) {
-	cur := &newParent
-	for cur != nil {
-		if *cur == node {
-			return true, nil
-		}
-		p, ok := r.pages[*cur]
-		if !ok {
-			break
-		}
-		cur = p.ParentID
-	}
-	return false, nil
 }
 
 func (r *fakeRepo) PageSlugExists(_ context.Context, slug string, parentID *uuid.UUID, excludeID *uuid.UUID) (bool, error) {
@@ -312,11 +307,13 @@ type fakeTranslator struct {
 	values  map[uuid.UUID]map[string]map[string]any
 	purged  []uuid.UUID
 	bundErr error
+	bundled int // Bundle calls, so a test can assert a list made none
 }
 
 func (f *fakeTranslator) Locales(context.Context) []string { return f.locales }
 
 func (f *fakeTranslator) Bundle(_ context.Context, _ string, _ []uuid.UUID, _ []string) (map[uuid.UUID]map[string]map[string]any, error) {
+	f.bundled++
 	if f.bundErr != nil {
 		return nil, f.bundErr
 	}

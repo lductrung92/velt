@@ -33,7 +33,14 @@ export interface MenuSlot {
 // A node in the detail item tree (GET /{id} + PUT items return).
 export interface MenuItemNode {
   id: string;
+  /**
+   * The stored (Vietnamese) label. The builder PUTs its whole tree back, so
+   * this is the value that must travel — rendering a translation here would
+   * write it over the original on the next save.
+   */
   label: string;
+  /** `label` in the language the console is being read in — for SHOWING only. */
+  label_display: string;
   /** One line shown under the label on the site (header dropdown). */
   description: string | null;
   link_type: MenuLinkType;

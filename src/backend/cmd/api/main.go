@@ -43,6 +43,7 @@ import (
 	"github.com/velt/backend/internal/platform/crypto"
 	"github.com/velt/backend/internal/platform/db"
 	"github.com/velt/backend/internal/platform/mail"
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/pubdocs"
 	"github.com/velt/backend/internal/platform/ratelimit"
 	"github.com/velt/backend/internal/platform/revalidate"
@@ -269,9 +270,7 @@ func run() error {
 	// landing/comments/newsletter); settingsSvc is the scoped reader/writer for the
 	// cms.* registry keys (CMS gates cms.settings.* itself).
 	// Data readers for CMS widget resolvers, each adapted to a narrow widgets port
-	// (articles_list / categories_showcase). Stateless over the pool. Games is left
-	// nil — there is no games catalog in this deployment, so a games_list widget
-	// resolves to nothing (the resolver is nil-safe by design).
+	// (articles_list / categories_showcase). Stateless over the pool.
 	cmsWiring := cms.Register(r, pool, settingsSvc, store, logger, authMW, widgets.Ports{
 		Articles:   cmsArticlesPort{cmsarticles.NewPublicRepository(pool, publicDocs)},
 		Categories: cmsCategoriesPort{cmstaxonomy.NewPublicRepository(pool)},
@@ -307,6 +306,8 @@ func run() error {
 				return cmsWiring.Menus.AuthorizeTranslate(ctx, id, entityID)
 			case translation.EntityLandingSection:
 				return cmsWiring.Landing.AuthorizeTranslate(ctx, id, entityID)
+			case translation.EntityRegionBlock:
+				return cmsWiring.Regions.AuthorizeTranslate(ctx, id, entityID)
 			case translation.EntitySiteChrome:
 				return cmsWiring.Settings.AuthorizeTranslate(ctx, id, entityID)
 			}
@@ -316,6 +317,10 @@ func run() error {
 	// write, the public side overlays it onto what was published.
 	cmsWiring.Landing.SetTranslator(translationSvc)
 	cmsWiring.PublicLanding.SetTranslator(translationSvc)
+	// A chrome block's text travels the same way: the write side only clears the
+	// copy of a block somebody removed, the public read overlays the rest.
+	cmsWiring.Regions.SetTranslator(translationSvc)
+	cmsWiring.PublicRegions.SetTranslator(translationSvc)
 
 	// The public settings read serves the site's header and footer copy, so it
 	// has to be able to answer in the language being read.
@@ -344,13 +349,46 @@ func run() error {
 	cmsWiring.Pages.SetTranslator(translationSvc)
 	cmsWiring.PublicPages.SetLocales(translationSvc)
 	cmsWiring.Taxonomy.SetTranslator(translationSvc)
+	cmsWiring.Menus.SetTranslator(translationSvc)
 	productsWiring.Catalog.SetTranslator(translationSvc)
 	productsWiring.PublicCatalog.SetLocales(translationSvc)
 	productsWiring.Categories.SetTranslator(translationSvc)
 	membersSvc.SetTranslator(translationSvc)
 	// Public asset serving (avatars + CMS article media) when the storage driver
 	// is local; the S3 driver serves them straight from the bucket endpoint.
+	// This is the LEGACY shape, /api/files/<storage key>, and it stays: the URLs
+	// inside already-published body_html are of this shape.
 	files.RegisterRoutes(r, filesHandler)
+	// The flat public URLs: /files/{slug}.{ext} and /img/{slug}[/{w}].{ext}.
+	// Same binary, two base URLs — in production /img is meant to answer on a
+	// cookie-less image subdomain (internal/platform/media).
+	mediaStore := media.NewStore(pool, media.URLs{
+		FilesBase: cfg.MediaFilesBaseURL,
+		ImageBase: cfg.MediaImageBaseURL,
+	}, logger)
+	media.RegisterRoutes(r, media.NewHandler(mediaStore, store, cfg.MediaCacheRoot))
+	// The write side: every upload path that produces a public asset mints a row
+	// here, so the slug exists before the URL it is handed back in is rendered —
+	// and every delete path forgets it again, row and rendered derivatives both.
+	mediaKeep := media.NewKeep(mediaStore, cfg.MediaCacheRoot)
+	cmsWiring.Base.SetMedia(mediaKeep)
+	productsWiring.Base.SetMedia(mediaKeep)
+	membersSvc.SetMedia(mediaKeep)
+	accountSvc.SetMedia(mediaKeep)
+	cmsWiring.LandingPagesPort.SetMediaForget(mediaKeep)
+	// The public READ side: every stored column still holds a storage key, so
+	// each public response looks its images up here and answers with the flat
+	// /img URL plus the intrinsic size the site needs to reserve space. Only the
+	// PUBLIC services get it — the console reads the same storage keys and must
+	// keep seeing the URLs it already knows.
+	mediaPublic := media.NewPublicURLs(mediaStore, media.URLs{
+		FilesBase: cfg.MediaFilesBaseURL,
+		ImageBase: cfg.MediaImageBaseURL,
+	}, store)
+	cmsWiring.PublicArticles.SetMediaURLs(mediaPublic)
+	cmsWiring.PublicLanding.SetMediaURLs(mediaPublic)
+	productsWiring.PublicCatalog.SetMediaURLs(mediaPublic)
+	membersSvc.SetMediaURLs(mediaPublic)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
@@ -433,7 +471,7 @@ type cmsProductsPort struct{ svc *catalog.PublicService }
 
 func (p cmsProductsPort) ListProducts(ctx context.Context, q widgets.ProductsQuery) ([]widgets.ProductItem, error) {
 	res, err := p.svc.List(ctx, catalog.PublicListParams{
-		Category: q.Category, PageSize: q.Limit, Page: 1, Locale: q.Locale,
+		Category: q.Category, Sort: q.Sort, PageSize: q.Limit, Page: 1, Locale: q.Locale,
 	})
 	if err != nil {
 		return nil, err
@@ -446,6 +484,7 @@ func (p cmsProductsPort) ListProducts(ctx context.Context, q widgets.ProductsQue
 		}
 		items = append(items, widgets.ProductItem{
 			Slug: it.Slug, Name: it.Name, Summary: it.Summary, CoverURL: it.CoverURL,
+			CoverWidth: it.CoverWidth, CoverHeight: it.CoverHeight,
 			Lifecycle: it.Lifecycle, IsFeatured: it.IsFeatured,
 			Audience: it.Audience, Platforms: it.Platforms, Categories: cats,
 		})
@@ -466,7 +505,9 @@ func (p cmsMembersPort) ListMembers(ctx context.Context, q widgets.MembersQuery)
 	for _, m := range res.Items {
 		items = append(items, widgets.MemberItem{
 			Slug: m.Slug, FullName: m.FullName, Role: m.Role,
-			Bio: m.Bio, AvatarURL: m.AvatarURL, Skills: m.Skills,
+			Bio: m.Bio, AvatarURL: m.AvatarURL,
+			AvatarWidth: m.AvatarWidth, AvatarHeight: m.AvatarHeight,
+			Skills: m.Skills,
 		})
 	}
 	return items, nil
@@ -482,7 +523,7 @@ func (p cmsArticlesPort) ListArticles(ctx context.Context, q widgets.ArticlesQue
 		}
 	}
 	cards, err := p.repo.ListPublished(ctx, cmsarticles.PublicFilter{
-		CategoryID: catID, Tag: q.Tag, Limit: q.Limit, Locale: q.Locale,
+		CategoryID: catID, Tag: q.Tag, Sort: q.Sort, Limit: q.Limit, Locale: q.Locale,
 	})
 	if err != nil {
 		return nil, err

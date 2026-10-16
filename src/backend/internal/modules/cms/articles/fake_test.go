@@ -208,11 +208,47 @@ func (r *fakeRepo) ListArticles(_ context.Context, p ArticleListParams) ([]artic
 	}
 	out := []articleListRow{}
 	for _, a := range matched[start:end] {
-		out = append(out, articleListRow{ID: a.ID, Title: a.Title, Slug: a.Slug, Status: a.Status,
-			CategoryID: a.CategoryID, AuthorID: a.AuthorID, PublishedAt: a.PublishedAt, UpdatedAt: a.UpdatedAt})
+		row := articleListRow{ID: a.ID, Title: a.Title, Slug: a.Slug, Status: a.Status,
+			CategoryID: a.CategoryID, AuthorID: a.AuthorID, PublishedAt: a.PublishedAt, UpdatedAt: a.UpdatedAt}
+		// The real query joins the category in; the fake looks it up the same
+		// way, so a test can see what a row says about its category.
+		if a.CategoryID != nil {
+			if cat, ok := r.cats[*a.CategoryID]; ok {
+				name := cat.Name
+				row.CategoryName = &name
+			}
+		}
+		out = append(out, row)
 	}
 	return out, total, nil
 }
+
+// fakeTranslator stands in for the translation module: a fixed bundle of
+// values, and a count of the reads a list made.
+type fakeTranslator struct {
+	values  map[uuid.UUID]map[string]map[string]any
+	bundled int
+	// entities records what was asked for, in order. A row carries text from
+	// two vocabularies — the article's own and its category's — so a test has
+	// to be able to say WHICH was read, not just how often.
+	entities []string
+}
+
+func (f *fakeTranslator) Locales(context.Context) []string { return nil }
+
+func (f *fakeTranslator) Bundle(_ context.Context, entity string, ids []uuid.UUID, _ []string) (map[uuid.UUID]map[string]map[string]any, error) {
+	f.bundled++
+	f.entities = append(f.entities, entity)
+	out := map[uuid.UUID]map[string]map[string]any{}
+	for _, id := range ids {
+		if v, ok := f.values[id]; ok {
+			out[id] = v
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeTranslator) Purge(context.Context, string, uuid.UUID) error { return nil }
 
 type tenv struct {
 	svc      *Service

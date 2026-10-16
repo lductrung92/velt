@@ -265,6 +265,70 @@ describe("ArticleList", () => {
     await waitFor(() => expect(deleted).toBe(true));
   });
 
+  it("tabs: one per place an article lives, not one per workflow state", async () => {
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/cms/articles`, () =>
+        HttpResponse.json(articlesResult()),
+      ),
+      ...taxonomyHandlers(),
+    );
+    renderPage();
+    await screen.findByTestId("cms-articles-table");
+
+    const tabs = screen.getByRole("group", {
+      name: i18n.t("cms.articles.filter_status"),
+    });
+    expect(
+      within(tabs)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual([
+      i18n.t("cms.articles.all_statuses"),
+      i18n.t("content_status.published"),
+      i18n.t("content_status.draft"),
+      i18n.t("content_status.archived"),
+    ]);
+  });
+
+  it("archive: row action → ConfirmDialog → PATCH status", async () => {
+    signIn(MANAGER);
+    let body: { status?: string; updated_at?: string } | undefined;
+    server.use(
+      http.get(`${API}/cms/articles`, () =>
+        HttpResponse.json(articlesResult()),
+      ),
+      http.patch(`${API}/cms/articles/a1`, async ({ request }) => {
+        body = (await request.json()) as typeof body;
+        return HttpResponse.json({ id: "a1", status: "archived" });
+      }),
+      ...taxonomyHandlers(),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByTestId("cms-articles-table");
+
+    await user.click(
+      within(screen.getByTestId("cms-articles-table")).getByRole("button", {
+        name: i18n.t("cms.articles.archive"),
+      }),
+    );
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: i18n.t("cms.articles.archive"),
+      }),
+    );
+
+    // The row's own lock token travels with it, the way the editor's save does.
+    await waitFor(() =>
+      expect(body).toEqual({
+        status: "archived",
+        updated_at: "2026-06-10T00:00:00Z",
+      }),
+    );
+  });
+
   it("delete blocked: 409 surfaces an error toast", async () => {
     signIn(MANAGER);
     server.use(

@@ -19,16 +19,154 @@ func TestListPages_RequiresViewPermission(t *testing.T) {
 	cmstest.AssertAppErr(t, err, http.StatusForbidden, "access_denied")
 }
 
-func TestListPages_Tree(t *testing.T) {
+// Every page is a row of its own. A page that happens to carry a parent_id from
+// before — the column is still there — is listed like any other, because the
+// relationship meant nothing to a reader: a page's address is one slug segment.
+func TestListPages_IsFlat(t *testing.T) {
 	e := newTestSvc(t)
 	root := e.repo.seedPage("About", "about", nil, PageStatusPublished)
 	e.repo.seedPage("Team", "team", &root.ID, PageStatusDraft)
-	tree, err := e.svc.ListPages(context.Background(), cmstest.ActorWith(permView), PageListParams{})
+	res, err := e.svc.ListPages(context.Background(), cmstest.ActorWith(permView), PageListParams{})
 	require.NoError(t, err)
-	require.Len(t, tree, 1)
-	require.Equal(t, root.ID, tree[0].ID)
-	require.Len(t, tree[0].Children, 1)
-	require.Equal(t, "team", tree[0].Children[0].Slug)
+	require.Equal(t, 2, res.Total)
+	require.Len(t, res.Items, 2)
+	slugs := []string{res.Items[0].Slug, res.Items[1].Slug}
+	require.ElementsMatch(t, []string{"about", "team"}, slugs)
+}
+
+func TestListPages_FiltersAndPages(t *testing.T) {
+	e := newTestSvc(t)
+	e.repo.seedPage("About", "about", nil, PageStatusPublished)
+	e.repo.seedPage("Team", "team", nil, PageStatusDraft)
+	e.repo.seedPage("Jobs", "jobs", nil, PageStatusDraft)
+	actor := cmstest.ActorWith(permView)
+
+	only, err := e.svc.ListPages(context.Background(), actor, PageListParams{Status: PageStatusDraft})
+	require.NoError(t, err)
+	require.Equal(t, 2, only.Total)
+
+	found, err := e.svc.ListPages(context.Background(), actor, PageListParams{Query: "abo"})
+	require.NoError(t, err)
+	require.Equal(t, 1, found.Total)
+	require.Equal(t, "about", found.Items[0].Slug)
+
+	// A page of two of three still reports three: the pager counts matches, not
+	// what fits on screen.
+	first, err := e.svc.ListPages(context.Background(), actor, PageListParams{Page: 1, PageSize: 2})
+	require.NoError(t, err)
+	require.Len(t, first.Items, 2)
+	require.Equal(t, 3, first.Total)
+	require.Equal(t, 2, first.PageSize)
+}
+
+func TestListPages_RejectsAnUnknownStatus(t *testing.T) {
+	e := newTestSvc(t)
+	_, err := e.svc.ListPages(context.Background(), cmstest.ActorWith(permView),
+		PageListParams{Status: "nope"})
+	cmstest.AssertAppErr(t, err, http.StatusUnprocessableEntity, "validation_error")
+}
+
+func TestListPageOptions_ReturnsEveryPage(t *testing.T) {
+	e := newTestSvc(t)
+	e.repo.seedPage("About", "about", nil, PageStatusPublished)
+	e.repo.seedPage("Team", "team", nil, PageStatusDraft)
+	// A picker must not stop at a page boundary, or it hides a page somebody
+	// is looking for.
+	opts, err := e.svc.ListPageOptions(context.Background(), cmstest.ActorWith(permView), "")
+	require.NoError(t, err)
+	require.Len(t, opts, 2)
+}
+
+// --- Reading a list in the console's language ---
+
+// titlesBySlug flattens a page list so a test can name a row without depending
+// on the order the fake repository happens to return.
+func titlesBySlug(items []PageListItem) map[string]string {
+	out := make(map[string]string, len(items))
+	for _, it := range items {
+		out[it.Slug] = it.Title
+	}
+	return out
+}
+
+// A page with an English title shows it; the one beside it that nobody has
+// translated keeps the Vietnamese the author wrote.
+func TestListPages_ShowsTheEnglishTitleWhereThereIsOne(t *testing.T) {
+	e := newTestSvc(t)
+	about := e.repo.seedPage("Gioi thieu", "gioi-thieu", nil, PageStatusPublished)
+	e.repo.seedPage("Lien he", "lien-he", nil, PageStatusDraft)
+	e.svc.SetTranslator(&fakeTranslator{values: map[uuid.UUID]map[string]map[string]any{
+		about.ID: {"en": {"title": "About us"}},
+	}})
+
+	res, err := e.svc.ListPages(context.Background(), cmstest.ActorWith(permView), PageListParams{Locale: "en"})
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"gioi-thieu": "About us", "lien-he": "Lien he"}, titlesBySlug(res.Items))
+}
+
+// A blank translation is somebody who opened the form and did not finish it,
+// not a page without a title.
+func TestListPages_BlankTranslationFallsBackToTheRow(t *testing.T) {
+	e := newTestSvc(t)
+	about := e.repo.seedPage("Gioi thieu", "gioi-thieu", nil, PageStatusPublished)
+	e.svc.SetTranslator(&fakeTranslator{values: map[uuid.UUID]map[string]map[string]any{
+		about.ID: {"en": {"title": ""}},
+	}})
+
+	res, err := e.svc.ListPages(context.Background(), cmstest.ActorWith(permView), PageListParams{Locale: "en"})
+	require.NoError(t, err)
+	require.Equal(t, "Gioi thieu", res.Items[0].Title)
+}
+
+// Reading in the source language must not cost a query.
+func TestListPages_SourceLanguageLooksUpNothing(t *testing.T) {
+	e := newTestSvc(t)
+	e.repo.seedPage("Gioi thieu", "gioi-thieu", nil, PageStatusPublished)
+	tr := &fakeTranslator{}
+	e.svc.SetTranslator(tr)
+
+	for _, locale := range []string{"vi", ""} {
+		res, err := e.svc.ListPages(context.Background(), cmstest.ActorWith(permView), PageListParams{Locale: locale})
+		require.NoError(t, err)
+		require.Equal(t, "Gioi thieu", res.Items[0].Title)
+	}
+	require.Zero(t, tr.bundled)
+}
+
+func TestListPageOptions_ShowsTheEnglishTitleWhereThereIsOne(t *testing.T) {
+	e := newTestSvc(t)
+	about := e.repo.seedPage("Gioi thieu", "gioi-thieu", nil, PageStatusPublished)
+	e.repo.seedPage("Lien he", "lien-he", nil, PageStatusDraft)
+	tr := &fakeTranslator{values: map[uuid.UUID]map[string]map[string]any{
+		about.ID: {"en": {"title": "About us"}},
+	}}
+	e.svc.SetTranslator(tr)
+
+	opts, err := e.svc.ListPageOptions(context.Background(), cmstest.ActorWith(permView), "en")
+	require.NoError(t, err)
+	got := map[string]string{}
+	for _, o := range opts {
+		got[o.Slug] = o.Title
+	}
+	require.Equal(t, map[string]string{"gioi-thieu": "About us", "lien-he": "Lien he"}, got)
+	require.Equal(t, 1, tr.bundled) // one bulk read for the whole picker
+}
+
+// The editor must keep showing the page's own columns: hand it a translated
+// title and the next save writes English into the Vietnamese row. GetPage
+// therefore takes no locale at all, and wiring a translator changes nothing.
+func TestGetPage_IsNeverTranslated(t *testing.T) {
+	e := newTestSvc(t)
+	about := e.repo.seedPage("Gioi thieu", "gioi-thieu", nil, PageStatusPublished)
+	tr := &fakeTranslator{values: map[uuid.UUID]map[string]map[string]any{
+		about.ID: {"en": {"title": "About us"}},
+	}}
+	e.svc.SetTranslator(tr)
+
+	got, err := e.svc.GetPage(context.Background(), cmstest.ActorWith(permView), about.ID)
+	require.NoError(t, err)
+	require.Equal(t, "Gioi thieu", got.Title)
+	require.Zero(t, tr.bundled)
 }
 
 func TestGetPage_NotFound(t *testing.T) {
@@ -77,26 +215,6 @@ func TestCreatePage_AutoSuffixSkipsTakenSuffixes(t *testing.T) {
 	require.Equal(t, "about-02", res.Slug)
 }
 
-// Auto-suffix is scoped per parent: the same slug is free under a different
-// parent (sibling-uniqueness, not global).
-func TestCreatePage_AutoSuffixScopedPerParent(t *testing.T) {
-	e := newTestSvc(t)
-	e.settings.Group = []map[string]any{{"key": shared.FlagArticleAllowSlugEdit, "type": "bool", "value": false}}
-	parent := e.repo.seedPage("Docs", "docs", nil, PageStatusDraft)
-	e.repo.seedPage("About", "about", nil, PageStatusDraft) // root-level "about" taken
-	res, err := e.svc.CreatePage(context.Background(), cmstest.SuperActor(),
-		CreatePageRequest{Title: "About", ParentID: &parent.ID})
-	require.NoError(t, err)
-	require.Equal(t, "about", res.Slug) // free under a different parent
-}
-
-func TestCreatePage_ParentNotFound(t *testing.T) {
-	e := newTestSvc(t)
-	missing := uuid.New()
-	_, err := e.svc.CreatePage(context.Background(), cmstest.SuperActor(), CreatePageRequest{Title: "Child", ParentID: &missing})
-	cmstest.AssertFieldErr(t, err, "parent_id", "not_found")
-}
-
 func TestCreatePage_UnsluggableTitle(t *testing.T) {
 	e := newTestSvc(t)
 	_, err := e.svc.CreatePage(context.Background(), cmstest.SuperActor(), CreatePageRequest{Title: "!!!"})
@@ -112,33 +230,6 @@ func TestCreatePage_SanitizesBody(t *testing.T) {
 	require.NotContains(t, *res.BodyHTML, "<script")
 	require.NotContains(t, *res.BodyHTML, "javascript:")
 	require.Contains(t, *res.BodyHTML, "<p>Hi</p>")
-}
-
-func TestUpdatePage_MoveToSelfCycle(t *testing.T) {
-	e := newTestSvc(t)
-	p := e.repo.seedPage("A", "a", nil, PageStatusDraft)
-	_, err := e.svc.UpdatePage(context.Background(), cmstest.SuperActor(), p.ID,
-		UpdatePageRequest{ParentID: shared.Optional[uuid.UUID]{Set: true, Value: &p.ID}, UpdatedAt: &p.UpdatedAt})
-	cmstest.AssertAppErr(t, err, http.StatusUnprocessableEntity, "page_cycle")
-}
-
-func TestUpdatePage_MoveUnderDescendantCycle(t *testing.T) {
-	e := newTestSvc(t)
-	root := e.repo.seedPage("Root", "root", nil, PageStatusDraft)
-	child := e.repo.seedPage("Child", "child", &root.ID, PageStatusDraft)
-	_, err := e.svc.UpdatePage(context.Background(), cmstest.SuperActor(), root.ID,
-		UpdatePageRequest{ParentID: shared.Optional[uuid.UUID]{Set: true, Value: &child.ID}, UpdatedAt: &root.UpdatedAt})
-	cmstest.AssertAppErr(t, err, http.StatusUnprocessableEntity, "page_cycle")
-}
-
-func TestUpdatePage_MoveToRoot(t *testing.T) {
-	e := newTestSvc(t)
-	root := e.repo.seedPage("Root", "root", nil, PageStatusDraft)
-	child := e.repo.seedPage("Child", "child", &root.ID, PageStatusDraft)
-	res, err := e.svc.UpdatePage(context.Background(), cmstest.SuperActor(), child.ID,
-		UpdatePageRequest{ParentID: shared.Optional[uuid.UUID]{Set: true, Value: nil}, UpdatedAt: &child.UpdatedAt})
-	require.NoError(t, err)
-	require.Nil(t, res.ParentID)
 }
 
 func TestUpdatePage_RegenerateSlugWhenManualEditOff(t *testing.T) {
@@ -190,12 +281,15 @@ func TestUpdatePage_SEOReplaceAll(t *testing.T) {
 	require.Nil(t, res.SEO.OGDescription) // wiped
 }
 
-func TestDeletePage_HasChildren(t *testing.T) {
+// A page that still points at another one is a leftover of a hierarchy nothing
+// can edit any more, so deleting the page it points at detaches it rather than
+// refusing — otherwise both pages would be stuck for good.
+func TestDeletePage_DetachesALeftoverChild(t *testing.T) {
 	e := newTestSvc(t)
 	root := e.repo.seedPage("Root", "root", nil, PageStatusDraft)
-	e.repo.seedPage("Child", "child", &root.ID, PageStatusDraft)
-	err := e.svc.DeletePage(context.Background(), cmstest.SuperActor(), root.ID)
-	cmstest.AssertAppErr(t, err, http.StatusConflict, "page_has_children")
+	child := e.repo.seedPage("Child", "child", &root.ID, PageStatusDraft)
+	require.NoError(t, e.svc.DeletePage(context.Background(), cmstest.SuperActor(), root.ID))
+	require.Nil(t, e.repo.pages[child.ID].ParentID)
 }
 
 func TestDeletePage_Success(t *testing.T) {

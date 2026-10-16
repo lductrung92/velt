@@ -53,8 +53,13 @@ export function useDeleteUser() {
   });
 }
 
+// Mints a new temporary password. It also revokes the user's sessions
+// server-side, so the sessions list is stale the moment this succeeds.
 export function useResetUserPassword() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => adminService.resetPassword(id),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: adminKeys.sessions.all() }),
   });
 }

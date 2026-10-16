@@ -33,7 +33,7 @@ export default function TwoFactor() {
   const profile = useProfile();
 
   return (
-    <Card className="max-w-2xl">
+    <Card>
       <CardContent className="pt-5">
         {profile.isLoading ? (
           <div className="space-y-4">

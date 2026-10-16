@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -183,4 +184,127 @@ func TestAuthorizeTranslate_ReusesTheManageGate(t *testing.T) {
 		http.StatusForbidden, "access_denied")
 	cmstest.AssertAppErr(t, e.svc.AuthorizeTranslateCategory(ctx, cmstest.ActorWith(permManage), uuid.New()),
 		http.StatusNotFound, "not_found")
+}
+
+// --- Admin list overlay (console reads in the language of its interface) ---
+
+// listEnv is a service whose translation port is wired, plus that port.
+func listEnv(t *testing.T) (*tenv, *fakeTranslator) {
+	t.Helper()
+	e := newTestSvc(t)
+	tr := newFakeTranslator()
+	e.svc.SetTranslator(tr)
+	return e, tr
+}
+
+func TestListCategories_ShowsEnglishWhereTranslated(t *testing.T) {
+	e, tr := listEnv(t)
+	news := e.repo.seedCategory("Tin Tức", "tin-tuc", nil)
+	life := e.repo.seedCategory("Đời Sống", "doi-song", nil)
+	tr.values[news.ID] = map[string]any{"name": "News"}
+
+	tree, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView), "en", "")
+	require.NoError(t, err)
+	require.Len(t, tree, 2)
+	byID := map[uuid.UUID]CategoryResponse{tree[0].ID: tree[0], tree[1].ID: tree[1]}
+
+	require.Equal(t, "News", byID[news.ID].NameDisplay)
+	require.Equal(t, "Đời Sống", byID[life.ID].NameDisplay, "no translation → the row's own name")
+}
+
+// The stored name must survive the overlay untouched. The console hydrates the
+// category EDITOR from this very response and PATCHes `name` straight back, so
+// folding the translation onto it would write English into the Vietnamese row
+// on the next save.
+func TestListCategories_LeavesTheStoredNameAlone(t *testing.T) {
+	e, tr := listEnv(t)
+	news := e.repo.seedCategory("Tin Tức", "tin-tuc", nil)
+	tr.values[news.ID] = map[string]any{"name": "News"}
+
+	tree, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView), "en", "")
+	require.NoError(t, err)
+	require.Equal(t, "Tin Tức", tree[0].Name)
+	require.Equal(t, "News", tree[0].NameDisplay)
+}
+
+// A blank translation is "I have not done this one", not "show nothing".
+func TestListCategories_BlankTranslationFallsBack(t *testing.T) {
+	e, tr := listEnv(t)
+	c := e.repo.seedCategory("Tin Tức", "tin-tuc", nil)
+	tr.values[c.ID] = map[string]any{"name": ""}
+
+	tree, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView), "en", "")
+	require.NoError(t, err)
+	require.Equal(t, "Tin Tức", tree[0].NameDisplay)
+}
+
+func TestListCategories_SourceLanguageLooksNothingUp(t *testing.T) {
+	for _, locale := range []string{"", "vi"} {
+		t.Run("locale="+locale, func(t *testing.T) {
+			e, tr := listEnv(t)
+			c := e.repo.seedCategory("Tin Tức", "tin-tuc", nil)
+			tr.values[c.ID] = map[string]any{"name": "News"}
+
+			tree, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView), locale, "")
+			require.NoError(t, err)
+			require.Equal(t, 0, tr.calls, "the source language is already in the row")
+			require.Equal(t, "Tin Tức", tree[0].NameDisplay)
+		})
+	}
+}
+
+func TestListCategories_ReadsTheWholeTreeInOneCall(t *testing.T) {
+	e, tr := listEnv(t)
+	for i := 0; i < 20; i++ {
+		c := e.repo.seedCategory(fmt.Sprintf("Mục %02d", i), fmt.Sprintf("muc-%02d", i), nil)
+		tr.values[c.ID] = map[string]any{"name": fmt.Sprintf("Topic %02d", i)}
+	}
+
+	tree, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView), "en", "")
+	require.NoError(t, err)
+	require.Len(t, tree, 20)
+	require.Equal(t, 1, tr.calls, "a 20-row tree must stay one round trip")
+	for _, n := range tree {
+		require.Equal(t, strings.Replace(n.Name, "Mục", "Topic", 1), n.NameDisplay)
+	}
+}
+
+func TestListCategories_NoTranslatorStillAnswers(t *testing.T) {
+	e := newTestSvc(t) // port never wired
+	e.repo.seedCategory("Tin Tức", "tin-tuc", nil)
+
+	tree, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView), "en", "")
+	require.NoError(t, err)
+	require.Equal(t, "Tin Tức", tree[0].NameDisplay)
+}
+
+func TestListCategories_StoreFailureServesVietnamese(t *testing.T) {
+	e, tr := listEnv(t)
+	c := e.repo.seedCategory("Tin Tức", "tin-tuc", nil)
+	tr.values[c.ID] = map[string]any{"name": "News"}
+	tr.err = errors.New("translation store down")
+
+	tree, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView), "en", "")
+	require.NoError(t, err, "a list that cannot reach the store still answers")
+	require.Equal(t, "Tin Tức", tree[0].NameDisplay)
+}
+
+// The write endpoints answer with what they persisted, in every language.
+func TestCategoryWrites_AnswerWithTheStoredName(t *testing.T) {
+	e, tr := listEnv(t)
+
+	created, err := e.svc.CreateCategory(context.Background(), cmstest.ActorWith(permManage), CreateCategoryRequest{Name: "Tin Tức"})
+	require.NoError(t, err)
+	tr.values[created.ID] = map[string]any{"name": "News"}
+	require.Equal(t, "Tin Tức", created.NameDisplay)
+
+	cur, err := e.repo.GetCategory(context.Background(), created.ID)
+	require.NoError(t, err)
+	name := "Tin Tức Mới"
+	updated, err := e.svc.UpdateCategory(context.Background(), cmstest.ActorWith(permManage), created.ID,
+		UpdateCategoryRequest{Name: &name, UpdatedAt: &cur.UpdatedAt})
+	require.NoError(t, err)
+	require.Equal(t, "Tin Tức Mới", updated.Name)
+	require.Equal(t, "Tin Tức Mới", updated.NameDisplay)
+	require.Equal(t, 0, tr.calls, "an editor response is never localized")
 }

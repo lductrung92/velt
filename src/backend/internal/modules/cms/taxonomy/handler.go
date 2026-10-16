@@ -24,7 +24,7 @@ func (h *Handler) ListCategories(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	res, err := h.svc.ListCategories(r.Context(), id)
+	res, err := h.svc.ListCategories(r.Context(), id, httpx.Locale(r), r.URL.Query().Get("status"))
 	if err != nil {
 		httpx.WriteError(w, err)
 		return

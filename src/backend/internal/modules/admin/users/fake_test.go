@@ -22,6 +22,13 @@ type fakeSession struct {
 	revoked bool
 }
 
+// fakePassword records what SetPassword stored, so a test can assert the hash
+// changed without ever seeing a plaintext.
+type fakePassword struct {
+	hash string
+	at   time.Time
+}
+
 // fakeRepo implements BOTH shared.SpineRepo and users.Repository so the Base
 // spine and the users service read consistent in-memory state.
 type fakeRepo struct {
@@ -34,7 +41,11 @@ type fakeRepo struct {
 	permIDByCode map[string]uuid.UUID
 	tfEnabled    map[uuid.UUID]bool
 	sessions     map[uuid.UUID]*fakeSession
-	now          time.Time
+	passwords    map[uuid.UUID]fakePassword
+	// createdHash is the hash the last CreateUser was handed, so a test can
+	// prove the service never stores a plaintext.
+	createdHash string
+	now         time.Time
 }
 
 func newFakeRepo(now time.Time) *fakeRepo {
@@ -43,7 +54,7 @@ func newFakeRepo(now time.Time) *fakeRepo {
 		userRoles: map[uuid.UUID]map[uuid.UUID]bool{}, roles: map[uuid.UUID]*shared.Role{},
 		byCode: map[string]uuid.UUID{}, rolePerms: map[uuid.UUID]map[string]bool{},
 		permIDByCode: map[string]uuid.UUID{}, tfEnabled: map[uuid.UUID]bool{},
-		sessions: map[uuid.UUID]*fakeSession{}, now: now,
+		sessions: map[uuid.UUID]*fakeSession{}, passwords: map[uuid.UUID]fakePassword{}, now: now,
 	}
 }
 
@@ -194,20 +205,46 @@ func (r *fakeRepo) ListUsers(_ context.Context, f ListUsersFilter) ([]User, int,
 		if f.Query != "" && !strings.Contains(u.Email, f.Query) && !strings.Contains(u.FullName, f.Query) {
 			continue
 		}
+		if f.Role != "" && !r.hasRoleCode(u.ID, f.Role) {
+			continue
+		}
 		out = append(out, *u)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Email < out[j].Email })
 	return out, len(out), nil
 }
 
-func (r *fakeRepo) CreateUser(_ context.Context, email, fullName, _ string, roleIDs []uuid.UUID, _ uuid.UUID) (*User, error) {
+func (r *fakeRepo) CreateUser(_ context.Context, email, fullName, passwordHash string, roleIDs []uuid.UUID, _ uuid.UUID) (*User, error) {
 	if _, ok := r.byEmail[strings.ToLower(email)]; ok {
 		return nil, shared.ErrConflict
 	}
+	r.createdHash = passwordHash
 	u := r.addUser(email, statusActive, roleIDs...)
 	u.FullName = fullName
 	cp := *u
 	return &cp, nil
+}
+
+func (r *fakeRepo) hasRoleCode(userID uuid.UUID, code string) bool {
+	for rid := range r.userRoles[userID] {
+		if r.roles[rid].Code == code {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *fakeRepo) SetPassword(_ context.Context, id uuid.UUID, passwordHash string, at time.Time) error {
+	if _, ok := r.users[id]; !ok {
+		return shared.ErrNotFound
+	}
+	r.passwords[id] = fakePassword{hash: passwordHash, at: at}
+	for _, s := range r.sessions {
+		if s.userID == id {
+			s.revoked = true
+		}
+	}
+	return nil
 }
 
 func (r *fakeRepo) HardDeleteUser(_ context.Context, id uuid.UUID) error {

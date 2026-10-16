@@ -37,6 +37,7 @@ func articleListParams(r *http.Request) (ArticleListParams, error) {
 		CreatedTo:   createdTo,
 		Page:        shared.QueryInt(r, "page", 1),
 		PageSize:    shared.QueryInt(r, "page_size", 20),
+		Locale:      httpx.Locale(r),
 	}, nil
 }
 

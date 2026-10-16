@@ -10,7 +10,7 @@ import {
   Send,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -31,12 +31,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ListPager } from "@/components/ui/list-pager";
+import { useDebounce } from "@/hooks/useDebounce";
+import { usePaging } from "@/hooks/usePaging";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
 import { PageStatusBadge } from "../components/PageStatusBadge";
-import { useDeletePage, usePages } from "../hooks/useCmsPages";
-import type { PageNode, PageStatus } from "../services/pages.service";
+import {
+  useDeletePage,
+  usePageOverview,
+  usePages,
+} from "../hooks/useCmsPages";
+import type { PageListItem, PageStatus } from "../services/pages.service";
 
 import "@/styles/list-page.css";
 import "./pages-list.css";
@@ -48,32 +55,15 @@ const PAGE_STATUSES: PageStatus[] = [
   "archived",
 ];
 
-// The overview cards. Three read a status; "landing" reads a different property
-// entirely, which is why each card carries its own predicate rather than a
-// status string.
+// The overview cards, in the order usePageOverview answers them. Their counts
+// come from the server now: the list is paginated, so what is on screen is no
+// longer the whole truth to count.
 const OVERVIEW = [
-  { key: "total", Icon: FileStack, match: null },
-  { key: "draft", Icon: PenLine, match: (n: PageNode) => n.status === "draft" },
-  {
-    key: "published",
-    Icon: Send,
-    match: (n: PageNode) => n.status === "published",
-  },
-  {
-    key: "landing",
-    Icon: LayoutTemplate,
-    match: (n: PageNode) => !!n.landing_id,
-  },
+  { key: "total", Icon: FileStack },
+  { key: "draft", Icon: PenLine },
+  { key: "published", Icon: Send },
+  { key: "landing", Icon: LayoutTemplate },
 ] as const;
-
-type Row = { node: PageNode; depth: number; childCount: number };
-
-function flatten(nodes: PageNode[], depth = 0): Row[] {
-  return nodes.flatMap((n) => [
-    { node: n, depth, childCount: n.children?.length ?? 0 },
-    ...flatten(n.children ?? [], depth + 1),
-  ]);
-}
 
 export default function PageList() {
   const { t } = useTranslation();
@@ -82,44 +72,38 @@ export default function PageList() {
   const canCreate = hasPermission("cms.page.create");
   const canDelete = hasPermission("cms.page.delete");
 
-  const pagesQuery = usePages();
   const del = useDeletePage();
-  const [toDelete, setToDelete] = useState<PageNode | null>(null);
-  const [q, setQ] = useState("");
+  const [toDelete, setToDelete] = useState<PageListItem | null>(null);
   const [draftQ, setDraftQ] = useState("");
   const [status, setStatus] = useState<PageStatus | "">("");
   const [landingOnly, setLandingOnly] = useState(false);
+  // Page, page size and pager style all come from the shared settings
+  // (Settings → General → Pagination), so every list pages the same way.
+  const paging = usePaging();
+  const { page, setPage } = paging;
+  // Typing used to be free: the whole tree was in memory. Each keystroke is a
+  // request now, so it waits for a pause instead of firing on every letter.
+  const q = useDebounce(draftQ.trim());
 
-  // One request returns the whole tree, so every count and filter here is
-  // client-side. No per-status round trip, unlike the paginated lists.
-  const all = useMemo(() => flatten(pagesQuery.data ?? []), [pagesQuery.data]);
   const hasFilters = !!(q || status || landingOnly);
+  const pagesQuery = usePages({
+    q: q || undefined,
+    status: status || undefined,
+    landing: landingOnly ? "1" : undefined,
+    page,
+    page_size: paging.pageSize,
+  });
+  const rows = pagesQuery.data?.items ?? [];
+  const total = pagesQuery.data?.total ?? 0;
+  const overview = usePageOverview(!pagesQuery.isError);
 
-  const rows = useMemo(() => {
-    if (!hasFilters) return all;
-    const needle = q.trim().toLowerCase();
-    return (
-      all
-        .filter((r) => !status || r.node.status === status)
-        .filter((r) => !landingOnly || !!r.node.landing_id)
-        .filter(
-          (r) =>
-            !needle ||
-            r.node.title.toLowerCase().includes(needle) ||
-            r.node.slug.toLowerCase().includes(needle),
-        )
-        // Filtering breaks the hierarchy: a match whose parent was filtered out
-        // would be indented under nothing. Flatten instead of drawing a lie.
-        .map((r) => ({ ...r, depth: 0 }))
-    );
-  }, [all, hasFilters, q, status, landingOnly]);
-
-  const counts = OVERVIEW.map(({ match }) =>
-    match ? all.filter((r) => match(r.node)).length : all.length,
-  );
+  // A filter change starts the list again from the top; otherwise page 4 of the
+  // old filter asks for page 4 of the new one, which is usually empty.
+  useEffect(() => {
+    setPage(1);
+  }, [q, status, landingOnly, setPage]);
 
   function reset() {
-    setQ("");
     setDraftQ("");
     setStatus("");
     setLandingOnly(false);
@@ -150,9 +134,8 @@ export default function PageList() {
     });
   }
 
-  const titleCell = ({ node, depth, childCount }: Row) => (
-    <div className="page-title" data-depth={depth}>
-      <span className="page-branch" aria-hidden />
+  const titleCell = (node: PageListItem) => (
+    <div className="page-title">
       <Link to={`/cms/pages/${node.id}`}>{node.title}</Link>
       {node.landing_id && (
         <span className="page-badge">
@@ -160,15 +143,10 @@ export default function PageList() {
           {t("cms.pages.badge.landing")}
         </span>
       )}
-      {childCount > 0 && !hasFilters && (
-        <span className="page-children">
-          {t("cms.pages.child_count", { count: childCount })}
-        </span>
-      )}
     </div>
   );
 
-  const actions = (node: PageNode) => (
+  const actions = (node: PageListItem) => (
     <RowActions>
       <RowAction
         icon={Pencil}
@@ -217,12 +195,14 @@ export default function PageList() {
               </span>
             </span>
             <strong>
-              {pagesQuery.isPending ? (
+              {overview[index].isPending ? (
                 <Skeleton className="h-8 w-12" />
-              ) : pagesQuery.isError ? (
+              ) : overview[index].isError ? (
                 "—"
               ) : (
-                new Intl.NumberFormat(i18n.language).format(counts[index])
+                new Intl.NumberFormat(i18n.language).format(
+                  overview[index].data?.total ?? 0,
+                )
               )}
             </strong>
             <span className="list-metric-bottom">
@@ -240,7 +220,7 @@ export default function PageList() {
             <p>
               {pagesQuery.isPending || pagesQuery.isError
                 ? t("cms.pages.list_hint")
-                : t("cms.pages.record_count", { count: all.length })}
+                : t("cms.pages.record_count", { count: total })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -276,10 +256,7 @@ export default function PageList() {
         <div className="list-toolbar">
           <form
             className="list-search"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setQ(draftQ.trim());
-            }}
+            onSubmit={(event) => event.preventDefault()}
           >
             <Search className="size-4" aria-hidden />
             <Input
@@ -287,13 +264,7 @@ export default function PageList() {
               value={draftQ}
               aria-label={t("cms.pages.search_label")}
               placeholder={t("cms.pages.search_ph")}
-              onChange={(event) => {
-                const value = event.target.value;
-                setDraftQ(value);
-                // The whole tree is already in memory, so searching as you type
-                // costs nothing and waiting for Enter would be pure friction.
-                setQ(value.trim());
-              }}
+              onChange={(event) => setDraftQ(event.target.value)}
             />
             <Button
               type="submit"
@@ -388,9 +359,6 @@ export default function PageList() {
           </div>
         ) : (
           <>
-            {hasFilters && (
-              <p className="page-flat-notice">{t("cms.pages.flat_notice")}</p>
-            )}
             <div className="list-desktop">
               <Table
                 scroll={false}
@@ -409,18 +377,16 @@ export default function PageList() {
                 </TableHeader>
                 <TableBody>
                   {rows.map((row) => (
-                    <TableRow key={row.node.id} data-testid="cms-page-row">
-                      <TableCell style={{ paddingLeft: 20 + row.depth * 18 }}>
-                        {titleCell(row)}
+                    <TableRow key={row.id} data-testid="cms-page-row">
+                      <TableCell>{titleCell(row)}</TableCell>
+                      <TableCell>
+                        <span className="page-path">/{row.slug}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="page-path">/{row.node.slug}</span>
-                      </TableCell>
-                      <TableCell>
-                        <PageStatusBadge status={row.node.status} />
+                        <PageStatusBadge status={row.status} />
                       </TableCell>
                       <TableCell className="text-right">
-                        {actions(row.node)}
+                        {actions(row)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -430,14 +396,14 @@ export default function PageList() {
 
             <div className="list-mobile">
               {rows.map((row) => (
-                <div className="page-mobile-card" key={row.node.id}>
+                <div className="page-mobile-card" key={row.id}>
                   <div className="page-mobile-heading">
                     {titleCell(row)}
-                    {actions(row.node)}
+                    {actions(row)}
                   </div>
                   <div className="page-mobile-meta">
-                    <PageStatusBadge status={row.node.status} />
-                    <span className="page-path">/{row.node.slug}</span>
+                    <PageStatusBadge status={row.status} />
+                    <span className="page-path">/{row.slug}</span>
                   </div>
                 </div>
               ))}
@@ -445,6 +411,16 @@ export default function PageList() {
           </>
         )}
       </section>
+
+      {/* Outside the card on purpose: the panel holds the records, the pager is
+          how you ask for the next ones. */}
+      <div className="list-pagination">
+        <ListPager
+          paging={paging}
+          total={total}
+          loading={pagesQuery.isFetching}
+        />
+      </div>
 
       <ConfirmDialog
         open={!!toDelete}

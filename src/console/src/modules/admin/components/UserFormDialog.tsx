@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save, X } from "lucide-react";
+import { Pencil, Save, UserPlus, X, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -9,16 +9,10 @@ import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { ModalHeader } from "@/components/common/ModalHeader";
 import { Select } from "@/components/common/Select";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -42,7 +36,10 @@ import {
   type CreateUserValues,
   type EditUserValues,
 } from "../schemas/admin";
-import type { AdminUser } from "../services/admin.service";
+import type {
+  AdminUser,
+  AdminUserCredentials,
+} from "../services/admin.service";
 
 const EDITOR_CODE = "editor";
 
@@ -56,15 +53,18 @@ interface RoleOption {
 export function UserFormDialog({
   mode,
   user,
+  onCreated,
   onClose,
 }: {
   mode: "create" | "edit";
   user?: AdminUser;
+  /** Hands the caller the new account and its one-time temporary password. */
+  onCreated?: (created: AdminUserCredentials) => void;
   onClose: () => void;
 }) {
   if (mode === "edit" && user)
     return <EditUserForm user={user} onClose={onClose} />;
-  return <CreateUserForm onClose={onClose} />;
+  return <CreateUserForm onCreated={onCreated} onClose={onClose} />;
 }
 
 // Role <Select> rendered only for super_admin (single role on console). Returns
@@ -83,7 +83,13 @@ function useRoleOptions(enabled: boolean): {
   return { options, loading: roles.isLoading, editorId };
 }
 
-function CreateUserForm({ onClose }: { onClose: () => void }) {
+function CreateUserForm({
+  onCreated,
+  onClose,
+}: {
+  onCreated?: (created: AdminUserCredentials) => void;
+  onClose: () => void;
+}) {
   const { t } = useTranslation();
   const { hasPermission } = usePermission();
   const isSuper = hasPermission("*");
@@ -114,8 +120,9 @@ function CreateUserForm({ onClose }: { onClose: () => void }) {
         role_ids: isSuper && v.role_id ? [v.role_id] : undefined,
       },
       {
-        onSuccess: () => {
+        onSuccess: (created) => {
           toast.success(t("admin.users.created"));
+          onCreated?.(created);
           onClose();
         },
         onError: (err) => {
@@ -136,8 +143,8 @@ function CreateUserForm({ onClose }: { onClose: () => void }) {
 
   return (
     <FormDialogShell
+      icon={UserPlus}
       title={t("admin.users.create_title")}
-      description={t("admin.users.create_desc")}
       topError={topError}
       dirty={form.formState.isDirty}
       onClose={onClose}
@@ -285,8 +292,9 @@ function EditUserForm({
 
   return (
     <FormDialogShell
+      icon={Pencil}
       title={t("admin.users.edit_title")}
-      description={t("admin.users.edit_desc")}
+      subject={user.full_name}
       topError={topError}
       dirty={form.formState.isDirty}
       onClose={onClose}
@@ -375,15 +383,17 @@ function EditUserForm({
 }
 
 function FormDialogShell({
+  icon,
   title,
-  description,
+  subject,
   topError,
   dirty,
   onClose,
   children,
 }: {
+  icon: LucideIcon;
   title: string;
-  description: string;
+  subject?: string;
   topError: string | null;
   /** True once the user has typed something worth losing. */
   dirty: boolean;
@@ -400,10 +410,7 @@ function FormDialogShell({
   return (
     <Dialog open {...dialogProps}>
       <DialogContent closeLabel={t("common.close")}>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
+        <ModalHeader icon={icon} title={title} subject={subject} />
         {topError && <Alert variant="danger" message={topError} />}
         {children}
       </DialogContent>

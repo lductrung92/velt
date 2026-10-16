@@ -9,6 +9,7 @@ import (
 
 	"github.com/velt/backend/internal/modules/cms/shared"
 	"github.com/velt/backend/internal/modules/cms/widgets"
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/storage"
 )
 
@@ -20,12 +21,19 @@ type PublicService struct {
 	resolver *widgets.Resolver
 	files    storage.Storage
 	tr       Translator
+	// assets upgrades a section's stored image paths to their flat /img address
+	// and attaches the size recorded for them; nil until wired, nil answers
+	// nothing and the sections carry the legacy URLs.
+	assets *media.PublicURLs
 }
 
 // NewPublicService wires the public landing service.
 func NewPublicService(repo Repository, resolver *widgets.Resolver, files storage.Storage) *PublicService {
 	return &PublicService{repo: repo, resolver: resolver, files: files}
 }
+
+// SetMediaURLs wires the read-path media mapping (called once at startup).
+func (s *PublicService) SetMediaURLs(m *media.PublicURLs) { s.assets = m }
 
 // ResolvePublishedSections returns the frozen (visible) sections of a PUBLISHED
 // landing, with media *_path→*_url injected and dynamic sections
@@ -57,6 +65,12 @@ func (s *PublicService) ResolvePublishedSectionsIn(ctx context.Context, id uuid.
 		return nil, nil
 	}
 	byID := s.sectionTranslations(ctx, snap.Sections, locale)
+	configs := make([]json.RawMessage, 0, len(snap.Sections))
+	for _, sec := range snap.Sections {
+		configs = append(configs, sec.Config)
+	}
+	// One lookup for every image on the page, not one per section.
+	found := s.assets.Resolve(ctx, configMediaPaths(configs))
 	out := make([]shared.PublicSection, 0, len(snap.Sections))
 	for _, sec := range snap.Sections {
 		config := sec.Config
@@ -66,7 +80,7 @@ func (s *PublicService) ResolvePublishedSectionsIn(ctx context.Context, id uuid.
 		out = append(out, shared.PublicSection{
 			Type:      sec.Type,
 			SortOrder: sec.SortOrder,
-			Config:    resolveConfigMediaURLs(ctx, s.files, config),
+			Config:    resolveConfigMediaURLs(ctx, s.files, found, config),
 			// The DATA a dynamic section pulls in (articles, members, products)
 			// is read in the language of the request by the resolver itself;
 			// only the words around it come from here.

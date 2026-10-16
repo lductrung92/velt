@@ -30,6 +30,15 @@ func cleanupIT(t *testing.T, pool *pgxpool.Pool) {
 	})
 }
 
+// replaceIT runs the whole-list replace and answers with the ids it removed,
+// which most tests ignore.
+func replaceIT(t *testing.T, repo Repository, group, slot string, blocks []blockWrite) []uuid.UUID {
+	t.Helper()
+	removed, err := repo.ReplaceRegionBlocks(context.Background(), group, slot, blocks)
+	require.NoError(t, err)
+	return removed
+}
+
 func widgetWrite(typ string) blockWrite {
 	return blockWrite{Kind: KindWidget, WidgetType: &typ, Config: json.RawMessage(`{}`), IsVisible: true}
 }
@@ -57,11 +66,11 @@ func TestIT_RegionBlocksKeepTheirIDsAcrossSaves(t *testing.T) {
 	cleanupIT(t, pool)
 
 	slot := itSlot()
-	require.NoError(t, repo.ReplaceRegionBlocks(ctx, GroupCommon, slot, []blockWrite{
+	replaceIT(t, repo, GroupCommon, slot, []blockWrite{
 		widgetWrite(widgets.TypeTeam),
 		widgetWrite(widgets.TypeArticlesList),
 		widgetWrite(widgets.TypeCTABanner),
-	}))
+	})
 
 	first, err := repo.RegionBlocks(ctx, GroupCommon, slot)
 	require.NoError(t, err)
@@ -73,10 +82,13 @@ func TestIT_RegionBlocksKeepTheirIDsAcrossSaves(t *testing.T) {
 	reordered := widgetWrite(widgets.TypeTeam)
 	reordered.ID = &kept.ID
 	reordered.Config = json.RawMessage(`{"limit": 4}`)
-	require.NoError(t, repo.ReplaceRegionBlocks(ctx, GroupCommon, slot, []blockWrite{
-		widgetWrite(widgets.TypeGamesList),
+	removed := replaceIT(t, repo, GroupCommon, slot, []blockWrite{
+		widgetWrite(widgets.TypeCategoriesShowcase),
 		reordered,
-	}))
+	})
+	// The ids the save deleted, which is the set whose translations are purged:
+	// every block that did not come back, not only the one named here.
+	require.ElementsMatch(t, []uuid.UUID{first[1].ID, dropped.ID}, removed)
 
 	second, err := repo.RegionBlocks(ctx, GroupCommon, slot)
 	require.NoError(t, err)
@@ -95,7 +107,7 @@ func TestIT_RegionBlocksKeepTheirIDsAcrossSaves(t *testing.T) {
 	// the case the group column has to carry — before it, these were one list.
 	stolen := widgetWrite(widgets.TypeTeam)
 	stolen.ID = &kept.ID
-	require.NoError(t, repo.ReplaceRegionBlocks(ctx, GroupBlogDetail, slot, []blockWrite{stolen}))
+	replaceIT(t, repo, GroupBlogDetail, slot, []blockWrite{stolen})
 	mine, err := repo.RegionBlocks(ctx, GroupCommon, slot)
 	require.NoError(t, err)
 	require.Len(t, mine, 2, "the other group must not have taken a block from this one")
@@ -121,8 +133,8 @@ func TestIT_PublicChromeOmitsASlotWithNoVisibleBlocks(t *testing.T) {
 	hidden, shown := itSlot(), itSlot()
 	invisible := widgetWrite(widgets.TypeTeam)
 	invisible.IsVisible = false
-	require.NoError(t, repo.ReplaceRegionBlocks(ctx, GroupBlogDetail, hidden, []blockWrite{invisible}))
-	require.NoError(t, repo.ReplaceRegionBlocks(ctx, GroupCommon, shown, []blockWrite{widgetWrite(widgets.TypeTeam)}))
+	replaceIT(t, repo, GroupBlogDetail, hidden, []blockWrite{invisible})
+	replaceIT(t, repo, GroupCommon, shown, []blockWrite{widgetWrite(widgets.TypeTeam)})
 
 	out, err := publicSvc(pool, widgets.Ports{}, fakeMenus{}).Chrome(ctx, "vi")
 	require.NoError(t, err)
@@ -151,10 +163,10 @@ func TestIT_PublicChromeDropsAMenuBlockThatDoesNotResolve(t *testing.T) {
 		"Chrome IT", "cmsit-"+uuid.NewString()[:8]).Scan(&menuID))
 
 	slot := itSlot()
-	require.NoError(t, repo.ReplaceRegionBlocks(ctx, GroupCommon, slot, []blockWrite{
+	replaceIT(t, repo, GroupCommon, slot, []blockWrite{
 		{Kind: KindMenu, MenuID: &menuID, Config: json.RawMessage(`{}`), IsVisible: true},
 		widgetWrite(widgets.TypeTeam),
-	}))
+	})
 
 	// The menu is absent from the resolution: deleted, or with nothing left to
 	// render — one accident with two spellings.
@@ -186,13 +198,66 @@ func TestIT_PublicChromeDropsAWidgetThatFailsToResolve(t *testing.T) {
 	cleanupIT(t, pool)
 
 	slot := itSlot()
-	require.NoError(t, repo.ReplaceRegionBlocks(ctx, GroupCommon, slot, []blockWrite{
+	replaceIT(t, repo, GroupCommon, slot, []blockWrite{
 		widgetWrite(widgets.TypeTeam),
 		widgetWrite(widgets.TypeCTABanner),
-	}))
+	})
 
 	out, err := publicSvc(pool, widgets.Ports{Members: brokenMembers{}}, fakeMenus{}).Chrome(ctx, "vi")
 	require.NoError(t, err)
 	require.Len(t, out[GroupCommon][slot], 1, "the broken widget is dropped, the static one still renders")
 	require.Equal(t, widgets.TypeCTABanner, out[GroupCommon][slot][0].(resolvedWidget).WidgetType)
+}
+
+// The public read answers in the language it is asked for: a block's config
+// comes back overlaid with one language's copy, and only its text is — a
+// number in a translation is not an override of a setting. A language nobody
+// has translated reads as what was typed, which is also what the editor's own
+// screen keeps showing.
+func TestIT_PublicChromeOverlaysTranslatedBlockConfig(t *testing.T) {
+	pool := cmstest.RequireDB(t)
+	repo := NewRepository(pool)
+	ctx := context.Background()
+	cleanupIT(t, pool)
+
+	slot := itSlot()
+	block := widgetWrite(widgets.TypeRichText)
+	block.Config = json.RawMessage(`{"body_html":"<p>Gọi cho chúng tôi</p>","align":"center"}`)
+	replaceIT(t, repo, GroupCommon, slot, []blockWrite{block})
+	stored, err := repo.RegionBlocks(ctx, GroupCommon, slot)
+	require.NoError(t, err)
+	require.Len(t, stored, 1)
+
+	tr := newFakeTranslator()
+	tr.withConfig(stored[0].ID, "en", map[string]any{
+		"body_html": "<p>Call us</p>",
+		"align":     "   ", // blank: keeps the original
+		"limit":     99,    // not text: never overlaid
+	})
+	svc := publicSvc(pool, widgets.Ports{}, fakeMenus{})
+	svc.SetTranslator(tr)
+
+	config := func(locale string) map[string]any {
+		t.Helper()
+		out, err := svc.Chrome(ctx, locale)
+		require.NoError(t, err)
+		require.Len(t, out[GroupCommon][slot], 1)
+		var cfg map[string]any
+		require.NoError(t, json.Unmarshal(out[GroupCommon][slot][0].(resolvedWidget).Config, &cfg))
+		return cfg
+	}
+
+	en := config("en")
+	require.Equal(t, "<p>Call us</p>", en["body_html"], "the English copy replaces the stored text")
+	require.Equal(t, "center", en["align"], "a blank translation keeps the original")
+	require.NotContains(t, en, "limit", "a non-string field is never overlaid")
+
+	vi := config("vi")
+	require.Equal(t, "<p>Gọi cho chúng tôi</p>", vi["body_html"],
+		"a language with no copy reads as what was typed")
+
+	second, err := repo.RegionBlocks(ctx, GroupCommon, slot)
+	require.NoError(t, err)
+	require.JSONEq(t, string(stored[0].Config), string(second[0].Config),
+		"the stored block is untouched: the overlay happens on the public read alone")
 }

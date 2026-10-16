@@ -33,11 +33,6 @@ export function normalizeSeo(seo: PageSEO): PageSEO {
   };
 }
 
-// normalizeSeo emits keys in a fixed order, so JSON compare is stable.
-export function seoEquals(a: PageSEO, b: PageSEO): boolean {
-  return JSON.stringify(normalizeSeo(a)) === JSON.stringify(normalizeSeo(b));
-}
-
 // Field plan mirrors the article editor's SEO card 1:1 (same order, controls and
 // max lengths) so both CMS editors read identically. State-driven (this form's
 // seo lives outside react-hook-form), but the markup matches FormItem spacing.

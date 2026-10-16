@@ -48,13 +48,13 @@ const messages = [
   },
 ];
 
-function mount() {
+function mount(entry = "/chat") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[entry]}>
         <ChatInbox />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -83,6 +83,58 @@ describe("Chat inbox workspace", () => {
     expect(
       screen.queryByRole("textbox", { name: t("chat.reply_ph") }),
     ).not.toBeInTheDocument();
+  });
+
+  it("opens the conversation a lead row handed over, and ends it with a danger button", async () => {
+    server.use(
+      http.get("*/chat/conversations", () =>
+        HttpResponse.json({ items: [first, second] }),
+      ),
+    );
+    mount(`/chat?conversation=${second.id}`);
+    expect(
+      await screen.findByRole("heading", {
+        name: i18n.t("chat.visitor_name", { id: "DEF456" }),
+      }),
+    ).toBeVisible();
+    expect(screen.queryByText(t("chat.welcome_title"))).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: t("chat.close") })).toHaveClass(
+      "bg-destructive",
+    );
+  });
+
+  // The common case: a lead is followed up long after its chat was ended, and
+  // the default queue hides closed threads.
+  it("finds a handed-over conversation that has already been closed", async () => {
+    const ended: InboxItem = { ...second, state: "closed" };
+    server.use(
+      http.get("*/chat/conversations", ({ request }) => {
+        const state = new URL(request.url).searchParams.get("state");
+        return HttpResponse.json({
+          items: state === "closed" ? [ended] : [first],
+        });
+      }),
+    );
+    mount(`/chat?conversation=${ended.id}`);
+    expect(
+      await screen.findByRole("heading", {
+        name: i18n.t("chat.visitor_name", { id: "DEF456" }),
+      }),
+    ).toBeVisible();
+    expect(screen.queryByText(t("chat.welcome_title"))).not.toBeInTheDocument();
+  });
+
+  it("lands on the welcome panel when the handed-over conversation is gone", async () => {
+    server.use(
+      http.get("*/chat/conversations", () =>
+        HttpResponse.json({ items: [first] }),
+      ),
+    );
+    mount("/chat?conversation=conversation-missing");
+    // The queue arrives, the hand-off finds nothing, and nobody sees an error.
+    expect(await screen.findAllByTestId("chat-inbox-row")).toHaveLength(1);
+    expect(screen.getByText(t("chat.welcome_title"))).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("searches conversations and queries the selected state including closed history", async () => {

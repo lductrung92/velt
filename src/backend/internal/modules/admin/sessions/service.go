@@ -10,6 +10,7 @@ import (
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/admin/shared"
 	"github.com/velt/backend/internal/platform/activity"
+	"github.com/velt/backend/internal/platform/retention"
 )
 
 // Service holds session-control business logic.
@@ -95,4 +96,38 @@ func (s *Service) RevokeUserSessions(ctx context.Context, id *httpx.Identity, ta
 		EntityLabel: s.ownerLabel(ctx, targetID),
 	})
 	return nil
+}
+
+// PurgeSessions permanently deletes every session older than the given
+// retention window and returns how many went. Requires sessions.revoke — the
+// same gate as the per-row revoke, because this is the same act in bulk.
+//
+// Two deliberate choices:
+//
+//   - The cutoff is dated from the server's clock, not taken from the request,
+//     so a client with a wrong clock cannot widen the delete.
+//   - The caller's OWN sessions are never deleted. The access token carries no
+//     session id, so "the current session" is not identifiable here; keeping
+//     every session the acting admin holds is the nearest thing that cannot
+//     sign them out mid-request. The console says so.
+func (s *Service) PurgeSessions(ctx context.Context, id *httpx.Identity, olderThan string) (PurgeResponse, error) {
+	if err := s.Require(ctx, id, permKill); err != nil {
+		return PurgeResponse{}, err
+	}
+	before, ok := retention.Cutoff(olderThan, s.Now())
+	if !ok {
+		return PurgeResponse{}, apperr.Validation(map[string]string{"older_than": "invalid"})
+	}
+	deleted, err := s.repo.PurgeSessions(ctx, before, id.UserID)
+	if err != nil {
+		return PurgeResponse{}, apperr.Internal()
+	}
+	s.Sec(ctx).Info("admin purged sessions",
+		"actor", id.UserID, "older_than", olderThan, "deleted", deleted)
+	// No entity: the target is the table, not one session or one account.
+	s.Record(ctx, id, activity.Entry{
+		Action:   actionPurged,
+		Metadata: map[string]any{"older_than": olderThan, "deleted": deleted},
+	})
+	return PurgeResponse{Deleted: deleted}, nil
 }

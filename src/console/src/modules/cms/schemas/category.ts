@@ -1,6 +1,8 @@
 import type { TFunction } from "i18next";
 import { z } from "zod";
 
+import type { CategoryStatus } from "../services/categories.service";
+
 // The "full" category dialog (consolidated create/edit): identity + placement +
 // long description + SEO. Slug is optional (derived from name when blank);
 // parent_id "" means a root node. Messages are pre-translated so <FormMessage>
@@ -8,6 +10,7 @@ import { z } from "zod";
 export interface CategoryFormValues {
   name: string;
   slug: string;
+  status: CategoryStatus;
   parent_id: string;
   sort_order: number;
   description: string;
@@ -19,6 +22,9 @@ export interface CategoryFormValues {
 export const categoryFormDefaults: CategoryFormValues = {
   name: "",
   slug: "",
+  // A new category is in use the moment it exists; the column defaults the
+  // same way, so the form and the server agree without sending anything.
+  status: "published",
   parent_id: "",
   sort_order: 0,
   description: "",
@@ -37,6 +43,7 @@ export function makeCategorySchema(t: TFunction) {
       .min(1, t("errors.validation.required"))
       .max(160, t("errors.validation.too_long")),
     slug: z.string().trim().max(160, t("errors.validation.too_long")),
+    status: z.enum(["draft", "published", "archived"]),
     parent_id: z.string(),
     sort_order: z.coerce
       .number({ invalid_type_error: t("errors.validation.invalid_value") })

@@ -25,7 +25,11 @@ func taxonomyDB(t *testing.T) (Repository, *pgxpool.Pool) {
 	return NewRepository(pool), pool
 }
 
-func itCat(slug string) categoryWrite { return categoryWrite{Name: "CMS IT", Slug: slug} }
+// itCat is a plain, in-use category: status is NOT NULL with a CHECK, so a
+// write always carries one.
+func itCat(slug string) categoryWrite {
+	return categoryWrite{Name: "CMS IT", Slug: slug, Status: CategoryStatusPublished}
+}
 
 func itUser(t *testing.T, pool *pgxpool.Pool) uuid.UUID {
 	t.Helper()
@@ -185,4 +189,81 @@ func TestIT_TagMergeDedupesAndDeletesSource(t *testing.T) {
 	var srcRows int
 	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM cms_article_tags WHERE tag_id = $1`, src.ID).Scan(&srcRows))
 	require.Equal(t, 0, srcRows)
+}
+
+// A row written the way every row predating the status column was written — no
+// status at all — must come back published, not draft.
+func TestIT_CategoryStatusDefaultsToPublishedForExistingRows(t *testing.T) {
+	repo, pool := taxonomyDB(t)
+	ctx := context.Background()
+
+	slug := "cmsit-legacy-" + uuid.NewString()[:8]
+	var id uuid.UUID
+	require.NoError(t, pool.QueryRow(ctx,
+		`INSERT INTO cms_categories (name, slug) VALUES ('CMS IT', $1) RETURNING id`, slug).Scan(&id))
+
+	got, err := repo.GetCategory(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, CategoryStatusPublished, got.Status)
+}
+
+func TestIT_CategoryStatusRoundTripsAndFiltersTheList(t *testing.T) {
+	repo, _ := taxonomyDB(t)
+	ctx := context.Background()
+
+	liveW := itCat("cmsit-live-" + uuid.NewString()[:8])
+	liveW.Status = CategoryStatusPublished
+	live, err := repo.CreateCategory(ctx, liveW)
+	require.NoError(t, err)
+
+	draftW := itCat("cmsit-draft-" + uuid.NewString()[:8])
+	draftW.Status = CategoryStatusDraft
+	draft, err := repo.CreateCategory(ctx, draftW)
+	require.NoError(t, err)
+	require.Equal(t, CategoryStatusDraft, draft.Status)
+
+	drafts, err := repo.ListCategoriesWithCounts(ctx, CategoryStatusDraft)
+	require.NoError(t, err)
+	require.Equal(t, []uuid.UUID{draft.ID}, itCategoryIDs(drafts, live.ID, draft.ID))
+
+	published, err := repo.ListCategoriesWithCounts(ctx, CategoryStatusPublished)
+	require.NoError(t, err)
+	require.Equal(t, []uuid.UUID{live.ID}, itCategoryIDs(published, live.ID, draft.ID))
+
+	all, err := repo.ListCategoriesWithCounts(ctx, "")
+	require.NoError(t, err)
+	require.Len(t, itCategoryIDs(all, live.ID, draft.ID), 2)
+
+	// The full-row UPDATE carries the new status through.
+	w := draftW
+	w.Status = CategoryStatusArchived
+	archived, err := repo.UpdateCategory(ctx, draft.ID, w, draft.UpdatedAt, false)
+	require.NoError(t, err)
+	require.Equal(t, CategoryStatusArchived, archived.Status)
+}
+
+// The CHECK constraint is the last line of defence behind the request
+// validation: a value the API would have rejected cannot reach the table.
+func TestIT_CategoryUnknownStatusIsRejectedByTheConstraint(t *testing.T) {
+	repo, _ := taxonomyDB(t)
+	w := itCat("cmsit-bad-" + uuid.NewString()[:8])
+	w.Status = "retired"
+	_, err := repo.CreateCategory(context.Background(), w)
+	require.Error(t, err)
+}
+
+// itCategoryIDs keeps only the ids this test created — the developer's database
+// has categories of its own and the list is not scoped to a prefix.
+func itCategoryIDs(rows []categoryWithCount, mine ...uuid.UUID) []uuid.UUID {
+	want := make(map[uuid.UUID]bool, len(mine))
+	for _, id := range mine {
+		want[id] = true
+	}
+	out := []uuid.UUID{}
+	for _, c := range rows {
+		if want[c.ID] {
+			out = append(out, c.ID)
+		}
+	}
+	return out
 }

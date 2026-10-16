@@ -156,3 +156,12 @@ func TestPublicService_GetBySlug_AlternatesIncludeSelf(t *testing.T) {
 	require.Equal(t, "en", d.Alternates[1].Locale)
 	require.False(t, d.Alternates[1].XDefault)
 }
+
+// The widget sort key is concatenated into the ORDER BY, so the only thing
+// standing between a config value and the SQL text is this switch.
+func TestWidgetSortClauseIsFixedText(t *testing.T) {
+	require.Equal(t, "random()", widgetSortClause("random"))
+	require.Contains(t, widgetSortClause("oldest"), "ASC")
+	require.Contains(t, widgetSortClause("title"), "'title'")
+	require.Equal(t, widgetSortClause("newest"), widgetSortClause("anything else"))
+}

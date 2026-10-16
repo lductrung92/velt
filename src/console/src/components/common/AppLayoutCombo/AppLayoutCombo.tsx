@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useLogout } from "@/modules/auth";
 import { useAuthStore } from "@/store/auth.store";
+import { fileUrl } from "@/utils/fileUrl";
 
 import { activeBranchKey, visibleNavSections } from "./navItems";
 import { SidebarNav } from "./SidebarNav";
@@ -313,7 +314,7 @@ export function AppLayoutCombo() {
                 <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-medium text-muted-foreground">
                   {user?.avatar_url ? (
                     <img
-                      src={user.avatar_url}
+                      src={fileUrl(user.avatar_url)}
                       alt=""
                       className="h-full w-full object-cover"
                     />

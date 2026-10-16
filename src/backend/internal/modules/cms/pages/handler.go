@@ -3,6 +3,7 @@ package pages
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -24,11 +25,19 @@ func pageListParams(r *http.Request) (PageListParams, error) {
 	if err != nil {
 		return PageListParams{}, err
 	}
-	return PageListParams{CreatedFrom: createdFrom, CreatedTo: createdTo}, nil
+	return PageListParams{
+		Query:       strings.TrimSpace(r.URL.Query().Get("q")),
+		Status:      r.URL.Query().Get("status"),
+		LandingOnly: r.URL.Query().Get("landing") == "1",
+		CreatedFrom: createdFrom,
+		CreatedTo:   createdTo,
+		Page:        shared.QueryInt(r, "page", 1),
+		PageSize:    shared.QueryInt(r, "page_size", 20),
+		Locale:      httpx.Locale(r),
+	}, nil
 }
 
-// GetPages handles GET /api/cms/pages (full tree, optionally narrowed to a
-// created-at range).
+// GetPages handles GET /api/cms/pages (one page of the list).
 func (h *Handler) GetPages(w http.ResponseWriter, r *http.Request) {
 	id, ok := shared.Identity(w, r)
 	if !ok {
@@ -45,6 +54,20 @@ func (h *Handler) GetPages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, res)
+}
+
+// GetPageOptions handles GET /api/cms/pages/options (every page, for a picker).
+func (h *Handler) GetPageOptions(w http.ResponseWriter, r *http.Request) {
+	id, ok := shared.Identity(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.ListPageOptions(r.Context(), id, httpx.Locale(r))
+	if err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 // GetPage handles GET /api/cms/pages/{id}.

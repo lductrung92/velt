@@ -28,7 +28,7 @@ afterEach(() => mockHook.mockReset());
 describe("WidgetPreview", () => {
   it("shows a skeleton grid while list data loads", () => {
     setHook({ isLoading: true, isError: false, data: undefined });
-    const { container } = renderPreview("games_list", { columns: 3 });
+    const { container } = renderPreview("product_grid", { columns: 3 });
     expect(container.querySelectorAll(".aspect-video")).toHaveLength(3);
   });
 
@@ -37,33 +37,35 @@ describe("WidgetPreview", () => {
       isLoading: false,
       isError: false,
       data: {
-        type: "games_list",
+        type: "product_grid",
         data: {
           items: [
             {
-              slug: "a",
-              title: "Game A",
-              age_group: "primary",
-              skills: [],
-              play_url: "/play/a",
-              access_tier: "free",
+              slug: "kho-gon",
+              name: "Kho Gọn",
+              summary: null,
               cover_url: null,
+              lifecycle: "live",
+              is_featured: false,
+              audience: [],
+              platforms: [],
+              categories: [],
             },
           ],
         },
       },
     });
-    renderPreview("games_list", { columns: 3 });
-    expect(screen.getByText("Game A")).toBeInTheDocument();
+    renderPreview("product_grid", { columns: 3 });
+    expect(screen.getByText("Kho Gọn")).toBeInTheDocument();
   });
 
   it("shows the empty state when the list resolves to no items", () => {
     setHook({
       isLoading: false,
       isError: false,
-      data: { type: "games_list", data: { items: [] } },
+      data: { type: "product_grid", data: { items: [] } },
     });
-    renderPreview("games_list", {});
+    renderPreview("product_grid", {});
     expect(
       screen.getByText(i18n.t("cms.pages.inline.preview_empty")),
     ).toBeInTheDocument();
@@ -71,7 +73,7 @@ describe("WidgetPreview", () => {
 
   it("shows the error state when the preview fails", () => {
     setHook({ isLoading: false, isError: true, data: undefined });
-    renderPreview("games_list", {});
+    renderPreview("product_grid", {});
     expect(
       screen.getByText(i18n.t("cms.pages.inline.preview_error")),
     ).toBeInTheDocument();

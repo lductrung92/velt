@@ -2,14 +2,9 @@ import { Camera, Image as ImageIcon, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ModalHeader } from "@/components/common/ModalHeader";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +73,8 @@ function freshSlots(): Record<TabKey, TabSlot> {
 export interface PickerModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** What the image is for ("Ảnh đại diện"), shown under the modal's title. */
+  subject?: string;
   /** Result emitted when user clicks Apply. When uploadUrl is set the modal
    *  POSTs the cropped blob first and emits kind:'uploaded'; otherwise it
    *  emits kind:'pending' so the parent form drives the upload. */
@@ -245,9 +242,15 @@ export function PickerModal(props: PickerModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl gap-4 p-0 sm:max-w-2xl">
-        <DialogHeader className="px-6 pt-6">
-          <DialogTitle>{t("image.upload.modal_title")}</DialogTitle>
-        </DialogHeader>
+        <ModalHeader
+          className="px-6 pt-6"
+          icon={ImageIcon}
+          title={t("image.upload.modal_title")}
+          // What the image is FOR, handed down by whoever opened the picker.
+          // The picker itself is shared by avatars, covers and galleries, so
+          // it cannot know; without it the second line says nothing useful.
+          subject={props.subject ?? t("image.upload.modal_subject")}
+        />
 
         <Tabs
           value={tab}

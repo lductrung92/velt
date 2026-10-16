@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { RowAction, RowActions } from "@/components/common/RowActions";
 import { TableCell, TableRow } from "@/components/ui/table";
 
+import { ProductCategoryStatusBadge } from "./ProductCategoryStatusBadge";
 import type { ProductCategory } from "../services/productCategories.service";
 
 // One row of the product taxonomy. Mirrors CategoryTreeRow minus the tree
@@ -56,13 +57,16 @@ export function ProductCategoryRow({
               <GripVertical className="size-4" />
             </button>
           )}
-          <strong title={category.name}>{category.name}</strong>
+          <strong title={category.name_display}>{category.name_display}</strong>
         </div>
       </TableCell>
       <TableCell>
         <span className="pcat-slug" title={category.slug}>
           {category.slug}
         </span>
+      </TableCell>
+      <TableCell>
+        <ProductCategoryStatusBadge status={category.status} />
       </TableCell>
       <TableCell>
         <span

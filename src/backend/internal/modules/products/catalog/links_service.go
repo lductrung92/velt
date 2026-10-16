@@ -14,6 +14,7 @@ import (
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/products/shared"
+	"github.com/velt/backend/internal/platform/media"
 )
 
 // --- Categories ---
@@ -153,7 +154,14 @@ func (s *Service) AddGalleryImage(ctx context.Context, id *httpx.Identity, produ
 		_ = s.store.Delete(ctx, key) // roll back the just-saved file
 		return MediaItem{}, s.MapRepoErr(ctx, "gallery: add image", err)
 	}
+	// Named mintedURL, not url: this file imports net/url.
+	mintedURL := media.MintOr(ctx, s.Media(), media.MintInput{
+		Key: key, Base: "gallery", Data: buf, OwnerKind: "product", OwnerID: &productID,
+	}, "")
 	item.URL = s.mediaURL(ctx, item.path)
+	if mintedURL != "" {
+		item.URL = &mintedURL
+	}
 	return *item, nil
 }
 
@@ -205,6 +213,7 @@ func (s *Service) DeleteGalleryItem(ctx context.Context, id *httpx.Identity, pro
 		if err := s.store.Delete(ctx, *item.path); err != nil {
 			s.Sec(ctx).Warn("products: gallery file delete failed", "path", *item.path, "err", err)
 		}
+		media.Forget(ctx, s.MediaForget(), *item.path)
 	}
 	return nil
 }

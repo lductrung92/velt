@@ -15,6 +15,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EditorActionBar } from "@/components/common/EditorActionBar";
 import {
   ImageUpload,
@@ -39,7 +40,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
-import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import { usePermission } from "@/modules/auth";
 import { LanguageTabs } from "@/modules/translation/components/LanguageTabs";
 import { useEntityTranslation } from "@/modules/translation/hooks/useEntityTranslation";
@@ -48,6 +48,7 @@ import { parseApiError } from "@/utils/apiError";
 import { MemberTranslationPanel } from "../components/MemberTranslationPanel";
 import {
   useCreateMember,
+  useDeleteMember,
   useDeleteMemberAvatar,
   useUploadMemberAvatar,
   useMember,
@@ -79,13 +80,14 @@ export default function MemberEditor() {
   const detail = useMember(isEdit ? id : undefined);
   const create = useCreateMember();
   const update = useUpdateMember();
+  const remove = useDeleteMember();
   const removeAvatar = useDeleteMemberAvatar();
   const uploadAvatar = useUploadMemberAvatar();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // The photo is held here until Save, so a new member can pick one before the
   // row exists.
   const [avatar, setAvatar] = useState<ImageUploadValue>({ kind: "empty" });
-  const [avatarDirty, setAvatarDirty] = useState(false);
 
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(makeMemberSchema(t)),
@@ -98,11 +100,6 @@ export default function MemberEditor() {
   // Translations live outside this form: their shape is locale x declared field,
   // which a static zod schema cannot describe.
   const tr = useEntityTranslation("member", member?.id);
-
-  useUnsavedChanges({
-    when: form.formState.isDirty || avatarDirty || tr.dirty,
-    what: t("members.one"),
-  });
 
   useEffect(() => {
     if (!member) return;
@@ -122,7 +119,6 @@ export default function MemberEditor() {
         ? { kind: "uploaded", fileId: "", url: member.avatar_url }
         : { kind: "empty" },
     );
-    setAvatarDirty(false);
   }, [member, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -161,7 +157,6 @@ export default function MemberEditor() {
         });
         await tr.refresh();
         await resolveAvatar(saved.id);
-        setAvatarDirty(false);
         form.reset({ ...values, slug: saved.slug });
         toast.success(t("members.saved"));
       } catch (err) {
@@ -184,7 +179,6 @@ export default function MemberEditor() {
     } catch (err) {
       onError(err);
     } finally {
-      setAvatarDirty(false);
       form.reset(values);
       navigate(`/members/${created.id}`, { replace: true });
     }
@@ -206,6 +200,17 @@ export default function MemberEditor() {
   };
 
   const saving = create.isPending || update.isPending;
+
+  const handleDelete = async () => {
+    if (!id) return;
+    try {
+      await remove.mutateAsync(id);
+      toast.success(t("members.deleted", { name: member?.full_name ?? "" }));
+      navigate(BACK);
+    } catch (err) {
+      toast.error(parseApiError(err, t).message);
+    }
+  };
 
   if (isEdit && detail.isLoading) {
     return <Skeleton className="h-96 w-full" />;
@@ -251,6 +256,17 @@ export default function MemberEditor() {
             </Button>
           }
         >
+          {isEdit && canManage && (
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={saving}
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="size-4" />
+              {t("common.delete")}
+            </Button>
+          )}
           <Button type="submit" disabled={!canManage || saving}>
             <Save className="size-4" />
             {t("common.save")}
@@ -386,11 +402,11 @@ export default function MemberEditor() {
               <CardContent className="flex flex-col items-center gap-3">
                 <ImageUpload
                   type="circle"
+                  subject={t("members.field.avatar")}
                   radius={64}
                   value={avatar}
                   onChange={(next) => {
                     setAvatar(next);
-                    setAvatarDirty(true);
                   }}
                   disabled={!canManage}
                 />
@@ -472,8 +488,15 @@ export default function MemberEditor() {
 
               <div className="space-y-2 border-t pt-5">
                 {/* A plain Label, not FormLabel: this heading labels the whole
-                    repeater, so it lives outside any FormField context. */}
-                <Label>{t("members.field.links")}</Label>
+                    repeater, so it lives outside any FormField context. It is
+                    forced to block so the add button below starts a line of its
+                    own instead of sitting beside the heading. */}
+                <Label className="block">{t("members.field.links")}</Label>
+                {links.fields.length === 0 && (
+                  <p className="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+                    {t("members.field.links_empty")}
+                  </p>
+                )}
                 {links.fields.map((row, i) => (
                   <div key={row.id} className="flex items-start gap-2">
                     <FormField
@@ -516,7 +539,9 @@ export default function MemberEditor() {
                       disabled={!canManage}
                       onClick={() => links.remove(i)}
                     >
-                      <Trash2 className="size-4" />
+                      {/* --destructive-ink, the same red every destructive row
+                          action uses (see RowActions). */}
+                      <Trash2 className="size-4 text-destructive-ink" />
                     </Button>
                   </div>
                 ))}
@@ -534,6 +559,20 @@ export default function MemberEditor() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Same prompt the list screen shows for the same record. */}
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title={t("members.delete.title")}
+          description={t("members.delete.description", {
+            name: member?.full_name ?? "",
+          })}
+          confirmLabel={t("common.delete")}
+          destructive
+          loading={remove.isPending}
+          onConfirm={() => void handleDelete()}
+        />
       </form>
     </Form>
   );

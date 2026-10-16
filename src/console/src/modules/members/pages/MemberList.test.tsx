@@ -195,7 +195,12 @@ describe("MemberList", () => {
         HttpResponse.json(
           page([
             member(),
-            member({ id: "m2", full_name: "Bình Trần", slug: "binh-tran", role: "Thiết kế" }),
+            member({
+              id: "m2",
+              full_name: "Bình Trần",
+              slug: "binh-tran",
+              role: "Thiết kế",
+            }),
           ]),
         ),
       ),
@@ -219,7 +224,9 @@ describe("MemberList", () => {
     signIn(MANAGER);
     server.use(
       http.get(`${API}/members`, () =>
-        HttpResponse.json(page([member(), member({ id: "m2", full_name: "Bình Trần" })])),
+        HttpResponse.json(
+          page([member(), member({ id: "m2", full_name: "Bình Trần" })]),
+        ),
       ),
     );
     renderPage();
@@ -259,7 +266,9 @@ describe("MemberList", () => {
     const order = (names: string[]) =>
       screen
         .getAllByTestId("member-row")
-        .map((r) => names.find((n) => (r.textContent ?? "").includes(n)) ?? "?");
+        .map(
+          (r) => names.find((n) => (r.textContent ?? "").includes(n)) ?? "?",
+        );
     const byName = () => order(["An Nguyễn", "Bình Trần", "Cường Lê"]);
     const byRole = () => order(["Backend", "Designer", "QA Engineer"]);
     const nameHead = screen.getByRole("button", { name: /Thành viên/ });
@@ -320,5 +329,4 @@ describe("MemberList", () => {
     );
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
-
 });

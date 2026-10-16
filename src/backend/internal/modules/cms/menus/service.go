@@ -10,13 +10,30 @@ import (
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/cms/shared"
+	"github.com/velt/backend/internal/platform/localize"
 )
+
+// Translator is the slice of the translation module this module needs. It is
+// an interface declared here, satisfied at wiring time, and allowed to be nil —
+// nil means "no translations", which is also what the feature switched off
+// looks like.
+type Translator interface {
+	Bundle(ctx context.Context, entity string, ids []uuid.UUID, locales []string) (map[uuid.UUID]map[string]map[string]any, error)
+}
+
+// EntityItem is this module's key in the translation store: a menu item's
+// label, written where the item is.
+const EntityItem = "menu_item"
 
 // Service holds menu business logic.
 type Service struct {
 	*shared.Base
 	repo Repository
+	tr   Translator
 }
+
+// SetTranslator wires the translation port (called once at startup).
+func (s *Service) SetTranslator(t Translator) { s.tr = t }
 
 // NewService wires the menus service onto the shared CMS base.
 func NewService(base *shared.Base, repo Repository) *Service {
@@ -40,7 +57,7 @@ func (s *Service) ListMenus(ctx context.Context, id *httpx.Identity) ([]Response
 }
 
 // GetMenu returns a slot + its item tree. Requires cms.menu.manage.
-func (s *Service) GetMenu(ctx context.Context, id *httpx.Identity, menuID uuid.UUID) (DetailResponse, error) {
+func (s *Service) GetMenu(ctx context.Context, id *httpx.Identity, menuID uuid.UUID, locale string) (DetailResponse, error) {
 	if err := s.Require(ctx, id, permManage); err != nil {
 		return DetailResponse{}, err
 	}
@@ -48,7 +65,7 @@ func (s *Service) GetMenu(ctx context.Context, id *httpx.Identity, menuID uuid.U
 	if err != nil {
 		return DetailResponse{}, mapGetErr(err)
 	}
-	return s.menuDetail(ctx, *m)
+	return s.menuDetail(ctx, *m, locale)
 }
 
 // CreateMenu creates a navigation slot. Requires cms.menu.manage. Several slots
@@ -125,7 +142,7 @@ func (s *Service) DeleteMenu(ctx context.Context, id *httpx.Identity, menuID uui
 // ReplaceMenuItems swaps the whole item tree of a menu (transactional). Requires
 // cms.menu.manage. Validates each node by link_type (internal/external URL,
 // article/page/category target_id); external URL is SSRF/open-redirect guarded.
-func (s *Service) ReplaceMenuItems(ctx context.Context, id *httpx.Identity, menuID uuid.UUID, req ItemsRequest) (DetailResponse, error) {
+func (s *Service) ReplaceMenuItems(ctx context.Context, id *httpx.Identity, menuID uuid.UUID, req ItemsRequest, locale string) (DetailResponse, error) {
 	if err := s.Require(ctx, id, permManage); err != nil {
 		return DetailResponse{}, err
 	}
@@ -141,15 +158,23 @@ func (s *Service) ReplaceMenuItems(ctx context.Context, id *httpx.Identity, menu
 	}
 	s.Sec(ctx).Info("cms menu items replaced", "actor", id.UserID, "menu", menuID, "roots", len(req.Items))
 	s.Record(ctx, id, menuEntry(actionItemsReplaced, menuID, m.Name, map[string]any{"roots": len(req.Items)}))
-	return s.menuDetail(ctx, *m)
+	return s.menuDetail(ctx, *m, locale)
 }
 
-func (s *Service) menuDetail(ctx context.Context, m Menu) (DetailResponse, error) {
+// menuDetail reads a slot's item tree. Each node's LabelDisplay answers in the
+// request locale where somebody has written a translation; Label never moves —
+// see ItemNode.
+func (s *Service) menuDetail(ctx context.Context, m Menu, locale string) (DetailResponse, error) {
 	rows, err := s.repo.MenuItems(ctx, m.ID)
 	if err != nil {
 		return DetailResponse{}, apperr.Internal()
 	}
-	return DetailResponse{Response: toResponse(m), Items: buildItemTree(rows)}, nil
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		ids = append(ids, r.ID)
+	}
+	tr := localize.Fields(ctx, s.tr, EntityItem, locale, ids)
+	return DetailResponse{Response: toResponse(m), Items: buildItemTree(rows, tr)}, nil
 }
 
 func mapGetErr(err error) error {

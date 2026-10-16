@@ -10,6 +10,7 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/modules/products/shared"
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/pubdocs"
 	"github.com/velt/backend/internal/platform/storage"
 )
@@ -45,6 +46,9 @@ type PublicService struct {
 	// response never built one — so the public layer resolves it here.
 	urls    storage.URLer
 	locales localeLister
+	// assets upgrades a stored image URL to its flat /img address and attaches
+	// the size recorded for it; nil until wired, and nil answers nothing.
+	assets *media.PublicURLs
 }
 
 // NewPublicService builds the public catalog service.
@@ -55,6 +59,11 @@ func NewPublicService(base *shared.Base, repo publicReader, urls storage.URLer) 
 // SetLocales wires the translation module's language list (called once at
 // startup). Unset → Vietnamese only.
 func (s *PublicService) SetLocales(l localeLister) { s.locales = l }
+
+// SetMediaURLs wires the read-path media mapping (called once at startup).
+// Unset → the legacy /api/files URLs and no dimensions, which is what this
+// response looked like before the `files` table existed.
+func (s *PublicService) SetMediaURLs(m *media.PublicURLs) { s.assets = m }
 
 // resolveLocale maps the ?locale= parameter onto a language that is actually
 // published. Anything unknown serves the original rather than an error: a
@@ -93,7 +102,7 @@ func (p PublicListParams) normalize() PublicListParams {
 		p.PageSize = publicMaxPageSize
 	}
 	switch p.Sort {
-	case "name", "newest", "featured":
+	case "name", "newest", "featured", "random":
 	default:
 		p.Sort = "featured"
 	}
@@ -121,6 +130,15 @@ func (s *PublicService) List(ctx context.Context, p PublicListParams) (PublicLis
 			continue
 		}
 		items = append(items, toPublicListItem(full))
+	}
+	// One lookup for the whole page: 20 products cost one query, not 20.
+	covers := make([]string, 0, len(items))
+	for i := range items {
+		media.Collect(&covers, items[i].CoverURL)
+	}
+	found := s.assets.Resolve(ctx, covers)
+	for i := range items {
+		items[i].CoverWidth, items[i].CoverHeight = media.Apply(found, &items[i].CoverURL)
 	}
 	return PublicListResponse{Items: items, Total: total, Page: p.Page, PageSize: p.PageSize}, nil
 }
@@ -217,7 +235,7 @@ func (s *PublicService) toPublicDetail(ctx context.Context, f Response, locale s
 			Kind: g.Kind, URL: g.URL, VideoURL: g.VideoURL, Caption: g.Caption,
 		})
 	}
-	return PublicDetail{
+	out := PublicDetail{
 		Slug:       f.Slug,
 		Locale:     locale,
 		Name:       f.Name,
@@ -254,6 +272,37 @@ func (s *PublicService) toPublicDetail(ctx context.Context, f Response, locale s
 		Gallery:     gallery,
 		PublishedAt: f.PublishedAt,
 		Alternates:  alts,
+	}
+	s.upgradeDetailMedia(ctx, &out)
+	return out
+}
+
+// upgradeDetailMedia rewrites every image URL on a product page to its flat
+// /img address and attaches the intrinsic size — cover, OG image, each gallery
+// image and each credited member's avatar — in ONE lookup for the whole page.
+//
+// The gallery items and member avatars are read back from the frozen snapshot,
+// which kept only the built URL and threw the storage key away; that is why the
+// batch is collected from the URLs rather than from paths.
+func (s *PublicService) upgradeDetailMedia(ctx context.Context, out *PublicDetail) {
+	values := make([]string, 0, 3+len(out.Gallery)+len(out.Members))
+	media.Collect(&values, out.CoverURL)
+	media.Collect(&values, out.SEO.OGImageURL)
+	for i := range out.Gallery {
+		media.Collect(&values, out.Gallery[i].URL)
+	}
+	for i := range out.Members {
+		media.Collect(&values, out.Members[i].AvatarURL)
+	}
+	found := s.assets.Resolve(ctx, values)
+	out.CoverWidth, out.CoverHeight = media.Apply(found, &out.CoverURL)
+	out.SEO.OGImageWidth, out.SEO.OGImageHeight = media.Apply(found, &out.SEO.OGImageURL)
+	for i := range out.Gallery {
+		out.Gallery[i].Width, out.Gallery[i].Height = media.Apply(found, &out.Gallery[i].URL)
+	}
+	for i := range out.Members {
+		out.Members[i].AvatarWidth, out.Members[i].AvatarHeight =
+			media.Apply(found, &out.Members[i].AvatarURL)
 	}
 }
 

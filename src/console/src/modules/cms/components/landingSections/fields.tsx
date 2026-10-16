@@ -308,6 +308,7 @@ export function ImageField({
       <div>
         <ImageUpload
           type="rounded"
+          subject={label}
           ratio={16 / 9}
           width={240}
           accept="image/jpeg,image/png,image/webp,image/gif"

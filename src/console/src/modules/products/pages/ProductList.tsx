@@ -35,10 +35,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DEFAULT_PAGE_SIZE,
-  TablePagination,
-} from "@/components/ui/table-pagination";
+import { ListPager } from "@/components/ui/list-pager";
+import { usePaging } from "@/hooks/usePaging";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
@@ -64,6 +62,7 @@ import {
 
 import "@/styles/list-page.css";
 import "./products.css";
+import { fileUrl } from "@/utils/fileUrl";
 
 // The overview cards and the filter each one applies. "Featured" reads a flag
 // rather than a status, which is why a card carries a whole params object.
@@ -86,7 +85,10 @@ export default function ProductList() {
   const canCreate = hasPermission("products.create");
   const canDelete = hasPermission("products.delete");
 
-  const [page, setPage] = useState(1);
+  // Page, page size and pager style all come from the shared settings
+  // (Settings → General → Pagination), so every list pages the same way.
+  const paging = usePaging();
+  const { page, setPage } = paging;
   const [sort, setSort] = useState<string | null>("-updated_at");
   const [q, setQ] = useState("");
   const [draftQ, setDraftQ] = useState("");
@@ -109,9 +111,19 @@ export default function ProductList() {
       featured: featured || undefined,
       sort: sort ?? undefined,
       page,
-      page_size: DEFAULT_PAGE_SIZE,
+      page_size: paging.pageSize,
     }),
-    [q, status, lifecycle, platform, audience, featured, sort, page],
+    [
+      q,
+      status,
+      lifecycle,
+      platform,
+      audience,
+      featured,
+      sort,
+      page,
+      paging.pageSize,
+    ],
   );
   const products = useProducts(params);
   const del = useDeleteProduct();
@@ -240,7 +252,7 @@ export default function ProductList() {
     <div className="product-identity">
       <span className="product-cover">
         {p.cover_url ? (
-          <img src={p.cover_url} alt="" loading="lazy" />
+          <img src={fileUrl(p.cover_url)} alt="" loading="lazy" />
         ) : (
           <ImageIcon className="size-4" aria-label={t("products.no_cover")} />
         )}
@@ -635,18 +647,21 @@ export default function ProductList() {
                 </div>
               ))}
             </div>
-
-            <div className="list-pagination">
-              <TablePagination
-                page={products.data?.page ?? 1}
-                pageSize={products.data?.page_size ?? DEFAULT_PAGE_SIZE}
-                total={total}
-                onPageChange={setPage}
-              />
-            </div>
           </>
         )}
       </section>
+
+      {/* Outside the card on purpose: the panel holds the records, the
+          pager is how you ask for the next ones. It hides itself when
+          everything fits on one page, so it costs nothing while loading
+          or on an empty list. */}
+      <div className="list-pagination">
+        <ListPager
+          paging={paging}
+          total={total}
+          loading={products.isFetching}
+        />
+      </div>
 
       <ConfirmDialog
         open={!!deleteTarget}

@@ -30,7 +30,10 @@ type PublicCard struct {
 type PublicFilter struct {
 	CategoryID *uuid.UUID
 	Tag        string
-	Limit      int
+	// Sort is newest | oldest | title | random (caller pre-validates); empty is
+	// newest.
+	Sort  string
+	Limit int
 	// Locale is the language the card is read in. Empty, or a language the
 	// article was never published in, serves the Vietnamese copy — the same
 	// rule the rest of the public surface follows.
@@ -55,8 +58,24 @@ func NewPublicRepository(pool *pgxpool.Pool, docs *pubdocs.Store) *PublicRepo {
 	return &PublicRepo{pool: pool, docs: docs}
 }
 
-// ListPublished returns up to Limit published articles (newest first), optionally
-// filtered by category id and/or tag slug.
+// widgetSortClause orders the widget card list. The title sort reads the same
+// translated expression the card displays, so a reader gets their own language
+// alphabetised and not the Vietnamese copy underneath it.
+func widgetSortClause(sort string) string {
+	switch sort {
+	case "random":
+		return "random()"
+	case "oldest":
+		return "a.published_at ASC NULLS LAST"
+	case "title":
+		return "COALESCE(NULLIF(pd.body ->> 'title', ''), a.title) ASC"
+	default:
+		return "a.published_at DESC NULLS LAST"
+	}
+}
+
+// ListPublished returns up to Limit published articles (newest first by
+// default), optionally filtered by category id and/or tag slug.
 func (r *PublicRepo) ListPublished(ctx context.Context, f PublicFilter) ([]PublicCard, error) {
 	conds := []string{"a.status = 'published'"}
 	args := []any{}
@@ -90,7 +109,7 @@ func (r *PublicRepo) ListPublished(ctx context.Context, f PublicFilter) ([]Publi
 	              AND pd.locale = $` + fmt.Sprint(len(args)) + `
 	              AND pd.is_current AND pd.body IS NOT NULL
 	       WHERE ` + strings.Join(conds, " AND ") +
-		` ORDER BY a.published_at DESC NULLS LAST ` + fmt.Sprintf(`LIMIT $%d`, limitArg)
+		` ORDER BY ` + widgetSortClause(f.Sort) + ` ` + fmt.Sprintf(`LIMIT $%d`, limitArg)
 
 	rows, err := r.pool.Query(ctx, q, args...)
 	if err != nil {

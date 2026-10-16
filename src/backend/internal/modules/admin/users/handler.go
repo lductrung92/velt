@@ -26,6 +26,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	res, err := h.svc.ListUsers(r.Context(), id, ListUsersFilter{
 		Query:    q.Get("q"),
 		Status:   q.Get("status"),
+		Role:     q.Get("role"),
 		Page:     shared.QueryInt(r, "page"),
 		PageSize: shared.QueryInt(r, "page_size"),
 		Sort:     q.Get("sort"),
@@ -159,7 +160,8 @@ func (h *Handler) RemoveRole(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusNoContent, nil)
 }
 
-// ResetPassword handles POST /api/admin/users/{id}/reset-password.
+// ResetPassword handles POST /api/admin/users/{id}/reset-password. The response
+// carries the new temporary password; it is the only time it is readable.
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	id, ok := shared.Identity(w, r)
 	if !ok {
@@ -170,9 +172,10 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, apperr.NotFound("not_found"))
 		return
 	}
-	if err := h.svc.TriggerResetPassword(r.Context(), id, target); err != nil {
+	res, err := h.svc.ResetPassword(r.Context(), id, target)
+	if err != nil {
 		httpx.WriteError(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusAccepted, map[string]bool{"ok": true})
+	httpx.WriteJSON(w, http.StatusOK, res)
 }

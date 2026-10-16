@@ -1,4 +1,5 @@
 import { useSite } from "../context";
+import { productPath } from "../lib/catalog";
 import { navHref, type NavItem } from "../lib/layout";
 import type { RegionBlock, SlotName } from "../lib/regions";
 
@@ -48,8 +49,8 @@ function Block({ block }: { block: RegionBlock }) {
       return <ArticlesBlock props={block.props} />;
     case "categories_showcase":
       return <CategoriesBlock props={block.props} />;
-    case "games_list":
-      return <GamesBlock props={block.props} />;
+    case "product_grid":
+      return <ProductsBlock props={block.props} />;
     default:
       // A type this build does not know about is skipped rather than guessed
       // at: the console may ship a widget before the site can draw it.
@@ -196,7 +197,8 @@ function CategoriesBlock({ props }: { props: Record<string, unknown> }) {
   );
 }
 
-function GamesBlock({ props }: { props: Record<string, unknown> }) {
+function ProductsBlock({ props }: { props: Record<string, unknown> }) {
+  const { href } = useSite();
   const items = list(props.items);
   if (items.length === 0) return null;
   return (
@@ -205,12 +207,8 @@ function GamesBlock({ props }: { props: Record<string, unknown> }) {
       <ul>
         {items.map((item, index) => (
           <li key={index}>
-            <a
-              href={text(item.play_url)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {text(item.title)}
+            <a href={href(productPath({ id: text(item.slug) }))}>
+              {text(item.name)}
             </a>
           </li>
         ))}

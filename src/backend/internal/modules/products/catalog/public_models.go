@@ -19,10 +19,12 @@ type PublicCategoryRef struct {
 // PublicMemberRef is a developer credited on the product, with the role they
 // held on THIS product rather than their general one.
 type PublicMemberRef struct {
-	Slug      string  `json:"slug"`
-	FullName  string  `json:"full_name"`
-	Role      *string `json:"role"`
-	AvatarURL *string `json:"avatar_url"`
+	Slug         string  `json:"slug"`
+	FullName     string  `json:"full_name"`
+	Role         *string `json:"role"`
+	AvatarURL    *string `json:"avatar_url"`
+	AvatarWidth  int     `json:"avatar_width,omitempty"`
+	AvatarHeight int     `json:"avatar_height,omitempty"`
 }
 
 // PublicMediaItem is one gallery entry: an image or an embedded video, never
@@ -30,6 +32,8 @@ type PublicMemberRef struct {
 type PublicMediaItem struct {
 	Kind     string  `json:"kind"`
 	URL      *string `json:"url"`
+	Width    int     `json:"width,omitempty"`
+	Height   int     `json:"height,omitempty"`
 	VideoURL *string `json:"video_url"`
 	Caption  *string `json:"caption"`
 }
@@ -45,19 +49,29 @@ type PublicSEO struct {
 	OGTitle       *string `json:"og_title"`
 	OGDescription *string `json:"og_description"`
 	OGImageURL    *string `json:"og_image_url"`
+	OGImageWidth  int     `json:"og_image_width,omitempty"`
+	OGImageHeight int     `json:"og_image_height,omitempty"`
 }
 
 // PublicListItem is a catalog row: enough to render a card, nothing more.
+//
+// The *_width/*_height siblings that appear beside every image URL in this file
+// are the asset's intrinsic pixel size, sent only when the image has a `files`
+// row. They let the site reserve the space before the bytes land (design §1,
+// CLS); absent, the image is one nothing was recorded about and the site sizes
+// it the way it did before.
 type PublicListItem struct {
-	Slug       string              `json:"slug"`
-	Name       string              `json:"name"`
-	Summary    *string             `json:"summary"`
-	CoverURL   *string             `json:"cover_url"`
-	Lifecycle  string              `json:"lifecycle"`
-	IsFeatured bool                `json:"is_featured"`
-	Audience   []string            `json:"audience"`
-	Platforms  []string            `json:"platforms"`
-	Categories []PublicCategoryRef `json:"categories"`
+	Slug        string              `json:"slug"`
+	Name        string              `json:"name"`
+	Summary     *string             `json:"summary"`
+	CoverURL    *string             `json:"cover_url"`
+	CoverWidth  int                 `json:"cover_width,omitempty"`
+	CoverHeight int                 `json:"cover_height,omitempty"`
+	Lifecycle   string              `json:"lifecycle"`
+	IsFeatured  bool                `json:"is_featured"`
+	Audience    []string            `json:"audience"`
+	Platforms   []string            `json:"platforms"`
+	Categories  []PublicCategoryRef `json:"categories"`
 }
 
 // PublicListResponse is the paginated catalog.
@@ -87,15 +101,17 @@ type PublicAlternate struct {
 
 // PublicDetail is the product page.
 type PublicDetail struct {
-	Slug       string  `json:"slug"`
-	Locale     string  `json:"locale"`
-	Name       string  `json:"name"`
-	Summary    *string `json:"summary"`
-	BodyHTML   *string `json:"body_html"`
-	CoverURL   *string `json:"cover_url"`
-	Lifecycle  string  `json:"lifecycle"`
-	Version    *string `json:"version"`
-	ReleasedAt *string `json:"released_at"`
+	Slug        string  `json:"slug"`
+	Locale      string  `json:"locale"`
+	Name        string  `json:"name"`
+	Summary     *string `json:"summary"`
+	BodyHTML    *string `json:"body_html"`
+	CoverURL    *string `json:"cover_url"`
+	CoverWidth  int     `json:"cover_width,omitempty"`
+	CoverHeight int     `json:"cover_height,omitempty"`
+	Lifecycle   string  `json:"lifecycle"`
+	Version     *string `json:"version"`
+	ReleasedAt  *string `json:"released_at"`
 
 	Audience   []string `json:"audience"`
 	Platforms  []string `json:"platforms"`
@@ -128,7 +144,7 @@ type PublicListParams struct {
 	Audience  string
 	Platform  string
 	Featured  *bool
-	Sort      string // "featured" (default) | "name" | "newest"
+	Sort      string // "featured" (default) | "name" | "newest" | "random"
 	Page      int
 	PageSize  int
 }

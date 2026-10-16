@@ -3,18 +3,140 @@ import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useProductCategories } from "@/modules/products/hooks/useProductCategories";
+
+import { useCategories } from "../hooks/useCmsCategories";
+import { flattenTree } from "../utils/categoryTree";
 
 import { WidgetSelect } from "./WidgetSelect";
 
-// Config editors for the remaining v1 widgets. Each is a controlled value/onChange
+// Config editors for the v1 widgets. Each is a controlled value/onChange
 // sub-form (the inline NodeView owns the draft via the node's `config` attr).
-// Text-only v1 — keep inputs simple; richer pickers (category select, multi-button)
-// are a later polish.
+
+// An empty category is not a missing answer but a deliberate one: no filter, so
+// the widget draws from the whole catalogue. The resolvers already read an
+// absent category that way, which is why this option needs nothing new behind
+// it.
+const ALL_CATEGORIES = "";
+
+// --- product_grid ---
+// Only `category`, `sort` and `limit` reach the resolver; `title` is the heading
+// the renderers draw above the rows. A field the resolver never reads would look
+// like a filter that silently does nothing.
+export interface ProductGridConfig {
+  title?: string;
+  category?: string;
+  /** Matches catalog.PublicListParams.Sort — the backend defaults to featured. */
+  sort?: "featured" | "newest" | "name" | "random";
+  limit?: number;
+  columns?: number;
+}
+
+export function ProductGridForm({
+  value,
+  onChange,
+  disabled = false,
+}: {
+  value: ProductGridConfig;
+  onChange: (v: ProductGridConfig) => void;
+  disabled?: boolean;
+}) {
+  const { t } = useTranslation();
+  const { data: categories } = useProductCategories();
+  const set = (p: Partial<ProductGridConfig>) => onChange({ ...value, ...p });
+  // Products are filtered by category SLUG (articles by id) — that is the
+  // catalogue's own public key, not an oversight.
+  const categoryOptions = [
+    { value: ALL_CATEGORIES, label: t("cms.pages.widget.all_categories") },
+    ...(categories?.items ?? []).map((c) => ({
+      value: c.slug,
+      label: c.name_display,
+    })),
+  ];
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div className="space-y-2 sm:col-span-2">
+        <Label htmlFor="pg-title">
+          {t("cms.pages.widget.product_grid.heading")}
+        </Label>
+        <Input
+          id="pg-title"
+          value={value.title ?? ""}
+          disabled={disabled}
+          onChange={(e) => set({ title: e.target.value })}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="pg-category">
+          {t("cms.pages.widget.product_grid.category")}
+        </Label>
+        <WidgetSelect
+          inputId="pg-category"
+          ariaLabel={t("cms.pages.widget.product_grid.category")}
+          disabled={disabled}
+          value={value.category ?? ALL_CATEGORIES}
+          options={categoryOptions}
+          onChange={(v) => set({ category: v })}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="pg-sort">
+          {t("cms.pages.widget.product_grid.sort")}
+        </Label>
+        <WidgetSelect
+          inputId="pg-sort"
+          ariaLabel={t("cms.pages.widget.product_grid.sort")}
+          disabled={disabled}
+          value={value.sort ?? "featured"}
+          options={(["featured", "newest", "name", "random"] as const).map(
+            (s) => ({
+              value: s,
+              label: t(`cms.pages.widget.product_grid.sort_${s}`),
+            }),
+          )}
+          onChange={(v) =>
+            set({ sort: (v as ProductGridConfig["sort"]) || "featured" })
+          }
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="pg-limit">
+          {t("cms.pages.widget.product_grid.limit")}
+        </Label>
+        <Input
+          id="pg-limit"
+          type="number"
+          min={1}
+          max={24}
+          value={value.limit ?? 6}
+          disabled={disabled}
+          onChange={(e) => set({ limit: Number(e.target.value) || 6 })}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="pg-cols">
+          {t("cms.pages.widget.product_grid.columns")}
+        </Label>
+        <Input
+          id="pg-cols"
+          type="number"
+          min={2}
+          max={4}
+          value={value.columns ?? 3}
+          disabled={disabled}
+          onChange={(e) => set({ columns: Number(e.target.value) || 3 })}
+        />
+      </div>
+    </div>
+  );
+}
 
 // --- articles_list ---
 export interface ArticlesListConfig {
   title?: string;
-  filters?: { category_id?: string; tag?: string };
+  filters?: { category_id?: string };
+  /** Matches the articles public service's sort — the backend defaults to newest. */
+  sort?: "newest" | "oldest" | "title" | "random";
   limit?: number;
   columns?: number;
 }
@@ -29,13 +151,23 @@ export function ArticlesListForm({
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
+  const { data: tree } = useCategories();
   const f = value.filters ?? {};
   const set = (p: Partial<ArticlesListConfig>) => onChange({ ...value, ...p });
   const setF = (p: Partial<NonNullable<ArticlesListConfig["filters"]>>) =>
     onChange({ ...value, filters: { ...f, ...p } });
+  // The taxonomy is a tree; non-breaking spaces carry the nesting, since the
+  // option is rendered as plain text and a normal space would collapse.
+  const categoryOptions = [
+    { value: ALL_CATEGORIES, label: t("cms.pages.widget.all_categories") },
+    ...flattenTree(tree ?? []).map((c) => ({
+      value: c.id,
+      label: "  ".repeat(c.depth) + c.name,
+    })),
+  ];
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <div className="sm:col-span-2">
+      <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="al-title">
           {t("cms.pages.widget.articles_list.heading")}
         </Label>
@@ -46,29 +178,40 @@ export function ArticlesListForm({
           onChange={(e) => set({ title: e.target.value })}
         />
       </div>
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="al-cat">
           {t("cms.pages.widget.articles_list.category_id")}
         </Label>
-        <Input
-          id="al-cat"
-          value={f.category_id ?? ""}
+        <WidgetSelect
+          inputId="al-cat"
+          ariaLabel={t("cms.pages.widget.articles_list.category_id")}
           disabled={disabled}
-          onChange={(e) => setF({ category_id: e.target.value })}
+          value={f.category_id ?? ALL_CATEGORIES}
+          options={categoryOptions}
+          onChange={(v) => setF({ category_id: v })}
         />
       </div>
-      <div>
-        <Label htmlFor="al-tag">
-          {t("cms.pages.widget.articles_list.tag")}
+      <div className="space-y-2">
+        <Label htmlFor="al-sort">
+          {t("cms.pages.widget.articles_list.sort")}
         </Label>
-        <Input
-          id="al-tag"
-          value={f.tag ?? ""}
+        <WidgetSelect
+          inputId="al-sort"
+          ariaLabel={t("cms.pages.widget.articles_list.sort")}
           disabled={disabled}
-          onChange={(e) => setF({ tag: e.target.value })}
+          value={value.sort ?? "newest"}
+          options={(["newest", "oldest", "title", "random"] as const).map(
+            (s) => ({
+              value: s,
+              label: t(`cms.pages.widget.articles_list.sort_${s}`),
+            }),
+          )}
+          onChange={(v) =>
+            set({ sort: (v as ArticlesListConfig["sort"]) || "newest" })
+          }
         />
       </div>
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="al-limit">
           {t("cms.pages.widget.articles_list.limit")}
         </Label>
@@ -82,7 +225,7 @@ export function ArticlesListForm({
           onChange={(e) => set({ limit: Number(e.target.value) || 6 })}
         />
       </div>
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="al-cols">
           {t("cms.pages.widget.articles_list.columns")}
         </Label>
@@ -120,7 +263,7 @@ export function CategoriesShowcaseForm({
     onChange({ ...value, ...p });
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <div className="sm:col-span-2">
+      <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="cs-title">
           {t("cms.pages.widget.categories_showcase.heading")}
         </Label>
@@ -131,7 +274,7 @@ export function CategoriesShowcaseForm({
           onChange={(e) => set({ title: e.target.value })}
         />
       </div>
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="cs-limit">
           {t("cms.pages.widget.categories_showcase.limit")}
         </Label>
@@ -168,7 +311,7 @@ export function RichTextForm({
   const set = (p: Partial<RichTextConfig>) => onChange({ ...value, ...p });
   return (
     <div className="space-y-3">
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="rt-html">{t("cms.pages.widget.rich_text.html")}</Label>
         <Textarea
           id="rt-html"
@@ -181,7 +324,7 @@ export function RichTextForm({
           {t("cms.pages.widget.rich_text.html_hint")}
         </p>
       </div>
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="rt-width">
           {t("cms.pages.widget.rich_text.width")}
         </Label>
@@ -238,7 +381,7 @@ export function CtaBannerForm({
   ) => onChange({ ...value, buttons: [{ ...btn, ...p, style: "primary" }] });
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <div className="sm:col-span-2">
+      <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="cb-heading">
           {t("cms.pages.widget.cta_banner.heading")}
         </Label>
@@ -249,7 +392,7 @@ export function CtaBannerForm({
           onChange={(e) => set({ heading: e.target.value })}
         />
       </div>
-      <div className="sm:col-span-2">
+      <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="cb-sub">{t("cms.pages.widget.cta_banner.sub")}</Label>
         <Textarea
           id="cb-sub"
@@ -259,7 +402,7 @@ export function CtaBannerForm({
           onChange={(e) => set({ sub: e.target.value })}
         />
       </div>
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="cb-label">
           {t("cms.pages.widget.cta_banner.button_label")}
         </Label>
@@ -270,7 +413,7 @@ export function CtaBannerForm({
           onChange={(e) => setBtn({ label: e.target.value })}
         />
       </div>
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="cb-href">
           {t("cms.pages.widget.cta_banner.button_href")}
         </Label>
@@ -280,11 +423,8 @@ export function CtaBannerForm({
           disabled={disabled}
           onChange={(e) => setBtn({ href: e.target.value })}
         />
-        <p className="mt-1 text-xs text-muted-foreground">
-          {t("cms.pages.widget.cta_banner.button_hint")}
-        </p>
       </div>
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="cb-align">
           {t("cms.pages.widget.cta_banner.align")}
         </Label>

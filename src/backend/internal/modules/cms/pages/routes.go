@@ -15,6 +15,7 @@ func Register(r chi.Router, base *shared.Base, pool *pgxpool.Pool, landing Landi
 	svc := NewService(base, NewRepository(pool), landing)
 	h := NewHandler(svc)
 	r.Get("/pages", h.GetPages)
+	r.Get("/pages/options", h.GetPageOptions)
 	r.Get("/pages/{id}", h.GetPage)
 	r.Post("/pages", h.CreatePage)
 	r.Patch("/pages/{id}", h.UpdatePage)

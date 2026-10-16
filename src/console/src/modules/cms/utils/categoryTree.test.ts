@@ -22,10 +22,12 @@ function cat(
   return {
     id,
     name: id.toUpperCase(),
+    name_display: id.toUpperCase(),
     slug: id,
     parent_id: parent,
     description: null,
     sort_order: sort,
+    status: "published",
     article_count: 0,
     seo: {},
     children,
@@ -67,6 +69,17 @@ describe("flattenTree", () => {
     expect(flat.map((n) => n.parentId)).toEqual([null, "a", "a", null]);
     expect(flat[0].hasChildren).toBe(true);
     expect(flat[1].hasChildren).toBe(false);
+  });
+
+  // Rows, search and the parent picker all read this projection, and all of
+  // them SHOW the category. The editor reads the category itself, so the
+  // stored name is deliberately absent here.
+  it("carries the display name, not the stored one", () => {
+    const [root] = makeTree();
+    const flat = flattenTree([
+      { ...root, name: "Tin Tức", name_display: "News" },
+    ]);
+    expect(flat[0].name).toBe("News");
   });
 });
 

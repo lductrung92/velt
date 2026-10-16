@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/i18n";
 import { useAuthStore } from "@/store/auth.store";
@@ -27,6 +27,7 @@ function catTree() {
       id: "a",
       name: "Tin tức",
       slug: "tin-tuc",
+      status: "draft",
       parent_id: null,
       description: null,
       sort_order: 0,
@@ -37,6 +38,7 @@ function catTree() {
           id: "a1",
           name: "Sự kiện",
           slug: "su-kien",
+          status: "published",
           parent_id: "a",
           description: null,
           sort_order: 0,
@@ -152,6 +154,42 @@ describe("CategoryEditor", () => {
       expect(postBody).toMatchObject({ name: "Thể thao", sort_order: 0 }),
     );
     expect(await screen.findByText("CATEGORY LIST")).toBeInTheDocument();
+  });
+
+  // The list can show and filter a status; this is the only screen that can
+  // set one.
+  it("edit: shows the stored status and PATCHes the one that was picked", async () => {
+    signIn(MANAGER);
+    let patchBody: Record<string, unknown> | undefined;
+    server.use(
+      ...baseHandlers(),
+      http.patch(`${API}/cms/categories/a`, async ({ request }) => {
+        patchBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: "a" });
+      }),
+    );
+    const user = userEvent.setup();
+    renderEditor("/cms/categories/a");
+
+    await screen.findByDisplayValue("Tin tức");
+    // The trigger carries the id the <FormLabel> names; the neighbouring
+    // parent select is the other combobox on the card.
+    const status = document.getElementById(
+      "cms-category-status",
+    ) as HTMLElement;
+    // "Nháp" is what the row holds, not the form's own default.
+    expect(status).toHaveTextContent(i18n.t("content_status.draft"));
+    await user.click(status);
+    await user.click(
+      await screen.findByRole("option", {
+        name: i18n.t("content_status.archived"),
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: SAVE() }));
+
+    await waitFor(() =>
+      expect(patchBody).toMatchObject({ status: "archived" }),
+    );
   });
 
   it("edit: prefilled from the tree, PATCH carries the optimistic-lock updated_at", async () => {
@@ -296,5 +334,56 @@ describe("CategoryEditor", () => {
     expect(
       (await screen.findAllByText(i18n.t("errors.slug_already_exists"))).length,
     ).toBeGreaterThan(0);
+  });
+});
+
+describe("CategoryEditor delete", () => {
+  const DELETE = () => i18n.t("common.delete");
+
+  it("offers no delete before the category exists", async () => {
+    signIn(MANAGER);
+    server.use(...baseHandlers());
+    renderEditor("/cms/categories/new");
+
+    await screen.findAllByRole("textbox");
+    expect(
+      screen.queryByRole("button", { name: DELETE() }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers no delete without cms.taxonomy.manage", async () => {
+    signIn(["cms.article.view"]);
+    server.use(...baseHandlers());
+    renderEditor("/cms/categories/a");
+
+    await screen.findByDisplayValue("Tin tức");
+    expect(
+      screen.queryByRole("button", { name: DELETE() }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("confirming the prompt deletes the category and returns to the list", async () => {
+    signIn(MANAGER);
+    const removed = vi.fn();
+    server.use(
+      ...baseHandlers(),
+      http.delete(`${API}/cms/categories/a`, () => {
+        removed();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderEditor("/cms/categories/a");
+
+    await screen.findByDisplayValue("Tin tức");
+    await user.click(screen.getByRole("button", { name: DELETE() }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText(i18n.t("cms.categories.dialog.delete.title")),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: DELETE() }));
+
+    await waitFor(() => expect(removed).toHaveBeenCalled());
+    expect(await screen.findByText("CATEGORY LIST")).toBeInTheDocument();
   });
 });

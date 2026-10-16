@@ -228,7 +228,8 @@
   object-fit: contain;
   filter: none;
 }
-.team-section .member-portrait > img {
+.team-section .member-portrait > img,
+.team-section .member-portrait > picture > img {
   width: 100%;
   height: 100%;
   position: absolute;
@@ -237,7 +238,8 @@
   object-position: center;
   transition: transform 0.35s;
 }
-.team-section .member-card:hover .member-portrait > img {
+.team-section .member-card:hover .member-portrait > img,
+.team-section .member-card:hover .member-portrait > picture > img {
   transform: scale(1.035);
 }
 .member-index {
@@ -442,7 +444,8 @@
 @media (prefers-reduced-motion: reduce) {
   .team-section .member-card:hover,
   .team-section .member-card:hover .portrait-emblem,
-  .team-section .member-card:hover .member-portrait > img {
+  .team-section .member-card:hover .member-portrait > img,
+  .team-section .member-card:hover .member-portrait > picture > img {
     transform: none;
   }
 }

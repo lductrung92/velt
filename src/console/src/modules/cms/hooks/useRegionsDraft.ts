@@ -112,7 +112,9 @@ export function useRegionsDraft(details: RegionGroupDetail[] | undefined) {
       const res = applyDrop(base, activeId, overId, defaultConfig);
       if (!res) return;
       setDraft(res.next);
-      setSelectedKey(res.key);
+      // Landing a block does NOT open its settings. It used to, which made
+      // adding three blocks in a row impossible: the dialog swallowed the
+      // next click. The pencil on the row is how settings are opened.
     },
     [draft, seedFromAncestor],
   );
@@ -157,6 +159,5 @@ export function useRegionsDraft(details: RegionGroupDetail[] | undefined) {
     toggleVisible: (key: string, is_visible: boolean) =>
       patch(key, { is_visible }),
     setConfig: (key: string, config: WidgetConfig) => patch(key, { config }),
-    setMenu: (key: string, menu_id: string) => patch(key, { menu_id }),
   };
 }

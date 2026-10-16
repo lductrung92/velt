@@ -1,19 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save, X } from "lucide-react";
+import { Pencil, Plus, Save, X } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { ModalHeader } from "@/components/common/ModalHeader";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -55,13 +50,15 @@ export function TagFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent closeLabel={t("common.close")}>
-        <DialogHeader>
-          <DialogTitle>
-            {tag
+        <ModalHeader
+          icon={tag ? Pencil : Plus}
+          title={
+            tag
               ? t("cms.tags.dialog.edit_title")
-              : t("cms.tags.dialog.new_title")}
-          </DialogTitle>
-        </DialogHeader>
+              : t("cms.tags.dialog.new_title")
+          }
+          subject={tag ? tag.name : t("cms.tags.title")}
+        />
         {/* One dialog serves every row of the list, so the form is keyed by the
             record it edits: both the fields and the translation drafts belong to
             one tag and must not survive into the next one. */}

@@ -11,6 +11,8 @@ import (
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/cms/shared"
+	"github.com/velt/backend/internal/modules/translation"
+	"github.com/velt/backend/internal/platform/localize"
 	"github.com/velt/backend/internal/platform/pubdocs"
 	"github.com/velt/backend/internal/platform/storage"
 )
@@ -138,9 +140,37 @@ func (s *Service) ListArticles(ctx context.Context, id *httpx.Identity, p Articl
 	if err != nil {
 		return ArticleListResult{}, apperr.Internal()
 	}
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		ids = append(ids, r.ID)
+	}
+	// One lookup for the whole page.
+	//
+	// The TITLE is translated and the slug is not. A slug is the record's
+	// address in the console — the one its own editor writes and the one a
+	// colleague quotes in a ticket — and showing a different one per reader
+	// would have people chasing a rename that never happened. The site serves
+	// the translated slug to visitors; that is a different audience.
+	tr := localize.Fields(ctx, s.tr, EntityArticle, p.Locale, ids)
+	// The category name on the row belongs to the taxonomy's own vocabulary, so
+	// it is read from there — by the entity it is stored under, not by this
+	// module's. Without this the row reads half in each language.
+	catIDs := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		if r.CategoryID != nil {
+			catIDs = append(catIDs, *r.CategoryID)
+		}
+	}
+	cats := localize.Fields(ctx, s.tr, translation.EntityCMSCategory, p.Locale, catIDs)
 	items := make([]ArticleListItem, 0, len(rows))
 	for _, r := range rows {
-		items = append(items, toArticleListItem(r))
+		item := toArticleListItem(r)
+		item.Title = localize.Str(tr[r.ID], "title", item.Title)
+		if item.Category != nil {
+			item.Category.Name = localize.Str(
+				cats[item.Category.ID], "name", item.Category.Name)
+		}
+		items = append(items, item)
 	}
 	return ArticleListResult{Items: items, Total: total, Page: p.Page, PageSize: p.PageSize}, nil
 }
@@ -282,8 +312,8 @@ func (s *Service) UpdateArticle(ctx context.Context, id *httpx.Identity, article
 	// featured/og are served from the LIVE columns (not the snapshot), so once the
 	// path is replaced/cleared the old file has no reference — delete it.
 	prefix := articleMediaPrefix(articleID)
-	shared.DeleteOldMedia(ctx, s.files, prefix, cur.FeaturedPath, updated.FeaturedPath)
-	shared.DeleteOldMedia(ctx, s.files, prefix, cur.OGPath, updated.OGPath)
+	shared.DeleteOldMedia(ctx, s.files, s.MediaForget(), prefix, cur.FeaturedPath, updated.FeaturedPath)
+	shared.DeleteOldMedia(ctx, s.files, s.MediaForget(), prefix, cur.OGPath, updated.OGPath)
 	// Reclaim inline body images dropped since the last save (removed/replaced,
 	// incl. upload-on-insert churn) — reconciled against the new body HTML.
 	body := ""
@@ -430,7 +460,7 @@ func (s *Service) DeleteArticle(ctx context.Context, id *httpx.Identity, article
 	}
 	// Reclaim the article's whole media folder (featured/og + any mid-edit
 	// uploads) — the row is gone, so nothing references it. Best-effort.
-	if err := shared.PurgeMediaTree(ctx, s.files, "cms/articles/"+articleID.String()+"/"); err != nil {
+	if err := shared.PurgeMediaTree(ctx, s.files, s.MediaForget(), "cms/articles/"+articleID.String()+"/"); err != nil {
 		s.Sec(ctx).Warn("cms article media purge failed", "article", articleID, "err", err)
 	}
 	s.Sec(ctx).Info("cms article deleted", "actor", id.UserID, "article", articleID)

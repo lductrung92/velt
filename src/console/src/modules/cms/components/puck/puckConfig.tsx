@@ -74,12 +74,16 @@ export function buildLandingPuckConfig(t: TFn, landingId: string): Config {
 
     components[type] = {
       label: label(type),
+      // Order IS the panel's order. The form comes first because it is what
+      // the pencil was pointed at; the two switches are settings about the
+      // section rather than content in it, so they sit at the foot of the
+      // panel — where puck-theme.css lays them out side by side.
       fields: {
-        visible: { type: "custom", render: renderVisible },
-        fullWidth: { type: "custom", render: renderFullWidth },
         // one full-form field; Puck renders exactly what renderField returns
         // (no auto label), so the panel is the app's own section form.
         cfg: { type: "custom", render: renderField },
+        visible: { type: "custom", render: renderVisible },
+        fullWidth: { type: "custom", render: renderFullWidth },
       },
       defaultProps: {
         visible: true,

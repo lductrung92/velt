@@ -26,6 +26,17 @@ const ROW = {
   two_factor_enabled: false,
 };
 
+const EDITOR_ROLE = {
+  id: "r1",
+  code: "editor",
+  name: "Editor",
+  description: null,
+  is_system: true,
+  member_count: 1,
+  permission_count: 1,
+  updated_at: "2026-01-01T00:00:00Z",
+};
+
 function pageOf(items: unknown[]) {
   return { items, total: items.length, page: 1, page_size: 10 };
 }
@@ -162,20 +173,7 @@ describe("UserManagement", () => {
     signInWith(["*"]); // super_admin
     server.use(
       http.get(`${API}/admin/users`, () => HttpResponse.json(pageOf([ROW]))),
-      http.get(`${API}/admin/roles`, () =>
-        HttpResponse.json([
-          {
-            id: "r1",
-            code: "editor",
-            name: "Editor",
-            description: null,
-            is_system: true,
-            member_count: 1,
-            permission_count: 1,
-            updated_at: "2026-01-01T00:00:00Z",
-          },
-        ]),
-      ),
+      http.get(`${API}/admin/roles`, () => HttpResponse.json([EDITOR_ROLE])),
     );
     const user = userEvent.setup();
     renderPage();
@@ -269,5 +267,94 @@ describe("UserManagement", () => {
     expect(
       screen.queryByRole("button", { name: i18n.t("admin.users.col.roles") }),
     ).not.toBeInTheDocument();
+  });
+
+  it("the role filter narrows the list server-side and back to page 1", async () => {
+    signInWith(["users.read", "roles.read"]);
+    const roleParams: (string | null)[] = [];
+    server.use(
+      http.get(`${API}/admin/users`, ({ request }) => {
+        roleParams.push(new URL(request.url).searchParams.get("role"));
+        return HttpResponse.json(pageOf([ROW]));
+      }),
+      http.get(`${API}/admin/roles`, () => HttpResponse.json([EDITOR_ROLE])),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByTestId("admin-users-table");
+    expect(roleParams[0]).toBe("");
+
+    await user.click(
+      screen.getByRole("combobox", {
+        name: i18n.t("admin.users.role_filter_label"),
+      }),
+    );
+    await user.click(await screen.findByRole("option", { name: "Editor" }));
+
+    // The role CODE goes to the server, not the display name or the id.
+    await waitFor(() => expect(roleParams.at(-1)).toBe("editor"));
+  });
+
+  it("the key action opens the credentials modal, not an email confirm", async () => {
+    signInWith(["users.read", "users.update"]);
+    server.use(
+      http.get(`${API}/admin/users`, () => HttpResponse.json(pageOf([ROW]))),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByTestId("admin-users-table");
+
+    const table = within(await screen.findByTestId("admin-users-table"));
+    await user.click(
+      table.getByRole("button", {
+        name: i18n.t("admin.users.action_credentials"),
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(ROW.email)).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", {
+        name: i18n.t("admin.users.regenerate"),
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("creating a user shows its temporary password once", async () => {
+    signInWith(["users.read", "users.create"]);
+    server.use(
+      http.get(`${API}/admin/users`, () => HttpResponse.json(pageOf([ROW]))),
+      http.post(`${API}/admin/users`, () =>
+        HttpResponse.json({ ...ROW, temporary_password: "TempFromServer1" }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByTestId("admin-users-table");
+    await user.click(screen.getByRole("button", { name: /thêm mới|add new/i }));
+    const form = await screen.findByRole("dialog");
+    await user.type(
+      within(form).getByLabelText(/email/i),
+      "jane2@velt.local.vn",
+    );
+    await user.type(
+      within(form).getByLabelText(/họ tên|full name/i),
+      "Jane Two",
+    );
+    await user.click(within(form).getByRole("button", { name: /lưu|^save$/i }));
+
+    // The create form closes and the credentials modal takes over, carrying
+    // the one-time password the server just minted.
+    const creds = await screen.findByRole("dialog");
+    expect(
+      within(creds).getByText(i18n.t("admin.users.temp_password_once")),
+    ).toBeInTheDocument();
+    await user.click(
+      within(creds).getByRole("button", {
+        name: i18n.t("common.show_password"),
+      }),
+    );
+    expect(within(creds).getByText("TempFromServer1")).toBeInTheDocument();
   });
 });

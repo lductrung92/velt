@@ -144,7 +144,7 @@ func (s *Service) DeleteLanding(ctx context.Context, id *httpx.Identity, landing
 		return apperr.Internal()
 	}
 	// Landing (+ snapshot) gone → reclaim its whole media folder. Best-effort.
-	if err := shared.PurgeMediaTree(ctx, s.files, "cms/landing/"+landingID.String()+"/"); err != nil {
+	if err := shared.PurgeMediaTree(ctx, s.files, s.MediaForget(), "cms/landing/"+landingID.String()+"/"); err != nil {
 		s.Sec(ctx).Warn("cms landing media purge failed", "landing", landingID, "err", err)
 	}
 	s.Sec(ctx).Info("cms landing deleted", "actor", id.UserID, "landing", landingID)
@@ -295,7 +295,7 @@ func (s *Service) PublishLanding(ctx context.Context, id *httpx.Identity, landin
 	// Reclaim media dropped from the snapshot since the last publish (safe now
 	// that public reads the new snapshot) — but keep anything still referenced by
 	// a current (incl. hidden/draft) section or the og_path.
-	gcDroppedMedia(ctx, s.files, landingMediaPrefix(landingID), cur.PublishedSnapshot,
+	gcDroppedMedia(ctx, s.files, s.MediaForget(), landingMediaPrefix(landingID), cur.PublishedSnapshot,
 		liveMediaPaths(snap, sections, cur.OGPath))
 	s.Sec(ctx).Info("cms landing published", "actor", id.UserID, "landing", landingID, "key", p.Key)
 	s.Record(ctx, id, landingEntry(actionPublished, landingID, p.Name,
@@ -387,7 +387,7 @@ func (s *Service) landingDetail(ctx context.Context, p Page) (DetailResponse, er
 		r := toSectionResponse(sec)
 		// Inject *_url next to stored *_path keys so the builder can preview
 		// already-saved images (mirrors the public read path).
-		r.Config = resolveConfigMediaURLs(ctx, s.files, r.Config)
+		r.Config = resolveConfigMediaURLs(ctx, s.files, nil, r.Config)
 		items = append(items, r)
 	}
 	return DetailResponse{Response: s.landingResponse(ctx, p), Sections: items}, nil

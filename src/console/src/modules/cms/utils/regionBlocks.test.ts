@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyDrop,
   changedSlots,
+  blockWarning,
   fromDetails,
   paletteMenuId,
   paletteWidgetId,
@@ -10,6 +11,7 @@ import {
   slotDroppableId,
   slotKey,
   toInput,
+  type BlockDraft,
   type RegionsDraft,
 } from "./regionBlocks";
 
@@ -22,7 +24,7 @@ import type {
 } from "../services/regions.service";
 
 const CONFIGS: Record<string, WidgetConfig> = {
-  games_list: { limit: 8, columns: 3, layout: "grid" },
+  articles_list: { limit: 6, columns: 3 },
   rich_text: { width: "normal" },
 };
 const configFor = (type: WidgetType) => CONFIGS[type] ?? {};
@@ -87,7 +89,7 @@ function board(): RegionsDraft {
   return fromDetails([
     group(
       "common",
-      at("header", menu("b1", "m-header"), widget("b2", "games_list")),
+      at("header", menu("b1", "m-header"), widget("b2", "articles_list")),
       at("footer", menu("b3", "m-footer")),
     ),
     group("home", at("header"), at("footer")),
@@ -106,12 +108,13 @@ const COMMON_HEADER = slotKey("common", "header");
 const COMMON_FOOTER = slotKey("common", "footer");
 const BLOG_FOOTER = slotKey("blog_detail", "footer");
 const BLOG_AFTER = slotKey("blog_detail", "after_article");
+const BLOG_SIDEBAR = slotKey("blog_detail", "sidebar_left");
 
 describe("regionBlocks", () => {
   it("drags a palette widget into a slot, creating a new id-less block", () => {
     const res = applyDrop(
       board(),
-      paletteWidgetId("games_list"),
+      paletteWidgetId("articles_list"),
       slotDroppableId(BLOG_AFTER),
       configFor,
     );
@@ -121,9 +124,9 @@ describe("regionBlocks", () => {
     expect(res?.next[BLOG_AFTER][0]).toMatchObject({
       id: null,
       kind: "widget",
-      widget_type: "games_list",
+      widget_type: "articles_list",
       menu_id: null,
-      config: { limit: 8, columns: 3, layout: "grid" },
+      config: { limit: 6, columns: 3 },
       is_visible: true,
     });
     // The drop selects what it created, and leaves the other slots alone.
@@ -155,12 +158,42 @@ describe("regionBlocks", () => {
   it("moves a block between slots, keeping its id", () => {
     const res = applyDrop(
       board(),
-      "b2",
-      slotDroppableId(COMMON_FOOTER),
+      "b4",
+      slotDroppableId(BLOG_AFTER),
       configFor,
     );
-    expect(res?.next[COMMON_HEADER].map((b) => b.id)).toEqual(["b1"]);
-    expect(res?.next[COMMON_FOOTER].map((b) => b.id)).toEqual(["b3", "b2"]);
+    expect(res?.next[BLOG_SIDEBAR].map((b) => b.id)).toEqual([]);
+    expect(res?.next[BLOG_AFTER].map((b) => b.id)).toEqual(["b4"]);
+  });
+
+  it("keeps widgets out of the header and the footer, menus welcome", () => {
+    const base = board();
+    // A new one from the library.
+    expect(
+      applyDrop(
+        base,
+        paletteWidgetId("rich_text"),
+        slotDroppableId(COMMON_FOOTER),
+        configFor,
+      ),
+    ).toBeNull();
+    // And one already on the board, dragged in from a rail.
+    expect(
+      applyDrop(base, "b4", slotDroppableId(COMMON_FOOTER), configFor),
+    ).toBeNull();
+    // A menu is what the chrome is for.
+    expect(
+      applyDrop(
+        base,
+        paletteMenuId("m-header"),
+        slotDroppableId(COMMON_FOOTER),
+        configFor,
+      )?.next[COMMON_FOOTER],
+    ).toHaveLength(2);
+    // What an older build already put there still reorders.
+    expect(applyDrop(base, "b2", "b1", configFor)?.next[COMMON_HEADER]).toEqual(
+      [base[COMMON_HEADER][1], base[COMMON_HEADER][0]],
+    );
   });
 
   it("ignores a drop that changes nothing", () => {
@@ -182,7 +215,7 @@ describe("regionBlocks", () => {
         // Same values, reversed key order.
         {
           ...base[COMMON_HEADER][1],
-          config: { layout: "grid", columns: 3, limit: 8 },
+          config: { columns: 3, limit: 6 },
         },
       ],
     };
@@ -193,25 +226,17 @@ describe("regionBlocks", () => {
     const next = applyDrop(
       board(),
       paletteWidgetId("rich_text"),
-      slotDroppableId(COMMON_HEADER),
+      slotDroppableId(BLOG_SIDEBAR),
       configFor,
     )?.next as RegionsDraft;
 
-    expect(toInput(next[COMMON_HEADER])).toEqual([
+    expect(toInput(next[BLOG_SIDEBAR])).toEqual([
       {
-        id: "b1",
-        kind: "menu",
-        widget_type: null,
-        menu_id: "m-header",
-        config: {},
-        is_visible: true,
-      },
-      {
-        id: "b2",
+        id: "b4",
         kind: "widget",
-        widget_type: "games_list",
+        widget_type: "rich_text",
         menu_id: null,
-        config: { limit: 8, columns: 3, layout: "grid" },
+        config: { width: "normal" },
         is_visible: true,
       },
       {
@@ -252,7 +277,9 @@ describe("inheritance", () => {
   it("walks past an empty middle group to its grandparent", () => {
     const draft = board();
     // blog_detail → blog (empty) → common.
-    expect(resolveSlot(draft, TREE, "blog_detail", "header").from).toBe("common");
+    expect(resolveSlot(draft, TREE, "blog_detail", "header").from).toBe(
+      "common",
+    );
   });
 
   it("reports nothing when no ancestor has anything either", () => {
@@ -269,3 +296,68 @@ describe("inheritance", () => {
 function emptyBoard(): RegionsDraft {
   return fromDetails([]);
 }
+
+describe("blockWarning", () => {
+  const draft = (over: Partial<BlockDraft>): BlockDraft => ({
+    key: "k",
+    id: null,
+    kind: "widget",
+    widget_type: "rich_text",
+    menu_id: null,
+    config: {},
+    is_visible: true,
+    ...over,
+  });
+
+  it("says SKIPPED for a menu block with no menu chosen", () => {
+    expect(blockWarning(draft({ kind: "menu", widget_type: null }))).toBe(
+      "skipped",
+    );
+    expect(
+      blockWarning(draft({ kind: "menu", widget_type: null, menu_id: "m1" })),
+    ).toBeNull();
+  });
+
+  it("says SKIPPED for rich text whose html is only empty markup", () => {
+    // An editor that has only been focused reports "<p></p>"; the site draws
+    // nothing for it, so neither should this read as configured.
+    expect(blockWarning(draft({ config: { html: "" } }))).toBe("skipped");
+    expect(blockWarning(draft({ config: { html: "<p></p>" } }))).toBe(
+      "skipped",
+    );
+    expect(blockWarning(draft({ config: { html: "<p>xin chào</p>" } }))).toBe(
+      null,
+    );
+  });
+
+  it("says SKIPPED for a CTA with no heading, no sub and no usable button", () => {
+    const cta = (config: Record<string, unknown>) =>
+      blockWarning(draft({ widget_type: "cta_banner", config }));
+    expect(cta({})).toBe("skipped");
+    // A button needs both halves; a label with no href links nowhere.
+    expect(cta({ buttons: [{ label: "Liên hệ" }] })).toBe("skipped");
+    expect(cta({ buttons: [{ label: "Liên hệ", href: "/#contact" }] })).toBe(
+      null,
+    );
+    expect(cta({ heading: "Cần tư vấn?" })).toBe(null);
+  });
+
+  it("says nothing about a list with no category", () => {
+    // Every category is the picker's first option and a real choice, so the
+    // block is configured, not unfinished. Flagging it nagged about a setting
+    // that works, and a warning read as nagging stops being read.
+    expect(blockWarning(draft({ widget_type: "product_grid" }))).toBeNull();
+    expect(blockWarning(draft({ widget_type: "articles_list" }))).toBeNull();
+    expect(
+      blockWarning(
+        draft({ widget_type: "product_grid", config: { category: "do-choi" } }),
+      ),
+    ).toBeNull();
+  });
+
+  it("leaves the categories block alone — showing them all is its job", () => {
+    expect(blockWarning(draft({ widget_type: "categories_showcase" }))).toBe(
+      null,
+    );
+  });
+});

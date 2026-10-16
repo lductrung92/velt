@@ -9,7 +9,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/media"
 )
+
+// SetMedia wires the files-table keeper (called once at startup). Nil means an
+// uploaded avatar keeps returning the legacy /api/files URL, which still serves.
+func (s *Service) SetMedia(m media.Keeper) { s.media = m }
 
 const defaultMaxUploadMB = 10
 
@@ -58,8 +63,13 @@ func (s *Service) UploadAvatar(ctx context.Context, id *httpx.Identity, r io.Rea
 		if err := s.store.Delete(ctx, *old); err != nil {
 			s.sec(ctx).Warn("avatar: delete old failed", "user_id", id.UserID, "err", err)
 		}
+		media.Forget(ctx, s.media, *old)
 	}
-	return *s.avatarURL(ctx, &key), nil
+	// The flat /img URL is what the console shows straight away; the legacy
+	// /api/files URL stays the fallback and keeps working either way.
+	return media.MintOr(ctx, s.media, media.MintInput{
+		Key: key, Base: "avatar", Data: buf, OwnerKind: "user", OwnerID: &id.UserID,
+	}, *s.avatarURL(ctx, &key)), nil
 }
 
 // DeleteAvatar clears the caller's avatar (path → NULL + best-effort file delete).
@@ -79,6 +89,7 @@ func (s *Service) DeleteAvatar(ctx context.Context, id *httpx.Identity) error {
 		if err := s.store.Delete(ctx, *old); err != nil {
 			s.sec(ctx).Warn("avatar: delete failed", "user_id", id.UserID, "err", err)
 		}
+		media.Forget(ctx, s.media, *old)
 	}
 	return nil
 }

@@ -27,8 +27,12 @@ function toNodeFields(
   values: MenuItemFormValues,
 ): Omit<MenuItemDraft, "key" | "children"> {
   const entity = isEntityLink(values.link_type);
+  const label = values.label.trim();
   return {
-    label: values.label.trim(),
+    label,
+    // The form edits the stored label, so that is also what the row shows
+    // until the save and the refetch bring any translation back.
+    labelDisplay: label,
     description: values.description.trim() || null,
     link_type: values.link_type,
     target_id: entity ? values.target_id : null,

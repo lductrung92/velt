@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/storage"
 )
 
@@ -17,7 +18,13 @@ type treeDeleter interface {
 // PurgeMediaTree best-effort deletes every object under prefix — used when a
 // product is removed, so its whole media folder is reclaimed instead of leaking.
 // No-op when the store lacks recursive delete. Returns any delete error to log.
-func PurgeMediaTree(ctx context.Context, files storage.Storage, prefix string) error {
+//
+// forget drops the public identity of everything under the prefix: the `files`
+// rows and the derivatives rendered from them. It runs even when the store
+// cannot delete the tree, because a row pointing at bytes nobody can read is
+// the worse of the two leaks.
+func PurgeMediaTree(ctx context.Context, files storage.Storage, forget media.Forgetter, prefix string) error {
+	media.ForgetPrefix(ctx, forget, prefix)
 	td, ok := files.(treeDeleter)
 	if !ok {
 		return nil
@@ -39,12 +46,13 @@ func OwnsMedia(prefix, path string) bool {
 //
 // Only safe where the old file is not referenced elsewhere — in particular NOT
 // while a published snapshot still points at it.
-func DeleteOldMedia(ctx context.Context, files storage.Storage, prefix string, oldPath, newPath *string) {
+func DeleteOldMedia(ctx context.Context, files storage.Storage, forget media.Forgetter, prefix string, oldPath, newPath *string) {
 	o, n := deref(oldPath), deref(newPath)
 	if o == "" || o == n || !strings.HasPrefix(o, prefix) {
 		return
 	}
 	_ = files.Delete(ctx, o)
+	media.Forget(ctx, forget, o)
 }
 
 func deref(s *string) string {

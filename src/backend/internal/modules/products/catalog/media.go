@@ -10,6 +10,7 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/media"
 )
 
 // defaultMaxUploadMB bounds an upload when the settings registry has no
@@ -71,7 +72,10 @@ func (s *Service) UploadMedia(ctx context.Context, id *httpx.Identity, productID
 		s.Sec(ctx).Error("products: media save failed", "product_id", productID, "err", err)
 		return UploadResponse{}, apperr.Internal()
 	}
-	return UploadResponse{Path: key, URL: *s.mediaURL(ctx, &key)}, nil
+	url := media.MintOr(ctx, s.Media(), media.MintInput{
+		Key: key, Base: purpose, Data: buf, OwnerKind: "product", OwnerID: &productID,
+	}, *s.mediaURL(ctx, &key))
+	return UploadResponse{Path: key, URL: url}, nil
 }
 
 // sniffImage detects the image type by magic bytes (never trusting the client

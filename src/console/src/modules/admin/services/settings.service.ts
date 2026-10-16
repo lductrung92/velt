@@ -34,6 +34,15 @@ export const settingsService = {
     return data;
   },
 
+  /**
+   * Ends the current wait: drops the snapshot the API caches and moves the
+   * token the public site polls, so neither keeps serving what was replaced.
+   * Changes no setting's value.
+   */
+  async purgeCache(): Promise<void> {
+    await api.post("/settings/cache/purge");
+  },
+
   async update(updates: SettingUpdate): Promise<SettingsView> {
     const { data } = await api.put<SettingsView>("/settings", { updates });
     return data;

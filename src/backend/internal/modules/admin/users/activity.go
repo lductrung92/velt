@@ -16,7 +16,9 @@ const (
 	actionDeleted      = "user.deleted"
 	actionRoleAssigned = "user.role_assigned"
 	actionRoleRemoved  = "user.role_removed"
-	actionResetSent    = "user.password_reset_sent"
+	// Older rows still carry "user.password_reset_sent" from when the admin
+	// could only mail a link; that code is retired, not renamed.
+	actionPasswordReset = "user.password_reset"
 )
 
 // entityUser is the account the action happened to — the target, never the

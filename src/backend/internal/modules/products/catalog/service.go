@@ -13,6 +13,7 @@ import (
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/products/shared"
 	"github.com/velt/backend/internal/platform/htmlsan"
+	"github.com/velt/backend/internal/platform/localize"
 	"github.com/velt/backend/internal/platform/pubdocs"
 	"github.com/velt/backend/internal/platform/slug"
 	"github.com/velt/backend/internal/platform/storage"
@@ -60,9 +61,25 @@ func (s *Service) List(ctx context.Context, id *httpx.Identity, p ListParams) (L
 	if err != nil {
 		return ListResponse{}, s.MapRepoErr(ctx, "list products", err)
 	}
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		ids = append(ids, r.ID)
+	}
+	// One lookup for the whole page. The editor reads the product's own columns
+	// through Get, so what the list shows never travels back into a save.
+	tr := localize.Fields(ctx, s.tr, EntityProduct, p.Locale, ids)
 	items := make([]ListItem, 0, len(rows))
 	for _, r := range rows {
-		items = append(items, s.toListItem(ctx, r))
+		item := s.toListItem(ctx, r)
+		values := tr[r.ID]
+		// Name and summary, not the slug: in the console a slug is the record's
+		// address — what its own editor writes and what a colleague quotes in a
+		// ticket — and one that changed per reader would have people chasing a
+		// rename that never happened. Visitors get the translated slug on the
+		// site; that is a different audience.
+		item.Name = localize.Str(values, "name", item.Name)
+		item.Summary = localize.StrPtr(values, "summary", item.Summary)
+		items = append(items, item)
 	}
 	return ListResponse{Items: items, Total: total, Page: p.Page, PageSize: p.PageSize}, nil
 }
@@ -280,8 +297,8 @@ func (s *Service) Update(ctx context.Context, id *httpx.Identity, productID uuid
 	// it; the frozen copy must keep rendering.
 	if cur.PublishedSnapshot == nil {
 		prefix := mediaPrefix(productID)
-		shared.DeleteOldMedia(ctx, s.store, prefix, cur.CoverPath, updated.CoverPath)
-		shared.DeleteOldMedia(ctx, s.store, prefix, cur.SEO.OGPath, updated.SEO.OGPath)
+		shared.DeleteOldMedia(ctx, s.store, s.MediaForget(), prefix, cur.CoverPath, updated.CoverPath)
+		shared.DeleteOldMedia(ctx, s.store, s.MediaForget(), prefix, cur.SEO.OGPath, updated.SEO.OGPath)
 	}
 	// A published product keeps the body it was published with, but its address
 	// is the live slug: re-syncing here is what lets a rename take effect without
@@ -321,7 +338,7 @@ func (s *Service) Delete(ctx context.Context, id *httpx.Identity, productID uuid
 			s.Sec(ctx).Warn("products: purge translations failed", "product_id", productID, "err", err)
 		}
 	}
-	if err := shared.PurgeMediaTree(ctx, s.store, mediaPrefix(productID)); err != nil {
+	if err := shared.PurgeMediaTree(ctx, s.store, s.MediaForget(), mediaPrefix(productID)); err != nil {
 		s.Sec(ctx).Warn("products: purge media failed", "product_id", productID, "err", err)
 	}
 	return nil

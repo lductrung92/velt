@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/cms/shared"
 	"github.com/velt/backend/internal/modules/cms/shared/cmstest"
 )
@@ -18,7 +19,7 @@ import (
 
 func TestListCategories_RequiresViewPermission(t *testing.T) {
 	e := newTestSvc(t)
-	_, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith())
+	_, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(), "", "")
 	cmstest.AssertAppErr(t, err, http.StatusForbidden, "access_denied")
 }
 
@@ -29,7 +30,7 @@ func TestListCategories_TreeAndCounts(t *testing.T) {
 	e.repo.catArticles[root.ID] = 2
 	e.repo.catArticles[child.ID] = 5
 
-	tree, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView))
+	tree, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView), "", "")
 	require.NoError(t, err)
 	require.Len(t, tree, 1)
 	require.Equal(t, root.ID, tree[0].ID)
@@ -424,7 +425,7 @@ func TestMergeTags_PermissionDenied(t *testing.T) {
 
 func TestUnauthenticated(t *testing.T) {
 	e := newTestSvc(t)
-	_, err := e.svc.ListCategories(context.Background(), nil)
+	_, err := e.svc.ListCategories(context.Background(), nil, "", "")
 	cmstest.AssertAppErr(t, err, http.StatusUnauthorized, "unauthorized")
 	_, err = e.svc.CreateTag(context.Background(), nil, CreateTagRequest{Name: "Go"})
 	cmstest.AssertAppErr(t, err, http.StatusUnauthorized, "unauthorized")
@@ -446,5 +447,84 @@ func TestSlugify(t *testing.T) {
 	}
 	for in, want := range cases {
 		require.Equal(t, want, shared.Slugify(in), "shared.Slugify(%q)", in)
+	}
+}
+
+// --- Category status ---
+
+func TestCreateCategory_DefaultsToPublished(t *testing.T) {
+	e := newTestSvc(t)
+	res, err := e.svc.CreateCategory(context.Background(), cmstest.ActorWith(permManage), CreateCategoryRequest{Name: "Tin"})
+	require.NoError(t, err)
+	// Omitting status must not park a new category in draft: every row that
+	// predates the column is published, and a create has to mean the same.
+	require.Equal(t, CategoryStatusPublished, res.Status)
+}
+
+func TestCreateCategory_HonoursExplicitStatus(t *testing.T) {
+	e := newTestSvc(t)
+	res, err := e.svc.CreateCategory(context.Background(), cmstest.ActorWith(permManage),
+		CreateCategoryRequest{Name: "Nháp", Status: cmstest.Strptr(CategoryStatusDraft)})
+	require.NoError(t, err)
+	require.Equal(t, CategoryStatusDraft, res.Status)
+}
+
+func TestUpdateCategory_ChangesStatus(t *testing.T) {
+	e := newTestSvc(t)
+	cur := e.repo.seedCategory("News", "news", nil)
+	res, err := e.svc.UpdateCategory(context.Background(), cmstest.ActorWith(permManage), cur.ID,
+		UpdateCategoryRequest{UpdatedAt: &cur.UpdatedAt, Status: cmstest.Strptr(CategoryStatusArchived)})
+	require.NoError(t, err)
+	require.Equal(t, CategoryStatusArchived, res.Status)
+}
+
+func TestUpdateCategory_KeepsStatusWhenOmitted(t *testing.T) {
+	e := newTestSvc(t)
+	cur := e.repo.seedCategory("News", "news", nil)
+	cur.Status = CategoryStatusDraft
+	res, err := e.svc.UpdateCategory(context.Background(), cmstest.ActorWith(permManage), cur.ID,
+		UpdateCategoryRequest{UpdatedAt: &cur.UpdatedAt, Name: cmstest.Strptr("Tin")})
+	require.NoError(t, err)
+	require.Equal(t, CategoryStatusDraft, res.Status)
+}
+
+func TestListCategories_FiltersByStatus(t *testing.T) {
+	e := newTestSvc(t)
+	live := e.repo.seedCategory("News", "news", nil) // seeded published
+	hidden := e.repo.seedCategory("Hidden", "hidden", nil)
+	hidden.Status = CategoryStatusDraft
+
+	tree, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView), "", CategoryStatusPublished)
+	require.NoError(t, err)
+	require.Len(t, tree, 1)
+	require.Equal(t, live.ID, tree[0].ID)
+
+	drafts, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView), "", CategoryStatusDraft)
+	require.NoError(t, err)
+	require.Len(t, drafts, 1)
+	require.Equal(t, hidden.ID, drafts[0].ID)
+
+	// No filter still answers with everything, so an existing caller that never
+	// learned about status is unaffected.
+	all, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView), "", "")
+	require.NoError(t, err)
+	require.Len(t, all, 2)
+}
+
+func TestListCategories_UnknownStatusIsUnprocessable(t *testing.T) {
+	e := newTestSvc(t)
+	_, err := e.svc.ListCategories(context.Background(), cmstest.ActorWith(permView), "", "retired")
+	cmstest.AssertAppErr(t, err, http.StatusUnprocessableEntity, "validation_error")
+}
+
+func TestCategoryRequests_RejectUnknownStatusWithUnprocessable(t *testing.T) {
+	now := time.Now()
+	err := httpx.Validate(&CreateCategoryRequest{Name: "X", Status: cmstest.Strptr("retired")})
+	cmstest.AssertAppErr(t, err, http.StatusUnprocessableEntity, "validation_error")
+	err = httpx.Validate(&UpdateCategoryRequest{UpdatedAt: &now, Status: cmstest.Strptr("retired")})
+	cmstest.AssertAppErr(t, err, http.StatusUnprocessableEntity, "validation_error")
+	// The three real values pass the same gate.
+	for _, s := range []string{CategoryStatusDraft, CategoryStatusPublished, CategoryStatusArchived} {
+		require.NoError(t, httpx.Validate(&CreateCategoryRequest{Name: "X", Status: &s}))
 	}
 }

@@ -236,38 +236,8 @@
   gap: 18px;
   align-items: stretch;
 }
-.dashboard-content-no-actions {
+.dashboard-content-no-activity {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.dashboard-quick {
-  order: 1;
-}
-.dashboard-quick-heading-icon {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius);
-  color: var(--dashboard-blue);
-  background: hsl(var(--primary) / 0.08);
-}
-.dashboard-quick-link {
-  border: 1px solid transparent;
-  transition:
-    background-color 0.2s,
-    border-color 0.2s;
-}
-.dashboard-quick-link:hover {
-  background: hsl(var(--primary) / 0.035);
-  border-color: hsl(var(--primary) / 0.15);
-}
-.dashboard-quick-icon {
-  background: hsl(var(--muted));
-  color: hsl(var(--muted-foreground));
-}
-.dashboard-quick-link:hover .dashboard-quick-icon {
-  color: var(--dashboard-blue);
-  background: hsl(var(--primary) / 0.08);
 }
 .dashboard-empty {
   min-height: 300px;
@@ -350,23 +320,9 @@
   .dashboard-content {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .dashboard-quick {
+  /* Two columns leave the third panel alone on its row — let it use it. */
+  .dashboard-activity {
     grid-column: 1 / -1;
-    order: -1;
-  }
-  .dashboard-quick > div {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-  .dashboard-quick > div > * {
-    margin-top: 0;
-  }
-  .dashboard-quick-heading-icon {
-    display: none;
-  }
-  .dashboard-quick h2 {
-    margin-top: 0;
   }
 }
 @media (max-width: 767px) {
@@ -380,24 +336,18 @@
     display: none;
   }
   .dashboard-content,
-  .dashboard-content-no-actions {
+  .dashboard-content-no-activity {
     grid-template-columns: minmax(0, 1fr);
   }
-  .dashboard-quick {
+  .dashboard-activity {
     grid-column: auto;
   }
   .dashboard-empty {
     min-height: 270px;
   }
 }
-@media (max-width: 399px) {
-  .dashboard-quick > div {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
-  .dashboard-stat,
-  .dashboard-quick-link {
+  .dashboard-stat {
     transition: none;
   }
 }

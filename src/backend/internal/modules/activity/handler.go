@@ -125,13 +125,33 @@ func (h *Handler) Actions(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, res)
 }
 
-// Register mounts the read-only activity routes behind authMW. Every endpoint
-// is gated by activity.read in the service layer.
+// Purge handles POST /api/activity/purge.
+func (h *Handler) Purge(w http.ResponseWriter, r *http.Request) {
+	id, ok := identity(w, r)
+	if !ok {
+		return
+	}
+	var req PurgeRequest
+	if err := httpx.DecodeAndValidate(r, &req); err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
+	res, err := h.svc.Purge(r.Context(), id, strings.TrimSpace(req.OlderThan))
+	if err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, res)
+}
+
+// Register mounts the activity routes behind authMW. Reads are gated by
+// activity.read and the purge by activity.purge, both in the service layer.
 func Register(r chi.Router, svc *Service, authMW func(http.Handler) http.Handler) {
 	h := NewHandler(svc)
 	r.Group(func(r chi.Router) {
 		r.Use(authMW)
 		r.Get("/api/activity", h.List)
 		r.Get("/api/activity/actions", h.Actions)
+		r.Post("/api/activity/purge", h.Purge)
 	})
 }

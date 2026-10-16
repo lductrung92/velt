@@ -24,6 +24,12 @@ export interface AdminUser {
   two_factor_enabled: boolean;
 }
 
+// A user plus the one-time temporary password the server just minted for them.
+// The plaintext arrives once, in this response, and is never readable again.
+export interface AdminUserCredentials extends AdminUser {
+  temporary_password: string;
+}
+
 export interface Page<T> {
   items: T[];
   total: number;
@@ -34,6 +40,8 @@ export interface Page<T> {
 export interface ListUsersParams {
   q?: string;
   status?: string;
+  /** Role CODE, e.g. "editor" — server-side, like `status`. */
+  role?: string;
   page: number;
   page_size: number;
   sort?: string;
@@ -103,9 +111,10 @@ export const adminService = {
     return data;
   },
 
-  async createUser(body: CreateUserBody): Promise<AdminUser> {
-    // No password — the BE emails a set-password link (workflows §1).
-    const { data } = await api.post<AdminUser>("/admin/users", body);
+  async createUser(body: CreateUserBody): Promise<AdminUserCredentials> {
+    // No password in the body — the BE mints a temporary one and returns it
+    // here, the only time it is readable.
+    const { data } = await api.post<AdminUserCredentials>("/admin/users", body);
     return data;
   },
 
@@ -119,9 +128,14 @@ export const adminService = {
     await api.delete(`/admin/users/${id}`);
   },
 
-  async resetPassword(id: string): Promise<void> {
-    // 202 — the BE emails a reset link; the admin never sees the password.
-    await api.post(`/admin/users/${id}/reset-password`, {});
+  async resetPassword(id: string): Promise<AdminUserCredentials> {
+    // Mints a NEW temporary password and revokes the user's sessions; the
+    // plaintext comes back once, for the admin to hand over.
+    const { data } = await api.post<AdminUserCredentials>(
+      `/admin/users/${id}/reset-password`,
+      {},
+    );
+    return data;
   },
 
   // Roles

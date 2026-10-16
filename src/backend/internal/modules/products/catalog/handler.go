@@ -70,6 +70,7 @@ func listParams(r *http.Request) (ListParams, error) {
 		Sort:        q.Get("sort"),
 		Page:        page,
 		PageSize:    size,
+		Locale:      httpx.Locale(r),
 	}, nil
 }
 

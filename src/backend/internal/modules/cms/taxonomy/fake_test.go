@@ -35,7 +35,8 @@ func newFakeRepo(now time.Time) *fakeRepo {
 }
 
 func (r *fakeRepo) seedCategory(name, slug string, parent *uuid.UUID) *Category {
-	c := &Category{ID: uuid.New(), Name: name, Slug: slug, ParentID: parent, CreatedAt: r.now, UpdatedAt: r.now}
+	c := &Category{ID: uuid.New(), Name: name, Slug: slug, ParentID: parent,
+		Status: CategoryStatusPublished, CreatedAt: r.now, UpdatedAt: r.now}
 	r.cats[c.ID] = c
 	r.catSlugs[slug] = c.ID
 	return c
@@ -48,9 +49,12 @@ func (r *fakeRepo) seedTag(name, slug string) *Tag {
 	return t
 }
 
-func (r *fakeRepo) ListCategoriesWithCounts(_ context.Context) ([]categoryWithCount, error) {
+func (r *fakeRepo) ListCategoriesWithCounts(_ context.Context, status string) ([]categoryWithCount, error) {
 	out := make([]categoryWithCount, 0, len(r.cats))
 	for _, c := range r.cats {
+		if status != "" && c.Status != status {
+			continue
+		}
 		out = append(out, categoryWithCount{Category: *c, ArticleCount: r.catArticles[c.ID]})
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -77,7 +81,7 @@ func (r *fakeRepo) CreateCategory(_ context.Context, w categoryWrite) (*Category
 	}
 	c := &Category{
 		ID: uuid.New(), Name: w.Name, Slug: w.Slug, ParentID: w.ParentID,
-		Description: w.Description, SortOrder: w.SortOrder,
+		Description: w.Description, SortOrder: w.SortOrder, Status: w.Status,
 		SEOTitle: w.SEOTitle, SEODescription: w.SEODescription, SEOKeywords: w.SEOKeywords,
 		CreatedAt: r.now, UpdatedAt: r.now,
 	}
@@ -113,6 +117,7 @@ func (r *fakeRepo) UpdateCategory(_ context.Context, id uuid.UUID, w categoryWri
 	delete(r.catSlugs, c.Slug)
 	c.Name, c.Slug, c.ParentID = w.Name, w.Slug, w.ParentID
 	c.Description, c.SortOrder = w.Description, w.SortOrder
+	c.Status = w.Status
 	c.SEOTitle, c.SEODescription, c.SEOKeywords = w.SEOTitle, w.SEODescription, w.SEOKeywords
 	c.UpdatedAt = r.now.Add(time.Second)
 	r.catSlugs[c.Slug] = id

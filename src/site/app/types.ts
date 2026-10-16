@@ -8,6 +8,9 @@ export interface Member {
   bio: string;
   skills: string[];
   image: string;
+  /** The avatar's INTRINSIC size, when the API knows it. */
+  imageWidth?: number;
+  imageHeight?: number;
   links: { label: string; url: string }[];
   email: string;
   zalo: string;
@@ -24,6 +27,9 @@ export interface Product {
   featured?: boolean;
   createdAt?: string;
   image?: string;
+  /** The cover's INTRINSIC size, when the API knows it. */
+  imageWidth?: number;
+  imageHeight?: number;
   url?: string;
   example?: boolean;
   skills?: string[];

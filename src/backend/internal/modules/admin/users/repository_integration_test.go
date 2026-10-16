@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -86,4 +87,34 @@ func TestIT_CreateUserAssignRoles(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, roles, 1)
 	require.Equal(t, "editor", roles[0].Code)
+}
+
+func TestIT_ListUsersFilterByRole(t *testing.T) {
+	repo, spine := usersDB(t)
+	ctx := context.Background()
+	editor, err := spine.GetRoleByCode(ctx, "editor")
+	require.NoError(t, err)
+	tag := uuid.NewString()[:8]
+	withRole, err := repo.CreateUser(ctx, "adminit-"+tag+"-r-"+uuid.NewString()+"@x.test", "R", itHash(t), []uuid.UUID{editor.ID}, uuid.Nil)
+	require.NoError(t, err)
+	_, err = repo.CreateUser(ctx, "adminit-"+tag+"-n-"+uuid.NewString()+"@x.test", "N", itHash(t), nil, uuid.Nil)
+	require.NoError(t, err)
+
+	rows, total, err := repo.ListUsers(ctx, ListUsersFilter{Query: "adminit-" + tag, Role: "editor"})
+	require.NoError(t, err)
+	require.Equal(t, 1, total)
+	require.Len(t, rows, 1)
+	require.Equal(t, withRole.ID, rows[0].ID)
+}
+
+func TestIT_SetPassword(t *testing.T) {
+	repo, _ := usersDB(t)
+	ctx := context.Background()
+	u, err := repo.CreateUser(ctx, "adminit-pw-"+uuid.NewString()+"@x.test", "PW", itHash(t), nil, uuid.Nil)
+	require.NoError(t, err)
+	next, err := crypto.HashPassword("integration-password-2")
+	require.NoError(t, err)
+	// Exercises the real UPDATE across users / password_reset_tokens /
+	// auth_sessions — the three tables the one transaction touches.
+	require.NoError(t, repo.SetPassword(ctx, u.ID, next, time.Now()))
 }

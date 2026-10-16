@@ -27,12 +27,26 @@ const (
 // Setting groups.
 const (
 	GroupGeneral = "general"
+	GroupCache   = "cache"
 	GroupEmail   = "email"
 	GroupStorage = "storage"
 )
 
 // SettingDef is the registry metadata for one key. The DB never stores any of
 // this — only the value.
+// The cache knobs this package owns. The third one — how long the public site
+// may serve a rendered page — belongs to the CMS module that reads it, and
+// joins them in GroupCache from there.
+const (
+	CacheConsoleRefresh = "cache.console_refresh_seconds"
+	CachePublicMaxAge   = "cache.public_max_age_seconds"
+	// purgeMarker is written by a cache purge and read by nobody. It is not in
+	// the registry, so it never appears in a view; its only job is to move
+	// system_settings' MAX(updated_at), which is part of the token the public
+	// site polls — moving it is what makes the site drop its rendered pages.
+	purgeMarker = "cache.purged_at"
+)
+
 type SettingDef struct {
 	Key           string
 	Group         string
@@ -76,6 +90,19 @@ func foundationDefs() []SettingDef {
 		{Key: "app.primary_color", Group: GroupGeneral, Type: TypeString, Format: "color", Default: "", IsPublic: true, Description: "Brand primary color (#RRGGBB); empty = theme default"},
 		{Key: "app.default_locale", Group: GroupGeneral, Type: TypeEnum, AllowedValues: []string{"vi", "en"}, Default: "vi", IsPublic: true, Description: "Default locale"},
 		{Key: "app.language_switcher_enabled", Group: GroupGeneral, Type: TypeBool, Default: true, IsPublic: true, Description: "Show the UI language switcher"},
+		// How the console's own list tables page. Public because the console
+		// reads them from /public/settings on first paint, beside the branding
+		// it already reads there — a second, authenticated call would only
+		// delay every list by one round trip. The max matches the cap every
+		// admin list endpoint already clamps to.
+		{Key: "app.page_size", Group: GroupGeneral, Type: TypeInt, Default: 10, Min: intp(2), Max: intp(100), IsPublic: true, Description: "Rows per page in the console's list tables"},
+		{Key: "app.pagination_template", Group: GroupGeneral, Type: TypeEnum, AllowedValues: []string{"numbered", "prev_next", "load_more", "infinite"}, Default: "numbered", IsPublic: true, Description: "How those tables offer the next rows: numbered pages, prev/next only, a Load more button, or on scroll"},
+
+		// What is allowed to go stale, and for how long. The site's own page TTL
+		// (site.cache_ttl_seconds) joins these in the same group; it is declared
+		// with the rest of the CMS keys because that is the module that reads it.
+		{Key: CacheConsoleRefresh, Group: GroupCache, Type: TypeInt, Default: 60, Min: intp(0), Max: intp(3600), IsPublic: true, Description: "Seconds between a console tab re-reading this configuration; 0 = only when the page is reloaded"},
+		{Key: CachePublicMaxAge, Group: GroupCache, Type: TypeInt, Default: 60, Min: intp(0), Max: intp(86400), IsPublic: true, Description: "Seconds a browser or CDN may cache the public settings response; 0 = no caching"},
 
 		{Key: "mail.smtp_host", Group: GroupEmail, Type: TypeString, Default: "", Description: "SMTP server host"},
 		{Key: "mail.smtp_port", Group: GroupEmail, Type: TypeInt, Default: 587, Min: intp(1), Max: intp(65535), Description: "SMTP server port"},

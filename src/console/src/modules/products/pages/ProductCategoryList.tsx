@@ -36,6 +36,7 @@ import { RowAction, RowActions } from "@/components/common/RowActions";
 import { SortableHead } from "@/components/common/SortableHead";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ListPager } from "@/components/ui/list-pager";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -44,16 +45,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { usePaging } from "@/hooks/usePaging";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
 import { ProductCategoryRow } from "../components/ProductCategoryRow";
+import { ProductCategoryStatusBadge } from "../components/ProductCategoryStatusBadge";
 import {
   useDeleteProductCategory,
   useProductCategories,
   useReorderProductCategories,
 } from "../hooks/useProductCategories";
-import type { ProductCategory } from "../services/productCategories.service";
+import {
+  PRODUCT_CATEGORY_STATUSES,
+  type ProductCategory,
+  type ProductCategoryStatus,
+} from "../services/productCategories.service";
 
 import "@/styles/list-page.css";
 import "./product-categories.css";
@@ -76,6 +83,11 @@ const OVERVIEW = [
 
 type Scope = (typeof OVERVIEW)[number]["key"];
 
+// The status tabs, in the order somebody looking for a category thinks of
+// them: what is in use, what is being set up, what has been put away. Same row
+// and same labels as the articles list.
+const STATUS_TABS = PRODUCT_CATEGORY_STATUSES;
+
 export default function ProductCategoryList() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -86,12 +98,18 @@ export default function ProductCategoryList() {
   const del = useDeleteProductCategory();
   const reorder = useReorderProductCategories();
 
+  // Page, page size and pager style all come from the shared settings
+  // (Settings → General → Pagination), so every list pages the same way.
+  const paging = usePaging();
+  const { page, setPage } = paging;
+
   const [deleteTarget, setDeleteTarget] = useState<ProductCategory | null>(
     null,
   );
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<string | null>(null);
   const [scope, setScope] = useState<Scope>("total");
+  const [status, setStatus] = useState<ProductCategoryStatus | "">("");
 
   // Local mirror so a drag renders instantly; the server call follows.
   const [order, setOrder] = useState<ProductCategory[]>([]);
@@ -108,9 +126,17 @@ export default function ProductCategoryList() {
 
   // Anything that narrows or resequences the list means the rows no longer
   // reflect sort_order, so dragging them would write an order the user cannot
-  // see. The overview cards count as narrowing.
-  const reorderable = q === "" && sort === null && scope === "total";
+  // see. The overview cards and the status tabs count as narrowing.
+  const reorderable =
+    q === "" && sort === null && scope === "total" && status === "";
   const hasFilters = !reorderable;
+
+  // Changing a filter puts you back on the first page — otherwise a narrower
+  // list leaves you looking at a page that no longer exists.
+  function applyFilter(change: () => void) {
+    change();
+    setPage(1);
+  }
 
   const counts = OVERVIEW.map(({ match }) =>
     match ? order.filter(match).length : order.length,
@@ -120,11 +146,12 @@ export default function ProductCategoryList() {
     let list = order;
     const card = OVERVIEW.find((o) => o.key === scope);
     if (card?.match) list = list.filter(card.match);
+    if (status) list = list.filter((c) => c.status === status);
     if (q) {
       const needle = q.toLowerCase();
       list = list.filter(
         (c) =>
-          c.name.toLowerCase().includes(needle) ||
+          c.name_display.toLowerCase().includes(needle) ||
           c.slug.toLowerCase().includes(needle),
       );
     }
@@ -136,7 +163,15 @@ export default function ProductCategoryList() {
       list = [...list].sort((a, b) => a[key].localeCompare(b[key], "vi") * dir);
     }
     return list;
-  }, [order, q, sort, scope]);
+  }, [order, q, sort, scope, status]);
+
+  // The whole taxonomy arrives in one response, so the pager slices it here
+  // rather than asking the server for a page it does not serve.
+  const total = rows.length;
+  const visible = rows.slice(
+    (page - 1) * paging.pageSize,
+    page * paging.pageSize,
+  );
 
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
@@ -192,7 +227,11 @@ export default function ProductCategoryList() {
             className="list-metric"
             data-kind={key}
             aria-pressed={scope === key}
-            onClick={() => setScope((cur) => (cur === key ? "total" : key))}
+            onClick={() =>
+              applyFilter(() =>
+                setScope((cur) => (cur === key ? "total" : key)),
+              )
+            }
           >
             <span className="list-metric-top">
               <span>{t(`products.categories.overview.${key}`)}</span>
@@ -227,9 +266,7 @@ export default function ProductCategoryList() {
             <p>
               {categories.isPending || categories.isError
                 ? t("products.categories.list_hint")
-                : t("products.categories.record_count", {
-                    count: order.length,
-                  })}
+                : t("products.categories.record_count", { count: total })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -262,9 +299,7 @@ export default function ProductCategoryList() {
           </div>
         </div>
 
-        {/* No status axis here, so no tabs row — the toolbar carries the rule
-            that would otherwise come from it. */}
-        <div className="list-toolbar list-toolbar-edge">
+        <div className="list-toolbar">
           <form
             className="list-search"
             onSubmit={(event) => event.preventDefault()}
@@ -277,7 +312,7 @@ export default function ProductCategoryList() {
               placeholder={t("products.categories.search_ph")}
               // The whole list is already in memory, so searching as you type
               // costs nothing and waiting for Enter would be pure friction.
-              onChange={(event) => setQ(event.target.value)}
+              onChange={(event) => applyFilter(() => setQ(event.target.value))}
             />
             <Button
               type="submit"
@@ -288,6 +323,32 @@ export default function ProductCategoryList() {
               <ArrowRight className="size-4" aria-hidden />
             </Button>
           </form>
+        </div>
+
+        <div
+          className="list-tabs"
+          role="group"
+          aria-label={t("products.categories.filter_status")}
+        >
+          <button
+            type="button"
+            aria-pressed={!status}
+            onClick={() => applyFilter(() => setStatus(""))}
+          >
+            {t("products.categories.all_statuses")}
+          </button>
+          {STATUS_TABS.map((value) => (
+            <button
+              type="button"
+              key={value}
+              data-status={value}
+              aria-pressed={status === value}
+              onClick={() => applyFilter(() => setStatus(value))}
+            >
+              <i aria-hidden />
+              {t(`content_status.${value}`)}
+            </button>
+          ))}
         </div>
 
         {categories.isError ? (
@@ -311,7 +372,7 @@ export default function ProductCategoryList() {
               <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
-        ) : !rows.length ? (
+        ) : !visible.length ? (
           <div className="list-empty">
             <div className="list-empty-art" aria-hidden>
               <span className="list-empty-ring" />
@@ -375,14 +436,17 @@ export default function ProductCategoryList() {
                         col="name"
                         label={t("products.categories.col.name")}
                         sort={sort}
-                        onSort={setSort}
+                        onSort={(next) => applyFilter(() => setSort(next))}
                       />
                       <SortableHead
                         col="slug"
                         label={t("products.categories.col.slug")}
                         sort={sort}
-                        onSort={setSort}
+                        onSort={(next) => applyFilter(() => setSort(next))}
                       />
+                      <TableHead>
+                        {t("products.categories.col.status")}
+                      </TableHead>
                       <TableHead>
                         {t("products.categories.col.product_count")}
                       </TableHead>
@@ -396,10 +460,10 @@ export default function ProductCategoryList() {
                   </TableHeader>
                   <TableBody>
                     <SortableContext
-                      items={rows.map((c) => c.id)}
+                      items={visible.map((c) => c.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      {rows.map((c) => (
+                      {visible.map((c) => (
                         <ProductCategoryRow
                           key={c.id}
                           category={c}
@@ -418,11 +482,11 @@ export default function ProductCategoryList() {
             {/* Reading only: dragging needs a pointer, so the handle stays on
                 the desktop table. */}
             <div className="list-mobile">
-              {rows.map((c) => (
+              {visible.map((c) => (
                 <div className="pcat-mobile-card" key={c.id}>
                   <div className="pcat-mobile-heading">
                     <div className="pcat-name">
-                      <strong title={c.name}>{c.name}</strong>
+                      <strong title={c.name_display}>{c.name_display}</strong>
                     </div>
                     {canManage && (
                       <RowActions>
@@ -443,6 +507,7 @@ export default function ProductCategoryList() {
                     )}
                   </div>
                   <div className="pcat-mobile-meta">
+                    <ProductCategoryStatusBadge status={c.status} />
                     <span
                       className="pcat-count"
                       data-empty={c.product_count === 0 ? "true" : "false"}
@@ -462,6 +527,17 @@ export default function ProductCategoryList() {
           </>
         )}
       </section>
+
+      {/* Outside the card on purpose: the panel holds the records, the pager
+          is how you ask for the next ones. It hides itself when everything
+          fits on one page. */}
+      <div className="list-pagination">
+        <ListPager
+          paging={paging}
+          total={total}
+          loading={categories.isFetching}
+        />
+      </div>
 
       <ConfirmDialog
         open={!!deleteTarget}

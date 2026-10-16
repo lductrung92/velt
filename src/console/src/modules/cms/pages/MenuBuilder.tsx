@@ -20,7 +20,6 @@ import {
   useMenus,
   useReplaceMenuItems,
 } from "../hooks/useCmsMenus";
-import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import { useMenuDraft } from "../hooks/useMenuDraft";
 import { translationService } from "@/modules/translation/services/translation.service";
 
@@ -47,10 +46,6 @@ export default function MenuBuilder() {
   const [deleteItemKey, setDeleteItemKey] = useState<string | null>(null);
   const [pendingSelect, setPendingSelect] = useState<string | null>(null);
 
-  // One declaration covers tab close, reload, the sidebar, the breadcrumb and
-  // the browser's back button. The in-page slot switch below stays local: it
-  // is not a navigation, so the router's blocker never sees it.
-  useUnsavedChanges({ when: draft.dirty, what: t("cms.menus.one") });
 
   // Landing on nothing made the right half a placeholder the reader then had
   // to dismiss by clicking the row they were going to click anyway.

@@ -10,19 +10,33 @@ import (
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/cms/shared"
+	"github.com/velt/backend/internal/platform/localize"
 )
 
 // ListCategories returns the full category tree with article counts. Requires
 // cms.article.view.
-func (s *Service) ListCategories(ctx context.Context, id *httpx.Identity) ([]CategoryResponse, error) {
+//
+// `locale` is the language the caller is reading in: each node's NameDisplay
+// answers in it where somebody has written a translation. Name itself never
+// moves — see CategoryResponse.
+//
+// `status` narrows the tree to one status; empty means the whole tree.
+func (s *Service) ListCategories(ctx context.Context, id *httpx.Identity, locale, status string) ([]CategoryResponse, error) {
 	if err := s.Require(ctx, id, permView); err != nil {
 		return nil, err
 	}
-	rows, err := s.repo.ListCategoriesWithCounts(ctx)
+	if status != "" && !validCategoryStatus[status] {
+		return nil, apperr.Validation(map[string]string{"status": "invalid_value"})
+	}
+	rows, err := s.repo.ListCategoriesWithCounts(ctx, status)
 	if err != nil {
 		return nil, apperr.Internal()
 	}
-	return buildCategoryTree(rows), nil
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		ids = append(ids, r.ID)
+	}
+	return buildCategoryTree(rows, localize.Fields(ctx, s.tr, EntityCategory, locale, ids)), nil
 }
 
 // CreateCategory creates a category. Requires cms.taxonomy.manage.
@@ -47,6 +61,7 @@ func (s *Service) CreateCategory(ctx context.Context, id *httpx.Identity, req Cr
 	w := categoryWrite{
 		Name: name, ParentID: req.ParentID,
 		Description: req.Description, SortOrder: derefInt(req.SortOrder),
+		Status: derefStatus(req.Status),
 	}
 	w.SEOTitle, w.SEODescription, w.SEOKeywords = seoFields(req.SEO)
 
@@ -223,7 +238,7 @@ func (s *Service) resolveParentMove(ctx context.Context, catID uuid.UUID, newPar
 func mergeCategoryWrite(cur *Category, req UpdateCategoryRequest) categoryWrite {
 	w := categoryWrite{
 		Name: cur.Name, Slug: cur.Slug, ParentID: cur.ParentID,
-		Description: cur.Description, SortOrder: cur.SortOrder,
+		Description: cur.Description, SortOrder: cur.SortOrder, Status: cur.Status,
 		SEOTitle: cur.SEOTitle, SEODescription: cur.SEODescription, SEOKeywords: cur.SEOKeywords,
 	}
 	if req.Name != nil {
@@ -235,6 +250,9 @@ func mergeCategoryWrite(cur *Category, req UpdateCategoryRequest) categoryWrite 
 	if req.SortOrder != nil {
 		w.SortOrder = *req.SortOrder
 	}
+	if req.Status != nil {
+		w.Status = *req.Status
+	}
 	if req.SEO != nil {
 		w.SEOTitle, w.SEODescription, w.SEOKeywords = seoFields(req.SEO)
 	}
@@ -242,18 +260,20 @@ func mergeCategoryWrite(cur *Category, req UpdateCategoryRequest) categoryWrite 
 }
 
 func categoryDetail(c Category, articleCount int) CategoryResponse {
-	return toCategoryResponse(categoryWithCount{Category: c, ArticleCount: articleCount})
+	return toCategoryResponse(categoryWithCount{Category: c, ArticleCount: articleCount}, nil)
 }
 
 // buildCategoryTree assembles the flat (pre-ordered) rows into a nested tree.
-func buildCategoryTree(rows []categoryWithCount) []CategoryResponse {
+// `tr` is the request locale's stored values per category id, nil when there
+// are none.
+func buildCategoryTree(rows []categoryWithCount, tr map[uuid.UUID]map[string]any) []CategoryResponse {
 	type node struct {
 		resp     CategoryResponse
 		children []*node
 	}
 	byID := make(map[uuid.UUID]*node, len(rows))
 	for _, r := range rows {
-		byID[r.ID] = &node{resp: toCategoryResponse(r)}
+		byID[r.ID] = &node{resp: toCategoryResponse(r, tr[r.ID])}
 	}
 	roots := []*node{}
 	for _, r := range rows {

@@ -1,6 +1,14 @@
-import { EditorContent, useEditor, type Editor, type Extensions } from "@tiptap/react";
+import {
+  EditorContent,
+  useEditor,
+  type Editor,
+  type Extensions,
+} from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Bold,
   Heading2,
   Heading3,
@@ -16,6 +24,8 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+import { TextAlignExtension } from "./TextAlignExtension";
 
 export type RichTextDoc = Record<string, unknown>;
 
@@ -81,6 +91,28 @@ const ACTIONS: {
     isActive: (e) => e.isActive("heading", { level: 3 }),
     run: (e) => e.chain().focus().toggleHeading({ level: 3 }).run(),
   },
+  // Left is the absence of an alignment, so its button clears rather than sets,
+  // and reads as active while neither of the other two is.
+  {
+    key: "align_left",
+    icon: AlignLeft,
+    isActive: (e) =>
+      !e.isActive({ textAlign: "center" }) &&
+      !e.isActive({ textAlign: "right" }),
+    run: (e) => e.chain().focus().setTextAlign(null).run(),
+  },
+  {
+    key: "align_center",
+    icon: AlignCenter,
+    isActive: (e) => e.isActive({ textAlign: "center" }),
+    run: (e) => e.chain().focus().setTextAlign("center").run(),
+  },
+  {
+    key: "align_right",
+    icon: AlignRight,
+    isActive: (e) => e.isActive({ textAlign: "right" }),
+    run: (e) => e.chain().focus().setTextAlign("right").run(),
+  },
   {
     key: "bullet_list",
     icon: List,
@@ -116,7 +148,7 @@ function RichTextEditorBase({
 }: RichTextEditorProps) {
   const { t } = useTranslation();
   const editor = useEditor({
-    extensions: [StarterKit, ...(extraExtensions ?? [])],
+    extensions: [StarterKit, TextAlignExtension, ...(extraExtensions ?? [])],
     content: initialJSON ?? value,
     editable,
     immediatelyRender: false,

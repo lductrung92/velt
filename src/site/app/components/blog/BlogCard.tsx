@@ -2,12 +2,16 @@ import { useId, useState } from "react";
 import { useSite } from "../../context";
 import { blogDate, blogPath, type BlogCard as Post } from "../../lib/blog";
 import { Icon } from "../Icon";
+import { Img } from "../Img";
 
 export function BlogCover({
   post,
+  sizes,
   priority = false,
 }: {
   post: Post;
+  /** How wide this cover renders; the card and the article differ. */
+  sizes: string;
   priority?: boolean;
 }) {
   const [broken, setBroken] = useState(false);
@@ -15,10 +19,13 @@ export function BlogCover({
   return (
     <div className="blog-cover">
       {post.cover_url && !broken ? (
-        <img
+        <Img
           src={post.cover_url}
+          width={post.cover_width}
+          height={post.cover_height}
           alt=""
-          loading={priority ? "eager" : "lazy"}
+          sizes={sizes}
+          priority={priority}
           onError={() => setBroken(true)}
         />
       ) : (
@@ -130,7 +137,15 @@ export function PostCard({
   return (
     <article className={`blog-card${featured ? " blog-card-featured" : ""}`}>
       <a className="blog-card-link" href={href(blogPath(post.slug))}>
-        <BlogCover post={post} priority={featured} />
+        <BlogCover
+          post={post}
+          sizes={
+            featured
+              ? "(min-width: 1248px) 616px, (min-width: 768px) 51vw, calc(100vw - 48px)"
+              : "(min-width: 1248px) 384px, (min-width: 1001px) 32vw, (min-width: 541px) 50vw, calc(100vw - 48px)"
+          }
+          priority={featured}
+        />
         <div className="blog-card-copy">
           <div className="blog-card-meta">
             <span>{featured ? t("blog.card.latest") : "ZUKATEK JOURNAL"}</span>

@@ -15,6 +15,7 @@ func RegisterRoutes(r chi.Router, h *Handler, authMW func(http.Handler) http.Han
 		r.Get("/api/settings", h.GetAll)
 		r.Put("/api/settings", h.Update)
 		r.Post("/api/settings/email/test", h.TestEmail)
+		r.Post("/api/settings/cache/purge", h.PurgeCache)
 	})
 	r.Get("/api/public/settings", h.GetPublic)
 }

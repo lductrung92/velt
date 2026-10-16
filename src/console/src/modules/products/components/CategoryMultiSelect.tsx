@@ -27,7 +27,7 @@ export function CategoryMultiSelect({
   if (items.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        {t("products.categories.empty.title")}
+        {t("products.categories.empty_title")}
       </p>
     );
   }

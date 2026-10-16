@@ -81,6 +81,8 @@ export interface EntityTranslation {
   /** Draft values of the active language, edited in place. */
   values: Record<string, unknown>;
   setField: (field: string, value: unknown) => void;
+  /** Throws the draft away — for a dialog that closes without applying. */
+  reset: () => void;
   /** Typed values a record with no id yet must have written on its behalf. */
   pending: Record<string, Record<string, unknown>>;
   dirty: boolean;
@@ -216,8 +218,13 @@ export function useEntityTranslation(
     });
   }, [enabled, entity, entityId, qc]);
 
+  // Throw the draft away. A dialog that closes without applying has to undo
+  // what was typed in it, and the drafts live here rather than in the caller.
+  const reset = useCallback(() => setEdits({}), []);
+
   return {
     enabled,
+    reset,
     baseLocale,
     tabs: [baseLocale, ...locales],
     locale,

@@ -33,7 +33,7 @@ func TestMenus_CreatePermissionDenied(t *testing.T) {
 
 func TestMenus_GetNotFound(t *testing.T) {
 	e := newTestSvc(t)
-	_, err := e.svc.GetMenu(context.Background(), cmstest.ActorWith(permManage), uuid.New())
+	_, err := e.svc.GetMenu(context.Background(), cmstest.ActorWith(permManage), uuid.New(), "")
 	cmstest.AssertAppErr(t, err, http.StatusNotFound, "not_found")
 }
 
@@ -53,7 +53,7 @@ func TestMenus_DeleteCascadesItems(t *testing.T) {
 	e := newTestSvc(t)
 	m, _ := e.svc.CreateMenu(context.Background(), cmstest.ActorWith(permManage), CreateRequest{Name: "H", Location: "header"})
 	_, err := e.svc.ReplaceMenuItems(context.Background(), cmstest.ActorWith(permManage), m.ID,
-		ItemsRequest{Items: []ItemInput{{Label: "Home", LinkType: LinkInternal, URL: cmstest.Strptr("/")}}})
+		ItemsRequest{Items: []ItemInput{{Label: "Home", LinkType: LinkInternal, URL: cmstest.Strptr("/")}}}, "")
 	require.NoError(t, err)
 	require.NoError(t, e.svc.DeleteMenu(context.Background(), cmstest.ActorWith(permManage), m.ID))
 	_, ok := e.repo.menuItems[m.ID]
@@ -70,7 +70,7 @@ func TestMenus_ReplaceItemsTreeRoundTrips(t *testing.T) {
 			{Label: "Ext", LinkType: LinkExternal, URL: cmstest.Strptr("https://example.com"), OpenNewTab: true},
 		}},
 	}}
-	res, err := e.svc.ReplaceMenuItems(context.Background(), cmstest.ActorWith(permManage), m.ID, req)
+	res, err := e.svc.ReplaceMenuItems(context.Background(), cmstest.ActorWith(permManage), m.ID, req, "")
 	require.NoError(t, err)
 	require.Len(t, res.Items, 2)
 	require.Equal(t, "Home", res.Items[0].Label)
@@ -111,7 +111,7 @@ func TestMenus_ReplaceItemsRejectsBadLinks(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			_, err := e.svc.ReplaceMenuItems(context.Background(), act, m.ID, ItemsRequest{Items: []ItemInput{c.item}})
+			_, err := e.svc.ReplaceMenuItems(context.Background(), act, m.ID, ItemsRequest{Items: []ItemInput{c.item}}, "")
 			cmstest.AssertFieldErr(t, err, c.field, c.key)
 		})
 	}
@@ -135,7 +135,7 @@ func TestBuildItemTree_NestsAndPromotesOrphans(t *testing.T) {
 		{ID: child, ParentID: &root, Label: "Child", LinkType: LinkInternal, SortOrder: 0},
 		{ID: orphan, ParentID: &missing, Label: "Orphan", LinkType: LinkInternal, SortOrder: 1},
 	}
-	tree := buildItemTree(rows)
+	tree := buildItemTree(rows, nil)
 	require.Len(t, tree, 2) // real root + promoted orphan
 	require.Equal(t, "Root", tree[0].Label)
 	require.Len(t, tree[0].Children, 1)

@@ -333,8 +333,14 @@
 .list-desktop td:last-child {
   padding-right: 16px;
 }
+/*
+ * The pager sits BELOW the card, not inside it: the panel is the records, this
+ * is how you ask for more of them. The side inset makes up the difference
+ * between the component's own 12px and the card's 20px gutter, so the count
+ * lines up with the first column and the page buttons with the last one.
+ */
 .list-pagination {
-  padding: 0 20px;
+  padding: 0 8px;
 }
 .list-mobile {
   display: none;
@@ -481,9 +487,11 @@
 }
 
 @container listpage (max-width: 700px) {
-  .list-page {
-    gap: 16px;
-  }
+  /* `.list-page { gap: 16px }` used to sit here. It never applied — a container
+     query cannot style the element that declares the container, and `.list-page`
+     is that element — so the gap has always been the 20px above. Removed rather
+     than left looking alive; if the tighter gap is wanted, the container has to
+     move to a wrapper the way editor-page.css now does. */
 
   .list-metric {
     /* Never taller than the desktop card: the narrow screen has less room to

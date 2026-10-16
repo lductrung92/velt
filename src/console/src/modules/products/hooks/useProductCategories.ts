@@ -14,6 +14,8 @@ export function useProductCategories() {
   });
 }
 
+// The taxonomy as the editor must see it: in the source language, because the
+// form it fills is saved back into the Vietnamese row.
 export function useCreateProductCategory() {
   const qc = useQueryClient();
   return useMutation({

@@ -32,6 +32,8 @@ type Repository interface {
 	LoadAll(ctx context.Context) (snapshot, error)
 	// Apply executes all ops atomically in one transaction.
 	Apply(ctx context.Context, ops []writeOp, updatedBy uuid.UUID) error
+	// MarkPurge stamps the purge marker row. See purgeMarker for why.
+	MarkPurge(ctx context.Context, by uuid.UUID) error
 }
 
 type pgxRepository struct {
@@ -76,6 +78,19 @@ func (r *pgxRepository) Apply(ctx context.Context, ops []writeOp, updatedBy uuid
 		}
 		return nil
 	})
+}
+
+func (r *pgxRepository) MarkPurge(ctx context.Context, by uuid.UUID) error {
+	// A plain row like any other, so the token derived from this table's
+	// MAX(updated_at) moves. It is deliberately NOT in the registry: no view
+	// lists it, nothing reads it back, and a stored value would only be noise.
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO system_settings (key, value, value_encrypted, updated_at, updated_by)
+		 VALUES ($1, to_jsonb(now()::text), NULL, now(), $2)
+		 ON CONFLICT (key) DO UPDATE
+		   SET value = EXCLUDED.value, updated_at = now(), updated_by = $2`,
+		purgeMarker, by)
+	return wrapOp("mark purge", purgeMarker, err)
 }
 
 func applyOp(ctx context.Context, tx pgx.Tx, op writeOp, updatedBy uuid.UUID) error {

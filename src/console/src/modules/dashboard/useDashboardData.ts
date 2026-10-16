@@ -2,10 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { cmsKeys } from "@/modules/cms/hooks/cmsKeys";
 import { articlesService } from "@/modules/cms/services/articles.service";
-import {
-  pagesService,
-  type PageNode,
-} from "@/modules/cms/services/pages.service";
+import { pagesService } from "@/modules/cms/services/pages.service";
 import { memberKeys } from "@/modules/members/hooks/memberKeys";
 import { membersService } from "@/modules/members/services/members.service";
 import { productKeys } from "@/modules/products/hooks/productKeys";
@@ -34,13 +31,6 @@ function ranged<T extends object>(params: T, range: DateRange) {
   };
 }
 
-export function countPages(nodes: PageNode[]): number {
-  return nodes.reduce(
-    (total, node) => total + 1 + countPages(node.children),
-    0,
-  );
-}
-
 export function useDashboardData(
   access: {
     products: boolean;
@@ -64,9 +54,11 @@ export function useDashboardData(
     queryFn: () => articlesService.list(recent),
     enabled: access.articles,
   });
+  // One row is enough: the card shows the count the list reports, not the rows.
+  const pageQuery = { ...pageParams, page: 1, page_size: 1 };
   const pages = useQuery({
-    queryKey: [...cmsKeys.pageList(), pageParams],
-    queryFn: () => pagesService.list(pageParams),
+    queryKey: cmsKeys.pageList(pageQuery),
+    queryFn: () => pagesService.list(pageQuery),
     enabled: access.pages,
   });
   const members = useQuery({

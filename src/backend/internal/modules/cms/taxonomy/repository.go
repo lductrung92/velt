@@ -16,7 +16,7 @@ import (
 // Repository is the data-access contract for categories + tags.
 type Repository interface {
 	// Categories
-	ListCategoriesWithCounts(ctx context.Context) ([]categoryWithCount, error)
+	ListCategoriesWithCounts(ctx context.Context, status string) ([]categoryWithCount, error)
 	GetCategory(ctx context.Context, id uuid.UUID) (*Category, error)
 	CreateCategory(ctx context.Context, w categoryWrite) (*Category, error)
 	UpdateCategory(ctx context.Context, id uuid.UUID, w categoryWrite, expectedUpdatedAt time.Time, recheckCycle bool) (*Category, error)
@@ -60,12 +60,12 @@ const categoryCycleQuery = `
 	)
 	SELECT EXISTS (SELECT 1 FROM up WHERE id = $1)`
 
-const categoryColumns = `id, name, slug, parent_id, description, sort_order,
+const categoryColumns = `id, name, slug, parent_id, description, sort_order, status,
 	seo_title, seo_description, seo_keywords, created_at, updated_at`
 
 func scanCategory(row pgx.Row) (*Category, error) {
 	var c Category
-	err := row.Scan(&c.ID, &c.Name, &c.Slug, &c.ParentID, &c.Description, &c.SortOrder,
+	err := row.Scan(&c.ID, &c.Name, &c.Slug, &c.ParentID, &c.Description, &c.SortOrder, &c.Status,
 		&c.SEOTitle, &c.SEODescription, &c.SEOKeywords, &c.CreatedAt, &c.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, shared.ErrNotFound
@@ -76,12 +76,16 @@ func scanCategory(row pgx.Row) (*Category, error) {
 	return &c, nil
 }
 
-func (r *pgxRepository) ListCategoriesWithCounts(ctx context.Context) ([]categoryWithCount, error) {
+// ListCategoriesWithCounts returns the whole tree. An empty status is no
+// filter; otherwise only categories in that status come back (a child whose
+// parent was filtered out is left parentless and surfaces as a root).
+func (r *pgxRepository) ListCategoriesWithCounts(ctx context.Context, status string) ([]categoryWithCount, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT `+categoryColumns+`,
 		       (SELECT count(*) FROM cms_articles a WHERE a.category_id = c.id) AS article_count
 		  FROM cms_categories c
-		 ORDER BY c.sort_order, c.name`)
+		 WHERE $1 = '' OR c.status = $1
+		 ORDER BY c.sort_order, c.name`, status)
 	if err != nil {
 		return nil, fmt.Errorf("list categories: %w", err)
 	}
@@ -89,7 +93,7 @@ func (r *pgxRepository) ListCategoriesWithCounts(ctx context.Context) ([]categor
 	out := []categoryWithCount{}
 	for rows.Next() {
 		var c categoryWithCount
-		if err := rows.Scan(&c.ID, &c.Name, &c.Slug, &c.ParentID, &c.Description, &c.SortOrder,
+		if err := rows.Scan(&c.ID, &c.Name, &c.Slug, &c.ParentID, &c.Description, &c.SortOrder, &c.Status,
 			&c.SEOTitle, &c.SEODescription, &c.SEOKeywords, &c.CreatedAt, &c.UpdatedAt, &c.ArticleCount); err != nil {
 			return nil, fmt.Errorf("scan category row: %w", err)
 		}
@@ -104,10 +108,10 @@ func (r *pgxRepository) GetCategory(ctx context.Context, id uuid.UUID) (*Categor
 
 func (r *pgxRepository) CreateCategory(ctx context.Context, w categoryWrite) (*Category, error) {
 	c, err := scanCategory(r.pool.QueryRow(ctx, `
-		INSERT INTO cms_categories (name, slug, parent_id, description, sort_order, seo_title, seo_description, seo_keywords)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO cms_categories (name, slug, parent_id, description, sort_order, status, seo_title, seo_description, seo_keywords)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING `+categoryColumns,
-		w.Name, w.Slug, w.ParentID, w.Description, w.SortOrder, w.SEOTitle, w.SEODescription, w.SEOKeywords))
+		w.Name, w.Slug, w.ParentID, w.Description, w.SortOrder, w.Status, w.SEOTitle, w.SEODescription, w.SEOKeywords))
 	if err != nil {
 		if shared.IsUniqueViolation(err) {
 			return nil, shared.ErrConflict
@@ -142,10 +146,11 @@ func (r *pgxRepository) UpdateCategory(ctx context.Context, id uuid.UUID, w cate
 		c, e = scanCategory(tx.QueryRow(ctx, `
 			UPDATE cms_categories
 			   SET name = $3, slug = $4, parent_id = $5, description = $6, sort_order = $7,
-			       seo_title = $8, seo_description = $9, seo_keywords = $10, updated_at = now()
+			       status = $8, seo_title = $9, seo_description = $10, seo_keywords = $11, updated_at = now()
 			 WHERE id = $1 AND updated_at = $2
 			RETURNING `+categoryColumns,
-			id, expectedUpdatedAt, w.Name, w.Slug, w.ParentID, w.Description, w.SortOrder, w.SEOTitle, w.SEODescription, w.SEOKeywords))
+			id, expectedUpdatedAt, w.Name, w.Slug, w.ParentID, w.Description, w.SortOrder, w.Status,
+			w.SEOTitle, w.SEODescription, w.SEOKeywords))
 		if e != nil {
 			if shared.IsUniqueViolation(e) {
 				return shared.ErrConflict

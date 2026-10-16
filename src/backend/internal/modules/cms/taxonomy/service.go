@@ -36,6 +36,16 @@ func plainPtr(p *string) *string {
 	return &v
 }
 
+// derefStatus is the create-time status: what was asked for, or published —
+// a category that has just been made is in use, which is also what every row
+// that predates the status column means.
+func derefStatus(p *string) string {
+	if p == nil {
+		return CategoryStatusPublished
+	}
+	return *p
+}
+
 func derefInt(p *int) int {
 	if p == nil {
 		return 0

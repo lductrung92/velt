@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { I18nextProvider } from "react-i18next";
-import { createMemoryRouter, Outlet, RouterProvider } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { Toaster } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,8 +11,6 @@ import i18n from "@/app/i18n";
 import type { ImageUploadValue } from "@/components/common/ImageHandler";
 import { useAuthStore } from "@/store/auth.store";
 import { server } from "@/test/server";
-
-import { UnsavedChangesProvider } from "@/app/UnsavedChangesProvider";
 
 import ArticleEditor from "./ArticleEditor";
 
@@ -47,12 +45,18 @@ vi.mock("@/components/common/ImageHandler", () => ({
       type="button"
       data-testid="image-upload"
       data-value={value.kind}
+      // A click picks an image, or removes the one that is there — the two
+      // things the real widget's buttons do.
       onClick={() =>
-        onChange({
-          kind: "pending",
-          dataUrl: "data:image/png;base64,aGVsbG8=",
-          blob: new Blob(["fixture"], { type: "image/png" }),
-        })
+        onChange(
+          value.kind === "uploaded"
+            ? { kind: "empty" }
+            : {
+                kind: "pending",
+                dataUrl: "data:image/png;base64,aGVsbG8=",
+                blob: new Blob(["fixture"], { type: "image/png" }),
+              },
+        )
       }
     >
       {"Choose fixture image"}
@@ -136,28 +140,14 @@ function signIn(permissions: string[]) {
   useAuthStore.getState().setAuthz(["admin"], permissions);
 }
 
-/**
- * A DATA router, not <MemoryRouter>. The unsaved-changes prompt is driven by
- * `useBlocker`, which only exists on a data router — on a plain MemoryRouter
- * every navigation sails through and the guard silently tests nothing. The
- * list route is real so Back has somewhere to go.
- */
+/** A data router with a real list route, so Back has somewhere to go. */
 function renderEditor(path: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const router = createMemoryRouter(
     [
-      {
-        element: (
-          <UnsavedChangesProvider>
-            <Outlet />
-          </UnsavedChangesProvider>
-        ),
-        children: [
-          { path: "/cms/articles", element: <div>danh sách</div> },
-          { path: "/cms/articles/new", element: <ArticleEditor /> },
-          { path: "/cms/articles/:id", element: <ArticleEditor /> },
-        ],
-      },
+      { path: "/cms/articles", element: <div>danh sách</div> },
+      { path: "/cms/articles/new", element: <ArticleEditor /> },
+      { path: "/cms/articles/:id", element: <ArticleEditor /> },
     ],
     { initialEntries: [path] },
   );
@@ -249,6 +239,65 @@ describe("ArticleEditor", () => {
         updated_at: "u-1",
       }),
     );
+  });
+
+  it("edit: removing the featured image sends the removal", async () => {
+    // The PATCH has to SAY the image is gone. Leaving the field out means "I
+    // did not touch it", so the stored path survived the save and the image
+    // came back on the next read.
+    signIn(MANAGER);
+    let patchBody: Record<string, unknown> | undefined;
+    server.use(
+      ...baseHandlers(),
+      http.get(`${API}/cms/articles/a1`, () =>
+        HttpResponse.json(
+          fullArticle("a1", {
+            featured_url: "/api/files/cms/articles/a1/f.png",
+          }),
+        ),
+      ),
+      http.patch(`${API}/cms/articles/a1`, async ({ request }) => {
+        patchBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(fullArticle("a1"));
+      }),
+    );
+    const user = userEvent.setup();
+    renderEditor("/cms/articles/a1");
+
+    await screen.findByDisplayValue("Old title");
+    const featured = screen.getAllByTestId("image-upload")[0];
+    expect(featured).toHaveAttribute("data-value", "uploaded");
+    await user.click(featured);
+    await user.click(screen.getByRole("button", { name: SAVE() }));
+
+    await waitFor(() => expect(patchBody).toBeDefined());
+    expect(patchBody).toMatchObject({ featured_path: "" });
+  });
+
+  it("edit: an untouched empty image slot stays out of the PATCH", async () => {
+    signIn(MANAGER);
+    let patchBody: Record<string, unknown> | undefined;
+    server.use(
+      ...baseHandlers(),
+      http.get(`${API}/cms/articles/a1`, () =>
+        HttpResponse.json(fullArticle("a1")),
+      ),
+      http.patch(`${API}/cms/articles/a1`, async ({ request }) => {
+        patchBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(fullArticle("a1"));
+      }),
+    );
+    const user = userEvent.setup();
+    renderEditor("/cms/articles/a1");
+
+    const title = await screen.findByDisplayValue("Old title");
+    await user.clear(title);
+    await user.type(title, "Fresh title");
+    await user.click(screen.getByRole("button", { name: SAVE() }));
+
+    await waitFor(() => expect(patchBody).toBeDefined());
+    expect(patchBody).not.toHaveProperty("featured_path");
+    expect(patchBody).not.toHaveProperty("og_path");
   });
 
   it("validation: empty title blocks submit", async () => {
@@ -344,11 +393,7 @@ describe("ArticleEditor", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("a brand-new record is not dirty before the user types", async () => {
-    // Guards the whole create path: a pristine form must let you walk away.
-    // NOTE it does NOT catch the Tiptap "<p></p>" regression that caused this
-    // — jsdom never drives that mount emission. RichTextEditor.test.tsx owns
-    // that one.
+  it("Back returns to the list", async () => {
     signIn(MANAGER);
     server.use(...baseHandlers());
     renderEditor("/cms/articles/new");
@@ -359,65 +404,67 @@ describe("ArticleEditor", () => {
       screen.getByRole("button", { name: i18n.t("common.back") }),
     );
 
+    // Nothing stands between the editor and leaving it any more.
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(await screen.findByText("danh sách")).toBeInTheDocument();
   });
+});
 
-  it("Back asks before discarding content and cancel keeps the draft", async () => {
+describe("ArticleEditor delete", () => {
+  const DELETE = () => i18n.t("common.delete");
+
+  it("offers no delete before the article exists", async () => {
     signIn(MANAGER);
     server.use(...baseHandlers());
     renderEditor("/cms/articles/new");
+
     await screen.findByRole("textbox", { name: BODY() });
-    const user = userEvent.setup();
-    const title = screen.getByPlaceholderText(
-      i18n.t("cms.articles.editor.title_ph"),
-    );
-    await user.type(title, "Keep this draft");
-    await user.click(
-      screen.getByRole("button", { name: i18n.t("common.back") }),
-    );
-    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", { name: i18n.t("common.cancel") }),
-    );
-    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    expect(title).toHaveValue("Keep this draft");
+    expect(
+      screen.queryByRole("button", { name: DELETE() }),
+    ).not.toBeInTheDocument();
   });
 
-  it("SEO-only checkbox changes are protected by the unsaved Back prompt", async () => {
+  it("offers no delete without cms.article.delete", async () => {
+    signIn(["cms.article.view", "cms.article.edit", "cms.article.review"]);
+    server.use(
+      ...baseHandlers(),
+      http.get(`${API}/cms/articles/a1`, () =>
+        HttpResponse.json(fullArticle("a1")),
+      ),
+    );
+    renderEditor("/cms/articles/a1");
+
+    await screen.findByDisplayValue("Old title");
+    expect(
+      screen.queryByRole("button", { name: DELETE() }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("confirming the prompt deletes the article and returns to the list", async () => {
     signIn(MANAGER);
-    server.use(...baseHandlers());
-    renderEditor("/cms/articles/new");
-    await screen.findByRole("textbox", { name: BODY() });
-    const user = userEvent.setup();
-    await user.click(
-      screen.getByRole("checkbox", {
-        name: i18n.t("cms.articles.seo.noindex"),
+    const removed = vi.fn();
+    server.use(
+      ...baseHandlers(),
+      http.get(`${API}/cms/articles/a1`, () =>
+        HttpResponse.json(fullArticle("a1")),
+      ),
+      http.delete(`${API}/cms/articles/a1`, () => {
+        removed();
+        return new HttpResponse(null, { status: 204 });
       }),
     );
-    await user.click(
-      screen.getByRole("button", { name: i18n.t("common.back") }),
-    );
-    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
-  });
-
-  it("cover-only changes are protected and cancel keeps the pending image", async () => {
-    signIn(MANAGER);
-    server.use(...baseHandlers());
-    renderEditor("/cms/articles/new");
-    await screen.findByRole("textbox", { name: BODY() });
     const user = userEvent.setup();
-    await user.click(screen.getAllByTestId("image-upload")[0]);
-    await user.click(
-      screen.getByRole("button", { name: i18n.t("common.back") }),
-    );
-    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", { name: i18n.t("common.cancel") }),
-    );
-    expect(screen.getAllByTestId("image-upload")[0]).toHaveAttribute(
-      "data-value",
-      "pending",
-    );
+    renderEditor("/cms/articles/a1");
+
+    await screen.findByDisplayValue("Old title");
+    await user.click(screen.getByRole("button", { name: DELETE() }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText(i18n.t("cms.articles.dialog.delete.title")),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: DELETE() }));
+
+    await waitFor(() => expect(removed).toHaveBeenCalled());
+    expect(await screen.findByText("danh sách")).toBeInTheDocument();
   });
 });

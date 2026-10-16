@@ -1,6 +1,5 @@
 import {
   ArrowRight,
-  Sparkles,
   FileStack,
   FileText,
   Package,
@@ -26,10 +25,12 @@ import {
 import { useAuthStore } from "@/store/auth.store";
 import { formatDateTime } from "@/utils/format";
 
-import { countPages, useDashboardData, type DateRange } from "./useDashboardData";
+import { useDashboardData, type DateRange } from "./useDashboardData";
+import { DashboardActivity } from "./DashboardActivity";
 import { DashboardArtwork } from "./DashboardArtwork";
 import { DailyOverview } from "./DailyOverview";
 import "./dashboard.css";
+import { fileUrl } from "@/utils/fileUrl";
 
 interface RecentRecord {
   id: string;
@@ -139,7 +140,7 @@ function RecentPanel({
                 <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/30 text-muted-foreground">
                   {record.image ? (
                     <img
-                      src={record.image}
+                      src={fileUrl(record.image)}
                       alt=""
                       className="size-full object-cover"
                     />
@@ -185,6 +186,7 @@ export default function Dashboard() {
     articles: hasPermission("cms.article.view"),
     pages: hasPermission("cms.page.view"),
     members: hasPermission("members.view"),
+    activity: hasPermission("activity.read"),
   };
   // The counts and the recent lists answer for this window; the calendar and
   // the weather below are about today and ignore it.
@@ -213,7 +215,7 @@ export default function Dashboard() {
       to: "/cms/pages",
       visible: access.pages,
       query: data.pages,
-      total: data.pages.data ? countPages(data.pages.data) : undefined,
+      total: data.pages.data?.total,
     },
     {
       key: "members",
@@ -224,32 +226,6 @@ export default function Dashboard() {
       total: data.members.data?.total,
     },
   ].filter((stat) => stat.visible);
-  const actions = [
-    {
-      key: "product",
-      icon: Package,
-      to: "/products/new",
-      permission: "products.create",
-    },
-    {
-      key: "article",
-      icon: FileText,
-      to: "/cms/articles/new",
-      permission: "cms.article.create",
-    },
-    {
-      key: "page",
-      icon: FileStack,
-      to: "/cms/pages/new",
-      permission: "cms.page.create",
-    },
-    {
-      key: "member",
-      icon: Users2,
-      to: "/members/new",
-      permission: "members.manage",
-    },
-  ].filter((action) => hasPermission(action.permission));
 
   return (
     <div className="dashboard space-y-5">
@@ -355,54 +331,11 @@ export default function Dashboard() {
 
       <div
         className={
-          actions.length > 0
+          access.activity
             ? "dashboard-content"
-            : "dashboard-content dashboard-content-no-actions"
+            : "dashboard-content dashboard-content-no-activity"
         }
       >
-        {actions.length > 0 && (
-          <section className="dashboard-quick dashboard-panel min-w-0 rounded-lg border bg-background p-5">
-            <span className="dashboard-quick-heading-icon">
-              <Sparkles className="size-5" aria-hidden />
-            </span>
-            <h2 className="mt-3 text-base font-medium">
-              {t("dashboard.quick_title")}
-            </h2>
-            <p className="mt-1.5 text-sm leading-5 text-muted-foreground">
-              {t("dashboard.quick_description")}
-            </p>
-            <div className="mt-5 space-y-2">
-              {actions.map(({ key, icon: Icon, to }) => (
-                <Link
-                  key={key}
-                  to={to}
-                  aria-label={t(`dashboard.actions.${key}`)}
-                  className="dashboard-quick-link group flex items-center gap-3 rounded-lg p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <span className="dashboard-quick-icon flex size-9 shrink-0 items-center justify-center rounded-lg">
-                    <Icon
-                      className="size-[18px]"
-                      strokeWidth={1.6}
-                      aria-hidden
-                    />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium">
-                      {t(`dashboard.actions.${key}`)}
-                    </span>
-                    <span className="mt-1 block text-xs leading-4 text-muted-foreground">
-                      {t(`dashboard.action_descriptions.${key}`)}
-                    </span>
-                  </span>
-                  <Plus
-                    className="size-3.5 shrink-0 text-muted-foreground group-hover:text-primary"
-                    aria-hidden
-                  />
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
         {access.products && (
           <RecentPanel
             title={t("dashboard.recent_products")}
@@ -449,6 +382,7 @@ export default function Dashboard() {
             }
           />
         )}
+        {access.activity && <DashboardActivity />}
       </div>
       <DailyOverview />
     </div>

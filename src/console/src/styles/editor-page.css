@@ -30,9 +30,24 @@
  *   [data-editor="product"] .editor-body .ProseMirror { min-height: 32rem; }
  */
 
-.editor-grid {
+/*
+ * The container is the PAGE, not the grid.
+ *
+ * A container query cannot style the element that declares the container, so
+ * while `container-type` sat on `.editor-grid` the `@container` rule that
+ * collapses it to one column never applied — measured: at a 992px container the
+ * grid stayed `652px 320px`, and at 612px the content column was 272px while
+ * the sidebar kept its full 320px. Only the rules aimed at DESCENDANTS worked,
+ * which is why the side cards went two-up inside a column that had never
+ * widened. The page wraps the grid and is the same width, so moving the
+ * declaration here changes nothing except making those rules reachable.
+ */
+.editor-page {
   container-type: inline-size;
   container-name: editorgrid;
+}
+
+.editor-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 20rem;
   grid-template-areas: "main side" "wide side";
@@ -153,30 +168,19 @@
   align-items: start;
 }
 
-@container editorgrid (max-width: 1040px) {
+/*
+ * Where the two columns stop fitting: 320px of sidebar + 20px of gap leaves
+ * 540px of content at this width, and below it the content column is the one
+ * that suffers. The old threshold said 1040px, but it had never run — tuning it
+ * against a layout nobody had seen would have been guessing.
+ */
+@container editorgrid (max-width: 880px) {
   .editor-grid {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "main" "side" "wide";
   }
-  .editor-side {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-  }
-  /*
-   * An editor whose side column holds a single card must not take the two-up
-   * rule: it would sit at half width with the other half empty, under and over
-   * full-width cards. Measured at 454px of dead space on the category editor.
-   */
-  .editor-side:has(> :last-child:nth-child(1)) {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .editor-side > * {
-    margin-top: 0 !important;
-  }
 }
 @container editorgrid (max-width: 640px) {
-  .editor-side,
   .editor-social {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -187,4 +191,137 @@
   .editor-title input {
     font-size: var(--font-size-lg);
   }
+}
+
+/* ── an image in the body, with its handles ── The frame carries the width so
+ * the handles sit on the image's real edges whatever it is scaled to, and the
+ * `width` ATTRIBUTE is what travels in the HTML — the inline style here only
+ * mirrors it for the editor, where a percent on the attribute alone would be
+ * measured against the wrong box. ── */
+.editor-body .ProseMirror .kd-image {
+  margin: 0.75rem 0;
+}
+.editor-body .ProseMirror .kd-image-frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+}
+.editor-body .ProseMirror .kd-image-frame img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+}
+.editor-body .ProseMirror .kd-image[data-selected] .kd-image-frame img {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* The two handles. A wide hit area on a thin bar: the bar is what you see, the
+ * padding is what you can actually grab. */
+.editor-body .ProseMirror .kd-image-handle {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 44px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+  background: transparent;
+  touch-action: none;
+}
+.editor-body .ProseMirror .kd-image-handle::after {
+  content: "";
+  position: absolute;
+  inset: 0 5px;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--background));
+}
+.editor-body .ProseMirror .kd-image-handle.is-left {
+  left: -7px;
+}
+.editor-body .ProseMirror .kd-image-handle.is-right {
+  right: -7px;
+}
+
+.editor-body .ProseMirror .kd-image-bar {
+  position: absolute;
+  top: -0.75rem;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.1875rem;
+  transform: translate(-50%, -100%);
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  background: hsl(var(--background));
+  box-shadow: 0 2px 8px hsl(var(--foreground) / 0.12);
+  line-height: 1;
+  white-space: nowrap;
+}
+.editor-body .ProseMirror .kd-image-bar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 0.375rem;
+  border-radius: calc(var(--radius) - 4px);
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+}
+.editor-body .ProseMirror .kd-image-bar button:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+.editor-body .ProseMirror .kd-image-bar button[aria-pressed="true"] {
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+}
+/* The one verb on this bar that cannot be undone by clicking again. */
+.editor-body .ProseMirror .kd-image-bar button.is-destructive:hover {
+  background: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive-ink));
+}
+.editor-body .ProseMirror .kd-image-bar-sep {
+  width: 1px;
+  height: 1.125rem;
+  margin: 0 0.125rem;
+  background: hsl(var(--border));
+}
+
+/* What the classes mean, mirrored from the site so the editor shows the same
+ * thing the reader gets. A width class sits on the wrapper, which is what
+ * carries the layout; the image inside always fills it. */
+.editor-body .ProseMirror .kd-img--w25 .kd-image-frame {
+  width: 25%;
+}
+.editor-body .ProseMirror .kd-img--w50 .kd-image-frame {
+  width: 50%;
+}
+.editor-body .ProseMirror .kd-img--w75 .kd-image-frame {
+  width: 75%;
+}
+.editor-body .ProseMirror .kd-img--w100 .kd-image-frame {
+  width: 100%;
+}
+.editor-body .ProseMirror .kd-img--center {
+  text-align: center;
+}
+.editor-body .ProseMirror .kd-img--left {
+  float: left;
+  margin: 0.25rem 1rem 0.5rem 0;
+}
+.editor-body .ProseMirror .kd-img--right {
+  float: right;
+  margin: 0.25rem 0 0.5rem 1rem;
+}
+
+/* The two alignment classes the body may carry, mirrored from the site. */
+.editor-body .ProseMirror .kd-text--center {
+  text-align: center;
+}
+.editor-body .ProseMirror .kd-text--right {
+  text-align: right;
 }

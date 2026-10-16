@@ -142,6 +142,10 @@ type ArticleListParams struct {
 	Page        int
 	PageSize    int
 	Sort        string
+	// Locale is the language the console is reading in (Accept-Language), "" for
+	// the source language. The list overlays the stored translation of the text
+	// it shows; the article's own row is untouched.
+	Locale string
 }
 
 // --- Response DTOs (article-owned, resolved by SQL join) ---

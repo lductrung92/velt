@@ -8,6 +8,7 @@ import {
   Save,
   Search,
   SlidersHorizontal,
+  Trash2,
 } from "lucide-react";
 import {
   lazy,
@@ -23,6 +24,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EditorActionBar } from "@/components/common/EditorActionBar";
 import {
   ImageUpload,
@@ -52,16 +54,17 @@ import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
 import { LanguageTabs } from "@/modules/translation/components/LanguageTabs";
-import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import { useEntityTranslation } from "@/modules/translation/hooks/useEntityTranslation";
 
 import { ArticleImageButton } from "../components/ArticleImageButton";
+import { useInlineImage } from "../hooks/useInlineImage";
 import { ArticleTranslationPanel } from "../components/ArticleTranslationPanel";
 import { ArticleStatusBadge } from "../components/ArticleStatusBadge";
 import "@/styles/editor-page.css";
 import {
   useArticle,
   useCreateArticle,
+  useDeleteArticle,
   useUpdateArticle,
   useUploadArticleMedia,
 } from "../hooks/useCmsArticles";
@@ -113,6 +116,7 @@ export default function ArticleEditor() {
 
   const { hasPermission } = usePermission();
   const isReviewer = hasPermission("cms.article.review");
+  const canDelete = hasPermission("cms.article.delete");
 
   const articleQuery = useArticle(id);
   const article = articleQuery.data;
@@ -120,7 +124,9 @@ export default function ArticleEditor() {
   const categories = useCategories();
   const create = useCreateArticle();
   const update = useUpdateArticle();
+  const del = useDeleteArticle();
   const uploadMedia = useUploadArticleMedia();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Body editor: enable inline images (block <img>) + a toolbar upload button.
   // Before the article exists an inserted image is a local object URL; it is
@@ -128,16 +134,31 @@ export default function ArticleEditor() {
   const [pendingInline, setPendingInline] = useState<
     { url: string; file: File }[]
   >([]);
-  const bodyExtensions = useMemo(() => [ImageNode], []);
+  const onDeferredInline = useCallback(
+    (p: { url: string; file: File }) => setPendingInline((cur) => [...cur, p]),
+    [],
+  );
+  const inlineImage = useInlineImage({
+    articleId: article?.id,
+    onDeferred: onDeferredInline,
+  });
+  // The picker travels with the node so the image's own toolbar can replace it;
+  // it follows the same two rules the insert button does, because it IS the
+  // same picker.
+  const { pick } = inlineImage;
+  const bodyExtensions = useMemo(
+    () => [ImageNode.configure({ pickImage: pick })],
+    [pick],
+  );
   const renderBodyToolbar = useCallback(
     (editor: Editor | null) => (
       <ArticleImageButton
         editor={editor}
         articleId={article?.id}
-        onDeferred={(p) => setPendingInline((cur) => [...cur, p])}
+        onDeferred={onDeferredInline}
       />
     ),
-    [article?.id],
+    [article?.id, onDeferredInline],
   );
 
   const flag = (key: string, def = true) => {
@@ -168,30 +189,23 @@ export default function ArticleEditor() {
     mode: "onTouched",
   });
   const status = form.watch("status");
-  const [mediaDirty, setMediaDirty] = useState(false);
   // Translations live outside this form: their shape is locale x declared
   // field, which a static zod schema cannot describe (same reason the SEO and
   // image state sit outside it).
   const tr = useEntityTranslation("article", article?.id);
-  const dirty = form.formState.isDirty || mediaDirty || tr.dirty;
   // Editor is read-only for an editor (non-reviewer) once the article is out for
   // publishing (workflow-states §4).
   const isReadOnly =
     !isReviewer &&
     !!article &&
     (article.status === "published" || article.status === "scheduled");
-
-  // The guard lives at the router — one blocker per router — so this only
-  // declares what is pending. It covers the Back button, the sidebar, the
-  // breadcrumb and the browser's own back button alike.
-  useUnsavedChanges({
-    when: dirty && !isReadOnly,
-    what: t("cms.articles.one"),
-  });
+  // The same rule the list applies, because it is the one the server enforces:
+  // a non-reviewer may delete a draft and nothing else.
+  const canDeleteThis =
+    !!article && canDelete && (isReviewer || article.status === "draft");
 
   useEffect(() => {
     if (!article) return;
-    setMediaDirty(false);
     form.reset({
       ...articleFormDefaults,
       title: article.title,
@@ -272,11 +286,17 @@ export default function ArticleEditor() {
 
   // Upload a freshly-picked image (deferred until save) and return its stored
   // path; an unchanged/empty slot returns undefined (left as-is).
+  // What to send for an image slot, or undefined to leave the stored one alone.
+  // An empty string is the API's "remove it": the column is cleared and the
+  // file reclaimed. Only sent when there WAS an image, so an untouched empty
+  // slot stays out of the request.
   async function resolveImage(
     articleId: string,
     val: ImageUploadValue,
     purpose: UploadPurpose,
+    current: string | null,
   ): Promise<string | undefined> {
+    if (val.kind === "empty") return current ? "" : undefined;
     if (val.kind !== "pending") return undefined;
     const file = new File([val.blob], purpose, { type: val.blob.type });
     const res = await uploadMedia.mutateAsync({ id: articleId, file, purpose });
@@ -347,8 +367,14 @@ export default function ArticleEditor() {
           article.id,
           featured,
           "featured",
+          article.featured_url,
         );
-        const og_path = await resolveImage(article.id, og, "og");
+        const og_path = await resolveImage(
+          article.id,
+          og,
+          "og",
+          article.og_url,
+        );
         const body: UpdateArticleBody = {
           updated_at: article.updated_at,
           title: values.title.trim(),
@@ -370,8 +396,10 @@ export default function ArticleEditor() {
         } else if (!allowSlugEdit && regenerate) {
           body.regenerate_slug = true;
         }
-        if (featured_path) body.featured_path = featured_path;
-        if (og_path) body.og_path = og_path;
+        // Not `if (path)`: "" is the removal, and dropping it here is exactly
+        // what used to make a removed image come back on reload.
+        if (featured_path !== undefined) body.featured_path = featured_path;
+        if (og_path !== undefined) body.og_path = og_path;
         // Before the article write, not after: publishing reads the stored
         // translations, so the other order would republish the previous ones
         // and force a second Save to get this one onto the site.
@@ -399,8 +427,9 @@ export default function ArticleEditor() {
           created.id,
           featured,
           "featured",
+          null,
         );
-        const og_path = await resolveImage(created.id, og, "og");
+        const og_path = await resolveImage(created.id, og, "og", null);
         const inline = await resolveInlineImages(
           created.id,
           values.body_html,
@@ -440,6 +469,17 @@ export default function ArticleEditor() {
   });
 
   const saving = create.isPending || update.isPending || uploadMedia.isPending;
+
+  const handleDelete = async () => {
+    if (!id) return;
+    try {
+      await del.mutateAsync(id);
+      toast.success(t("cms.articles.toast.delete_success"));
+      navigate("/cms/articles");
+    } catch (err) {
+      toast.error(parseApiError(err, t).message);
+    }
+  };
 
   if (isEdit && articleQuery.isLoading && !article) {
     return (
@@ -495,6 +535,17 @@ export default function ArticleEditor() {
           }
         >
           <ArticleStatusBadge status={status} />
+          {canDeleteThis && (
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={saving}
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="size-4" aria-hidden />
+              {t("common.delete")}
+            </Button>
+          )}
           {!isReadOnly && (
             <Button type="submit" loading={saving}>
               <Save className="size-4" aria-hidden />
@@ -580,7 +631,6 @@ export default function ArticleEditor() {
                     checked={regenerate}
                     onChange={(e) => {
                       setRegenerate(e.target.checked);
-                      setMediaDirty(true);
                     }}
                   />
                 )}
@@ -752,6 +802,7 @@ export default function ArticleEditor() {
               <CardContent className="space-y-3">
                 <ImageUpload
                   type="rounded"
+                  subject={t("cms.articles.field.featured")}
                   ratio={16 / 9}
                   width={280}
                   className="editor-image"
@@ -761,7 +812,6 @@ export default function ArticleEditor() {
                   value={featured}
                   onChange={(value) => {
                     setFeatured(value);
-                    setMediaDirty(true);
                   }}
                 />
                 <p className="text-xs leading-5 text-muted-foreground">
@@ -945,6 +995,7 @@ export default function ArticleEditor() {
                     </p>
                     <ImageUpload
                       type="rounded"
+                      subject={t("cms.articles.seo.og_image")}
                       ratio={16 / 9}
                       width={280}
                       className="editor-image"
@@ -954,7 +1005,6 @@ export default function ArticleEditor() {
                       value={og}
                       onChange={(value) => {
                         setOg(value);
-                        setMediaDirty(true);
                       }}
                     />
                   </div>
@@ -963,6 +1013,21 @@ export default function ArticleEditor() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Same prompt the list screen shows for the same record. */}
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title={t("cms.articles.dialog.delete.title")}
+          description={t("cms.articles.dialog.delete.description", {
+            title: article?.title ?? "",
+          })}
+          confirmLabel={t("common.delete")}
+          confirmIcon={Trash2}
+          destructive
+          loading={del.isPending}
+          onConfirm={() => void handleDelete()}
+        />
       </form>
     </Form>
   );

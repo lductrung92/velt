@@ -5,11 +5,13 @@ import {
   History,
   RotateCcw,
   Search,
+  Trash2,
   User,
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
 import { FilterChips, type FilterChip } from "@/components/common/FilterChips";
@@ -27,13 +29,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DEFAULT_PAGE_SIZE,
-  TablePagination,
-} from "@/components/ui/table-pagination";
+import { ListPager } from "@/components/ui/list-pager";
+import { usePaging } from "@/hooks/usePaging";
+import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
+import { CleanupDialog } from "../components/CleanupDialog";
 import { useActivity, useActivityActions } from "../hooks/useActivity";
+import { usePurgeActivity } from "../hooks/usePurge";
 import type { ActivityEntry } from "../services/activity.service";
 import "@/styles/list-page.css";
 import "./activity.css";
@@ -58,7 +61,11 @@ type Target = { entity: string; id: string; label: string };
 
 export default function ActivityLog() {
   const { t, i18n } = useTranslation();
-  const [page, setPage] = useState(1);
+  const { hasPermission } = usePermission();
+  // Page, page size and pager style all come from the shared settings
+  // (Settings → General → Pagination), so every list pages the same way.
+  const paging = usePaging();
+  const { page, setPage } = paging;
   const [draftQ, setDraftQ] = useState("");
   const [q, setQ] = useState("");
   const [action, setAction] = useState("");
@@ -71,7 +78,7 @@ export default function ActivityLog() {
 
   const params = {
     page,
-    page_size: DEFAULT_PAGE_SIZE,
+    page_size: paging.pageSize,
     ...(q ? { q } : {}),
     ...(action ? { action } : {}),
     ...(actor ? { actor_id: actor.id } : {}),
@@ -81,6 +88,8 @@ export default function ActivityLog() {
   };
   const list = useActivity(params);
   const actions = useActivityActions();
+  const purge = usePurgeActivity();
+  const [cleaning, setCleaning] = useState(false);
 
   const relative = useMemo(() => {
     const rtf = new Intl.RelativeTimeFormat(i18n.language, {
@@ -272,22 +281,34 @@ export default function ActivityLog() {
                 : t("activity.record_count", { count: list.data?.total ?? 0 })}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={list.isFetching}
-            onClick={() => void list.refetch()}
-          >
-            <RotateCcw
-              className={
-                list.isFetching
-                  ? "size-3.5 animate-spin motion-reduce:animate-none"
-                  : "size-3.5"
-              }
-              aria-hidden
-            />
-            {t("common.refresh")}
-          </Button>
+          <div className="flex items-center gap-2">
+            {hasPermission("activity.purge") && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setCleaning(true)}
+              >
+                <Trash2 className="size-3.5" aria-hidden />
+                {t("activity.cleanup")}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={list.isFetching}
+              onClick={() => void list.refetch()}
+            >
+              <RotateCcw
+                className={
+                  list.isFetching
+                    ? "size-3.5 animate-spin motion-reduce:animate-none"
+                    : "size-3.5"
+                }
+                aria-hidden
+              />
+              {t("common.refresh")}
+            </Button>
+          </div>
         </div>
 
         {/* No status axis here, so the toolbar closes the panel itself. */}
@@ -475,17 +496,34 @@ export default function ActivityLog() {
                 </article>
               ))}
             </div>
-            <div className="list-pagination">
-              <TablePagination
-                page={list.data?.page ?? page}
-                pageSize={list.data?.page_size ?? DEFAULT_PAGE_SIZE}
-                total={list.data?.total ?? 0}
-                onPageChange={setPage}
-              />
-            </div>
           </>
         )}
       </section>
+
+      {/* Outside the card on purpose: the panel holds the records, the
+          pager is how you ask for the next ones. It hides itself when
+          everything fits on one page, so it costs nothing while loading
+          or on an empty list. */}
+      <div className="list-pagination">
+        <ListPager
+          paging={paging}
+          total={list.data?.total ?? 0}
+          loading={list.isFetching}
+        />
+      </div>
+
+      <CleanupDialog
+        open={cleaning}
+        onOpenChange={setCleaning}
+        subject={t("activity.list_title")}
+        warning={t("activity.cleanup_warning")}
+        pending={purge.isPending}
+        onPurge={async (olderThan) => {
+          const { deleted } = await purge.mutateAsync(olderThan);
+          toast.success(t("activity.cleanup_done", { count: deleted }));
+          setPage(1);
+        }}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/modules/cms/shared"
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/storage"
 )
 
@@ -31,11 +32,19 @@ type localeLister interface {
 }
 
 // PublicArticleCard is a published-article card for the public blog list.
+//
+// cover_width/cover_height are the cover's intrinsic pixel size, present only
+// when the image has a `files` row. They are what lets the site reserve the
+// space before the bytes land (design §1, CLS); their absence means the cover
+// is an asset nothing was recorded about, and the site sizes it as it did
+// before.
 type PublicArticleCard struct {
 	Slug        string     `json:"slug"`
 	Title       string     `json:"title"`
 	Excerpt     *string    `json:"excerpt"`
 	CoverURL    *string    `json:"cover_url"`
+	CoverWidth  int        `json:"cover_width,omitempty"`
+	CoverHeight int        `json:"cover_height,omitempty"`
 	PublishedAt *time.Time `json:"published_at"`
 }
 
@@ -55,6 +64,8 @@ type PublicArticleDetail struct {
 	Excerpt     *string           `json:"excerpt"`
 	BodyHTML    *string           `json:"body_html"`
 	CoverURL    *string           `json:"cover_url"`
+	CoverWidth  int               `json:"cover_width,omitempty"`
+	CoverHeight int               `json:"cover_height,omitempty"`
 	PublishedAt *time.Time        `json:"published_at"`
 	SEO         shared.PageSEO    `json:"seo"`
 	Alternates  []PublicAlternate `json:"alternates"`
@@ -75,6 +86,9 @@ type PublicService struct {
 	repo    publicReader
 	files   storage.Storage
 	locales localeLister
+	// assets upgrades a stored image URL to its flat /img address and attaches
+	// the size recorded for it; nil until wired, and nil answers nothing.
+	assets *media.PublicURLs
 }
 
 // NewPublicService builds the public blog service.
@@ -85,6 +99,11 @@ func NewPublicService(repo publicReader, files storage.Storage) *PublicService {
 // SetLocales wires the translation module's language list (called once at
 // startup). Unset → Vietnamese only.
 func (s *PublicService) SetLocales(l localeLister) { s.locales = l }
+
+// SetMediaURLs wires the read-path media mapping (called once at startup).
+// Unset → the legacy /api/files URLs and no dimensions, which is what this
+// response looked like before the `files` table existed.
+func (s *PublicService) SetMediaURLs(m *media.PublicURLs) { s.assets = m }
 
 // resolveLocale maps the ?locale= parameter onto a language that is actually
 // published. Anything unknown serves the original rather than an error: a
@@ -136,11 +155,18 @@ func (s *PublicService) ListPublished(ctx context.Context, locale, query, sort s
 		return PublicArticleList{}, apperr.Internal()
 	}
 	items := make([]PublicArticleCard, len(cards))
+	covers := make([]string, 0, len(cards))
 	for i := range cards {
 		items[i] = PublicArticleCard{
 			Slug: cards[i].Slug, Title: cards[i].Title, Excerpt: cards[i].Excerpt,
 			CoverURL: s.fileURL(ctx, cards[i].FeaturedPath), PublishedAt: cards[i].PublishedAt,
 		}
+		media.Collect(&covers, items[i].CoverURL)
+	}
+	// One lookup for the whole page: a 48-card list is one query, not 48.
+	found := s.assets.Resolve(ctx, covers)
+	for i := range items {
+		items[i].CoverWidth, items[i].CoverHeight = media.Apply(found, &items[i].CoverURL)
 	}
 	return PublicArticleList{Items: items, Total: total, Page: page, PageSize: pageSize}, nil
 }
@@ -166,11 +192,15 @@ func (s *PublicService) GetBySlug(ctx context.Context, locale, slug string) (Pub
 	for _, r := range a.Alternates {
 		alts = append(alts, PublicAlternate{Locale: r.Locale, Slug: r.Slug, XDefault: r.Locale == baseLocale})
 	}
-	return PublicArticleDetail{
+	out := PublicArticleDetail{
 		Slug: a.Slug, Locale: want, Title: a.Title, Excerpt: a.Excerpt, BodyHTML: a.BodyHTML,
 		CoverURL: s.fileURL(ctx, a.FeaturedPath), PublishedAt: a.PublishedAt,
 		SEO: a.SEO, Alternates: alts,
-	}, nil
+	}
+	covers := make([]string, 0, 1)
+	media.Collect(&covers, out.CoverURL)
+	out.CoverWidth, out.CoverHeight = media.Apply(s.assets.Resolve(ctx, covers), &out.CoverURL)
+	return out, nil
 }
 
 func (s *PublicService) fileURL(ctx context.Context, path *string) *string {

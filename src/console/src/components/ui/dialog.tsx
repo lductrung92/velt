@@ -41,7 +41,16 @@ const DialogContent = React.forwardRef<
         className={cn(
           // w-[calc(100%-2rem)]: keep the same 16px side gutter ConfirmDialog
           // has — `w-full` ran the form modal edge-to-edge at 390px.
-          "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-md border bg-background p-6 shadow-lg",
+          //
+          // max-h + overflow-y-auto: a dialog is centred, so one taller than
+          // the window loses BOTH ends off the screen — on a laptop the save
+          // button simply was not there, and the page behind it does not
+          // scroll while a dialog is open. Capping it a gutter short of the
+          // viewport and letting it scroll inside means the last field is
+          // always reachable, whatever the form holds. A dialog that wants a
+          // header and footer to stay put while only its middle scrolls says
+          // so with its own grid-rows (see the landing section editor).
+          "fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-md border bg-background p-6 shadow-lg",
           className,
         )}
         // Project rule: a click/interaction outside NEVER closes a modal — users

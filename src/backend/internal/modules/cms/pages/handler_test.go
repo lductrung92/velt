@@ -22,6 +22,20 @@ func TestPageListParams_CreatedRangeResolvesToHalfOpenBounds(t *testing.T) {
 	require.Equal(t, "2026-10-14T00:00:00+07:00", p.CreatedTo.Format("2006-01-02T15:04:05Z07:00"))
 }
 
+// The console sends the language its interface is in; only the primary subtag
+// reaches the list.
+func TestPageListParams_LocaleComesFromAcceptLanguage(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/api/cms/pages", nil)
+	r.Header.Set("Accept-Language", "en-GB,en;q=0.9")
+	p, err := pageListParams(r)
+	require.NoError(t, err)
+	require.Equal(t, "en", p.Locale)
+
+	p, err = parsePageListQuery(t, "")
+	require.NoError(t, err)
+	require.Equal(t, "", p.Locale)
+}
+
 func TestPageListParams_CreatedRangeIsOptional(t *testing.T) {
 	p, err := parsePageListQuery(t, "")
 	require.NoError(t, err)

@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/velt/backend/internal/modules/admin/shared"
 	"github.com/velt/backend/internal/modules/admin/shared/admintest"
+	"github.com/velt/backend/internal/platform/authpolicy"
+	"github.com/velt/backend/internal/platform/crypto"
 )
 
 func ctx() context.Context { return context.Background() }
@@ -42,7 +45,7 @@ func TestGetUser_NotFound(t *testing.T) {
 	admintest.AssertAppErr(t, err, http.StatusNotFound, "not_found")
 }
 
-func TestCreateUser_DefaultEditorAndMail(t *testing.T) {
+func TestCreateUser_DefaultEditorAndTempPassword(t *testing.T) {
 	e := newTestSvc(t)
 	e.repo.addRole(roleEditor, "Editor", true)
 	res, err := e.svc.CreateUser(ctx(), e.superActor(), CreateUserRequest{Email: "new@x.test", FullName: "New"})
@@ -50,7 +53,27 @@ func TestCreateUser_DefaultEditorAndMail(t *testing.T) {
 	require.Equal(t, "new@x.test", res.Email)
 	require.Len(t, res.Roles, 1)
 	require.Equal(t, roleEditor, res.Roles[0].Code)
-	require.Len(t, e.reset.sent, 1)
+	// The temporary password is minted server-side, handed back exactly once,
+	// and must clear the same policy every other password does.
+	require.GreaterOrEqual(t, len(res.TemporaryPassword), authpolicy.MinPasswordLen)
+	_, ok := authpolicy.ValidatePassword(res.TemporaryPassword)
+	require.True(t, ok)
+	// No mail: the admin reads the password out, nothing is emailed.
+	require.Empty(t, e.reset.sent)
+}
+
+func TestCreateUser_TempPasswordIsHashedAndUnique(t *testing.T) {
+	e := newTestSvc(t)
+	e.repo.addRole(roleEditor, "Editor", true)
+	actor := e.superActor()
+	a, err := e.svc.CreateUser(ctx(), actor, CreateUserRequest{Email: "a@x.test", FullName: "A"})
+	require.NoError(t, err)
+	b, err := e.svc.CreateUser(ctx(), actor, CreateUserRequest{Email: "b@x.test", FullName: "B"})
+	require.NoError(t, err)
+	require.NotEqual(t, a.TemporaryPassword, b.TemporaryPassword)
+	// What the repo was handed is an argon2id hash, never the plaintext.
+	require.True(t, strings.HasPrefix(e.repo.createdHash, "$argon2id$"))
+	require.NotContains(t, e.repo.createdHash, b.TemporaryPassword)
 }
 
 func TestCreateUser_AntiEscalation(t *testing.T) {
@@ -242,18 +265,56 @@ func TestRemoveRole_LastSuperAdmin(t *testing.T) {
 	admintest.AssertAppErr(t, err, http.StatusConflict, "last_super_admin")
 }
 
-func TestTriggerReset_DisabledTarget(t *testing.T) {
+func TestResetPassword_DisabledTarget(t *testing.T) {
 	e := newTestSvc(t)
 	target := e.repo.addUser("t@x.test", statusDisabled)
-	err := e.svc.TriggerResetPassword(ctx(), e.superActor(), target.ID)
+	_, err := e.svc.ResetPassword(ctx(), e.superActor(), target.ID)
 	admintest.AssertAppErr(t, err, http.StatusConflict, "conflict")
 }
 
-func TestTriggerReset_OK(t *testing.T) {
+func TestResetPassword_MintsStoresAndRevokes(t *testing.T) {
 	e := newTestSvc(t)
 	target := e.repo.addUser("t@x.test", statusActive)
-	require.NoError(t, e.svc.TriggerResetPassword(ctx(), e.superActor(), target.ID))
-	require.Contains(t, e.reset.sent, target.ID)
+	sid := e.repo.addSession(target.ID)
+	res, err := e.svc.ResetPassword(ctx(), e.superActor(), target.ID)
+	require.NoError(t, err)
+	require.NotEmpty(t, res.TemporaryPassword)
+	_, ok := authpolicy.ValidatePassword(res.TemporaryPassword)
+	require.True(t, ok)
+	// Stored as a hash the plaintext verifies against — never as the plaintext.
+	stored := e.repo.passwords[target.ID].hash
+	require.NotEqual(t, res.TemporaryPassword, stored)
+	match, err := crypto.VerifyPassword(res.TemporaryPassword, stored)
+	require.NoError(t, err)
+	require.True(t, match)
+	// The old password is gone, so the old sessions have to go with it.
+	require.True(t, e.repo.sessions[sid].revoked)
+	// Nothing is emailed any more.
+	require.Empty(t, e.reset.sent)
+}
+
+func TestResetPassword_RateLimitedPerTarget(t *testing.T) {
+	e := newTestSvc(t)
+	target := e.repo.addUser("t@x.test", statusActive)
+	actor := e.superActor()
+	for i := 0; i < rlResetPerTarget; i++ {
+		_, err := e.svc.ResetPassword(ctx(), actor, target.ID)
+		require.NoError(t, err)
+	}
+	_, err := e.svc.ResetPassword(ctx(), actor, target.ID)
+	require.Error(t, err)
+}
+
+func TestListUsers_FilterByRoleCode(t *testing.T) {
+	e := newTestSvc(t)
+	editor := e.repo.addRole(roleEditor, "Editor", true)
+	viewer := e.repo.addRole("viewer", "Viewer", true)
+	kept := e.repo.addUser("editor@x.test", statusActive, editor.ID)
+	e.repo.addUser("viewer@x.test", statusActive, viewer.ID)
+	res, err := e.svc.ListUsers(ctx(), e.superActor(), ListUsersFilter{Role: roleEditor})
+	require.NoError(t, err)
+	require.Len(t, res.Items, 1)
+	require.Equal(t, kept.ID, res.Items[0].ID)
 }
 
 // Every mutation must reject an actor lacking its permission. A wrong perm
@@ -270,7 +331,7 @@ func TestUsers_MutationsRequirePermission(t *testing.T) {
 		"DeleteUser":  func() error { return e.svc.DeleteUser(ctx(), noPerm, target.ID, false) },
 		"AssignRole":  func() error { return e.svc.AssignRole(ctx(), noPerm, target.ID, rid) },
 		"RemoveRole":  func() error { return e.svc.RemoveRole(ctx(), noPerm, target.ID, rid) },
-		"ResetPasswd": func() error { return e.svc.TriggerResetPassword(ctx(), noPerm, target.ID) },
+		"ResetPasswd": func() error { _, err := e.svc.ResetPassword(ctx(), noPerm, target.ID); return err },
 	}
 	for name, call := range cases {
 		t.Run(name, func(t *testing.T) {

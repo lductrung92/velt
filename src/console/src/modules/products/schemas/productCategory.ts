@@ -1,9 +1,12 @@
 import type { TFunction } from "i18next";
 import { z } from "zod";
 
+import type { ProductCategoryStatus } from "../services/productCategories.service";
+
 export interface ProductCategoryFormValues {
   name: string;
   slug: string;
+  status: ProductCategoryStatus;
   description: string;
   sort_order: number;
   seo_title: string;
@@ -14,6 +17,9 @@ export interface ProductCategoryFormValues {
 export const productCategoryFormDefaults: ProductCategoryFormValues = {
   name: "",
   slug: "",
+  // A new category is in use the moment it exists; the column defaults the
+  // same way, so the form and the server agree without sending anything.
+  status: "published",
   description: "",
   sort_order: 0,
   seo_title: "",
@@ -31,6 +37,7 @@ export function makeProductCategorySchema(t: TFunction) {
       .min(1, t("errors.validation.required"))
       .max(160, t("errors.validation.too_long")),
     slug: z.string().trim().max(160, t("errors.validation.too_long")),
+    status: z.enum(["draft", "published", "archived"]),
     description: z.string().trim().max(1000, t("errors.validation.too_long")),
     sort_order: z
       .number()

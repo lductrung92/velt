@@ -16,6 +16,10 @@ import (
 const (
 	rlResetPerTarget = 5
 	rlResetWindow    = 15 * time.Minute
+
+	// tempPasswordBytes of entropy, base64url-encoded, is what an admin reads
+	// out to a new user; see tempPassword.
+	tempPasswordBytes = 12
 )
 
 // Service holds user-management business logic.
@@ -79,43 +83,61 @@ func (s *Service) GetUser(ctx context.Context, id *httpx.Identity, targetID uuid
 	return s.adminUser(ctx, u)
 }
 
-// CreateUser creates a user (no password; a set-password mail is sent), assigning
-// roles under anti-escalation. Requires users.create.
-func (s *Service) CreateUser(ctx context.Context, id *httpx.Identity, req CreateUserRequest) (UserDetail, error) {
+// CreateUser creates a user with a server-minted temporary password, assigning
+// roles under anti-escalation. The plaintext is returned once, to be handed to
+// the new user out of band. Requires users.create.
+func (s *Service) CreateUser(ctx context.Context, id *httpx.Identity, req CreateUserRequest) (UserCredentials, error) {
 	if err := s.Require(ctx, id, permUsersCreate); err != nil {
-		return UserDetail{}, err
+		return UserCredentials{}, err
 	}
 	roleIDs, err := s.resolveCreateRoles(ctx, id.UserID, req.RoleIDs)
 	if err != nil {
-		return UserDetail{}, err
+		return UserCredentials{}, err
 	}
 	if _, err := s.repo.GetUserByEmail(ctx, req.Email); err == nil {
-		return UserDetail{}, apperr.Conflict("conflict")
+		return UserCredentials{}, apperr.Conflict("conflict")
 	} else if !errors.Is(err, shared.ErrNotFound) {
-		return UserDetail{}, apperr.Internal()
+		return UserCredentials{}, apperr.Internal()
 	}
-	// Unusable random password — the user sets a real one via the emailed link.
-	rnd, err := crypto.RandomToken(32)
+	plain, hash, err := tempPassword()
 	if err != nil {
-		return UserDetail{}, apperr.Internal()
-	}
-	hash, err := crypto.HashPassword(rnd)
-	if err != nil {
-		return UserDetail{}, apperr.Internal()
+		return UserCredentials{}, apperr.Internal()
 	}
 	u, err := s.repo.CreateUser(ctx, req.Email, req.FullName, hash, roleIDs, id.UserID)
 	if errors.Is(err, shared.ErrConflict) {
-		return UserDetail{}, apperr.Conflict("conflict")
+		return UserCredentials{}, apperr.Conflict("conflict")
 	}
 	if err != nil {
-		return UserDetail{}, apperr.Internal()
-	}
-	if err := s.SendResetLink(ctx, u.ID); err != nil {
-		s.Sec(ctx).Warn("create user: set-password mail failed", "user_id", u.ID, "err", err)
+		return UserCredentials{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("admin created user", "actor", id.UserID, "target", u.ID)
 	s.Record(ctx, id, userEntry(actionCreated, u.ID, u.FullName, map[string]any{"email": u.Email}))
-	return s.adminUser(ctx, u)
+	return s.withTempPassword(ctx, u, plain)
+}
+
+// tempPassword mints a temporary password and its argon2id hash. 12 random
+// bytes render as 16 URL-safe characters, clearing the shared password policy
+// (authpolicy.MinPasswordLen) without the admin having to invent anything.
+func tempPassword() (plain, hash string, err error) {
+	plain, err = crypto.RandomToken(tempPasswordBytes)
+	if err != nil {
+		return "", "", err
+	}
+	hash, err = crypto.HashPassword(plain)
+	if err != nil {
+		return "", "", err
+	}
+	return plain, hash, nil
+}
+
+// withTempPassword pairs the freshly read user with the plaintext the caller is
+// about to show once. The plaintext never reaches a log line.
+func (s *Service) withTempPassword(ctx context.Context, u *User, plain string) (UserCredentials, error) {
+	detail, err := s.adminUser(ctx, u)
+	if err != nil {
+		return UserCredentials{}, err
+	}
+	return UserCredentials{UserDetail: detail, TemporaryPassword: plain}, nil
 }
 
 // resolveCreateRoles defaults to Editor and enforces the single-role / anti-
@@ -360,32 +382,37 @@ func (s *Service) RemoveRole(ctx context.Context, id *httpx.Identity, targetID, 
 	return nil
 }
 
-// TriggerResetPassword emails a reset link to the target. Rate-limited; target
-// must be active. Requires users.update.
-func (s *Service) TriggerResetPassword(ctx context.Context, id *httpx.Identity, targetID uuid.UUID) error {
+// ResetPassword mints a new temporary password for the target, revoking every
+// live session so the new password is the only way back in, and returns the
+// plaintext once. Rate-limited; target must be active. Requires users.update.
+func (s *Service) ResetPassword(ctx context.Context, id *httpx.Identity, targetID uuid.UUID) (UserCredentials, error) {
 	if err := s.Require(ctx, id, permUsersUpdate); err != nil {
-		return err
+		return UserCredentials{}, err
 	}
 	if err := s.Allow(ctx, "admin:reset:user:"+targetID.String(), rlResetPerTarget, rlResetWindow); err != nil {
-		return err
+		return UserCredentials{}, err
 	}
 	u, err := s.repo.GetUser(ctx, targetID)
 	if errors.Is(err, shared.ErrNotFound) {
-		return apperr.NotFound("not_found")
+		return UserCredentials{}, apperr.NotFound("not_found")
 	}
 	if err != nil {
-		return apperr.Internal()
+		return UserCredentials{}, apperr.Internal()
 	}
 	if u.Status != statusActive {
-		return apperr.Conflict("conflict")
+		return UserCredentials{}, apperr.Conflict("conflict")
 	}
-	if err := s.SendResetLink(ctx, targetID); err != nil {
-		s.Sec(ctx).Error("admin trigger reset: send link", "err", err)
-		return apperr.Internal()
+	plain, hash, err := tempPassword()
+	if err != nil {
+		return UserCredentials{}, apperr.Internal()
 	}
-	s.Sec(ctx).Info("admin triggered reset", "actor", id.UserID, "target", targetID)
-	s.Record(ctx, id, userEntry(actionResetSent, targetID, u.FullName, nil))
-	return nil
+	if err := s.repo.SetPassword(ctx, targetID, hash, s.Now()); err != nil {
+		s.Sec(ctx).Error("admin reset password", "err", err)
+		return UserCredentials{}, apperr.Internal()
+	}
+	s.Sec(ctx).Info("admin reset password", "actor", id.UserID, "target", targetID)
+	s.Record(ctx, id, userEntry(actionPasswordReset, targetID, u.FullName, nil))
+	return s.withTempPassword(ctx, u, plain)
 }
 
 // adminUser builds the UserDetail for a single user (roles + 2FA).

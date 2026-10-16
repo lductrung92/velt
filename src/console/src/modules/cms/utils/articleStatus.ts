@@ -12,15 +12,16 @@ export const ARTICLE_STATUSES: ArticleStatus[] = [
   "archived",
 ];
 
-// Status → StatusBadge tone (the shared badge has 4 tones; map the 6 states onto
-// them — table-columns §2 hues collapse to success/warning/danger/neutral).
+// Status → StatusBadge tone. draft and archived both used to be neutral, which
+// made the two pills identical in a list that shows both; archived has its own
+// tone now.
 const TONE: Record<ArticleStatus, StatusTone> = {
   draft: "neutral",
   pending_review: "warning",
   needs_revision: "danger",
   scheduled: "warning",
   published: "success",
-  archived: "neutral",
+  archived: "archive",
 };
 
 export function statusTone(status: ArticleStatus): StatusTone {

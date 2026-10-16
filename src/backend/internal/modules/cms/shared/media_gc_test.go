@@ -21,7 +21,7 @@ func TestPurgeMediaTree_RemovesPrefixOnly(t *testing.T) {
 	st.Saved["cms/articles/a2/keep.jpg"] = []byte("x") // different entity
 	st.Saved["cms/landing/l1/hero.jpg"] = []byte("x")  // different module
 
-	require.NoError(t, shared.PurgeMediaTree(context.Background(), st, "cms/articles/a1/"))
+	require.NoError(t, shared.PurgeMediaTree(context.Background(), st, nil, "cms/articles/a1/"))
 
 	_, gone1 := st.Saved["cms/articles/a1/f.jpg"]
 	_, gone2 := st.Saved["cms/articles/a1/og.jpg"]
@@ -46,7 +46,7 @@ func (s *noTreeStore) Delete(_ context.Context, k string) error {
 func (*noTreeStore) URL(_ context.Context, k string) string { return k }
 
 func TestPurgeMediaTree_NoopWithoutTreeSupport(t *testing.T) {
-	require.NoError(t, shared.PurgeMediaTree(context.Background(), &noTreeStore{}, "cms/articles/a1/"))
+	require.NoError(t, shared.PurgeMediaTree(context.Background(), &noTreeStore{}, nil, "cms/articles/a1/"))
 }
 
 func TestDeleteOldMedia(t *testing.T) {
@@ -69,7 +69,7 @@ func TestDeleteOldMedia(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			st := &noTreeStore{}
-			shared.DeleteOldMedia(ctx, st, prefix, c.old, c.newP)
+			shared.DeleteOldMedia(ctx, st, nil, prefix, c.old, c.newP)
 			if c.wantDelete == "" {
 				require.Empty(t, st.deleted)
 			} else {

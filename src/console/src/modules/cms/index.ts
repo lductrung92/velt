@@ -10,5 +10,5 @@ export { default as MenuBuilder } from "./pages/MenuBuilder";
 export { default as PageEditor } from "./pages/PageEditor";
 export { default as PageList } from "./pages/PageList";
 // The settings screen picks the homepage from the published page tree.
-export { usePages } from "./hooks/useCmsPages";
-export type { PageNode } from "./services/pages.service";
+export { usePageOptions, usePages } from "./hooks/useCmsPages";
+export type { PageListItem, PageOption } from "./services/pages.service";

@@ -88,25 +88,50 @@
   color: hsl(var(--muted-foreground));
 }
 
-/* Two dates behave as one control, so they share a row and split it evenly
- * rather than each claiming a filter slot of its own. */
+/*
+ * The filter row is ONE row: search on the left, action select and range
+ * picker together at the right edge, all on the same baseline.
+ *
+ * It was not. The range used to declare `flex: 1 1 320px`, written when this
+ * slot held a pair of `<input type="date">`; it holds one button now, which
+ * draws at about 165px. `.list-filter-controls` is content-sized in the
+ * toolbar, and a flex container measures itself from what its items can SHRINK
+ * to — so the group came out NARROWER than the two controls standing side by
+ * side, and `flex-wrap: wrap` answered that by breaking the row rather than
+ * shrinking. The date button landed on a line of its own, stretched across the
+ * full group with its label stranded at the left, below and left of the action
+ * select (bugs/console/image-3.png).
+ *
+ * Two controls never need a second line, so this screen says so outright
+ * instead of leaving it to that measurement: if the group is ever short of
+ * room the selects give ground, which is what the rest of the console does.
+ */
+[data-list="activity"] .list-filter-controls {
+  flex-wrap: nowrap;
+  /* ...and the group keeps the width its two controls ask for. Without this it
+     was handed less than that even with half the toolbar standing empty, and
+     the action select answered by truncating its own label to "Mọi hành đ…".
+     The search box beside it is the elastic one (flex: 1, max 410px), which is
+     the part that should give ground. */
+  flex-shrink: 0;
+}
+/* Both controls are given a width they keep, rather than a basis they can be
+   talked out of: the group is measured from what its items can shrink to, and
+   a basis alone left the select at 138px, truncating "Mọi hành động" with half
+   the toolbar empty beside it. The date slot is the wider of the two because
+   its label is two formatted dates rather than one word. */
+[data-list="activity"] .list-filter-select {
+  flex: 0 0 200px;
+  width: 200px;
+}
 [data-list="activity"] .activity-range {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1 1 320px;
-  min-width: 0;
+  flex: 0 0 15rem;
+  min-width: 9rem;
 }
-[data-list="activity"] .activity-range input {
+/* 36px is the height of the action select next to it; the shared trigger is
+   h-10 and stood 4px proud of the row. */
+[data-list="activity"] .activity-range button[aria-haspopup] {
   height: 36px;
-  min-width: 0;
-  flex: 1;
-  font-size: var(--font-size-sm);
-  background: hsl(var(--muted) / 0.25);
-}
-[data-list="activity"] .activity-range > span {
-  color: hsl(var(--muted-foreground));
-  font-size: var(--font-size-xs);
 }
 
 [data-list="activity"] .activity-window-note {
@@ -163,10 +188,15 @@
     padding: 10px 14px;
   }
 
-  /* The toolbar's filter row becomes a grid here, where the pair would be
-     squeezed into one column alongside the action select. Two dates and an
-     arrow need the whole row or they collapse to unreadable stubs. */
+  /* The toolbar's filter row becomes a grid here, where the range would be
+     squeezed into one column alongside the action select. Two formatted dates
+     need the whole row or they collapse to an ellipsis. */
   [data-list="activity"] .activity-range {
     grid-column: 1 / -1;
+    /* Free to take the width it is given: below this breakpoint the controls
+       group is sized by the toolbar (`.list-filter-controls { flex: 1 }`)
+       rather than by its own content, so the wide-screen basis is moot. */
+    flex: 1 1 12rem;
+    min-width: 9rem;
   }
 }

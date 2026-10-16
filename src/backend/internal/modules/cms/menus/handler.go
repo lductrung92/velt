@@ -41,7 +41,7 @@ func (h *Handler) GetMenu(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, apperr.NotFound("not_found"))
 		return
 	}
-	res, err := h.svc.GetMenu(r.Context(), id, menuID)
+	res, err := h.svc.GetMenu(r.Context(), id, menuID, httpx.Locale(r))
 	if err != nil {
 		httpx.WriteError(w, err)
 		return
@@ -126,7 +126,7 @@ func (h *Handler) ReplaceMenuItems(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, err)
 		return
 	}
-	res, err := h.svc.ReplaceMenuItems(r.Context(), id, menuID, req)
+	res, err := h.svc.ReplaceMenuItems(r.Context(), id, menuID, req, httpx.Locale(r))
 	if err != nil {
 		httpx.WriteError(w, err)
 		return

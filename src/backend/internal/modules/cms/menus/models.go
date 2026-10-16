@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/velt/backend/internal/platform/localize"
 )
 
 // permManage gates every menu endpoint.
@@ -38,11 +40,11 @@ type itemRow struct {
 	ParentID    *uuid.UUID
 	Label       string
 	Description *string
-	LinkType   string
-	TargetID   *uuid.UUID
-	URL        *string
-	OpenNewTab bool
-	SortOrder  int
+	LinkType    string
+	TargetID    *uuid.UUID
+	URL         *string
+	OpenNewTab  bool
+	SortOrder   int
 }
 
 // itemWrite is one node to persist on a tree replace (children nested).
@@ -53,10 +55,10 @@ type itemWrite struct {
 	Label       string
 	Description *string
 	LinkType    string
-	TargetID   *uuid.UUID
-	URL        *string
-	OpenNewTab bool
-	Children   []itemWrite
+	TargetID    *uuid.UUID
+	URL         *string
+	OpenNewTab  bool
+	Children    []itemWrite
 }
 
 // --- Requests ---
@@ -81,11 +83,11 @@ type ItemInput struct {
 	ID          *uuid.UUID  `json:"id"`
 	Label       string      `json:"label" validate:"required,max=200"`
 	Description *string     `json:"description" validate:"omitempty,max=300"`
-	LinkType   string      `json:"link_type" validate:"required,oneof=internal external article page category"`
-	TargetID   *uuid.UUID  `json:"target_id"`
-	URL        *string     `json:"url" validate:"omitempty,max=2000"`
-	OpenNewTab bool        `json:"open_new_tab"`
-	Children   []ItemInput `json:"children" validate:"omitempty,dive"`
+	LinkType    string      `json:"link_type" validate:"required,oneof=internal external article page category"`
+	TargetID    *uuid.UUID  `json:"target_id"`
+	URL         *string     `json:"url" validate:"omitempty,max=2000"`
+	OpenNewTab  bool        `json:"open_new_tab"`
+	Children    []ItemInput `json:"children" validate:"omitempty,dive"`
 }
 
 // ItemsRequest is the PUT /menus/{id}/items body (whole tree replace).
@@ -106,15 +108,21 @@ type Response struct {
 
 // ItemNode is a menu item in the detail tree.
 type ItemNode struct {
-	ID          uuid.UUID  `json:"id"`
-	Label       string     `json:"label"`
-	Description *string    `json:"description"`
-	LinkType   string     `json:"link_type"`
-	TargetID   *uuid.UUID `json:"target_id"`
-	URL        *string    `json:"url"`
-	OpenNewTab bool       `json:"open_new_tab"`
-	SortOrder  int        `json:"sort_order"`
-	Children   []ItemNode `json:"children"`
+	ID    uuid.UUID `json:"id"`
+	Label string    `json:"label"`
+	// LabelDisplay is Label in the language the request asked for, falling
+	// back to Label itself. It is for SHOWING the item — the builder's tree
+	// row — and is never sent back: the builder PUTs the whole tree, so Label
+	// has to keep carrying the stored Vietnamese or a save would write the
+	// translation over every item at once.
+	LabelDisplay string     `json:"label_display"`
+	Description  *string    `json:"description"`
+	LinkType     string     `json:"link_type"`
+	TargetID     *uuid.UUID `json:"target_id"`
+	URL          *string    `json:"url"`
+	OpenNewTab   bool       `json:"open_new_tab"`
+	SortOrder    int        `json:"sort_order"`
+	Children     []ItemNode `json:"children"`
 }
 
 // DetailResponse is a menu slot + its item tree (GET /menus/{id}, PUT items).
@@ -128,8 +136,9 @@ type DetailResponse struct {
 func toResponse(m Menu) Response { return Response(m) }
 
 // buildItemTree assembles flat rows (ordered by parent, sort_order) into a nested
-// tree. Rows whose parent is absent from the set become roots.
-func buildItemTree(rows []itemRow) []ItemNode {
+// tree. Rows whose parent is absent from the set become roots. `tr` is the
+// request locale's stored values per item id, nil when there are none.
+func buildItemTree(rows []itemRow, tr map[uuid.UUID]map[string]any) []ItemNode {
 	type node struct {
 		item     ItemNode
 		children []*node
@@ -137,8 +146,10 @@ func buildItemTree(rows []itemRow) []ItemNode {
 	byID := make(map[uuid.UUID]*node, len(rows))
 	for _, r := range rows {
 		byID[r.ID] = &node{item: ItemNode{
-			ID: r.ID, Label: r.Label, Description: r.Description,
-			LinkType: r.LinkType, TargetID: r.TargetID,
+			ID: r.ID, Label: r.Label,
+			LabelDisplay: localize.Str(tr[r.ID], "label", r.Label),
+			Description:  r.Description,
+			LinkType:     r.LinkType, TargetID: r.TargetID,
 			URL: r.URL, OpenNewTab: r.OpenNewTab, SortOrder: r.SortOrder,
 		}}
 	}

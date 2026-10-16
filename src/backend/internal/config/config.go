@@ -63,6 +63,18 @@ type Config struct {
 	// Storage (local driver root; S3 config comes from the settings registry)
 	StorageLocalRoot string `env:"STORAGE_LOCAL_ROOT" envDefault:"./storage"`
 
+	// Public asset serving (internal/platform/media). Both bases are empty by
+	// default, which yields site-relative /files and /img URLs — right for local
+	// dev, where everything is one origin. In production they are absolute and
+	// different: images belong on their own cookie-less subdomain so an image
+	// request never carries the refresh cookie, and either base can be repointed
+	// at a CDN without touching a single stored URL.
+	MediaFilesBaseURL string `env:"MEDIA_FILES_BASE_URL"` // e.g. https://zukatek.vn
+	MediaImageBaseURL string `env:"MEDIA_IMAGE_BASE_URL"` // e.g. https://img.zukatek.vn
+	// MediaCacheRoot holds rendered image derivatives. Reconstructible: deleting
+	// it costs CPU, not data.
+	MediaCacheRoot string `env:"MEDIA_CACHE_ROOT" envDefault:"./cache/media"`
+
 	// CORS: browser origins allowed to call the API with credentials. The
 	// console/web are separate origins (admin./api. subdomains), so cross-origin
 	// requests need this. Comma-separated; defaults cover local dev.

@@ -15,7 +15,7 @@ import (
 // Repository is the product-category persistence port. The service depends on
 // this interface so it can be unit-tested against a fake.
 type Repository interface {
-	List(ctx context.Context) ([]Category, error)
+	List(ctx context.Context, status string) ([]Category, error)
 	Get(ctx context.Context, id uuid.UUID) (*Category, error)
 	Create(ctx context.Context, w write) (*Category, error)
 	Update(ctx context.Context, id uuid.UUID, w write) (*Category, error)
@@ -32,15 +32,15 @@ type pgxRepository struct {
 func NewRepository(pool *pgxpool.Pool) Repository { return &pgxRepository{pool: pool} }
 
 // returningColumns is the same list unqualified: RETURNING has no table alias.
-const returningColumns = `id, slug, name, description, sort_order,
+const returningColumns = `id, slug, name, description, sort_order, status,
 	seo_title, seo_description, seo_keywords, created_at, updated_at`
 
-const categoryColumns = `c.id, c.slug, c.name, c.description, c.sort_order,
+const categoryColumns = `c.id, c.slug, c.name, c.description, c.sort_order, c.status,
 	c.seo_title, c.seo_description, c.seo_keywords, c.created_at, c.updated_at`
 
 func scanCategory(row pgx.Row) (*Category, error) {
 	var c Category
-	err := row.Scan(&c.ID, &c.Slug, &c.Name, &c.Description, &c.SortOrder,
+	err := row.Scan(&c.ID, &c.Slug, &c.Name, &c.Description, &c.SortOrder, &c.Status,
 		&c.SEOTitle, &c.SEODescription, &c.SEOKeywords, &c.CreatedAt, &c.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, shared.ErrNotFound
@@ -51,13 +51,17 @@ func scanCategory(row pgx.Row) (*Category, error) {
 	return &c, nil
 }
 
-func (r *pgxRepository) List(ctx context.Context) ([]Category, error) {
+// List returns the taxonomy. An empty status is no filter; otherwise only
+// categories in that status come back.
+func (r *pgxRepository) List(ctx context.Context, status string) ([]Category, error) {
 	// The count comes from a correlated subquery rather than a GROUP BY join so
 	// a category with no products still appears, with 0.
 	rows, err := r.pool.Query(ctx,
 		`SELECT `+categoryColumns+`,
 		        (SELECT count(*) FROM product_category_links l WHERE l.category_id = c.id)
-		 FROM product_categories c ORDER BY c.sort_order, c.name`)
+		 FROM product_categories c
+		 WHERE $1 = '' OR c.status = $1
+		 ORDER BY c.sort_order, c.name`, status)
 	if err != nil {
 		return nil, shared.Wrap("list product categories", err)
 	}
@@ -66,7 +70,7 @@ func (r *pgxRepository) List(ctx context.Context) ([]Category, error) {
 	out := make([]Category, 0, 8)
 	for rows.Next() {
 		var c Category
-		if err := rows.Scan(&c.ID, &c.Slug, &c.Name, &c.Description, &c.SortOrder,
+		if err := rows.Scan(&c.ID, &c.Slug, &c.Name, &c.Description, &c.SortOrder, &c.Status,
 			&c.SEOTitle, &c.SEODescription, &c.SEOKeywords, &c.CreatedAt, &c.UpdatedAt,
 			&c.ProductCount); err != nil {
 			return nil, shared.Wrap("scan product category", err)
@@ -84,12 +88,12 @@ func (r *pgxRepository) Get(ctx context.Context, id uuid.UUID) (*Category, error
 func (r *pgxRepository) Create(ctx context.Context, w write) (*Category, error) {
 	c, err := scanCategory(r.pool.QueryRow(ctx,
 		`INSERT INTO product_categories
-		     (slug, name, description, sort_order, seo_title, seo_description, seo_keywords)
+		     (slug, name, description, sort_order, status, seo_title, seo_description, seo_keywords)
 		 VALUES ($1, $2, $3,
 		         COALESCE($4, (SELECT COALESCE(max(sort_order), -1) + 1 FROM product_categories)),
-		         $5, $6, $7)
+		         $5, $6, $7, $8)
 		 RETURNING `+returningColumns,
-		w.Slug, w.Name, w.Description, w.SortOrder,
+		w.Slug, w.Name, w.Description, w.SortOrder, w.Status,
 		w.SEOTitle, w.SEODescription, w.SEOKeywords))
 	if err != nil && shared.IsUniqueViolation(err) {
 		return nil, shared.ErrConflict
@@ -100,10 +104,10 @@ func (r *pgxRepository) Create(ctx context.Context, w write) (*Category, error) 
 func (r *pgxRepository) Update(ctx context.Context, id uuid.UUID, w write) (*Category, error) {
 	c, err := scanCategory(r.pool.QueryRow(ctx,
 		`UPDATE product_categories
-		 SET slug = $2, name = $3, description = $4, sort_order = $5,
-		     seo_title = $6, seo_description = $7, seo_keywords = $8, updated_at = now()
+		 SET slug = $2, name = $3, description = $4, sort_order = $5, status = $6,
+		     seo_title = $7, seo_description = $8, seo_keywords = $9, updated_at = now()
 		 WHERE id = $1 RETURNING `+returningColumns,
-		id, w.Slug, w.Name, w.Description, w.SortOrder,
+		id, w.Slug, w.Name, w.Description, w.SortOrder, w.Status,
 		w.SEOTitle, w.SEODescription, w.SEOKeywords))
 	if err != nil && shared.IsUniqueViolation(err) {
 		return nil, shared.ErrConflict

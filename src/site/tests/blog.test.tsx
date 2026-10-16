@@ -80,6 +80,38 @@ test("article SSR renders readable CMS HTML, stable heading links and article SE
   assert.equal(articleOutline("<p></p>").minutes, 1);
 });
 
+test("the article cover offers only served widths it has pixels for, and an image without dimensions keeps its plain tag", () => {
+  const sized = render("/blog/bai-viet-thu", {
+    ...emptyBlog(),
+    article: {
+      ...post,
+      cover_url: "http://api.local/img/anh-bia-8a304388.png",
+      cover_width: 960,
+      cover_height: 540,
+    },
+  });
+  // 1280 and 1920 are absent: the server does not upscale, so advertising them
+  // would buy the same pixels twice.
+  assert.match(
+    sized.html,
+    /type="image\/webp" srcSet="http:\/\/api.local\/img\/anh-bia-8a304388\/320.webp 320w, http:\/\/api.local\/img\/anh-bia-8a304388\/640.webp 640w, http:\/\/api.local\/img\/anh-bia-8a304388\/960.webp 960w"/,
+  );
+  assert.match(sized.html, /width="960" height="540"/);
+  assert.match(sized.html, /fetchPriority="high"/);
+  assert.doesNotMatch(sized.html, /1280.webp/);
+
+  // No files row: no dimensions, no slug to size by — and still an image.
+  const plain = render("/blog/bai-viet-thu", {
+    ...emptyBlog(),
+    article: { ...post, cover_url: "http://api.local/api/files/a/cover.png" },
+  });
+  assert.match(
+    plain.html,
+    /<img src="http:\/\/api.local\/api\/files\/a\/cover.png"/,
+  );
+  assert.doesNotMatch(plain.html, /srcSet/);
+});
+
 test("unpublished/missing article is404; API failure is503 rather than a fabricated post", () => {
   const missing = render("/blog/not-published", {
     ...emptyBlog(),

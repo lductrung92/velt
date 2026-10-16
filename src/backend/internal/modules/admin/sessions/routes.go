@@ -14,6 +14,7 @@ func Register(r chi.Router, base *shared.Base, pool *pgxpool.Pool) {
 	h := NewHandler(NewService(base, NewRepository(pool)))
 	r.Get("/sessions", h.ListSessions)
 	r.Delete("/sessions/{id}", h.RevokeSession)
+	r.Post("/sessions/purge", h.PurgeSessions)
 	r.Get("/users/{id}/sessions", h.GetUserSessions)
 	r.Delete("/users/{id}/sessions", h.RevokeUserSessions)
 }

@@ -42,6 +42,7 @@ function itemNode(id: string, label: string) {
   return {
     id,
     label,
+    label_display: label,
     description: null,
     link_type: "internal",
     target_id: null,
@@ -344,9 +345,9 @@ describe("MenuBuilder", () => {
       "/about",
     );
     // The English box only exists because the dialog no longer waits for an id.
-    const english = await screen.findByPlaceholderText(
-      t("cms.menus.item.label"),
-    );
+    // It is found by its LABEL: the field's name moved out of the placeholder,
+    // which now shows the Vietnamese the box falls back to.
+    const english = await screen.findByLabelText(t("cms.menus.item.label"));
     await user.type(english, "About");
     await user.click(screen.getByRole("button", { name: t("common.save") }));
 

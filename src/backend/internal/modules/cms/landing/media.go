@@ -10,6 +10,7 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/media"
 )
 
 const defaultMaxUploadMB = 10
@@ -74,7 +75,10 @@ func (s *Service) UploadMedia(ctx context.Context, id *httpx.Identity, landingID
 		return UploadMediaResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms landing media uploaded", "actor", id.UserID, "landing", landingID)
-	return UploadMediaResponse{Path: key, URL: s.files.URL(ctx, key)}, nil
+	url := media.MintOr(ctx, s.Media(), media.MintInput{
+		Key: key, Base: "section", Data: buf, OwnerKind: "landing", OwnerID: &landingID,
+	}, s.files.URL(ctx, key))
+	return UploadMediaResponse{Path: key, URL: url}, nil
 }
 
 // sniffImageExt detects the image type by magic bytes (never trusting the client

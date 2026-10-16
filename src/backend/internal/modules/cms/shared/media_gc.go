@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/storage"
 )
 
@@ -18,7 +19,13 @@ type treeDeleter interface {
 // entity (and, where applicable, its published snapshot) is removed, so its whole
 // media folder (e.g. "cms/articles/<id>/") is reclaimed instead of leaking.
 // No-op when the store lacks recursive delete. Returns any delete error to log.
-func PurgeMediaTree(ctx context.Context, files storage.Storage, prefix string) error {
+//
+// forget drops the public identity of everything under the prefix: the `files`
+// rows and the derivatives rendered from them. It runs even when the store
+// cannot delete the tree, because a row pointing at bytes nobody can read is
+// the worse of the two leaks.
+func PurgeMediaTree(ctx context.Context, files storage.Storage, forget media.Forgetter, prefix string) error {
+	media.ForgetPrefix(ctx, forget, prefix)
 	td, ok := files.(treeDeleter)
 	if !ok {
 		return nil
@@ -41,12 +48,13 @@ func OwnsMedia(prefix, path string) bool {
 // prefix scopes the delete to the entity's own media folder (defense-in-depth: a
 // stored path outside it is left untouched, so a spoofed *_path can't nuke
 // another entity's files).
-func DeleteOldMedia(ctx context.Context, files storage.Storage, prefix string, oldPath, newPath *string) {
+func DeleteOldMedia(ctx context.Context, files storage.Storage, forget media.Forgetter, prefix string, oldPath, newPath *string) {
 	o, n := deref(oldPath), deref(newPath)
 	if o == "" || o == n || !strings.HasPrefix(o, prefix) {
 		return
 	}
 	_ = files.Delete(ctx, o)
+	media.Forget(ctx, forget, o)
 }
 
 func deref(s *string) string {

@@ -27,6 +27,7 @@ function node(
   return {
     key,
     label: key,
+    labelDisplay: key,
     description: null,
     link_type: "internal",
     target_id: null,
@@ -70,6 +71,13 @@ describe("flattenTree", () => {
     expect(rows.find((r) => r.key === "a")?.hasChildren).toBe(true);
     expect(rows.find((r) => r.key === "a1")?.hasChildren).toBe(false);
   });
+
+  // The row shows the translation; the stored label stays in the draft, which
+  // is what the PUT is built from.
+  it("rows carry the display label, not the stored one", () => {
+    const tree = [node("a", [], { label: "Trang Chủ", labelDisplay: "Home" })];
+    expect(flattenTree(tree)[0].label).toBe("Home");
+  });
 });
 
 describe("toItemsInput", () => {
@@ -107,6 +115,40 @@ describe("toItemsInput", () => {
       url: null,
     });
     expect(out.children[0]).toMatchObject({ target_id: "p1", url: null });
+  });
+});
+
+describe("toItemsInput translation safety", () => {
+  // The builder replaces the whole tree on save. If the display label ever
+  // reached the body, one save with the console in English would overwrite
+  // every Vietnamese label at once.
+  it("sends the stored label and never the display one", () => {
+    const tree = [
+      node(
+        "a",
+        [node("a1", [], { label: "Tư Vấn", labelDisplay: "Consulting" })],
+        {
+          label: "Dịch Vụ",
+          labelDisplay: "Services",
+        },
+      ),
+    ];
+    const body = toItemsInput(tree);
+    expect(body[0].label).toBe("Dịch Vụ");
+    expect(body[0].children[0].label).toBe("Tư Vấn");
+    expect(JSON.stringify(body)).not.toContain("labelDisplay");
+    expect(JSON.stringify(body)).not.toContain("Services");
+    expect(JSON.stringify(body)).not.toContain("Consulting");
+  });
+
+  // Otherwise switching the interface language would make every menu look
+  // unsaved.
+  it("a differing display label does not make the tree dirty", () => {
+    const stored = [
+      node("a", [], { label: "Trang Chủ", labelDisplay: "Trang Chủ" }),
+    ];
+    const shown = [node("a", [], { label: "Trang Chủ", labelDisplay: "Home" })];
+    expect(treesEqual(stored, shown)).toBe(true);
   });
 });
 
@@ -216,6 +258,7 @@ describe("fromNodes", () => {
       {
         id: "s1",
         label: "Home",
+        label_display: "Home",
         description: null,
         link_type: "internal",
         target_id: null,
@@ -235,6 +278,7 @@ describe("pairSavedIDs", () => {
   const node = (id: string, children: MenuItemNode[] = []): MenuItemNode => ({
     id,
     label: id,
+    label_display: id,
     description: null,
     link_type: "internal",
     target_id: null,

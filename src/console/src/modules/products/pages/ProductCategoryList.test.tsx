@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { I18nextProvider } from "react-i18next";
@@ -19,8 +19,10 @@ function category(over: Record<string, unknown> = {}) {
     id: "c1",
     slug: "cong-tac",
     name: "Cộng tác",
+    name_display: "Cộng tác",
     description: "Công cụ làm việc nhóm",
     sort_order: 0,
+    status: "published",
     product_count: 3,
     seo: { title: null, description: null, keywords: null },
     created_at: "2026-01-01T00:00:00Z",
@@ -35,6 +37,7 @@ const TWO = [
     id: "c2",
     slug: "ai-tu-dong-hoa",
     name: "AI & tự động hoá",
+    name_display: "AI & tự động hoá",
     sort_order: 1,
   }),
 ];
@@ -71,7 +74,19 @@ function renderPage() {
 const MANAGER = ["products.view", "products.category.manage"];
 const VIEWER = ["products.view"];
 
-beforeEach(() => useAuthStore.getState().clear());
+// usePaging reads the public config; without a handler MSW fails the request
+// (the suite is set to error on unhandled ones) and the pager silently falls
+// back to its defaults.
+function settings(pageSize = 10) {
+  return http.get(`${API}/public/settings`, () =>
+    HttpResponse.json({ "app.page_size": pageSize }),
+  );
+}
+
+beforeEach(() => {
+  useAuthStore.getState().clear();
+  server.use(settings());
+});
 afterEach(() => useAuthStore.getState().clear());
 
 describe("ProductCategoryList", () => {
@@ -235,5 +250,84 @@ describe("ProductCategoryList", () => {
     renderPage();
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+  it("status: the badge renders in the table", async () => {
+    signIn(VIEWER);
+    server.use(
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({
+          items: [TWO[0], { ...TWO[1], status: "archived" }],
+        }),
+      ),
+    );
+    renderPage();
+
+    const t = await screen.findByTestId("product-categories-table");
+    // Labels come from the shared content_status.* bundle, not a parallel set.
+    expect(
+      within(t).getByText(i18n.t("content_status.published")),
+    ).toBeInTheDocument();
+    expect(
+      within(t).getByText(i18n.t("content_status.archived")),
+    ).toBeInTheDocument();
+  });
+
+  it("status tabs: picking one filters the list", async () => {
+    signIn(VIEWER);
+    server.use(
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({
+          items: [TWO[0], { ...TWO[1], status: "archived" }],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByTestId("product-categories-table");
+    expect(screen.getAllByTestId("product-category-row")).toHaveLength(2);
+
+    await user.click(
+      screen.getByRole("button", { name: i18n.t("content_status.archived") }),
+    );
+    const rows = screen.getAllByTestId("product-category-row");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("AI & tự động hoá");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: i18n.t("products.categories.all_statuses"),
+      }),
+    );
+    expect(screen.getAllByTestId("product-category-row")).toHaveLength(2);
+  });
+
+  it("pager: shows one page at a time and moves to the next", async () => {
+    signIn(VIEWER);
+    const many = Array.from({ length: 12 }, (_, i) =>
+      category({
+        id: `p${i}`,
+        slug: `cat-${i}`,
+        name: `Cat ${i}`,
+        name_display: `Cat ${i}`,
+        sort_order: i,
+      }),
+    );
+    server.use(
+      settings(10),
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({ items: many }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByTestId("product-categories-table");
+
+    await waitFor(() =>
+      expect(screen.getAllByTestId("product-category-row")).toHaveLength(10),
+    );
+    await user.click(screen.getByRole("button", { name: "2" }));
+    const rows = screen.getAllByTestId("product-category-row");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("Cat 10");
   });
 });

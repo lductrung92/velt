@@ -21,6 +21,10 @@ type fakeRepo struct {
 	seen   ListParams // the params the service actually handed down
 	calls  int
 	failed error
+	// purged/purgedBefore record the cutoff the service worked out, so a test
+	// can assert the window maths without reading the surviving rows.
+	purged       bool
+	purgedBefore time.Time
 }
 
 func (r *fakeRepo) List(_ context.Context, p ListParams) ([]Entry, int, error) {
@@ -69,6 +73,25 @@ func matchesText(e Entry, q string) bool {
 		strings.Contains(strings.ToLower(e.Action), q)
 }
 
+// Purge keeps the rows at or after the cutoff and drops the rest, which is
+// what `DELETE ... WHERE occurred_at < $1` does. A zero cutoff drops the lot.
+func (r *fakeRepo) Purge(_ context.Context, before time.Time) (int64, error) {
+	r.purgedBefore, r.purged = before, true
+	if r.failed != nil {
+		return 0, r.failed
+	}
+	kept := []Entry{}
+	for _, e := range r.rows {
+		if before.IsZero() || e.OccurredAt.Before(before) {
+			continue
+		}
+		kept = append(kept, e)
+	}
+	deleted := int64(len(r.rows) - len(kept))
+	r.rows = kept
+	return deleted, nil
+}
+
 func (r *fakeRepo) Actions(context.Context) ([]string, error) {
 	if r.failed != nil {
 		return nil, r.failed
@@ -102,6 +125,10 @@ func newEnv(rows ...Entry) *env {
 
 func reader() *httpx.Identity {
 	return &httpx.Identity{UserID: uuid.New(), Permissions: []string{permRead}}
+}
+
+func purger() *httpx.Identity {
+	return &httpx.Identity{UserID: uuid.New(), Permissions: []string{permRead, permPurge}}
 }
 
 func stranger() *httpx.Identity {

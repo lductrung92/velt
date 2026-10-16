@@ -1,14 +1,15 @@
 import { type ReactNode } from "react";
 
-import { GamesListForm, type GamesListConfig } from "./GamesListForm";
 import {
   ArticlesListForm,
   CategoriesShowcaseForm,
   CtaBannerForm,
+  ProductGridForm,
   RichTextForm,
   type ArticlesListConfig,
   type CategoriesShowcaseConfig,
   type CtaBannerConfig,
+  type ProductGridConfig,
   type RichTextConfig,
 } from "./widgetForms";
 
@@ -16,7 +17,7 @@ export type WidgetConfig = Record<string, unknown>;
 
 // All v1 widget types (shared by the block-list builder and the inline editor).
 export const WIDGET_TYPES = [
-  "games_list",
+  "product_grid",
   "articles_list",
   "categories_showcase",
   "rich_text",
@@ -25,6 +26,16 @@ export const WIDGET_TYPES = [
 
 export type WidgetType = (typeof WIDGET_TYPES)[number];
 
+// What the region library offers. A page group's chrome and rails are not where
+// a taxonomy grid belongs, so `categories_showcase` is left out — it stays
+// insertable inside a page's own content.
+export const REGION_WIDGET_TYPES = [
+  "product_grid",
+  "articles_list",
+  "rich_text",
+  "cta_banner",
+] as const satisfies readonly WidgetType[];
+
 export function isKnownWidget(type: string): type is WidgetType {
   return (WIDGET_TYPES as readonly string[]).includes(type);
 }
@@ -32,8 +43,8 @@ export function isKnownWidget(type: string): type is WidgetType {
 // defaultConfig is the starting config when a widget is first inserted.
 export function defaultConfig(type: string): WidgetConfig {
   switch (type) {
-    case "games_list":
-      return { limit: 8, columns: 3, layout: "grid" };
+    case "product_grid":
+      return { limit: 6 };
     case "articles_list":
       return { limit: 6, columns: 3 };
     case "categories_showcase":
@@ -56,10 +67,10 @@ export function renderWidgetForm(
 ): ReactNode {
   const ch = (v: unknown) => onChange(v as WidgetConfig);
   switch (type) {
-    case "games_list":
+    case "product_grid":
       return (
-        <GamesListForm
-          value={value as GamesListConfig}
+        <ProductGridForm
+          value={value as ProductGridConfig}
           onChange={ch}
           disabled={disabled}
         />

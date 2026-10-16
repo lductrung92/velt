@@ -24,7 +24,10 @@ export const INDENT_WIDTH = 20;
 // body strips it — the backend recreates the tree.
 export interface MenuItemDraft {
   key: string;
+  /** The stored label — the only one `toItemsInput` ever sends back. */
   label: string;
+  /** What the tree row shows: the translation where there is one. */
+  labelDisplay: string;
   description: string | null;
   link_type: MenuLinkType;
   target_id: string | null;
@@ -39,6 +42,11 @@ export interface FlatMenuItem {
   key: string;
   parentKey: string | null;
   depth: number;
+  /**
+   * The label to SHOW. The stored one is deliberately not carried here: this
+   * projection feeds the tree rows and the drag geometry, never the PUT body,
+   * which is built from `MenuItemDraft` by `toItemsInput`.
+   */
   label: string;
   link_type: MenuLinkType;
   hasChildren: boolean;
@@ -55,6 +63,7 @@ export function fromNodes(nodes: MenuItemNode[]): MenuItemDraft[] {
   return nodes.map((n) => ({
     key: n.id,
     label: n.label,
+    labelDisplay: n.label_display,
     description: n.description,
     link_type: n.link_type,
     target_id: n.target_id,
@@ -66,6 +75,10 @@ export function fromNodes(nodes: MenuItemNode[]): MenuItemDraft[] {
 
 // Serialise the draft to the PUT body, dropping client keys and normalising the
 // target/url pair per link_type (internal/external → url; entity → target_id).
+//
+// Every field is named explicitly, which is what keeps `labelDisplay` out of
+// the body: spreading the draft here would send a translated label back as the
+// stored one the first time somebody saved a menu with the console in English.
 export function toItemsInput(drafts: MenuItemDraft[]): MenuItemInput[] {
   return drafts.map((d) => {
     const isEntity =
@@ -136,7 +149,7 @@ export function flattenTree(
       key: node.key,
       parentKey,
       depth,
-      label: node.label,
+      label: node.labelDisplay,
       link_type: node.link_type,
       hasChildren: node.children.length > 0,
     },

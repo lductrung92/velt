@@ -66,8 +66,63 @@ type Page struct {
 // rows. That is what keeps the dashboard's page count and the page list it
 // sits above telling the same story.
 type PageListParams struct {
+	Query       string
+	Status      string
+	LandingOnly bool
 	CreatedFrom *time.Time
 	CreatedTo   *time.Time
+	Page        int
+	PageSize    int
+	// Locale is the language the console is reading in (Accept-Language), "" for
+	// the source language. The list overlays the stored translation of the title
+	// it shows; the page's own row is untouched.
+	Locale string
+}
+
+// maxPageListSize caps the server-side page list, like every other admin list.
+const maxPageListSize = 100
+
+// PageListItem is one row of the pages list.
+//
+// Flat, and without parent_id: a page's address is a single slug segment (see
+// public_sync.go), the site routes none of them through a parent, and nothing
+// in the console could ever set one. The column stays in the table — no data is
+// thrown away — but it stopped being part of what this module answers.
+type PageListItem struct {
+	ID          uuid.UUID  `json:"id"`
+	Title       string     `json:"title"`
+	Slug        string     `json:"slug"`
+	Template    *string    `json:"template"`
+	Status      string     `json:"status"`
+	LandingID   *uuid.UUID `json:"landing_id"` // set → the page is a landing design
+	PublishedAt *time.Time `json:"published_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+// PageListResult is the paginated list envelope.
+type PageListResult struct {
+	Items    []PageListItem `json:"items"`
+	Total    int            `json:"total"`
+	Page     int            `json:"page"`
+	PageSize int            `json:"page_size"`
+}
+
+// PageOption is a page as a picker needs it: the whole set, unpaginated, with
+// nothing a selector does not read. Same shape and reason as TagOption.
+type PageOption struct {
+	ID     uuid.UUID `json:"id"`
+	Title  string    `json:"title"`
+	Slug   string    `json:"slug"`
+	Status string    `json:"status"`
+}
+
+func toPageListItem(p Page) PageListItem {
+	return PageListItem{
+		ID: p.ID, Title: p.Title, Slug: p.Slug, Template: p.Template,
+		Status: p.Status, LandingID: p.LandingID, PublishedAt: p.PublishedAt,
+		CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt,
+	}
 }
 
 // pageWrite is the full mutable working state persisted on create/update (PATCH
@@ -103,7 +158,6 @@ const PageKindLanding = "landing"
 type CreatePageRequest struct {
 	Title     string          `json:"title" validate:"required,max=200"`
 	Slug      *string         `json:"slug" validate:"omitempty,max=200"`
-	ParentID  *uuid.UUID      `json:"parent_id"`
 	SortOrder *int            `json:"sort_order" validate:"omitempty,min=0"`
 	Template  *string         `json:"template" validate:"omitempty,max=100"`
 	BodyHTML  *string         `json:"body_html"`
@@ -120,7 +174,6 @@ type CreatePageRequest struct {
 type UpdatePageRequest struct {
 	Title          *string                    `json:"title" validate:"omitempty,max=200"`
 	Slug           *string                    `json:"slug" validate:"omitempty,max=200"`
-	ParentID       shared.Optional[uuid.UUID] `json:"parent_id"`
 	SortOrder      *int                       `json:"sort_order" validate:"omitempty,min=0"`
 	Template       *string                    `json:"template" validate:"omitempty,max=100"`
 	BodyHTML       *string                    `json:"body_html"`
@@ -132,22 +185,6 @@ type UpdatePageRequest struct {
 	RegenerateSlug bool                       `json:"regenerate_slug"`
 }
 
-// PageResponse is a page node in the tree (no body — list/tree is lightweight).
-type PageResponse struct {
-	ID          uuid.UUID      `json:"id"`
-	Title       string         `json:"title"`
-	Slug        string         `json:"slug"`
-	ParentID    *uuid.UUID     `json:"parent_id"`
-	SortOrder   int            `json:"sort_order"`
-	Template    *string        `json:"template"`
-	Status      string         `json:"status"`
-	LandingID   *uuid.UUID     `json:"landing_id"` // set → the page is a landing design
-	PublishedAt *time.Time     `json:"published_at"`
-	Children    []PageResponse `json:"children"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-}
-
 // PageDetailResponse is the full page (GET /{id}, create/update return).
 type PageDetailResponse struct {
 	ID                uuid.UUID       `json:"id"`
@@ -155,7 +192,6 @@ type PageDetailResponse struct {
 	Slug              string          `json:"slug"`
 	BodyHTML          *string         `json:"body_html"`
 	BodyJSON          json.RawMessage `json:"body_json"`
-	ParentID          *uuid.UUID      `json:"parent_id"`
 	SortOrder         int             `json:"sort_order"`
 	Template          *string         `json:"template"`
 	Status            string          `json:"status"`
@@ -197,19 +233,10 @@ func pageSEO(p Page) shared.PageSEO {
 	}
 }
 
-func toPageResponse(p Page) PageResponse {
-	return PageResponse{
-		ID: p.ID, Title: p.Title, Slug: p.Slug, ParentID: p.ParentID,
-		SortOrder: p.SortOrder, Template: p.Template, Status: p.Status,
-		LandingID: p.LandingID, PublishedAt: p.PublishedAt, Children: []PageResponse{},
-		CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt,
-	}
-}
-
 func toPageDetail(p Page) PageDetailResponse {
 	return PageDetailResponse{
 		ID: p.ID, Title: p.Title, Slug: p.Slug, BodyHTML: p.BodyHTML, BodyJSON: p.BodyJSON,
-		ParentID: p.ParentID, SortOrder: p.SortOrder, Template: p.Template, Status: p.Status,
+		SortOrder: p.SortOrder, Template: p.Template, Status: p.Status,
 		OGPath: p.OGPath, LandingID: p.LandingID, SEO: pageSEO(p), PublishedAt: p.PublishedAt,
 		PublishedSnapshot: p.PublishedSnapshot, CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt,
 	}

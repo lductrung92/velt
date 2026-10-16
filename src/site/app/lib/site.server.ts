@@ -28,6 +28,8 @@ interface ApiProduct {
   name: string;
   summary: string | null;
   cover_url: string | null;
+  cover_width?: number;
+  cover_height?: number;
   lifecycle: string;
   is_featured: boolean;
   audience: string[] | null;
@@ -41,6 +43,8 @@ interface ApiMember {
   role: string | null;
   bio: string | null;
   avatar_url: string | null;
+  avatar_width?: number;
+  avatar_height?: number;
   email: string | null;
   zalo: string | null;
   links: { label: string; url: string }[] | null;
@@ -92,6 +96,8 @@ function toProduct(p: ApiProduct, t: T): Product {
     status: p.lifecycle,
     featured: p.is_featured,
     image: absolute(p.cover_url),
+    imageWidth: p.cover_width,
+    imageHeight: p.cover_height,
     skills: (p.platforms ?? []).map((c) => coded(t, "platform", c)),
   };
 }
@@ -104,6 +110,8 @@ function toMember(m: ApiMember, index: number): Member {
     bio: m.bio ?? "",
     skills: m.skills ?? [],
     image: absolute(m.avatar_url),
+    imageWidth: m.avatar_width,
+    imageHeight: m.avatar_height,
     links: m.links ?? [],
     email: m.email ?? "",
     zalo: m.zalo ?? "",

@@ -66,17 +66,19 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 		w.PublicArticles = articles.RegisterPublic(r, pool, store, docs)
 		newsletter.RegisterPublic(r, base, pool, limiter, trustProxy)
 		menus.RegisterPublic(r, pool)
-		regions.RegisterPublic(r, pool, resolver, menusPublic, log)
+		w.PublicRegions = regions.RegisterPublic(r, pool, resolver, menusPublic, log)
 	})
 
 	r.Route("/api/cms", func(r chi.Router) {
 		r.Use(authMW)
 		widgets.RegisterPreview(r, base, resolver)
 		w.Taxonomy = taxonomy.Register(r, base, pool)
-		w.Pages = pages.Register(r, base, pool, landing.NewPagesPort(landing.NewRepository(pool), store))
+		landingPort := landing.NewPagesPort(landing.NewRepository(pool), store)
+		w.LandingPagesPort = landingPort
+		w.Pages = pages.Register(r, base, pool, landingPort)
 		w.Articles = articles.Register(r, base, pool, store)
 		w.Menus = menus.Register(r, base, pool)
-		regions.Register(r, base, pool)
+		w.Regions = regions.Register(r, base, pool)
 		w.Landing = landing.Register(r, base, pool, store)
 		comments.Register(r, base, pool)
 		newsletter.Register(r, base, pool)
@@ -104,10 +106,18 @@ type Wiring struct {
 	// translation route (a menu item's label, the site chrome's copy).
 	Menus    *menus.Service
 	Settings *cmssettings.Service
+	// LandingPagesPort is handed back only so the application can wire the media
+	// forgetter into it: it is created inside this function, after Base, and a
+	// page deleting its landing must reclaim that landing's `files` rows too.
+	LandingPagesPort *landing.PagesPort
 	// Landing is handed back for the same reason: it gates the translation of a
 	// section, and the public half of it needs the translation port wired.
 	Landing       *landing.Service
 	PublicLanding *landing.PublicService
+	// Regions is handed back on the same terms: a chrome block's text is
+	// translated, gated by the write side and overlaid by the public one.
+	Regions       *regions.Service
+	PublicRegions *regions.PublicService
 }
 
 // SettingDefs returns the CMS feature-flag definitions for the settings registry

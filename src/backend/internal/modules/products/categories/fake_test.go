@@ -21,9 +21,12 @@ func newFakeRepo(now time.Time) *fakeRepo {
 	return &fakeRepo{rows: map[uuid.UUID]*Category{}, now: now}
 }
 
-func (r *fakeRepo) List(_ context.Context) ([]Category, error) {
+func (r *fakeRepo) List(_ context.Context, status string) ([]Category, error) {
 	out := make([]Category, 0, len(r.rows))
 	for _, c := range r.rows {
+		if status != "" && c.Status != status {
+			continue
+		}
 		out = append(out, *c)
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -57,6 +60,7 @@ func (r *fakeRepo) Create(_ context.Context, w write) (*Category, error) {
 	r.seq++
 	c := &Category{
 		ID: uuid.New(), Slug: w.Slug, Name: w.Name, Description: w.Description,
+		Status:   w.Status,
 		SEOTitle: w.SEOTitle, SEODescription: w.SEODescription, SEOKeywords: w.SEOKeywords,
 		SortOrder: order, CreatedAt: r.now, UpdatedAt: r.now,
 	}
@@ -76,6 +80,7 @@ func (r *fakeRepo) Update(_ context.Context, id uuid.UUID, w write) (*Category, 
 		}
 	}
 	cur.Slug, cur.Name, cur.Description = w.Slug, w.Name, w.Description
+	cur.Status = w.Status
 	cur.SEOTitle, cur.SEODescription, cur.SEOKeywords = w.SEOTitle, w.SEODescription, w.SEOKeywords
 	if w.SortOrder != nil {
 		cur.SortOrder = *w.SortOrder

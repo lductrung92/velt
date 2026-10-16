@@ -10,8 +10,6 @@
     "empty_title": "No data yet",
     "empty_description": "Recently updated items will appear here so you can pick up where you left off.",
     "create_first": "Create the first item",
-    "quick_title": "Quick create",
-    "quick_description": "Start something new with a single action.",
     "recent_products": "Recently updated products",
     "recent_articles": "Recently updated articles",
     "stats": {
@@ -19,12 +17,6 @@
       "articles": "Articles",
       "pages": "Content pages",
       "members": "Members"
-    },
-    "actions": {
-      "product": "Add product",
-      "article": "Write an article",
-      "page": "Create a page",
-      "member": "Add member"
     },
     "workspace": "ZUKATEK WORKSPACE",
     "welcome": "Hello {{name}} 👋",
@@ -34,12 +26,6 @@
     "empty_articles": "Share your first story",
     "empty_products_description": "Add a product to manage its details and introduce it to your customers.",
     "empty_articles_description": "Write an article to share insights, updates and news from Zukatek.",
-    "action_descriptions": {
-      "product": "Build your product catalog",
-      "article": "Share news and insights",
-      "page": "Design your website content",
-      "member": "Add a team profile"
-    },
     "daily": {
       "title": "Calendar & weather",
       "calendar_title": "Solar · lunar calendar",
@@ -121,9 +107,12 @@
     "close": "Close",
     "actions": "Actions",
     "pagination": {
-      "page_info": "{{from}}–{{to}} / {{total}}",
+      "page_info": "Showing {{from}}–{{to}} of {{total}}",
       "prev": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "loaded": "{{loaded}} of {{total}} loaded",
+      "load_more": "Load more",
+      "ceiling": "One view holds at most {{max}} rows — filter or search to narrow the list."
     },
     "language": "Language",
     "theme": {
@@ -148,10 +137,6 @@
       "time": "Time"
     },
     "unsaved": {
-      "title": "Leave with unsaved changes?",
-      "hint": "Unsaved changes will be lost. Cancel to keep editing.",
-      "hint_named": "Unsaved changes to the {{what}} will be lost. Cancel to keep editing.",
-      "confirm": "Leave",
       "close_title": "Close with unsaved changes?",
       "close_hint": "What you just entered will be lost.",
       "close_confirm": "Close"
@@ -163,6 +148,7 @@
       "change": "Change image",
       "remove": "Remove image",
       "modal_title": "Choose an image",
+      "modal_subject": "Upload, capture, or pick an existing image",
       "tabs": {
         "illustrative": "Illustrative",
         "upload": "Upload",
@@ -378,30 +364,33 @@
       "never_logged_in": "Never signed in",
       "roles_more": "+{{n}}",
       "create_title": "Create user",
-      "create_desc": "A set-password email will be sent to the new user.",
       "edit_title": "Edit user",
-      "edit_desc": "Update the full name and account status.",
       "email_label": "Email",
       "full_name_label": "Full name",
       "full_name_ph": "Enter full name",
       "status_label": "Status",
       "role_label": "Role",
       "action_edit": "Edit",
-      "action_reset": "Send reset-password email",
       "action_delete": "Delete",
       "delete_title": "Delete user",
       "delete_desc": "Disable the account \"{{name}}\"? Their sessions will be revoked.",
-      "reset_title": "Reset password",
-      "reset_desc": "Send a reset-password email to \"{{name}}\"?",
-      "created": "User created — a set-password email was sent",
+      "created": "User created — hand them the temporary password",
       "updated": "User updated",
       "deleted": "User deleted",
-      "reset_sent": "Reset-password email sent",
       "list_title": "Users",
       "empty_title": "No users yet",
       "empty_hint": "Create the first account to start assigning roles.",
       "no_results": "No users found",
-      "no_results_hint": "Try a different term or clear a filter."
+      "no_results_hint": "Try a different term or clear a filter.",
+      "role_filter_label": "Filter by role",
+      "role_all": "All roles",
+      "action_credentials": "Login details",
+      "credentials_title": "Login details",
+      "login_label": "Username",
+      "temp_password_label": "Temporary password",
+      "temp_password_once": "This password is shown once. Copy it and pass it on now — closing this dialog puts it out of reach.",
+      "temp_password_hidden": "The current password is hashed and cannot be read back. Regenerate it to get a new temporary password.",
+      "regenerate": "Regenerate password"
     },
     "rbac": {
       "title": "Roles & Permissions",
@@ -465,7 +454,11 @@
       "empty_title": "No sessions",
       "empty_hint": "Sessions appear here once someone signs in.",
       "no_results": "No sessions found",
-      "no_results_hint": "Try clearing the active-only filter."
+      "no_results_hint": "Try clearing the active-only filter.",
+      "cleanup": "Clean up",
+      "cleanup_warning": "Sessions older than the cut-off you pick are permanently deleted, and anyone signed in on them is signed out. Your own sessions are always kept.",
+      "cleanup_done_one": "Deleted {{count}} session",
+      "cleanup_done_other": "Deleted {{count}} sessions"
     },
     "home": {
       "title": "Administration",
@@ -473,6 +466,22 @@
       "users": "Users",
       "active_sessions": "Active sessions",
       "roles": "Roles"
+    },
+    "cleanup": {
+      "title": "Clean up",
+      "window_label": "Delete data older than",
+      "window_ph": "Pick a cut-off",
+      "window_hint": "Every cut-off keeps everything from now back to that point and deletes what is older.",
+      "confirm": "Delete permanently",
+      "window": {
+        "all": "Everything",
+        "3d": "3 days ago",
+        "7d": "7 days ago",
+        "1m": "1 month ago",
+        "3m": "3 months ago",
+        "6m": "6 months ago",
+        "1y": "1 year ago"
+      }
     }
   },
   "cms": {
@@ -481,8 +490,6 @@
       "subtitle": "Static pages with embeddable widgets.",
       "delete_confirm_title": "Delete page?",
       "delete_confirm_body": "Delete \"{{title}}\"? This can't be undone.",
-      "publish": "Publish",
-      "unpublish": "Unpublish",
       "kind": {
         "label": "Page type",
         "content": "Content page",
@@ -522,7 +529,7 @@
         "settings": "Page settings",
         "permalink": "Permalink",
         "kind_hint": "A landing page is built with the drag-and-drop designer as soon as it exists.",
-        "publish_hint": "Use the Publish button above to put the page on the site.",
+        "publish_hint": "The selected status takes effect when you click Save. Taking a page off the site archives it.",
         "search_preview": "Search appearance preview",
         "preview_title": "Your page title",
         "preview_description": "The SEO description will appear here.",
@@ -542,23 +549,28 @@
         "preview_empty": "No content yet."
       },
       "widget": {
-        "games_list": {
-          "name": "Games list",
+        "all_categories": "All categories",
+        "product_grid": {
+          "name": "Products list",
           "heading": "Heading",
-          "age_group": "Age group",
-          "subject": "Subject",
-          "skill": "Skill",
+          "category": "Category",
+          "sort": "Showing",
+          "sort_featured": "Featured",
+          "sort_newest": "Newest",
+          "sort_name": "Name A-Z",
+          "sort_random": "Random",
           "limit": "Limit",
-          "columns": "Columns",
-          "layout": "Layout",
-          "layout_grid": "Grid",
-          "layout_carousel": "Carousel"
+          "columns": "Columns"
         },
         "articles_list": {
           "name": "Articles list",
           "heading": "Heading",
-          "category_id": "Category ID",
-          "tag": "Tag (slug)",
+          "category_id": "Category",
+          "sort": "Showing",
+          "sort_newest": "Newest",
+          "sort_oldest": "Oldest",
+          "sort_title": "Title A-Z",
+          "sort_random": "Random",
           "limit": "Limit",
           "columns": "Columns"
         },
@@ -582,7 +594,6 @@
           "sub": "Subtext",
           "button_label": "Button label",
           "button_href": "Button link",
-          "button_hint": "The button only shows when both label and link are set.",
           "align": "Align",
           "align_left": "Left",
           "align_center": "Center"
@@ -607,7 +618,6 @@
       "empty_hint": "Static pages such as About or Contact live here, with their hierarchy.",
       "no_results": "No pages found",
       "no_results_hint": "Try removing a filter or changing the search term.",
-      "flat_notice": "Filtered, so the list is flat rather than nested.",
       "child_count_one": "{{count}} child page",
       "child_count_other": "{{count}} child pages",
       "col": {
@@ -619,7 +629,7 @@
       "overview": {
         "label": "Page overview",
         "total": "Total pages",
-        "total_hint": "The whole page tree",
+        "total_hint": "Every page",
         "draft": "Drafts",
         "draft_hint": "Not public yet",
         "published": "Published",
@@ -686,10 +696,11 @@
     "landings": {
       "translate": {
         "title": "Translate block: {{section}}",
-        "open": "Translate this block",
         "hint": "One box per piece of text in the block. Leave a box empty and the site keeps the Vietnamese.",
         "empty": "This block has no text to translate.",
-        "saved": "Block translation saved"
+        "saved": "Block translation saved",
+        "title_short": "Translation",
+        "hint_new": "Save the page and the translation is stored with it."
       },
       "field": {
         "name": "Name",
@@ -711,7 +722,11 @@
         "reorder": "Drag to reorder",
         "move_down": "Move down",
         "config_invalid": "Invalid JSON config",
-        "delete_section_title": "Delete section?"
+        "delete_section_title": "Delete section?",
+        "edit": "Edit",
+        "edit_title": "Settings",
+        "toggle_library": "Toggle the block library",
+        "canvas": "Page layout"
       },
       "preview": {
         "dynamic_hint": "Content loads when published",
@@ -807,7 +822,13 @@
         "show_all_href": "Show-all link",
         "email": "Email",
         "zalo": "Zalo",
-        "note": "Note"
+        "note": "Note",
+        "answer_html": "Answer",
+        "body_html": "Body",
+        "cta_label": "Call-to-action label",
+        "cta_href": "Call-to-action link",
+        "headline": "Headline",
+        "subtitle": "Subtitle"
       }
     },
     "menus": {
@@ -904,7 +925,8 @@
         "sort_order": "Order",
         "article_count": "Articles",
         "description": "Description",
-        "actions": "Actions"
+        "actions": "Actions",
+        "status": "Status"
       },
       "seo": {
         "heading": "SEO",
@@ -957,7 +979,9 @@
         "used_hint": "Has articles",
         "unused": "Empty",
         "unused_hint": "Could be merged or removed"
-      }
+      },
+      "filter_status": "Filter by status",
+      "all_statuses": "All"
     },
     "articles": {
       "title": "Articles",
@@ -983,12 +1007,17 @@
       "toast": {
         "delete_success": "Article deleted",
         "create_success": "Article created",
-        "update_success": "Article saved"
+        "update_success": "Article saved",
+        "archived": "The article was archived."
       },
       "dialog": {
         "delete": {
           "title": "Delete article",
           "description": "Delete “{{title}}”? This cannot be undone."
+        },
+        "archive": {
+          "title": "Archive this article?",
+          "description": "\"{{title}}\" comes off the site and moves to the archive. Change its status in the editor to bring it back."
         }
       },
       "editor": {
@@ -1063,20 +1092,44 @@
         "total_hint": "Every article",
         "draft": "Drafts",
         "draft_hint": "Still being written",
-        "pending_review": "Awaiting review",
-        "pending_review_hint": "Needs a reviewer",
         "published": "Published",
-        "published_hint": "Live on the site"
+        "published_hint": "Live on the site",
+        "archived": "Archived",
+        "archived_hint": "Put away"
       },
-      "one": "article"
+      "one": "article",
+      "archive": "Archive"
     },
     "appearance": {
       "title": "Appearance",
-      "subtitle": "Drag widgets and menus into the regions of the public site.",
+      "subtitle": "Manage content blocks and menus for each page group.",
       "one": "appearance",
+      "ui": {
+        "library": "Block library",
+        "groups_hint": "Choose where the layout applies.",
+        "palette_hint": "Drag a block or press + to add it.",
+        "add_to": "Add to region",
+        "no_target": "no region selected",
+        "add": "Add {{label}}",
+        "layout": "PAGE LAYOUT",
+        "regions": "{{n}} regions",
+        "common_hint": "Child page groups inherit this common layout.",
+        "group_hint": "Set up this group or inherit its parent's layout.",
+        "board_hint": "Select a block to configure it. Drag its handle to reorder.",
+        "select_region": "Select {{slot}} region",
+        "targeted": "Selected",
+        "drop_hint": "Or select this region and press + in the library.",
+        "select_block": "Configure each block",
+        "unchanged": "No changes",
+        "unsaved": "{{n}} regions not saved",
+        "menus_only": "The header and footer take menus only.",
+        "chrome_inherited": "Common's",
+        "chrome_toggle": "Give this group its own {{slot}}"
+      },
       "settings": "Settings",
-      "settings_hint": "Pick a block in the middle to edit its settings.",
-      "which_menu": "Menu shown",
+      "settings_hint": "Select a block in the layout to edit its content and display settings.",
+      "translate_heading": "Translation of this block",
+      "translate_hint": "Leave a box empty and the site keeps the Vietnamese. Saved with the page.",
       "menu_block": "Menu: {{name}}",
       "menu_missing": "Menu deleted",
       "drop_here": "Drag a block here",
@@ -1086,6 +1139,9 @@
       "hide": "Hide {{label}}",
       "show": "Show {{label}}",
       "remove": "Remove {{label}}",
+      "edit": "Edit {{label}}",
+      "blank_widget": "Nothing filled in yet, so the site will skip this block.",
+      "blank_menu": "No menu chosen yet, so the site will skip this block.",
       "palette": {
         "widgets": "Blocks",
         "menus": "Menus",
@@ -1187,7 +1243,16 @@
     "bullet_list": "Bullet list",
     "ordered_list": "Numbered list",
     "blockquote": "Quote",
-    "image": "Insert image"
+    "align_left": "Align left",
+    "align_center": "Align centre",
+    "align_right": "Align right",
+    "image": "Insert image",
+    "image_resize": "Drag to resize the image",
+    "image_align_left": "Align left, text wraps right",
+    "image_align_center": "Align centre",
+    "image_align_right": "Align right, text wraps left",
+    "image_replace": "Replace the image",
+    "image_remove": "Remove the image"
   },
   "members": {
     "title": "Members",
@@ -1222,10 +1287,12 @@
       "bio": "Bio",
       "skills": "Skills",
       "skills_ph": "Type and press Enter",
+      "avatar": "Avatar",
       "email": "Email",
       "email_help": "Public contact address, separate from the login email.",
       "zalo": "Zalo",
       "links": "Links",
+      "links_empty": "No links yet",
       "link_label": "Label",
       "permalink": "Permalink"
     },
@@ -1299,7 +1366,9 @@
       "search_preview": "Search appearance preview",
       "preview_title": "Product name",
       "preview_description": "The summary shown in search results.",
-      "social": "Social sharing"
+      "social": "Social sharing",
+      "publish": "Publish",
+      "publish_hint": "The selected status takes effect when you click Save."
     },
     "field": {
       "slug_ph": "auto-generated-from-name",
@@ -1320,18 +1389,10 @@
       "categories": "Categories",
       "members": "Built by"
     },
-    "transition": {
-      "menu": "Publishing",
-      "publish": "Publish",
-      "unpublish": "Unpublish",
-      "archive": "Archive",
-      "publish_done": "Product published",
-      "unpublish_done": "Product unpublished",
-      "archive_done": "Product archived"
-    },
     "delete": {
       "title": "Delete product?",
-      "description": "Delete {{name}} and all its images. To take it off the site instead, use Archive."
+      "description": "Delete {{name}} and all its images. To take it off the site instead, use Archive.",
+      "success": "Product deleted"
     },
     "categories": {
       "title": "Categories",
@@ -1349,7 +1410,8 @@
         "description": "Description",
         "sort_order": "Order",
         "actions": "Actions",
-        "product_count": "PRODUCTS"
+        "product_count": "PRODUCTS",
+        "status": "Status"
       },
       "editor": {
         "basic": "Basics",
@@ -1392,7 +1454,9 @@
         "used_hint": "Has products",
         "unused": "Empty",
         "unused_hint": "Could be merged or removed"
-      }
+      },
+      "filter_status": "Filter by status",
+      "all_statuses": "All"
     },
     "gallery": {
       "add_image": "Upload image",
@@ -1401,7 +1465,10 @@
       "caption_ph": "Short description",
       "reorder": "Drag to reorder",
       "video_url": "Video link",
-      "video_hosts": "YouTube and Vimeo only (https)."
+      "video_hosts": "YouTube and Vimeo only (https).",
+      "replace": "Change image",
+      "replace_video": "Change video",
+      "preview": "Preview"
     },
     "members": {
       "add": "Add member",
@@ -1555,7 +1622,6 @@
     "reply_ph": "Reply to the visitor…",
     "bot_still_answering": "AI is assisting this customer. Take over to reply directly.",
     "empty_hint": "New conversations from your website will appear here.",
-    "support_workspace": "Customer support workspace",
     "conversations": "Conversations",
     "refresh": "Refresh conversations",
     "search_ph": "Search messages or conversation ID...",
@@ -1804,13 +1870,18 @@
         "created": "Created user",
         "deleted": "Deleted user",
         "disabled": "Disabled user",
+        "password_reset": "Reset the password",
         "password_reset_sent": "Sent a password-reset link",
         "role_assigned": "Assigned a role",
         "role_removed": "Removed a role",
         "updated": "Updated user"
       }
     },
-    "range": "Date range"
+    "range": "Date range",
+    "cleanup": "Clean up",
+    "cleanup_warning": "Activity older than the cut-off you pick is permanently deleted from the log and cannot be recovered.",
+    "cleanup_done_one": "Deleted {{count}} recorded action",
+    "cleanup_done_other": "Deleted {{count}} recorded actions"
   },
   "tr": {
     "tabs": "Content language",
@@ -1832,7 +1903,8 @@
       "translation": "Languages",
       "email": "Email",
       "storage": "Storage",
-      "ai": "AI"
+      "ai": "AI",
+      "cache": "Cache"
     },
     "secret": {
       "set": "Set",
@@ -1881,7 +1953,7 @@
       "cms_publish_allow_now": "Immediate publishing only",
       "cms_newsletter_notify_on_publish": "Notify subscribers",
       "cms_home_page_slug": "Home page",
-      "site_cache_ttl_seconds": "Page cache (seconds)",
+      "site_cache_ttl_seconds": "Website page cache",
       "site_og_image_url": "Sharing image",
       "site_brand_tagline": "Footer line under the logo",
       "site_footer_note_title": "Last footer column — heading",
@@ -1912,7 +1984,11 @@
       "ai_max_turns": "Max turns per conversation",
       "ai_daily_token_cap": "Daily token cap",
       "ai_max_message_len": "Max message length",
-      "ai_system_persona": "Assistant persona"
+      "ai_system_persona": "Assistant persona",
+      "app_page_size": "Rows per page",
+      "app_pagination_template": "Pagination style",
+      "cache_public_max_age_seconds": "Public response cache",
+      "cache_console_refresh_seconds": "Console config refresh"
     },
     "help": {
       "app_name": "Shown in the console and used as the site's brand name.",
@@ -1933,7 +2009,7 @@
       "cms_publish_allow_now": "Off, scheduling is offered as well.",
       "cms_newsletter_notify_on_publish": "Email subscribers when an article is published.",
       "cms_home_page_slug": "Pick a published page to serve at /. Empty = the site's built-in home.",
-      "site_cache_ttl_seconds": "How long a rendered page may be reused. 0 disables caching.",
+      "site_cache_ttl_seconds": "Seconds the website may serve a page it has already rendered. Set 0 while editing to see changes at once.",
       "site_og_image_url": "Used when a link is shared. An article with its own cover wins.",
       "site_brand_tagline": "Line breaks are kept. Empty = the built-in copy.",
       "site_footer_note_text": "Line breaks are kept.",
@@ -1952,7 +2028,11 @@
       "translation_enabled": "On, the site gains a /<code> address per language and a switcher. Off, Vietnamese only; translations are kept.",
       "translation_locales": "Comma-separated codes, e.g. en or en,ja.",
       "ai_base_url": "Empty = the provider's default endpoint.",
-      "ai_system_persona": "Added to the built-in brief; it does not override the safety rules."
+      "ai_system_persona": "Added to the built-in brief; it does not override the safety rules.",
+      "app_page_size": "Applies to every list table in the console. Between 2 and 100 rows.",
+      "app_pagination_template": "How a table offers the rows it is not showing yet.",
+      "cache_public_max_age_seconds": "Seconds a browser or CDN may hold the public configuration. Keep it at or below the refresh below, or an open console tab will re-read and still be handed its cached copy.",
+      "cache_console_refresh_seconds": "Seconds between an open console tab re-reading the configuration. 0 means only on reload."
     },
     "value": {
       "local": "Server disk",
@@ -1960,7 +2040,11 @@
       "vi": "Tiếng Việt",
       "en": "English",
       "anthropic": "Anthropic (Claude)",
-      "openai": "OpenAI / OpenAI-compatible"
+      "openai": "OpenAI / OpenAI-compatible",
+      "numbered": "Numbered pages",
+      "prev_next": "Previous / Next only",
+      "load_more": "Load more button",
+      "infinite": "Infinite scroll"
     },
     "section": {
       "general_brand": {
@@ -2049,7 +2133,21 @@
       "other": {
         "title": "Other",
         "help": "Keys with no section yet — usually ones just added to the backend."
+      },
+      "general_pagination": {
+        "title": "Pagination",
+        "help": "Rows per page and how the list tables page."
+      },
+      "cache_ttl": {
+        "title": "How long things may be stale",
+        "help": "Each one is the delay between saving a change and that place noticing it. 0 means no caching."
       }
+    },
+    "cache_purge": {
+      "label": "Clear the cache now",
+      "help": "Ends every wait above without changing any value: drops the API's copy and tells the website to throw away the pages it has rendered.",
+      "run": "Clear cache",
+      "ok": "Cache cleared. The website re-renders within about 10 seconds."
     }
   }
 }

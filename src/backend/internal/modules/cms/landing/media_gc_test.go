@@ -48,7 +48,7 @@ func TestGcDroppedMedia_DeletesOnlyDropped(t *testing.T) {
 	oldSnap := json.RawMessage(`{"sections":[{"config":{"image_path":"cms/landing/l1/hero-old.jpg"}},{"config":{"image_path":"cms/landing/l1/kept.jpg"}}]}`)
 	newSnap := json.RawMessage(`{"sections":[{"config":{"image_path":"cms/landing/l1/hero-new.jpg"}},{"config":{"image_path":"cms/landing/l1/kept.jpg"}}]}`)
 
-	gcDroppedMedia(context.Background(), st, "cms/landing/l1/", oldSnap, snapshotMediaPaths(newSnap))
+	gcDroppedMedia(context.Background(), st, nil, "cms/landing/l1/", oldSnap, snapshotMediaPaths(newSnap))
 
 	require.NotContains(t, st.Saved, "cms/landing/l1/hero-old.jpg") // dropped → deleted
 	require.Contains(t, st.Saved, "cms/landing/l1/hero-new.jpg")    // newly added → kept
@@ -59,7 +59,7 @@ func TestGcDroppedMedia_FirstPublishKeepsEverything(t *testing.T) {
 	st := newFakeStoreWith("cms/landing/l1/hero.jpg")
 	newSnap := json.RawMessage(`{"sections":[{"config":{"image_path":"cms/landing/l1/hero.jpg"}}]}`)
 	// no previous snapshot
-	gcDroppedMedia(context.Background(), st, "cms/landing/l1/", nil, snapshotMediaPaths(newSnap))
+	gcDroppedMedia(context.Background(), st, nil, "cms/landing/l1/", nil, snapshotMediaPaths(newSnap))
 	require.Contains(t, st.Saved, "cms/landing/l1/hero.jpg")
 }
 
@@ -74,7 +74,7 @@ func TestGcDroppedMedia_KeepsHiddenSectionMedia(t *testing.T) {
 	// The current sections list still carries the (hidden) section referencing it.
 	sections := []Section{{Config: json.RawMessage(`{"image_path":"cms/landing/l1/hidden.jpg"}`), IsVisible: false}}
 
-	gcDroppedMedia(context.Background(), st, "cms/landing/l1/", oldSnap,
+	gcDroppedMedia(context.Background(), st, nil, "cms/landing/l1/", oldSnap,
 		liveMediaPaths(newSnap, sections, nil))
 
 	require.Contains(t, st.Saved, "cms/landing/l1/hidden.jpg") // still referenced → kept
@@ -86,7 +86,7 @@ func TestGcDroppedMedia_SkipsOutsidePrefix(t *testing.T) {
 	st := newFakeStoreWith("customers/x/passport.pdf")
 	oldSnap := json.RawMessage(`{"sections":[{"config":{"image_path":"customers/x/passport.pdf"}}]}`)
 	newSnap := json.RawMessage(`{"sections":[]}`)
-	gcDroppedMedia(context.Background(), st, "cms/landing/l1/", oldSnap, snapshotMediaPaths(newSnap))
+	gcDroppedMedia(context.Background(), st, nil, "cms/landing/l1/", oldSnap, snapshotMediaPaths(newSnap))
 	require.Contains(t, st.Saved, "customers/x/passport.pdf") // outside prefix → untouched
 }
 

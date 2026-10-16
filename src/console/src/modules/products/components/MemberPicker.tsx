@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/popover";
 import { useMembers } from "@/modules/members/hooks/useMembers";
 import { cn } from "@/lib/utils";
+import { fileUrl } from "@/utils/fileUrl";
 
 /** One row of the picker: a member plus the role they played on THIS product. */
 export interface ProductMemberDraft {
@@ -99,7 +100,7 @@ function Row({
       <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-medium text-muted-foreground">
         {entry.avatar_url ? (
           <img
-            src={entry.avatar_url}
+            src={fileUrl(entry.avatar_url)}
             alt=""
             className="size-full object-cover"
           />

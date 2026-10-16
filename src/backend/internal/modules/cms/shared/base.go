@@ -7,6 +7,7 @@ import (
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/platform/activity"
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/revalidate"
 )
 
@@ -21,6 +22,9 @@ type Base struct {
 	// acts is wired after construction and may stay nil, which is what this
 	// context looked like before the activity log existed.
 	acts activity.Recorder
+	// media mints the public slug for an upload and forgets it again when the
+	// bytes are deleted; nil before it is wired.
+	media media.Keeper
 }
 
 // SetActivity wires the activity recorder (called once at startup).
@@ -121,4 +125,26 @@ func (b *Base) SchedulingEnabled(ctx context.Context) bool {
 // settings port; 0 when absent.
 func (b *Base) GetInt(ctx context.Context, key string) int {
 	return b.settings.GetInt(ctx, key)
+}
+
+// SetMedia wires the files-table keeper (called once at startup). Like the
+// activity recorder it may stay nil, and nil means uploads keep returning the
+// legacy /api/files URL — which still serves — and deletes reclaim the bytes
+// only, exactly as they did before the table existed.
+func (b *Base) SetMedia(m media.Keeper) { b.media = m }
+
+// Media returns the minter, or nil when none is wired.
+func (b *Base) Media() media.Minter { return b.media }
+
+// MediaForget returns the forgetter the delete paths call, or nil when none is
+// wired.
+func (b *Base) MediaForget() media.Forgetter { return b.media }
+
+// MediaLookup returns the bulk `files` reader, or nil when none is wired. It is
+// what lets a cleanup path ask what a stored key is called in public.
+func (b *Base) MediaLookup() media.BulkRepository {
+	if b.media == nil {
+		return nil
+	}
+	return b.media
 }

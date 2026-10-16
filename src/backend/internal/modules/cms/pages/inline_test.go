@@ -12,7 +12,7 @@ func TestExtractInlineWidgets(t *testing.T) {
 		"type":"doc",
 		"content":[
 			{"type":"paragraph","content":[{"type":"text","text":"hi"}]},
-			{"type":"widget","attrs":{"wid":"w1","wtype":"games_list","config":{"limit":6}}},
+			{"type":"widget","attrs":{"wid":"w1","wtype":"articles_list","config":{"limit":6}}},
 			{"type":"blockquote","content":[
 				{"type":"widget","attrs":{"wid":"w2","wtype":"cta_banner","config":{"label":"Go","href":"https://x.test"}}}
 			]}
@@ -21,7 +21,7 @@ func TestExtractInlineWidgets(t *testing.T) {
 	got := extractInlineWidgets(body)
 	require.Len(t, got, 2)
 	require.Equal(t, "w1", got[0].Wid)
-	require.Equal(t, "games_list", got[0].Type)
+	require.Equal(t, "articles_list", got[0].Type)
 	require.Equal(t, "w2", got[1].Wid)
 	require.Equal(t, "cta_banner", got[1].Type)
 }
@@ -30,10 +30,10 @@ func TestExtractInlineWidgets_DropsInvalid(t *testing.T) {
 	body := json.RawMessage(`{
 		"type":"doc",
 		"content":[
-			{"type":"widget","attrs":{"wid":"","wtype":"games_list","config":{}}},
+			{"type":"widget","attrs":{"wid":"","wtype":"articles_list","config":{}}},
 			{"type":"widget","attrs":{"wid":"w2","wtype":"unknown_type","config":{}}},
-			{"type":"widget","attrs":{"wid":"w3","wtype":"games_list","config":{"limit":6}}},
-			{"type":"widget","attrs":{"wid":"w3","wtype":"games_list","config":{"limit":12}}}
+			{"type":"widget","attrs":{"wid":"w3","wtype":"articles_list","config":{"limit":6}}},
+			{"type":"widget","attrs":{"wid":"w3","wtype":"articles_list","config":{"limit":12}}}
 		]
 	}`)
 	got := extractInlineWidgets(body)

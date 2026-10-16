@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
 import i18n from "@/app/i18n";
@@ -43,6 +43,12 @@ const lead: Lead = {
   updated_at: "2026-10-12T02:00:00Z",
 };
 
+// Where a row would send the operator: the screen navigates, it does not link.
+function Probe() {
+  const { pathname, search } = useLocation();
+  return <output data-testid="where">{`${pathname}${search}`}</output>;
+}
+
 function mount(permissions = ["*"]) {
   useAuthStore.getState().setAuthz([], permissions);
   const client = new QueryClient({
@@ -52,6 +58,7 @@ function mount(permissions = ["*"]) {
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <LeadList />
+        <Probe />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -208,6 +215,29 @@ describe("CRM lead workspace", () => {
     expect(within(table).queryByRole("combobox")).not.toBeInTheDocument();
     expect(within(table).queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByText(t("leads.open_chat"))).not.toBeInTheDocument();
+  });
+
+  it("opens the inbox on the lead's own conversation", async () => {
+    server.use(
+      http.get("*/crm/leads", ({ request }) =>
+        HttpResponse.json(response(new URL(request.url))),
+      ),
+    );
+    mount();
+    const table = await screen.findByTestId("leads-table");
+    const user = userEvent.setup();
+    // The source badge and the row action are the same promise, so both carry
+    // the conversation rather than dumping the operator on the whole queue.
+    const links = within(table).getAllByRole("button", {
+      name: t("leads.open_chat"),
+    });
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      await user.click(link);
+      expect(screen.getByTestId("where")).toHaveTextContent(
+        "/chat?conversation=conv-1",
+      );
+    }
   });
 
   it("updates status through the existing endpoint and refreshes the list", async () => {

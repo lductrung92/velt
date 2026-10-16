@@ -40,6 +40,17 @@ export const splitSlotKey = (key: SlotKey): { group: Group; slot: Slot } => {
 
 export type RegionsDraft = Record<SlotKey, BlockDraft[]>;
 
+/**
+ * The two slots every group has, and the only ones that take menus alone.
+ *
+ * A header and a footer are navigation; a product grid in them is a content
+ * block that happens to sit above the page. The rails (sidebar, after_article,
+ * aside) take either. Enforced in `applyDrop` rather than in the palette, so a
+ * drag cannot route around the rule the + button obeys.
+ */
+export const CHROME_SLOTS: Slot[] = ["header", "footer"];
+export const acceptsWidgets = (slot: Slot) => !CHROME_SLOTS.includes(slot);
+
 /** Where a drag ended: a slot plus the index to insert at. */
 export interface DropTarget {
   at: SlotKey;
@@ -67,6 +78,50 @@ export function blockLabel(
       : t("cms.appearance.menu_missing");
   }
   return t(`cms.pages.widget.${block.widget_type}.name`);
+}
+
+/**
+ * What is wrong with a block, judged from its config alone — or null.
+ *
+ * One outcome, and only where it is certainly true: a menu with no menu, empty
+ * rich text and an empty CTA are DROPPED by the site. These mirror the null
+ * branches in src/site/app/components/RegionSlot.tsx, so the warning states
+ * what will happen rather than what might.
+ *
+ * A list with no category is NOT one of them. Every category is a real choice
+ * — it is the first option in the picker and what the block does without one —
+ * so flagging it was nagging about a setting that works. And what any list
+ * does when the server finds no records is beyond this side's knowledge.
+ */
+export type BlockWarning = "skipped";
+
+const trimmed = (value: unknown) =>
+  typeof value === "string" ? value.trim() : "";
+
+export function blockWarning(block: BlockDraft): BlockWarning | null {
+  if (block.kind === "menu") return block.menu_id ? null : "skipped";
+  const config = block.config;
+
+  if (block.widget_type === "rich_text") {
+    // An editor that has only been focused still reports "<p></p>".
+    const text = trimmed(config.html)
+      .replace(/<[^>]*>/g, "")
+      .trim();
+    return text === "" ? "skipped" : null;
+  }
+
+  if (block.widget_type === "cta_banner") {
+    const buttons = Array.isArray(config.buttons) ? config.buttons : [];
+    const usable = buttons.filter((b) => {
+      const button = (b ?? {}) as Record<string, unknown>;
+      return trimmed(button.label) && trimmed(button.href);
+    });
+    const bare =
+      !trimmed(config.heading) && !trimmed(config.sub) && usable.length === 0;
+    return bare ? "skipped" : null;
+  }
+
+  return null;
 }
 
 export function emptyDraft(): RegionsDraft {
@@ -113,6 +168,23 @@ export function resolveSlot(
     }
   }
   return { blocks: [], from: null };
+}
+
+/**
+ * The draft key each saved row belongs to.
+ *
+ * A slot is replaced as one ordered list, so the server answers in the order it
+ * was sent — position is the only link between a block that had no id and the
+ * row it has just become. It is what lets a translation typed before the save
+ * find its block afterwards.
+ */
+export function pairSavedIDs(
+  drafts: BlockDraft[],
+  saved: { id: string }[],
+): Array<[key: string, id: string]> {
+  return drafts.flatMap((block, index) =>
+    saved[index] ? [[block.key, saved[index].id] as [string, string]] : [],
+  );
 }
 
 /** Strips the local key and keeps the id, which the PUT needs to reuse the row. */
@@ -218,7 +290,21 @@ export function applyDrop(
   const target = dropTarget(draft, overId);
   if (!target) return null;
 
+  // What is moving: a new block from the palette, or one already on the board.
   const palette = parsePalette(activeId);
+  const from = palette ? null : findBlock(draft, activeId);
+  const moving = palette ?? (from ? draft[from.at][from.index] : null);
+  if (!moving) return null;
+  // Only entering a slot is judged: a widget an older build left in the header
+  // can still be reordered and removed, it just cannot be joined by another.
+  const entering = !from || from.at !== target.at;
+  if (
+    entering &&
+    moving.kind === "widget" &&
+    !acceptsWidgets(splitSlotKey(target.at).slot)
+  )
+    return null;
+
   if (palette) {
     const block: BlockDraft = {
       ...palette,
@@ -232,7 +318,6 @@ export function applyDrop(
     return { next, key: block.key };
   }
 
-  const from = findBlock(draft, activeId);
   if (!from) return null;
   if (from.at === target.at && from.index === target.index) return null;
 

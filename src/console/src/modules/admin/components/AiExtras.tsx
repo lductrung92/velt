@@ -120,7 +120,7 @@ function TestOutcome({ result }: { result: TestResult }) {
   }
   return (
     <Alert variant="success">
-      <p>{t("ai.test.ok")}</p>
+      <p>{t("ai.test.passed")}</p>
       <p className="mt-1 text-xs">
         {t("ai.test.latency", { ms: result.latency_ms })}
       </p>

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
@@ -91,6 +92,7 @@ export default function ChatInbox() {
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [params, setParams] = useSearchParams();
   const [newMessages, setNewMessages] = useState(false);
   const selected = selection?.id ?? null;
   const inbox = useInbox(filter === "all" ? undefined : filter);
@@ -145,6 +147,36 @@ export default function ChatInbox() {
     return () => observer.disconnect();
   }, [selected]);
 
+  // A lead row links here with ?conversation=<id>: open that thread as soon as
+  // the queue arrives. The parameter is spent either way — a conversation that
+  // is no longer in the queue leaves the operator on the welcome panel rather
+  // than on an error, and a later "back to inbox" is not undone by the URL.
+  //
+  // A miss is retried once against "closed". A lead's conversation has usually
+  // been ended by the time somebody follows up on the lead, and the default
+  // queue hides closed threads, so without the retry the common case is a
+  // click that silently does nothing. Landing on the closed filter also leaves
+  // the thread visible in the queue beside its transcript.
+  const retriedClosed = useRef(false);
+  useEffect(() => {
+    const wanted = params.get("conversation");
+    if (!wanted || !inbox.data) return;
+    const match = inbox.data.find((c) => c.id === wanted);
+    if (!match && filter !== "closed" && !retriedClosed.current) {
+      retriedClosed.current = true;
+      setFilter("closed");
+      return; // keep the parameter: the closed queue has not arrived yet
+    }
+    if (match) setSelection(match);
+    setParams(
+      (previous) => {
+        previous.delete("conversation");
+        return previous;
+      },
+      { replace: true },
+    );
+  }, [params, inbox.data, filter, setParams]);
+
   const open = (item: InboxItem) => {
     atBottom.current = true;
     setNewMessages(false);
@@ -174,12 +206,7 @@ export default function ChatInbox() {
       <PageHeader
         title={t("chat.title")}
         subtitle={t("chat.subtitle")}
-        actions={
-          <span className="chat-support-label">
-            <Headphones className="size-3.5" aria-hidden />
-            {t("chat.support_workspace")}
-          </span>
-        }
+        breadcrumbs={[{ labelKey: "nav.chat" }]}
       />
       <div className="console-chat-workspace" data-thread-open={!!selected}>
         <aside
@@ -458,7 +485,7 @@ export default function ChatInbox() {
                   {current.state !== "closed" && (
                     <Button
                       size="sm"
-                      variant="ghost"
+                      variant="destructive"
                       disabled={closeOne.isPending}
                       onClick={() =>
                         closeOne.mutate(current.id, {

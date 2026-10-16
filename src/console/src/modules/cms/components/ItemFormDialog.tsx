@@ -1,22 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save, X } from "lucide-react";
+import { Pencil, Plus, Save, X } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { ModalHeader } from "@/components/common/ModalHeader";
 import { Select } from "@/components/common/Select/Select";
 import { Button } from "@/components/ui/button";
 import { useDialogDismissGuard } from "@/hooks/useDialogDismissGuard";
 import { useEntityTranslation } from "@/modules/translation/hooks/useEntityTranslation";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -143,13 +138,15 @@ export function ItemFormDialog({
   return (
     <Dialog open={open} {...dialogProps}>
       <DialogContent closeLabel={t("common.close")}>
-        <DialogHeader>
-          <DialogTitle>
-            {node
+        <ModalHeader
+          icon={node ? Pencil : Plus}
+          title={
+            node
               ? t("cms.menus.item.edit_title")
-              : t("cms.menus.item.new_title")}
-          </DialogTitle>
-        </DialogHeader>
+              : t("cms.menus.item.new_title")
+          }
+          subject={node ? node.label : t("cms.menus.structure")}
+        />
         <Form {...form}>
           <form onSubmit={onSubmit} noValidate className="space-y-4">
             <FormField
@@ -294,20 +291,40 @@ export function ItemFormDialog({
                     ))}
                   </div>
                 </div>
-                <TextField
-                  id="menu-item-tr-label"
-                  maxLength={200}
-                  placeholder={t("cms.menus.item.label")}
-                  value={text(tr.values.label)}
-                  onChange={(e) => tr.setField("label", e.target.value)}
-                />
-                <TextField
-                  id="menu-item-tr-description"
-                  maxLength={300}
-                  placeholder={t("cms.menus.item.description")}
-                  value={text(tr.values.description)}
-                  onChange={(e) => tr.setField("description", e.target.value)}
-                />
+                {/* The field's name is a label here, not a placeholder: a
+                    placeholder leaves as soon as somebody types, so a box that
+                    had been translated no longer said what it was. The
+                    Vietnamese it falls back to is the placeholder instead. */}
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="menu-item-tr-label"
+                    className="text-xs font-medium"
+                  >
+                    {t("cms.menus.item.label")}
+                  </Label>
+                  <TextField
+                    id="menu-item-tr-label"
+                    maxLength={200}
+                    placeholder={form.watch("label")}
+                    value={text(tr.values.label)}
+                    onChange={(e) => tr.setField("label", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="menu-item-tr-description"
+                    className="text-xs font-medium"
+                  >
+                    {t("cms.menus.item.description")}
+                  </Label>
+                  <TextField
+                    id="menu-item-tr-description"
+                    maxLength={300}
+                    placeholder={form.watch("description")}
+                    value={text(tr.values.description)}
+                    onChange={(e) => tr.setField("description", e.target.value)}
+                  />
+                </div>
                 <p className="text-xs leading-5 text-muted-foreground">
                   {itemId
                     ? t("cms.menus.item.translate_hint")

@@ -12,6 +12,7 @@ import (
 const (
 	actionRevoked    = "session.revoked"
 	actionRevokedAll = "session.revoked_all"
+	actionPurged     = "session.purged"
 )
 
 // What the action happened to: one session, or the account whose sessions were

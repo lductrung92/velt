@@ -15,6 +15,7 @@ import (
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/platform/activity"
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/revalidate"
 )
 
@@ -58,10 +59,24 @@ type Base struct {
 	// acts is wired after construction and may stay nil, which is what this
 	// context looked like before the activity log existed.
 	acts activity.Recorder
+	// media mints the public slug for an upload and forgets it again when the
+	// bytes are deleted; nil before it is wired.
+	media media.Keeper
 }
 
 // SetActivity wires the activity recorder (called once at startup).
 func (b *Base) SetActivity(r activity.Recorder) { b.acts = r }
+
+// SetMedia wires the files-table minter (called once at startup). Nil means
+// uploads keep returning the legacy /api/files URL, which still serves.
+func (b *Base) SetMedia(m media.Keeper) { b.media = m }
+
+// Media returns the minter, or nil when none is wired.
+func (b *Base) Media() media.Minter { return b.media }
+
+// MediaForget returns the forgetter the delete paths call, or nil when none is
+// wired.
+func (b *Base) MediaForget() media.Forgetter { return b.media }
 
 // Record files one entry in the activity log. A nil recorder is a no-op: the
 // log is a record OF the action, never a condition for it.

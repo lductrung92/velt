@@ -1,4 +1,10 @@
-import { LogOut, MonitorSmartphone, Plus, RotateCcw } from "lucide-react";
+import {
+  LogOut,
+  MonitorSmartphone,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -20,15 +26,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DEFAULT_PAGE_SIZE,
-  TablePagination,
-} from "@/components/ui/table-pagination";
+import { ListPager } from "@/components/ui/list-pager";
+import { usePaging } from "@/hooks/usePaging";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 import { formatDateTime } from "@/utils/format";
 
+import { CleanupDialog } from "../components/CleanupDialog";
 import { useRevokeSession, useSessions } from "../hooks/useAdminSessions";
+import { usePurgeSessions } from "../hooks/usePurge";
 import type { AdminSession } from "../services/admin.service";
 
 import "@/styles/list-page.css";
@@ -39,15 +45,20 @@ export default function Sessions() {
   const canRevoke = hasPermission("sessions.revoke");
 
   const [activeOnly, setActiveOnly] = useState(true);
-  const [page, setPage] = useState(1);
-  useEffect(() => setPage(1), [activeOnly]);
+  // Page, page size and pager style all come from the shared settings
+  // (Settings → General → Pagination), so every list pages the same way.
+  const paging = usePaging();
+  const { page, setPage } = paging;
+  useEffect(() => setPage(1), [activeOnly, setPage]);
 
   const sessions = useSessions({
     active: activeOnly,
     page,
-    page_size: DEFAULT_PAGE_SIZE,
+    page_size: paging.pageSize,
   });
   const revoke = useRevokeSession();
+  const purge = usePurgeSessions();
+  const [cleaning, setCleaning] = useState(false);
   const [target, setTarget] = useState<AdminSession | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
@@ -127,6 +138,16 @@ export default function Sessions() {
             <h2>{t("admin.sessions.list_title")}</h2>
           </div>
           <div className="flex items-center gap-2">
+            {canRevoke && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setCleaning(true)}
+              >
+                <Trash2 className="size-3.5" aria-hidden />
+                {t("admin.sessions.cleanup")}
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -275,18 +296,33 @@ export default function Sessions() {
                 </div>
               ))}
             </div>
-
-            <div className="list-pagination">
-              <TablePagination
-                page={page}
-                pageSize={DEFAULT_PAGE_SIZE}
-                total={sessions.data?.total ?? 0}
-                onPageChange={setPage}
-              />
-            </div>
           </>
         )}
       </section>
+
+      {/* Outside the card on purpose: the panel holds the records, the
+          pager is how you ask for the next ones. It hides itself when
+          everything fits on one page, so it costs nothing while loading
+          or on an empty list. */}
+      <div className="list-pagination">
+        <ListPager
+          paging={paging}
+          total={sessions.data?.total ?? 0}
+          loading={sessions.isFetching}
+        />
+      </div>
+
+      <CleanupDialog
+        open={cleaning}
+        onOpenChange={setCleaning}
+        subject={t("admin.sessions.list_title")}
+        warning={t("admin.sessions.cleanup_warning")}
+        pending={purge.isPending}
+        onPurge={async (olderThan) => {
+          const { deleted } = await purge.mutateAsync(olderThan);
+          toast.success(t("admin.sessions.cleanup_done", { count: deleted }));
+        }}
+      />
 
       {target && (
         <ConfirmDialog

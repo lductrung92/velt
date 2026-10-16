@@ -7,16 +7,16 @@ import type { WidgetConfig } from "../components/widgetCatalog";
 // preview matches exactly what visitors will see. Item shapes mirror backend
 // cms/widgets resolve.go.
 
-export interface PreviewGameItem {
+export interface PreviewProductItem {
   slug: string;
-  title: string;
-  description?: string | null;
-  age_group: string;
-  subject?: string | null;
-  skills: string[];
+  name: string;
+  summary?: string | null;
   cover_url?: string | null;
-  play_url: string;
-  access_tier: string;
+  lifecycle: string;
+  is_featured: boolean;
+  audience: string[];
+  platforms: string[];
+  categories: string[];
 }
 
 export interface PreviewArticleItem {
@@ -33,7 +33,7 @@ export interface PreviewCategoryItem {
 }
 
 export type PreviewItem =
-  | PreviewGameItem
+  | PreviewProductItem
   | PreviewArticleItem
   | PreviewCategoryItem;
 

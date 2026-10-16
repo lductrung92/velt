@@ -11,6 +11,7 @@ import (
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/modules/cms/shared"
 	"github.com/velt/backend/internal/platform/htmlsan"
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/storage"
 )
 
@@ -151,7 +152,12 @@ func sanitizeFAQAnswers(m map[string]any) {
 // resolveConfigMediaURLs returns config with a sibling "<X>_url" (served URL)
 // injected next to every string "<X>_path" (a stored storage key). Section-agnostic
 // so the same pass covers all 14 types. On any error it returns raw unchanged.
-func resolveConfigMediaURLs(ctx context.Context, files storage.Storage, raw json.RawMessage) json.RawMessage {
+//
+// found is the already-resolved media batch for the WHOLE page (see
+// configMediaPaths): a key in it also gets "<X>_width"/"<X>_height" and the
+// flat /img URL. A nil map — which is what the console path passes — keeps the
+// legacy behaviour exactly.
+func resolveConfigMediaURLs(ctx context.Context, files storage.Storage, found map[string]media.Image, raw json.RawMessage) json.RawMessage {
 	if len(raw) == 0 || files == nil {
 		return raw
 	}
@@ -163,7 +169,7 @@ func resolveConfigMediaURLs(ctx context.Context, files storage.Storage, raw json
 	if err := dec.Decode(&v); err != nil {
 		return raw
 	}
-	injectMediaURLs(ctx, files, v)
+	injectMediaURLs(ctx, files, found, v)
 	out, err := json.Marshal(v)
 	if err != nil {
 		return raw
@@ -213,7 +219,7 @@ func snapshotMediaPaths(snap json.RawMessage) map[string]struct{} {
 // nobody (public reads the new snapshot). Best-effort. This is the SAFE moment to
 // reclaim landing media: while a path is in the published snapshot it is live, so
 // we never delete at edit time — only once a (re)publish drops it.
-func gcDroppedMedia(ctx context.Context, files storage.Storage, prefix string, oldSnap json.RawMessage, keep map[string]struct{}) {
+func gcDroppedMedia(ctx context.Context, files storage.Storage, forget media.Forgetter, prefix string, oldSnap json.RawMessage, keep map[string]struct{}) {
 	if files == nil {
 		return
 	}
@@ -227,6 +233,7 @@ func gcDroppedMedia(ctx context.Context, files storage.Storage, prefix string, o
 			continue
 		}
 		_ = files.Delete(ctx, p)
+		media.Forget(ctx, forget, p)
 	}
 }
 
@@ -254,25 +261,57 @@ func liveMediaPaths(newSnap json.RawMessage, sections []Section, ogPath *string)
 	return keep
 }
 
-func injectMediaURLs(ctx context.Context, files storage.Storage, v any) {
+func injectMediaURLs(ctx context.Context, files storage.Storage, found map[string]media.Image, v any) {
 	switch t := v.(type) {
 	case map[string]any:
 		add := map[string]any{}
 		for k, val := range t {
 			if s, ok := val.(string); ok && s != "" && strings.HasSuffix(k, "_path") {
-				add[strings.TrimSuffix(k, "_path")+"_url"] = files.URL(ctx, s)
+				base := strings.TrimSuffix(k, "_path")
+				if img, known := found[s]; known {
+					add[base+"_url"] = img.URL
+					add[base+"_width"] = img.Width
+					add[base+"_height"] = img.Height
+					continue
+				}
+				// No row: the legacy URL and no dimensions, exactly as before.
+				add[base+"_url"] = files.URL(ctx, s)
 				continue
 			}
-			injectMediaURLs(ctx, files, val)
+			injectMediaURLs(ctx, files, found, val)
 		}
 		for k, val := range add {
 			t[k] = val
 		}
 	case []any:
 		for _, val := range t {
-			injectMediaURLs(ctx, files, val)
+			injectMediaURLs(ctx, files, found, val)
 		}
 	}
+}
+
+// configMediaPaths returns every storage key referenced by a set of section
+// configs. It exists so one page's images are looked up in ONE query instead of
+// one per section.
+func configMediaPaths(configs []json.RawMessage) []string {
+	keys := map[string]struct{}{}
+	for _, raw := range configs {
+		if len(raw) == 0 {
+			continue
+		}
+		var v any
+		dec := json.NewDecoder(bytes.NewReader(raw))
+		dec.UseNumber()
+		if err := dec.Decode(&v); err != nil {
+			continue
+		}
+		collectMediaPaths(v, keys)
+	}
+	out := make([]string, 0, len(keys))
+	for k := range keys {
+		out = append(out, k)
+	}
+	return out
 }
 
 func buildLandingSnapshot(p Page, sections []Section) ([]byte, error) {

@@ -12,6 +12,9 @@ import (
 type Service struct {
 	*shared.Base
 	repo Repository
+	// tr is wired after construction and may stay nil: without it a block has
+	// no translated copy to drop.
+	tr Translator
 }
 
 // NewService wires the regions service onto the shared CMS base.
@@ -85,9 +88,12 @@ func (s *Service) ReplaceRegionBlocks(ctx context.Context, id *httpx.Identity, g
 			return SlotResponse{}, apperr.Validation(map[string]string{"menu_id": "not_found"})
 		}
 	}
-	if err := s.repo.ReplaceRegionBlocks(ctx, group, slot, writes); err != nil {
+	removed, err := s.repo.ReplaceRegionBlocks(ctx, group, slot, writes)
+	if err != nil {
 		return SlotResponse{}, apperr.Internal()
 	}
+	// A block left out of the list is gone, and its translated copy with it.
+	s.purgeTranslations(ctx, removed)
 	s.Sec(ctx).Info("cms region blocks replaced", "actor", id.UserID,
 		"group", group, "slot", slot, "blocks", len(writes))
 	return s.slotDetail(ctx, group, slot)

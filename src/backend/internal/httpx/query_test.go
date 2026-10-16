@@ -75,3 +75,22 @@ func TestQueryDateRange_RejectsReversedRange(t *testing.T) {
 	require.Equal(t, "validation_error", ae.Key)
 	require.Equal(t, "after_created_to", ae.Details["fields"].(map[string]any)["created_from"])
 }
+
+func TestLocale_KeepsThePrimarySubtag(t *testing.T) {
+	read := func(header string) string {
+		r := httptest.NewRequest(http.MethodGet, "/x", nil)
+		if header != "" {
+			r.Header.Set("Accept-Language", header)
+		}
+		return Locale(r)
+	}
+	require.Equal(t, "en", read("en"))
+	require.Equal(t, "en", read("en-GB"))
+	require.Equal(t, "en", read("en-GB,en;q=0.9,vi;q=0.8"))
+	require.Equal(t, "vi", read("VI"))
+	// Nothing asked for, or nothing a language tag can be read out of: the
+	// caller leaves its rows in the source language.
+	require.Equal(t, "", read(""))
+	require.Equal(t, "", read("*"))
+	require.Equal(t, "", read("12"))
+}

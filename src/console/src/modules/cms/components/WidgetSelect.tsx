@@ -1,10 +1,26 @@
 import Select from "react-select";
+import { createContext, useContext, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
 export interface WidgetSelectOption {
   value: string;
   label: string;
+}
+
+// Inside a Radix dialog the menu must NOT be portalled to <body>: the dialog
+// traps pointer events, so a menu rendered outside it cannot be clicked (that
+// is the bug this context was first added for). Rendering it in place keeps it
+// inside the trap, and nothing in the dialog clips it — the form is not a
+// scroll box. Everywhere else the menu still portals, because the inline
+// widget card IS a clipping container.
+const ModalWidgetControlsContext = createContext(false);
+export function ModalWidgetControls({ children }: { children: ReactNode }) {
+  return (
+    <ModalWidgetControlsContext.Provider value={true}>
+      {children}
+    </ModalWidgetControlsContext.Provider>
+  );
 }
 
 // react-select themed to match the shadcn input/popover look. Used for the enum
@@ -25,6 +41,7 @@ export function WidgetSelect({
   ariaLabel?: string;
   inputId?: string;
 }) {
+  const inModal = useContext(ModalWidgetControlsContext);
   return (
     <Select<WidgetSelectOption>
       inputId={inputId}
@@ -37,7 +54,7 @@ export function WidgetSelect({
       value={options.find((o) => o.value === value) ?? null}
       onChange={(opt) => onChange(opt?.value ?? "")}
       menuPortalTarget={
-        typeof document !== "undefined" ? document.body : undefined
+        inModal || typeof document === "undefined" ? undefined : document.body
       }
       classNames={{
         control: ({ isFocused }) =>
@@ -70,6 +87,9 @@ export function WidgetSelect({
           height: "2.25rem",
         }),
         menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+        // In a dialog the menu is a normal child, so it needs to sit above the
+        // fields under it rather than rely on the portal's z-index.
+        menu: (base) => ({ ...base, zIndex: 50 }),
       }}
     />
   );

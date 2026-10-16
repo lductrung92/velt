@@ -1,6 +1,8 @@
+import { Layers } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { cn } from "@/lib/utils";
+import { Select } from "@/components/common/Select";
+import { Card } from "@/components/ui/card";
 
 import {
   ancestry,
@@ -10,15 +12,16 @@ import {
 } from "../services/regions.service";
 
 /**
- * Which kind of page the board below is editing.
+ * Which kind of page the board is editing.
  *
- * A tree rather than tabs: nine groups with two levels of nesting read as a
- * hierarchy, which is the whole point — a block put on a parent shows on every
- * child. Tabs would flatten exactly the relationship the editor needs to see.
+ * One select, the same one every other screen uses. A hand-built tree had to
+ * carry its own rails, indents, hover and selected states, and it drifted from
+ * the rest of the console every time one of them was tuned; nine entries do
+ * not earn a bespoke control.
  *
- * A grouping-only node (Products, Blog) matches no page of its own; it exists
- * so "every product page" has somewhere to live. It is selectable, because
- * that is where such a block is put, and it says so underneath.
+ * The nesting survives as indentation in the labels, which is enough to read
+ * what inherits from what — the board itself names the ancestor a slot is
+ * inherited from, so the picker does not have to carry that weight too.
  */
 export function GroupTree({
   groups,
@@ -30,46 +33,35 @@ export function GroupTree({
   onChange: (group: Group) => void;
 }) {
   const { t } = useTranslation();
+
+  const options = groups.map(({ group }) => {
+    const depth = ancestry(group, groups).length - 1;
+    const name = t(`cms.appearance.group.${group}`);
+    const tag = GROUPING_ONLY.includes(group)
+      ? ` ${t("cms.appearance.grouping_only")}`
+      : "";
+    // Non-breaking spaces: react-select renders the label as text, and a plain
+    // space would collapse and take the indent with it.
+    return { value: group, label: "  ".repeat(depth) + name + tag };
+  });
+
   return (
-    <div className="space-y-1">
-      <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {t("cms.appearance.groups_title")}
-      </p>
-      <ul
-        className="space-y-0.5"
-        role="tree"
-        aria-label={t("cms.appearance.groups_title")}
-      >
-        {groups.map(({ group }) => {
-          const depth = ancestry(group, groups).length - 1;
-          const grouping = GROUPING_ONLY.includes(group);
-          return (
-            <li key={group} role="none">
-              <button
-                type="button"
-                role="treeitem"
-                aria-selected={group === value}
-                aria-level={depth + 1}
-                style={{ paddingLeft: `${0.5 + depth * 0.85}rem` }}
-                className={cn(
-                  "w-full rounded-md py-1.5 pr-2 text-left text-sm transition-colors",
-                  group === value
-                    ? "bg-accent font-medium text-accent-foreground"
-                    : "hover:bg-muted/50",
-                )}
-                onClick={() => onChange(group)}
-              >
-                {t(`cms.appearance.group.${group}`)}
-                {grouping && (
-                  <span className="ml-1.5 text-xs text-muted-foreground">
-                    {t("cms.appearance.grouping_only")}
-                  </span>
-                )}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+    <Card className="appearance-panel appearance-groups">
+      <div className="appearance-panel-heading">
+        <Layers className="size-4" />
+        <h2>{t("cms.appearance.groups_title")}</h2>
+      </div>
+      <div className="appearance-group-field">
+        <Select
+          inputId="appearance-group"
+          aria-label={t("cms.appearance.groups_title")}
+          options={options}
+          value={options.find((o) => o.value === value) ?? null}
+          onChange={(option) => option && onChange(option.value)}
+          isClearable={false}
+          isSearchable={false}
+        />
+      </div>
+    </Card>
   );
 }

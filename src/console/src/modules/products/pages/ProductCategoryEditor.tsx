@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Alert } from "@/components/common/Alert";
 import { EditorActionBar } from "@/components/common/EditorActionBar";
 import { PageHeader } from "@/components/common/PageHeader";
+import { Select } from "@/components/common/Select";
 import { SlugField } from "@/components/common/SlugField";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +32,6 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
-import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
@@ -48,6 +48,7 @@ import {
   useProductCategories,
   useUpdateProductCategory,
 } from "../hooks/useProductCategories";
+import { PRODUCT_CATEGORY_STATUSES } from "../services/productCategories.service";
 import {
   makeProductCategorySchema,
   productCategoryFormDefaults,
@@ -65,8 +66,11 @@ function str(v: unknown): string {
 // is flat.
 //
 // Like the CMS editor, the row being edited is resolved from the list query
-// rather than fetched per id: the whole vocabulary is one small request that the
-// list screen has already warmed.
+// rather than fetched per id: the whole vocabulary is one small request.
+//
+// It is the SOURCE-LANGUAGE copy of that list, not the one the screens show:
+// this form is saved back into the Vietnamese row, so seeding it with the
+// English name a reader sees would overwrite the Vietnamese one.
 export default function ProductCategoryEditor() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -76,7 +80,20 @@ export default function ProductCategoryEditor() {
   const { hasPermission } = usePermission();
   const canManage = hasPermission("products.category.manage");
 
+  // `name` on these rows is the stored one, which is what this form writes
+  // back; the list renders `name_display` instead.
   const categories = useProductCategories();
+  // The three labels are the shared content vocabulary, the same ones the
+  // list's badges and tabs read from.
+  const statusOptions = useMemo(
+    () =>
+      PRODUCT_CATEGORY_STATUSES.map((value) => ({
+        value,
+        label: t(`content_status.${value}`),
+      })),
+    [t],
+  );
+
   const category = useMemo(
     () =>
       isEdit ? categories.data?.items.find((c) => c.id === id) : undefined,
@@ -95,16 +112,12 @@ export default function ProductCategoryEditor() {
   // field, which a static zod schema cannot describe.
   const tr = useEntityTranslation("product_category", category?.id);
 
-  useUnsavedChanges({
-    when: form.formState.isDirty || tr.dirty,
-    what: t("products.one"),
-  });
-
   useEffect(() => {
     if (!category) return;
     form.reset({
       name: category.name,
       slug: category.slug,
+      status: category.status,
       description: category.description ?? "",
       sort_order: category.sort_order,
       seo_title: category.seo.title ?? "",
@@ -116,6 +129,7 @@ export default function ProductCategoryEditor() {
   const onSubmit = form.handleSubmit(async (values) => {
     const body = {
       name: values.name,
+      status: values.status,
       description: values.description,
       sort_order: values.sort_order,
       // A present `seo` object replaces all three fields, so an emptied input
@@ -317,7 +331,33 @@ export default function ProductCategoryEditor() {
                   {t("products.categories.editor.placement")}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-5">
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {t("products.categories.col.status")}
+                      </FormLabel>
+                      <Select
+                        inputId="product-category-status"
+                        options={statusOptions}
+                        isClearable={false}
+                        isSearchable={false}
+                        isDisabled={!canManage}
+                        value={
+                          statusOptions.find((o) => o.value === field.value) ??
+                          null
+                        }
+                        onChange={(o) =>
+                          field.onChange(o?.value ?? "published")
+                        }
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="sort_order"

@@ -9,7 +9,9 @@ import {
   Rocket,
   Save,
   Search,
+  Send,
   SlidersHorizontal,
+  Trash2,
   Users,
 } from "lucide-react";
 import { Suspense, lazy, useEffect, useState } from "react";
@@ -19,6 +21,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EditorActionBar } from "@/components/common/EditorActionBar";
 import {
   ImageUpload,
@@ -31,12 +34,6 @@ import { StringListField } from "@/components/common/StringListField";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Form,
   FormControl,
@@ -52,7 +49,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
-import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import type { PageSEO } from "@/modules/cms/services/pages.service";
 import { usePermission } from "@/modules/auth";
 import { LanguageTabs } from "@/modules/translation/components/LanguageTabs";
@@ -76,6 +72,7 @@ import {
   useAddGalleryImage,
   useAddGalleryVideo,
   useCreateProduct,
+  useDeleteProduct,
   useProduct,
   useProductTransition,
   useSetProductCategories,
@@ -92,8 +89,10 @@ import {
   PRODUCT_AUDIENCES,
   PRODUCT_LIFECYCLES,
   PRODUCT_PLATFORMS,
+  PRODUCT_STATUSES,
   type Product,
   type ProductLifecycle,
+  type ProductStatus,
   type TiptapDoc,
   type UpdateProductBody,
 } from "../services/products.service";
@@ -107,6 +106,15 @@ const RichTextEditor = lazy(() =>
 );
 
 const BACK = "/products";
+
+// Which publication endpoint takes the product to a chosen status. Status is
+// not a column a PATCH may write: publishing also freezes the snapshot the
+// public site reads, stamps published_at and revalidates the cached pages.
+const TRANSITION: Record<ProductStatus, "publish" | "unpublish" | "archive"> = {
+  draft: "unpublish",
+  published: "publish",
+  archived: "archive",
+};
 
 // The text half of the SEO block; the two flags are rendered as checkboxes.
 type SeoTextKey =
@@ -137,11 +145,13 @@ export default function ProductEditor() {
   const { hasPermission } = usePermission();
   const canEdit = hasPermission(isEdit ? "products.edit" : "products.create");
   const canPublish = hasPermission("products.publish");
+  const canDelete = hasPermission("products.delete");
 
   const detail = useProduct(isEdit ? id : undefined);
   const create = useCreateProduct();
   const update = useUpdateProduct();
   const transition = useProductTransition();
+  const remove = useDeleteProduct();
   const setCategories = useSetProductCategories();
   const setMembers = useSetProductMembers();
   const uploadMedia = useUploadProductMedia();
@@ -152,7 +162,6 @@ export default function ProductEditor() {
   // shared controlled component, and body_json is a side-output of the editor
   // that no validation rule touches.
   const [seo, setSeo] = useState<PageSEO>(EMPTY_SEO);
-  const [seoDirty, setSeoDirty] = useState(false);
   const [bodyJson, setBodyJson] = useState<TiptapDoc | null>(null);
   // Categories and members save through their own endpoints (a PATCH of the
   // product never touches them), so they are drafts here with their own dirty
@@ -164,9 +173,12 @@ export default function ProductEditor() {
   // upload endpoint only stores bytes, so the returned path still has to be
   // written back through cover_path.
   const [cover, setCover] = useState<ImageUploadValue>({ kind: "empty" });
-  const [coverDirty, setCoverDirty] = useState(false);
   // Gallery entries picked before the product exists, flushed in order on save.
   const [galleryDraft, setGalleryDraft] = useState<GalleryDraftItem[]>([]);
+  // The publication status is picked here and applied on Save, like the
+  // article editor's. It is not a form field: the PATCH cannot carry it.
+  const [status, setStatus] = useState<ProductStatus>("draft");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(makeProductSchema(t)),
@@ -179,17 +191,6 @@ export default function ProductEditor() {
   // field, which a static zod schema cannot describe — the same reason the SEO
   // and cover state sit outside it.
   const tr = useEntityTranslation("product", product?.id);
-
-  useUnsavedChanges({
-    when:
-      form.formState.isDirty ||
-      seoDirty ||
-      relationsDirty ||
-      coverDirty ||
-      tr.dirty ||
-      galleryDraft.length > 0,
-    what: t("products.one"),
-  });
 
   useEffect(() => {
     if (!product) return;
@@ -213,14 +214,13 @@ export default function ProductEditor() {
       demo_instructions: product.demo_instructions,
     });
     setSeo({ ...EMPTY_SEO, ...product.seo });
-    setSeoDirty(false);
     setBodyJson(product.body_json);
     setCover(
       product.cover_url
         ? { kind: "uploaded", fileId: "", url: product.cover_url }
         : { kind: "empty" },
     );
-    setCoverDirty(false);
+    setStatus(product.status);
     setCategoryIds(product.categories.map((c) => c.id));
     setMemberDraft(
       product.members.map((m) => ({
@@ -250,8 +250,11 @@ export default function ProductEditor() {
     ]);
 
   // Uploads a freshly-picked cover and returns its stored path. An untouched
-  // slot returns undefined, which leaves the current cover alone.
+  // slot returns undefined, which leaves the current cover alone; an emptied
+  // one returns "", the API's "remove it", which clears the column and
+  // reclaims the file.
   const resolveCover = async (productId: string) => {
+    if (cover.kind === "empty") return product?.cover_url ? "" : undefined;
     if (cover.kind !== "pending") return undefined;
     const file = new File([cover.blob], "cover", { type: cover.blob.type });
     const res = await uploadMedia.mutateAsync({
@@ -301,7 +304,9 @@ export default function ProductEditor() {
           ...fields,
           body_json: bodyJson,
           seo,
-          ...(cover_path && { cover_path }),
+          // Not `cover_path &&`: "" is the removal, and dropping it here is
+          // what used to make a removed cover come back on reload.
+          ...(cover_path !== undefined && { cover_path }),
         };
         // Only when it actually changed: sending the current slug back on every
         // save would re-run the rename path for nothing, and a slug is an
@@ -314,13 +319,16 @@ export default function ProductEditor() {
         await tr.flush(id);
         const saved = await update.mutateAsync({ id, body });
         if (relationsDirty) await saveRelations(saved.id);
+        // Last of the writes: publishing freezes a snapshot of the product
+        // WITH its relations, so a status moved before them would freeze the
+        // previous ones.
+        if (status !== product?.status)
+          await transition.mutateAsync({ id, action: TRANSITION[status] });
         // That write republished the product, which is what clears "needs
         // republishing" — so the translation view has to be read again.
         await tr.refresh();
         form.reset({ ...values, slug: saved.slug });
-        setSeoDirty(false);
         setRelationsDirty(false);
-        setCoverDirty(false);
         toast.success(t("products.saved"));
       } catch (err) {
         fail(err);
@@ -354,22 +362,20 @@ export default function ProductEditor() {
       fail(err);
     } finally {
       form.reset(values);
-      setSeoDirty(false);
       setRelationsDirty(false);
-      setCoverDirty(false);
       navigate(`/products/${created.id}`, { replace: true });
     }
   });
 
-  const runTransition = (action: "publish" | "unpublish" | "archive") => {
+  const confirmRemove = () => {
     if (!id) return;
-    transition.mutate(
-      { id, action },
-      {
-        onSuccess: () => toast.success(t(`products.transition.${action}_done`)),
-        onError: (err) => toast.error(parseApiError(err, t).message),
+    remove.mutate(id, {
+      onSuccess: () => {
+        toast.success(t("products.delete.success"));
+        navigate(BACK);
       },
-    );
+      onError: (err) => toast.error(parseApiError(err, t).message),
+    });
   };
 
   // Saving a new product now runs a short sequence of calls, so the button has
@@ -381,13 +387,13 @@ export default function ProductEditor() {
     addGalleryImage.isPending ||
     addGalleryVideo.isPending ||
     setCategories.isPending ||
-    setMembers.isPending;
+    setMembers.isPending ||
+    transition.isPending;
 
   // The SEO block is one object the server replaces wholesale, so it is held in
   // state and these rows are wired by hand rather than through FormField.
   const patchSeo = (next: Partial<PageSEO>) => {
     setSeo({ ...seo, ...next });
-    setSeoDirty(true);
   };
   const seoText = (
     key: SeoTextKey,
@@ -466,29 +472,16 @@ export default function ProductEditor() {
               <ProductLifecycleBadge lifecycle={product.lifecycle} />
             </div>
           )}
-          {isEdit && canPublish && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={transition.isPending}
-                >
-                  {t("products.transition.menu")}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => runTransition("publish")}>
-                  {t("products.transition.publish")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => runTransition("unpublish")}>
-                  {t("products.transition.unpublish")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => runTransition("archive")}>
-                  {t("products.transition.archive")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {isEdit && product && canDelete && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setConfirmDelete(true)}
+              disabled={saving || remove.isPending}
+            >
+              <Trash2 className="size-4" />
+              {t("common.delete")}
+            </Button>
           )}
           <Button type="submit" disabled={!canEdit || saving}>
             <Save className="size-4" />
@@ -839,6 +832,48 @@ export default function ProductEditor() {
             className="editor-side space-y-4"
             aria-label={t("products.editor.settings")}
           >
+            {/* Publication is its own permission, so the card appears only for
+                someone who holds it; everyone else still reads the status off
+                the badge in the action bar. */}
+            {isEdit && canPublish && (
+              <Card className="editor-card">
+                <CardHeader className="editor-heading">
+                  <CardTitle>
+                    <Send
+                      className="size-4 text-muted-foreground"
+                      aria-hidden
+                    />
+                    {t("products.editor.publish")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="product-status">
+                      {t("products.col.status")}
+                    </Label>
+                    <Select
+                      inputId="product-status"
+                      isClearable={false}
+                      value={{
+                        value: status,
+                        label: t(`products.status.${status}`),
+                      }}
+                      options={PRODUCT_STATUSES.map((s) => ({
+                        value: s,
+                        label: t(`products.status.${s}`),
+                      }))}
+                      onChange={(o) =>
+                        setStatus((o?.value as ProductStatus) ?? status)
+                      }
+                    />
+                  </div>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {t("products.editor.publish_hint")}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="editor-card">
               <CardHeader className="editor-heading">
                 <CardTitle>
@@ -975,6 +1010,7 @@ export default function ProductEditor() {
                 {/* No field label here: the card heading already names it. */}
                 <ImageUpload
                   type="rounded"
+                  subject={t("products.field.cover")}
                   ratio={16 / 9}
                   width={280}
                   className="editor-image"
@@ -984,7 +1020,6 @@ export default function ProductEditor() {
                   disabled={!canEdit}
                   onChange={(next) => {
                     setCover(next);
-                    setCoverDirty(true);
                   }}
                 />
               </CardContent>
@@ -1056,6 +1091,19 @@ export default function ProductEditor() {
             </CardContent>
           </Card>
         </div>
+
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title={t("products.delete.title")}
+          description={t("products.delete.description", {
+            name: product?.name ?? "",
+          })}
+          confirmLabel={t("common.delete")}
+          destructive
+          loading={remove.isPending}
+          onConfirm={confirmRemove}
+        />
       </form>
     </Form>
   );

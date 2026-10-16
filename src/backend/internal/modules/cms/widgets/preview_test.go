@@ -21,7 +21,7 @@ func idWith(perms ...string) *httpx.Identity {
 
 func TestPreview_RequiresPermission(t *testing.T) {
 	s := newPreviewService()
-	_, err := s.Preview(context.Background(), idWith(), TypeGamesList, json.RawMessage(`{}`))
+	_, err := s.Preview(context.Background(), idWith(), TypeArticlesList, json.RawMessage(`{}`))
 	if err == nil {
 		t.Fatal("expected permission denied without cms.page.view")
 	}
@@ -37,14 +37,14 @@ func TestPreview_UnknownTypeRejected(t *testing.T) {
 
 func TestPreview_ResolvesKnownType(t *testing.T) {
 	s := newPreviewService()
-	res, err := s.Preview(context.Background(), idWith(permPageView), TypeGamesList, json.RawMessage(`{"limit":4}`))
+	res, err := s.Preview(context.Background(), idWith(permPageView), TypeArticlesList, json.RawMessage(`{"limit":4}`))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if res.Type != TypeGamesList {
-		t.Fatalf("type = %q, want %q", res.Type, TypeGamesList)
+	if res.Type != TypeArticlesList {
+		t.Fatalf("type = %q, want %q", res.Type, TypeArticlesList)
 	}
-	// nil Games port → resolver returns {"items": []}
+	// nil Articles port → resolver returns {"items": []}
 	m, ok := res.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("data = %T, want map", res.Data)

@@ -16,13 +16,12 @@ import (
 
 // Repository is the data-access contract for static pages.
 type Repository interface {
-	ListPages(ctx context.Context, p PageListParams) ([]Page, error)
+	ListPages(ctx context.Context, p PageListParams) ([]Page, int, error)
+	ListPageOptions(ctx context.Context) ([]PageOption, error)
 	GetPage(ctx context.Context, id uuid.UUID) (*Page, error)
 	CreatePage(ctx context.Context, w pageWrite) (*Page, error)
-	UpdatePage(ctx context.Context, id uuid.UUID, w pageWrite, expectedUpdatedAt time.Time, recheckCycle bool) (*Page, error)
+	UpdatePage(ctx context.Context, id uuid.UUID, w pageWrite, expectedUpdatedAt time.Time) (*Page, error)
 	DeletePage(ctx context.Context, id uuid.UUID) error
-	PageHasChildren(ctx context.Context, id uuid.UUID) (bool, error)
-	PageCreatesCycle(ctx context.Context, node, newParent uuid.UUID) (bool, error)
 	PageSlugExists(ctx context.Context, slug string, parentID *uuid.UUID, excludeID *uuid.UUID) (bool, error)
 	PublishPage(ctx context.Context, id uuid.UUID, snapshot []byte) (*Page, error)
 	RefreshPageSnapshot(ctx context.Context, id uuid.UUID, snapshot []byte) error
@@ -36,20 +35,9 @@ type pgxRepository struct {
 // NewRepository builds the pgx-backed page repository.
 func NewRepository(pool *pgxpool.Pool) Repository { return &pgxRepository{pool: pool} }
 
-// pagesTreeAdvisoryLock serializes concurrent page MOVES inside a transaction
-// (TOCTOU guard). Arbitrary constant scoped to the cms_pages tree.
-const pagesTreeAdvisoryLock = 0x636D73_70616765 // "cms_page"
-
-// pageCycleQuery reports whether making $1's parent be $2 forms a cycle ($2 is $1
-// or a descendant of $1) — walks UP from $2.
-const pageCycleQuery = `
-	WITH RECURSIVE up AS (
-		SELECT id, parent_id FROM cms_pages WHERE id = $2
-		UNION ALL
-		SELECT p.id, p.parent_id FROM cms_pages p JOIN up ON p.id = up.parent_id
-	)
-	SELECT EXISTS (SELECT 1 FROM up WHERE id = $1)`
-
+// pageColumns is every column a Page carries. parent_id is still read and
+// written: the column stays, nothing sets it any more, and a row that carries
+// one from before keeps it.
 const pageColumns = `id, title, slug, body_html, body_json, parent_id, sort_order,
 	template, status, og_path, seo_title, seo_description, seo_keywords,
 	canonical_url, seo_noindex, seo_nofollow, og_title, og_description,
@@ -70,12 +58,22 @@ func scanPage(row pgx.Row) (*Page, error) {
 	return &p, nil
 }
 
-func (r *pgxRepository) ListPages(ctx context.Context, p PageListParams) ([]Page, error) {
+func (r *pgxRepository) ListPages(ctx context.Context, p PageListParams) ([]Page, int, error) {
 	conds := []string{"1=1"}
 	args := []any{}
 	add := func(tmpl string, val any) {
 		args = append(args, val)
 		conds = append(conds, fmt.Sprintf(tmpl, len(args)))
+	}
+	if q := strings.TrimSpace(p.Query); q != "" {
+		args = append(args, "%"+strings.ToLower(q)+"%")
+		conds = append(conds, fmt.Sprintf("(lower(title) LIKE $%d OR lower(slug) LIKE $%d)", len(args), len(args)))
+	}
+	if p.Status != "" {
+		add("status = $%d", p.Status)
+	}
+	if p.LandingOnly {
+		conds = append(conds, "landing_id IS NOT NULL")
 	}
 	// CreatedTo is already midnight after the requested day, so < keeps that
 	// whole day in range; see httpx.QueryDateRange.
@@ -85,19 +83,49 @@ func (r *pgxRepository) ListPages(ctx context.Context, p PageListParams) ([]Page
 	if p.CreatedTo != nil {
 		add("created_at < $%d", *p.CreatedTo)
 	}
-	rows, err := r.pool.Query(ctx, `SELECT `+pageColumns+` FROM cms_pages WHERE `+
-		strings.Join(conds, " AND ")+` ORDER BY sort_order, title`, args...)
+	where := strings.Join(conds, " AND ")
+
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT count(*) FROM cms_pages WHERE `+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count pages: %w", err)
+	}
+	// id breaks the tie: sort_order and title can both repeat, and a page that
+	// moves between pages of the result as you walk it is worse than any order.
+	args = append(args, p.PageSize, (p.Page-1)*p.PageSize)
+	rows, err := r.pool.Query(ctx, `SELECT `+pageColumns+` FROM cms_pages WHERE `+where+
+		fmt.Sprintf(` ORDER BY sort_order, title, id LIMIT $%d OFFSET $%d`, len(args)-1, len(args)), args...)
 	if err != nil {
-		return nil, fmt.Errorf("list pages: %w", err)
+		return nil, 0, fmt.Errorf("list pages: %w", err)
 	}
 	defer rows.Close()
 	out := []Page{}
 	for rows.Next() {
 		p, err := scanPage(rows)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		out = append(out, *p)
+	}
+	return out, total, rows.Err()
+}
+
+// ListPageOptions reads every page a selector may offer. Capped rather than
+// paginated: a picker that silently stopped at page one would quietly hide
+// pages somebody is looking for.
+func (r *pgxRepository) ListPageOptions(ctx context.Context) ([]PageOption, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, title, slug, status FROM cms_pages ORDER BY title, id LIMIT 500`)
+	if err != nil {
+		return nil, fmt.Errorf("list page options: %w", err)
+	}
+	defer rows.Close()
+	out := []PageOption{}
+	for rows.Next() {
+		var o PageOption
+		if err := rows.Scan(&o.ID, &o.Title, &o.Slug, &o.Status); err != nil {
+			return nil, fmt.Errorf("scan page option: %w", err)
+		}
+		out = append(out, o)
 	}
 	return out, rows.Err()
 }
@@ -134,21 +162,11 @@ func (r *pgxRepository) CreatePage(ctx context.Context, w pageWrite) (*Page, err
 // match → else ErrOptLock). When recheckCycle is set (a move to a non-root
 // parent), it serializes against other moves with an advisory xact lock and
 // re-checks the cycle inside the transaction → ErrPageCycle.
-func (r *pgxRepository) UpdatePage(ctx context.Context, id uuid.UUID, w pageWrite, expectedUpdatedAt time.Time, recheckCycle bool) (*Page, error) {
+func (r *pgxRepository) UpdatePage(ctx context.Context, id uuid.UUID, w pageWrite, expectedUpdatedAt time.Time) (*Page, error) {
 	var p *Page
 	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
-		if recheckCycle && w.ParentID != nil {
-			if _, e := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, int64(pagesTreeAdvisoryLock)); e != nil {
-				return e
-			}
-			var cycles bool
-			if e := tx.QueryRow(ctx, pageCycleQuery, id, *w.ParentID).Scan(&cycles); e != nil {
-				return e
-			}
-			if cycles {
-				return shared.ErrPageCycle
-			}
-		}
+		// parent_id is written back exactly as it was read: nothing can set it
+		// any more, and a row that carries one from before keeps it.
 		var e error
 		p, e = scanPage(tx.QueryRow(ctx, `
 			UPDATE cms_pages SET title=$3, slug=$4, body_html=$5, body_json=$6, parent_id=$7, sort_order=$8,
@@ -183,35 +201,28 @@ func (r *pgxRepository) UpdatePage(ctx context.Context, id uuid.UUID, w pageWrit
 }
 
 func (r *pgxRepository) DeletePage(ctx context.Context, id uuid.UUID) error {
-	// Conditional on no child pages (parent_id FK is RESTRICT). 0 rows ⇒ has a child
-	// (or concurrent delete) → ErrInUse (service → 409 page_has_children).
-	tag, err := r.pool.Exec(ctx, `
-		DELETE FROM cms_pages
-		 WHERE id = $1 AND NOT EXISTS (SELECT 1 FROM cms_pages ch WHERE ch.parent_id = $1)`, id)
-	if err != nil {
-		if shared.IsForeignKeyViolation(err) {
-			return shared.ErrInUse
+	// A row that still points at this one is a leftover of the hierarchy this
+	// module used to have. Refusing the delete would strand the page: nothing
+	// can re-parent it any more. So the pointer is cleared — the pages it names
+	// are ordinary pages, which is what they already were to a reader — and the
+	// delete goes ahead. The FK is RESTRICT, so both must happen together.
+	return pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx,
+			`UPDATE cms_pages SET parent_id = NULL, updated_at = now() WHERE parent_id = $1`, id); err != nil {
+			return shared.Wrap("detach child pages", err)
 		}
-		return shared.Wrap("delete page", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return shared.ErrInUse
-	}
-	return nil
-}
-
-func (r *pgxRepository) PageHasChildren(ctx context.Context, id uuid.UUID) (bool, error) {
-	var exists bool
-	err := r.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM cms_pages WHERE parent_id = $1)`, id).Scan(&exists)
-	return exists, shared.Wrap("page has children", err)
-}
-
-// PageCreatesCycle reports whether setting node's parent to newParent would form
-// a cycle (newParent is node or a descendant of node).
-func (r *pgxRepository) PageCreatesCycle(ctx context.Context, node, newParent uuid.UUID) (bool, error) {
-	var cycles bool
-	err := r.pool.QueryRow(ctx, pageCycleQuery, node, newParent).Scan(&cycles)
-	return cycles, shared.Wrap("page cycle check", err)
+		tag, err := tx.Exec(ctx, `DELETE FROM cms_pages WHERE id = $1`, id)
+		if err != nil {
+			if shared.IsForeignKeyViolation(err) {
+				return shared.ErrInUse
+			}
+			return shared.Wrap("delete page", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return shared.ErrNotFound
+		}
+		return nil
+	})
 }
 
 func (r *pgxRepository) PageSlugExists(ctx context.Context, slug string, parentID *uuid.UUID, excludeID *uuid.UUID) (bool, error) {

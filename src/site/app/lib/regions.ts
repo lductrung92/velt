@@ -71,7 +71,7 @@ const DRAWABLE = new Set([
   "cta_banner",
   "articles_list",
   "categories_showcase",
-  "games_list",
+  "product_grid",
 ]);
 
 export interface MenuBlock {

@@ -21,6 +21,12 @@ import (
 type fakeRepo struct {
 	snap       snapshot
 	applyCount int
+	purges     int
+}
+
+func (r *fakeRepo) MarkPurge(context.Context, uuid.UUID) error {
+	r.purges++
+	return nil
 }
 
 func (r *fakeRepo) LoadAll(context.Context) (snapshot, error) {

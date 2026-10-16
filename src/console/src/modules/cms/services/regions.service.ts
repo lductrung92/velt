@@ -81,10 +81,7 @@ export interface RegionGroupDetail {
 }
 
 /** The chain from a group up to the root, nearest first. */
-export function ancestry(
-  group: Group,
-  groups: RegionGroupDetail[],
-): Group[] {
+export function ancestry(group: Group, groups: RegionGroupDetail[]): Group[] {
   const parentOf = new Map(groups.map((g) => [g.group, g.parent]));
   const chain: Group[] = [group];
   let parent = parentOf.get(group) ?? null;

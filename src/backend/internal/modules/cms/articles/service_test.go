@@ -189,6 +189,143 @@ func TestArticles_ListEditorScopedToOwn(t *testing.T) {
 	require.Equal(t, 2, all.Total)
 }
 
+// --- Reading a list in the console's language ---
+
+// An article with an English title shows it; the one beside it that nobody has
+// translated keeps the Vietnamese the author wrote.
+//
+// The SLUG stays Vietnamese even where a translated one exists: in the console
+// a slug is the record's address — what its own editor writes and what a
+// colleague quotes in a ticket — and a different one per reader would have
+// people chasing a rename that never happened.
+// A row carries text from two vocabularies: the article's own, and the name of
+// the category it sits in. Both are translated, from their own entity, or the
+// row reads half in each language.
+func TestArticles_ListTranslatesTheCategoryNameOnTheRow(t *testing.T) {
+	e := newTestSvc(t)
+	catID := uuid.New()
+	e.repo.cats[catID] = ArticleCategoryRef{ID: catID, Name: "Chuyên nghề", Slug: "chuyen-nghe"}
+	a := e.repo.seedArticle("Tin tuc", "tin-tuc", uuid.New(), ArticleStatusDraft)
+	a.CategoryID = &catID
+	tr := &fakeTranslator{values: map[uuid.UUID]map[string]map[string]any{
+		a.ID:  {"en": {"title": "The news"}},
+		catID: {"en": {"name": "Craft"}},
+	}}
+	e.svc.SetTranslator(tr)
+
+	res, err := e.svc.ListArticles(context.Background(), reviewerActor(), ArticleListParams{Locale: "en"})
+	require.NoError(t, err)
+	require.Len(t, res.Items, 1)
+	require.Equal(t, "The news", res.Items[0].Title)
+	require.NotNil(t, res.Items[0].Category)
+	require.Equal(t, "Craft", res.Items[0].Category.Name)
+	// Each vocabulary read once for the whole page, never once per row.
+	require.Equal(t, []string{"article", "cms_category"}, tr.entities)
+}
+
+// An untranslated category keeps the name the taxonomy holds, beside a title
+// that did get translated.
+func TestArticles_ListKeepsAnUntranslatedCategoryName(t *testing.T) {
+	e := newTestSvc(t)
+	catID := uuid.New()
+	e.repo.cats[catID] = ArticleCategoryRef{ID: catID, Name: "Chuyên nghề", Slug: "chuyen-nghe"}
+	a := e.repo.seedArticle("Tin tuc", "tin-tuc", uuid.New(), ArticleStatusDraft)
+	a.CategoryID = &catID
+	e.svc.SetTranslator(&fakeTranslator{values: map[uuid.UUID]map[string]map[string]any{
+		a.ID: {"en": {"title": "The news"}},
+	}})
+
+	res, err := e.svc.ListArticles(context.Background(), reviewerActor(), ArticleListParams{Locale: "en"})
+	require.NoError(t, err)
+	require.Equal(t, "Chuyên nghề", res.Items[0].Category.Name)
+}
+
+func TestArticles_ListShowsTheEnglishTitleWhereThereIsOne(t *testing.T) {
+	e := newTestSvc(t)
+	done := e.repo.seedArticle("Tin tuc", "tin-tuc", uuid.New(), ArticleStatusDraft)
+	e.repo.seedArticle("Chua dich", "chua-dich", uuid.New(), ArticleStatusDraft)
+	e.svc.SetTranslator(&fakeTranslator{values: map[uuid.UUID]map[string]map[string]any{
+		done.ID: {"en": {"title": "The news", "slug": "the-news"}},
+	}})
+
+	res, err := e.svc.ListArticles(context.Background(), reviewerActor(), ArticleListParams{Locale: "en"})
+	require.NoError(t, err)
+	got := map[uuid.UUID]ArticleListItem{}
+	for _, it := range res.Items {
+		got[it.ID] = it
+	}
+	require.Equal(t, "The news", got[done.ID].Title)
+	require.Equal(t, "tin-tuc", got[done.ID].Slug)
+	for _, it := range res.Items {
+		if it.ID != done.ID {
+			require.Equal(t, "Chua dich", it.Title)
+			require.Equal(t, "chua-dich", it.Slug)
+		}
+	}
+}
+
+// A blank translation is somebody who opened the form and did not finish it,
+// not an article without a title.
+func TestArticles_ListBlankTranslationFallsBackToTheRow(t *testing.T) {
+	e := newTestSvc(t)
+	a := e.repo.seedArticle("Tin tuc", "tin-tuc", uuid.New(), ArticleStatusDraft)
+	e.svc.SetTranslator(&fakeTranslator{values: map[uuid.UUID]map[string]map[string]any{
+		a.ID: {"en": {"title": ""}},
+	}})
+
+	res, err := e.svc.ListArticles(context.Background(), reviewerActor(), ArticleListParams{Locale: "en"})
+	require.NoError(t, err)
+	require.Equal(t, "Tin tuc", res.Items[0].Title)
+}
+
+// Reading in the source language must not cost a query.
+func TestArticles_ListSourceLanguageLooksUpNothing(t *testing.T) {
+	e := newTestSvc(t)
+	e.repo.seedArticle("Tin tuc", "tin-tuc", uuid.New(), ArticleStatusDraft)
+	tr := &fakeTranslator{}
+	e.svc.SetTranslator(tr)
+
+	for _, locale := range []string{"vi", ""} {
+		res, err := e.svc.ListArticles(context.Background(), reviewerActor(), ArticleListParams{Locale: locale})
+		require.NoError(t, err)
+		require.Equal(t, "Tin tuc", res.Items[0].Title)
+	}
+	require.Zero(t, tr.bundled)
+}
+
+// One bulk read for the page, not one per row.
+func TestArticles_ListReadsTranslationsOnce(t *testing.T) {
+	e := newTestSvc(t)
+	for i := range 3 {
+		e.repo.seedArticle("Bai "+string(rune('A'+i)), "bai-"+string(rune('a'+i)), uuid.New(), ArticleStatusDraft)
+	}
+	tr := &fakeTranslator{}
+	e.svc.SetTranslator(tr)
+
+	res, err := e.svc.ListArticles(context.Background(), reviewerActor(), ArticleListParams{Locale: "en"})
+	require.NoError(t, err)
+	require.Len(t, res.Items, 3)
+	require.Equal(t, 1, tr.bundled)
+}
+
+// The editor must keep showing the article's own columns: hand it a translated
+// title and the next save writes English into the Vietnamese row. GetArticle
+// therefore takes no locale at all, and wiring a translator changes nothing.
+func TestArticles_GetIsNeverTranslated(t *testing.T) {
+	e := newTestSvc(t)
+	a := e.repo.seedArticle("Tin tuc", "tin-tuc", uuid.New(), ArticleStatusDraft)
+	tr := &fakeTranslator{values: map[uuid.UUID]map[string]map[string]any{
+		a.ID: {"en": {"title": "The news", "slug": "the-news"}},
+	}}
+	e.svc.SetTranslator(tr)
+
+	got, err := e.svc.GetArticle(context.Background(), reviewerActor(), a.ID)
+	require.NoError(t, err)
+	require.Equal(t, "Tin tuc", got.Title)
+	require.Equal(t, "tin-tuc", got.Slug)
+	require.Zero(t, tr.bundled)
+}
+
 func TestArticles_ListInvalidStatusRejected(t *testing.T) {
 	e := newTestSvc(t)
 	_, err := e.svc.ListArticles(context.Background(), reviewerActor(), ArticleListParams{Status: "bogus"})
@@ -408,6 +545,29 @@ func TestArticles_UpdateReclaimsDroppedInlineMedia(t *testing.T) {
 	require.Contains(t, e.store.Saved, keep)    // referenced → kept
 	require.NotContains(t, e.store.Saved, drop) // unreferenced inline → reclaimed
 	require.Contains(t, e.store.Saved, feat)    // featured tracked by column → kept
+}
+
+// Removing the featured image clears the column and reclaims the file. The
+// console says "removed" by sending an empty path; anything else would be
+// indistinguishable from "I did not touch this field", which is how a removed
+// image used to come straight back on the next read.
+func TestArticles_UpdateClearsFeaturedDeletesFile(t *testing.T) {
+	e := newTestSvc(t)
+	e.flags(map[string]bool{shared.FlagArticleCategorize: false})
+	owner := uuid.New()
+	art := e.repo.seedArticle("Dr", "dr", owner, ArticleStatusDraft)
+	old := "cms/articles/" + art.ID.String() + "/featured-old.png"
+	art.FeaturedPath = &old
+	e.store.Saved[old] = []byte("x")
+	blank := ""
+
+	got, err := e.svc.UpdateArticle(context.Background(), editorActor(owner), art.ID,
+		UpdateArticleRequest{UpdatedAt: &art.UpdatedAt, FeaturedPath: &blank})
+	require.NoError(t, err)
+
+	require.Nil(t, got.FeaturedURL) // the response stops offering one
+	require.Nil(t, e.repo.articles[art.ID].FeaturedPath)
+	require.NotContains(t, e.store.Saved, old) // cleared → file reclaimed
 }
 
 // Replacing the featured image deletes the previous file (served live, so the

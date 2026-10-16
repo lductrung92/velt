@@ -63,6 +63,11 @@ func jsonScalar(v string) string {
 
 func publicSortClause(sort string) string {
 	switch sort {
+	// A fresh draw per query: with LIMIT/OFFSET paging a row can come back on
+	// two pages or on none, so this is an ordering for one short list (a widget
+	// asks for page 1 only), not for walking the catalogue.
+	case "random":
+		return `random()`
 	case "name":
 		return `body->>'name' ASC`
 	case "newest":

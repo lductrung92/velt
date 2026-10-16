@@ -1,4 +1,5 @@
 import {
+  Archive,
   ArrowDown,
   ArrowRight,
   ArrowUp,
@@ -11,7 +12,6 @@ import {
   Plus,
   RotateCcw,
   Search,
-  Send,
   Trash2,
   User,
 } from "lucide-react";
@@ -38,7 +38,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TablePagination } from "@/components/ui/table-pagination";
+import { ListPager } from "@/components/ui/list-pager";
+import { usePaging } from "@/hooks/usePaging";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
@@ -48,29 +49,38 @@ import {
   useArticleOverview,
   useArticles,
   useDeleteArticle,
+  useUpdateArticle,
 } from "../hooks/useCmsArticles";
 import { useTagOptions } from "../hooks/useCmsTags";
 import type {
   ArticleListItem,
   ArticleStatus,
 } from "../services/articles.service";
-import { ARTICLE_STATUSES } from "../utils/articleStatus";
 import { flattenTree } from "../utils/categoryTree";
 
 import "@/styles/list-page.css";
 import "./articles.css";
 
-const PAGE_SIZE = 10;
 const DEFAULT_SORT = "-updated_at";
 const SORTABLE = new Set(["title", "status", "published_at", "updated_at"]);
 
+/**
+ * The tabs, in the order somebody looking for an article thinks of them: what
+ * is live, what is being written, what has been put away.
+ *
+ * Not every status — the review states (pending_review, needs_revision,
+ * scheduled) are stops inside one piece of work, not places a reader browses.
+ */
+const STATUS_TABS: ArticleStatus[] = ["published", "draft", "archived"];
+
 // The overview cards and the status each one filters to. "" is the unfiltered
-// total, which is why it comes first.
+// total, which is why it comes first; the rest follow the tabs below, so the
+// two rows read in the same order.
 const OVERVIEW = [
   { status: "", key: "total", Icon: FileText },
-  { status: "draft", key: "draft", Icon: PenLine },
-  { status: "pending_review", key: "pending_review", Icon: Send },
   { status: "published", key: "published", Icon: CalendarClock },
+  { status: "draft", key: "draft", Icon: PenLine },
+  { status: "archived", key: "archived", Icon: Archive },
 ] as const;
 
 interface Option {
@@ -87,7 +97,10 @@ export default function ArticleList() {
   const canDelete = hasPermission("cms.article.delete");
   const isReviewer = hasPermission("cms.article.review");
 
-  const [page, setPage] = useState(1);
+  // Page, page size and pager style all come from the shared settings
+  // (Settings → General → Pagination), so every list pages the same way.
+  const paging = usePaging();
+  const { page, setPage } = paging;
   const [sort, setSort] = useState(DEFAULT_SORT);
   const [q, setQ] = useState("");
   const [draftQ, setDraftQ] = useState("");
@@ -98,6 +111,10 @@ export default function ArticleList() {
     null,
   );
   const del = useDeleteArticle();
+  const update = useUpdateArticle();
+  const [archiveTarget, setArchiveTarget] = useState<ArticleListItem | null>(
+    null,
+  );
 
   const articles = useArticles({
     q: q || undefined,
@@ -105,7 +122,7 @@ export default function ArticleList() {
     category_id: categoryId || undefined,
     tag: tag || undefined,
     page,
-    page_size: PAGE_SIZE,
+    page_size: paging.pageSize,
     sort,
   });
   const overview = useArticleOverview(
@@ -192,6 +209,22 @@ export default function ArticleList() {
       },
     });
 
+  // Archiving is a status change, not an endpoint of its own — the same PATCH
+  // the editor's status picker makes, carrying the row's own lock token.
+  async function handleArchive() {
+    if (!archiveTarget) return;
+    try {
+      await update.mutateAsync({
+        id: archiveTarget.id,
+        body: { updated_at: archiveTarget.updated_at, status: "archived" },
+      });
+      toast.success(t("cms.articles.toast.archived"));
+      setArchiveTarget(null);
+    } catch (err) {
+      toast.error(parseApiError(err, t).message);
+    }
+  }
+
   async function handleDelete() {
     if (!deleteTarget) return;
     try {
@@ -277,6 +310,8 @@ export default function ArticleList() {
   );
   const actions = (a: ArticleListItem) => {
     const showDelete = canDelete && (isReviewer || a.status === "draft");
+    // Nothing to archive about something already archived.
+    const showArchive = canEdit && a.status !== "archived";
     if (!canEdit && !showDelete) return null;
     return (
       <RowActions>
@@ -285,6 +320,13 @@ export default function ArticleList() {
             icon={Pencil}
             label={t("common.edit")}
             to={`/cms/articles/${a.id}`}
+          />
+        )}
+        {showArchive && (
+          <RowAction
+            icon={Archive}
+            label={t("cms.articles.archive")}
+            onClick={() => setArchiveTarget(a)}
           />
         )}
         {showDelete && (
@@ -468,7 +510,7 @@ export default function ArticleList() {
           >
             {t("cms.articles.all_statuses")}
           </button>
-          {ARTICLE_STATUSES.map((value) => (
+          {STATUS_TABS.map((value) => (
             <button
               type="button"
               key={value}
@@ -616,18 +658,37 @@ export default function ArticleList() {
                 </div>
               ))}
             </div>
-
-            <div className="list-pagination">
-              <TablePagination
-                page={page}
-                total={total}
-                pageSize={PAGE_SIZE}
-                onPageChange={setPage}
-              />
-            </div>
           </>
         )}
       </section>
+
+      {/* Outside the card on purpose: the panel holds the records, the
+          pager is how you ask for the next ones. It hides itself when
+          everything fits on one page, so it costs nothing while loading
+          or on an empty list. */}
+      <div className="list-pagination">
+        <ListPager
+          paging={paging}
+          total={total}
+          loading={articles.isFetching}
+        />
+      </div>
+
+      {/* A published article leaves the site the moment this lands, so it asks
+          first — the same way deleting does. */}
+      <ConfirmDialog
+        open={!!archiveTarget}
+        onOpenChange={(open) => !open && setArchiveTarget(null)}
+        title={t("cms.articles.dialog.archive.title")}
+        description={t("cms.articles.dialog.archive.description", {
+          title: archiveTarget?.title ?? "",
+        })}
+        confirmLabel={t("cms.articles.archive")}
+        confirmIcon={Archive}
+        destructive
+        loading={update.isPending}
+        onConfirm={() => void handleArchive()}
+      />
 
       <ConfirmDialog
         open={!!deleteTarget}

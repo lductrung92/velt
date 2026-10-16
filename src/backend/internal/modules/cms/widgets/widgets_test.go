@@ -18,10 +18,10 @@ func TestSanitizeConfig(t *testing.T) {
 		wantErr bool
 	}{
 		{"unknown type", "nope", `{}`, true},
-		{"games ok", TypeGamesList, `{"limit":6}`, false},
-		{"empty becomes object", TypeGamesList, ``, false},
-		{"null becomes object", TypeGamesList, `null`, false},
-		{"invalid json", TypeGamesList, `{`, true},
+		{"articles ok", TypeArticlesList, `{"limit":6}`, false},
+		{"empty becomes object", TypeArticlesList, ``, false},
+		{"null becomes object", TypeArticlesList, `null`, false},
+		{"invalid json", TypeArticlesList, `{`, true},
 		{"rich_text ok", TypeRichText, `{"html":"<b>hi</b>"}`, false},
 		{"dangerous scheme rejected", TypeCTABanner, `{"buttons":[{"href":"javascript:alert(1)"}]}`, true},
 		{"data svg href rejected", TypeCTABanner, `{"buttons":[{"href":"data:image/svg+xml;base64,x"}]}`, true},
@@ -47,13 +47,13 @@ func TestSanitizeConfig_RichTextStripsScript(t *testing.T) {
 	require.NotContains(t, string(out), "<script>")
 }
 
-type fakeGames struct{ items []GameItem }
+type fakeArticles struct {
+	items []ArticleItem
+	got   ArticlesQuery
+}
 
-func (f fakeGames) ListGames(context.Context, GamesQuery) ([]GameItem, error) { return f.items, nil }
-
-type fakeArticles struct{ items []ArticleItem }
-
-func (f fakeArticles) ListArticles(context.Context, ArticlesQuery) ([]ArticleItem, error) {
+func (f *fakeArticles) ListArticles(_ context.Context, q ArticlesQuery) ([]ArticleItem, error) {
+	f.got = q
 	return f.items, nil
 }
 
@@ -65,13 +65,12 @@ func (f fakeCats) ListCategories(context.Context, CategoriesQuery) ([]CategoryIt
 
 func TestResolve(t *testing.T) {
 	r := NewResolver(Ports{
-		Games:      fakeGames{items: []GameItem{{Slug: "a"}}},
-		Articles:   fakeArticles{items: []ArticleItem{{Slug: "x"}}},
+		Articles:   &fakeArticles{items: []ArticleItem{{Slug: "x"}}},
 		Categories: fakeCats{items: []CategoryItem{{Slug: "c"}}},
 	})
 	ctx := context.Background()
 
-	for _, typ := range []string{TypeGamesList, TypeArticlesList, TypeCategoriesShowcase} {
+	for _, typ := range []string{TypeArticlesList, TypeCategoriesShowcase} {
 		data, err := r.Resolve(ctx, typ, json.RawMessage(`{"limit":5}`))
 		require.NoError(t, err)
 		require.NotNil(t, data, typ)
@@ -87,7 +86,7 @@ func TestResolve(t *testing.T) {
 
 func TestResolve_NilPortsEmpty(t *testing.T) {
 	r := NewResolver(Ports{}) // no ports wired
-	data, err := r.Resolve(context.Background(), TypeGamesList, json.RawMessage(`{}`))
+	data, err := r.Resolve(context.Background(), TypeArticlesList, json.RawMessage(`{}`))
 	require.NoError(t, err)
 	require.NotNil(t, data) // empty items map, never nil
 }
@@ -124,7 +123,7 @@ func TestResolve_ProductGridAndTeam(t *testing.T) {
 	data, err := r.Resolve(ctx, TypeProductGrid, json.RawMessage(`{"category":"van-hanh","limit":3}`))
 	require.NoError(t, err)
 	require.Equal(t, map[string]any{"items": products.items}, data)
-	require.Equal(t, ProductsQuery{Category: "van-hanh", Limit: 3}, products.got)
+	require.Equal(t, ProductsQuery{Category: "van-hanh", Sort: "featured", Limit: 3}, products.got)
 
 	data, err = r.Resolve(ctx, TypeTeam, json.RawMessage(`{"limit":4}`))
 	require.NoError(t, err)
@@ -135,4 +134,37 @@ func TestResolve_ProductGridAndTeam(t *testing.T) {
 	_, err = r.Resolve(ctx, TypeProductGrid, json.RawMessage(`{}`))
 	require.NoError(t, err)
 	require.Equal(t, 6, products.got.Limit)
+}
+
+// The console's selection-mode control writes a "sort" key into the widget
+// config. The query handed to the port is the last place that choice still
+// exists, so that is where it has to be checked.
+func TestResolve_Sort(t *testing.T) {
+	products := &fakeProducts{}
+	articles := &fakeArticles{}
+	r := NewResolver(Ports{Products: products, Articles: articles})
+	ctx := context.Background()
+
+	for _, want := range []string{"featured", "newest", "name", "random"} {
+		_, err := r.Resolve(ctx, TypeProductGrid, json.RawMessage(`{"sort":"`+want+`"}`))
+		require.NoError(t, err)
+		require.Equal(t, want, products.got.Sort)
+	}
+	for _, want := range []string{"newest", "oldest", "title", "random"} {
+		_, err := r.Resolve(ctx, TypeArticlesList, json.RawMessage(`{"sort":"`+want+`"}`))
+		require.NoError(t, err)
+		require.Equal(t, want, articles.got.Sort)
+	}
+
+	// An ordering the data layer cannot honour, and no ordering at all, both
+	// mean the default — a widget shows the usual order rather than nothing.
+	for _, cfg := range []string{`{"sort":"shuffle"}`, `{}`} {
+		_, err := r.Resolve(ctx, TypeProductGrid, json.RawMessage(cfg))
+		require.NoError(t, err)
+		require.Equal(t, "featured", products.got.Sort, cfg)
+
+		_, err = r.Resolve(ctx, TypeArticlesList, json.RawMessage(cfg))
+		require.NoError(t, err)
+		require.Equal(t, "newest", articles.got.Sort, cfg)
+	}
 }

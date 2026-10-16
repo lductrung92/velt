@@ -21,6 +21,7 @@ type fakeUser struct {
 
 type fakeSession struct {
 	userID  uuid.UUID
+	created time.Time
 	expires time.Time
 	revoked bool
 }
@@ -30,6 +31,9 @@ type fakeRepo struct {
 	sessions map[uuid.UUID]*fakeSession
 	users    map[uuid.UUID]fakeUser
 	now      time.Time
+	// What the service worked out and handed down on the last purge.
+	purgedBefore  time.Time
+	purgedKeeping uuid.UUID
 }
 
 func newFakeRepo(now time.Time) *fakeRepo {
@@ -43,8 +47,18 @@ func (r *fakeRepo) addUser(email string) fakeUser {
 }
 
 func (r *fakeRepo) addSession(userID uuid.UUID) uuid.UUID {
+	return r.addSessionAged(userID, 0)
+}
+
+// addSessionAged dates a session ageDays in the past, so the purge window has
+// something to be right or wrong about.
+func (r *fakeRepo) addSessionAged(userID uuid.UUID, ageDays int) uuid.UUID {
 	id := uuid.New()
-	r.sessions[id] = &fakeSession{userID: userID, expires: r.now.Add(time.Hour)}
+	r.sessions[id] = &fakeSession{
+		userID:  userID,
+		created: r.now.AddDate(0, 0, -ageDays),
+		expires: r.now.Add(time.Hour),
+	}
 	return id
 }
 
@@ -85,6 +99,25 @@ func (r *fakeRepo) RevokeAllUserSessions(_ context.Context, userID uuid.UUID, _ 
 		}
 	}
 	return nil
+}
+
+// PurgeSessions keeps the rows created at or after the cutoff and drops the
+// rest, which is what `DELETE ... WHERE created_at < $2` does. keepUser's rows
+// are never touched. A zero cutoff drops everything else.
+func (r *fakeRepo) PurgeSessions(_ context.Context, before time.Time, keepUser uuid.UUID) (int64, error) {
+	r.purgedBefore, r.purgedKeeping = before, keepUser
+	var deleted int64
+	for id, s := range r.sessions {
+		if s.userID == keepUser {
+			continue
+		}
+		if !before.IsZero() && !s.created.Before(before) {
+			continue
+		}
+		delete(r.sessions, id)
+		deleted++
+	}
+	return deleted, nil
 }
 
 func (r *fakeRepo) UserExists(_ context.Context, id uuid.UUID) (bool, error) {

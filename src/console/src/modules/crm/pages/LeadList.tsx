@@ -38,10 +38,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DEFAULT_PAGE_SIZE,
-  TablePagination,
-} from "@/components/ui/table-pagination";
+import { ListPager } from "@/components/ui/list-pager";
+import { usePaging } from "@/hooks/usePaging";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
@@ -58,6 +56,11 @@ import {
 } from "../services/leads.service";
 import "@/styles/list-page.css";
 import "./leads.css";
+
+// The inbox reads its conversation off the URL, so a row hands the id over
+// instead of dropping the operator on the unfiltered queue.
+const inboxLink = (conversationId: string) =>
+  `/chat?conversation=${encodeURIComponent(conversationId)}`;
 
 const OVERVIEW = [
   { status: "", key: "total", Icon: Users },
@@ -147,7 +150,10 @@ export default function LeadList() {
   const { hasPermission } = usePermission();
   const canManage = hasPermission("crm.leads.manage");
   const canChat = hasPermission("ai.chat.handle");
-  const [page, setPage] = useState(1);
+  // Page, page size and pager style all come from the shared settings
+  // (Settings → General → Pagination), so every list pages the same way.
+  const paging = usePaging();
+  const { page, setPage } = paging;
   const [q, setQ] = useState("");
   const [draftQ, setDraftQ] = useState("");
   const [status, setStatus] = useState("");
@@ -160,7 +166,7 @@ export default function LeadList() {
     source,
     assignee,
     page,
-    page_size: DEFAULT_PAGE_SIZE,
+    page_size: paging.pageSize,
   });
   const overview = useLeadOverview(hasPermission("crm.leads.view_all"));
   const update = useUpdateLead();
@@ -287,7 +293,10 @@ export default function LeadList() {
           {t(`leads.source.${lead.source}`)}
         </span>
         {lead.conversation_id && canChat && (
-          <button type="button" onClick={() => navigate("/chat")}>
+          <button
+            type="button"
+            onClick={() => navigate(inboxLink(lead.conversation_id as string))}
+          >
             <span>{t("leads.open_chat")}</span>
             <ArrowRight className="size-3" aria-hidden />
           </button>
@@ -302,7 +311,7 @@ export default function LeadList() {
           <RowAction
             icon={MessageSquare}
             label={t("leads.open_chat")}
-            onClick={() => navigate("/chat")}
+            onClick={() => navigate(inboxLink(lead.conversation_id as string))}
           />
         )}
         {canManage && (
@@ -318,7 +327,11 @@ export default function LeadList() {
 
   return (
     <div className="list-page" data-list="leads">
-      <PageHeader title={t("leads.title")} subtitle={t("leads.subtitle")} />
+      <PageHeader
+        title={t("leads.title")}
+        subtitle={t("leads.subtitle")}
+        breadcrumbs={[{ labelKey: "nav.leads" }]}
+      />
       <div className="list-overview" aria-label={t("leads.overview.label")}>
         {OVERVIEW.map(({ status: value, key, Icon }, index) => (
           <button
@@ -634,17 +647,21 @@ export default function LeadList() {
                 </article>
               ))}
             </div>
-            <div className="list-pagination">
-              <TablePagination
-                page={list.data?.page ?? page}
-                pageSize={list.data?.page_size ?? DEFAULT_PAGE_SIZE}
-                total={list.data?.total ?? 0}
-                onPageChange={setPage}
-              />
-            </div>
           </>
         )}
       </section>
+
+      {/* Outside the card on purpose: the panel holds the records, the
+          pager is how you ask for the next ones. It hides itself when
+          everything fits on one page, so it costs nothing while loading
+          or on an empty list. */}
+      <div className="list-pagination">
+        <ListPager
+          paging={paging}
+          total={list.data?.total ?? 0}
+          loading={list.isFetching}
+        />
+      </div>
       <ConfirmDialog
         open={!!pending}
         onOpenChange={(open) => !open && setPending(null)}

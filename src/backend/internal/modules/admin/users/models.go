@@ -1,5 +1,5 @@
 // Package users is the admin user-management feature: list/get/create/update/
-// delete users, role assignment, and admin-triggered password reset. Every
+// delete users, role assignment, and admin-minted temporary passwords. Every
 // action is permission-gated and subject to anti-escalation + self-protection
 // (enforced via the shared Base).
 package users
@@ -35,7 +35,8 @@ type User struct {
 	LastLoginAt *time.Time
 }
 
-// CreateUserRequest creates a user (no password; a set-password mail is sent).
+// CreateUserRequest creates a user. The password is not supplied: the server
+// mints a temporary one and returns it once (see UserCredentials).
 type CreateUserRequest struct {
 	Email    string      `json:"email" validate:"required,email"`
 	FullName string      `json:"full_name" validate:"required"`
@@ -73,10 +74,19 @@ type UserDetail struct {
 	TwoFactorEnabled bool                 `json:"two_factor_enabled"`
 }
 
-// ListUsersFilter parameterizes the user list query.
+// UserCredentials is a user plus a freshly minted temporary password. The
+// plaintext leaves the server exactly once — in this response — and is stored
+// only as an argon2id hash; it is never logged.
+type UserCredentials struct {
+	UserDetail
+	TemporaryPassword string `json:"temporary_password"`
+}
+
+// ListUsersFilter parameterizes the user list query. Role is a role CODE.
 type ListUsersFilter struct {
 	Query    string
 	Status   string
+	Role     string
 	Page     int
 	PageSize int
 	Sort     string

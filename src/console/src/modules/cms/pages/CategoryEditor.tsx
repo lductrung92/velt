@@ -6,6 +6,7 @@ import {
   Save,
   Search,
   SlidersHorizontal,
+  Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -14,6 +15,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EditorActionBar } from "@/components/common/EditorActionBar";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Select } from "@/components/common/Select";
@@ -33,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
+import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
 import { LanguageTabs } from "@/modules/translation/components/LanguageTabs";
@@ -47,6 +50,7 @@ import { useCmsSettings } from "../hooks/useCmsSettings";
 import {
   useCategories,
   useCreateCategory,
+  useDeleteCategory,
   useUpdateCategory,
 } from "../hooks/useCmsCategories";
 import {
@@ -54,9 +58,10 @@ import {
   makeCategorySchema,
   type CategoryFormValues,
 } from "../schemas/category";
-import type {
-  CreateCategoryBody,
-  UpdateCategoryBody,
+import {
+  CATEGORY_STATUSES,
+  type CreateCategoryBody,
+  type UpdateCategoryBody,
 } from "../services/categories.service";
 import {
   findCategory,
@@ -85,6 +90,10 @@ export default function CategoryEditor() {
 
   const create = useCreateCategory();
   const update = useUpdateCategory();
+  const del = useDeleteCategory();
+  const { hasPermission } = usePermission();
+  const canManage = hasPermission("cms.taxonomy.manage");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { data: settings } = useCmsSettings(true);
   const slugFlag = settings?.cms?.find(
@@ -111,6 +120,7 @@ export default function CategoryEditor() {
       ...categoryFormDefaults,
       name: category.name,
       slug: category.slug,
+      status: category.status,
       parent_id: category.parent_id ?? "",
       sort_order: category.sort_order,
       description: category.description ?? "",
@@ -120,6 +130,17 @@ export default function CategoryEditor() {
     });
     setRegenerate(false);
   }, [category, form]);
+
+  // The three labels are the shared content vocabulary, the same ones the
+  // list's badges and tabs read from.
+  const statusOptions = useMemo(
+    () =>
+      CATEGORY_STATUSES.map((value) => ({
+        value,
+        label: t(`content_status.${value}`),
+      })),
+    [t],
+  );
 
   // Parent options = the flattened tree (indented), excluding the node being
   // edited + all its descendants (choosing one would create a cycle).
@@ -149,6 +170,7 @@ export default function CategoryEditor() {
       if (isEdit && category) {
         const body: UpdateCategoryBody = {
           name: values.name.trim(),
+          status: values.status,
           parent_id: parentId,
           sort_order: values.sort_order,
           description: values.description.trim(),
@@ -173,6 +195,7 @@ export default function CategoryEditor() {
       } else {
         const body: CreateCategoryBody = {
           name: values.name.trim(),
+          status: values.status,
           sort_order: values.sort_order,
           description: values.description.trim(),
           seo,
@@ -195,6 +218,18 @@ export default function CategoryEditor() {
   });
 
   const saving = create.isPending || update.isPending;
+
+  const handleDelete = async () => {
+    if (!id) return;
+    try {
+      await del.mutateAsync(id);
+      toast.success(t("cms.categories.toast.delete_success"));
+      navigate(BACK);
+    } catch (err) {
+      toast.error(parseApiError(err, t).message);
+    }
+  };
+
   const header = (
     <PageHeader
       title={
@@ -252,6 +287,17 @@ export default function CategoryEditor() {
             </Button>
           }
         >
+          {isEdit && canManage && (
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={saving}
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="size-4" />
+              {t("common.delete")}
+            </Button>
+          )}
           <Button type="submit" loading={saving}>
             <Save className="size-4" />
             {t("common.save")}
@@ -358,6 +404,29 @@ export default function CategoryEditor() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("cms.categories.col.status")}</FormLabel>
+                      <Select
+                        inputId="cms-category-status"
+                        options={statusOptions}
+                        isClearable={false}
+                        isSearchable={false}
+                        value={
+                          statusOptions.find((o) => o.value === field.value) ??
+                          null
+                        }
+                        onChange={(o) =>
+                          field.onChange(o?.value ?? "published")
+                        }
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="parent_id"
@@ -480,6 +549,19 @@ export default function CategoryEditor() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Same prompt the list screen shows for the same record. */}
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title={t("cms.categories.dialog.delete.title")}
+          description={t("cms.categories.dialog.delete.description")}
+          confirmLabel={t("common.delete")}
+          confirmIcon={Trash2}
+          destructive
+          loading={del.isPending}
+          onConfirm={() => void handleDelete()}
+        />
       </form>
     </Form>
   );

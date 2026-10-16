@@ -43,6 +43,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { RowAction, RowActions } from "@/components/common/RowActions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ListPager } from "@/components/ui/list-pager";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -51,16 +52,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { usePaging } from "@/hooks/usePaging";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
+import { CategoryStatusBadge } from "../components/CategoryStatusBadge";
 import { CategoryTreeRow } from "../components/CategoryTreeRow";
 import {
   useCategories,
   useDeleteCategory,
   useReorderCategories,
 } from "../hooks/useCmsCategories";
-import type { Category } from "../services/categories.service";
+import {
+  CATEGORY_STATUSES,
+  type Category,
+  type CategoryStatus,
+} from "../services/categories.service";
 import {
   computeReorder,
   findCategory,
@@ -97,6 +104,11 @@ const OVERVIEW = [
 
 type Scope = (typeof OVERVIEW)[number]["key"];
 
+// The status tabs, in the order somebody looking for a category thinks of
+// them: what is in use, what is being set up, what has been put away. Same row
+// and same labels as the articles list.
+const STATUS_TABS = CATEGORY_STATUSES;
+
 export default function CategoryTree() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -110,10 +122,23 @@ export default function CategoryTree() {
   const tree = useMemo(() => categories.data ?? [], [categories.data]);
   const flat = useMemo(() => flattenTree(tree), [tree]);
 
+  // Page, page size and pager style all come from the shared settings
+  // (Settings → General → Pagination), so every list pages the same way.
+  const paging = usePaging();
+  const { page, setPage } = paging;
+
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<string | null>(null);
   const [scope, setScope] = useState<Scope>("total");
+  const [status, setStatus] = useState<CategoryStatus | "">("");
+
+  // Changing a filter puts you back on the first page — otherwise a narrower
+  // list leaves you looking at a page that no longer exists.
+  function applyFilter(change: () => void) {
+    change();
+    setPage(1);
+  }
 
   // Drag state (tree view only): picked-up node, hovered node, horizontal offset.
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -131,7 +156,8 @@ export default function CategoryTree() {
   // drag-reorder) is the default when none of them is set: a handle that moves
   // a row within a filtered subset would be writing a sort_order the user
   // cannot see.
-  const flatMode = q !== "" || sort !== null || scope !== "total";
+  const flatMode =
+    q !== "" || sort !== null || scope !== "total" || status !== "";
 
   const counts = OVERVIEW.map(({ match }) =>
     match ? flat.filter(match).length : flat.length,
@@ -141,6 +167,7 @@ export default function CategoryTree() {
     let list = flat;
     const card = OVERVIEW.find((o) => o.key === scope);
     if (card?.match) list = list.filter(card.match);
+    if (status) list = list.filter((n) => n.status === status);
     if (q) {
       const needle = q.toLowerCase();
       list = list.filter(
@@ -157,15 +184,32 @@ export default function CategoryTree() {
       list = [...list].sort((a, b) => a[key].localeCompare(b[key]) * dir);
     }
     return list;
-  }, [flat, q, sort, scope]);
+  }, [flat, q, sort, scope, status]);
+
+  // What the pager counts. In the flat view that is a row; in the tree the
+  // unit is a ROOT, because a root's whole subtree travels with it and a page
+  // must never split a parent from its children.
+  const total = flatMode ? rowsForView.length : tree.length;
+  const from = (page - 1) * paging.pageSize;
+
+  // The ids the current page shows. Tree mode expands the page's roots so the
+  // subtrees come with them; `flat` itself is left whole, because the drag
+  // projection and the reorder patch are computed against the real tree and
+  // not against the window being shown.
+  const pageIds = useMemo(() => {
+    if (flatMode) return null;
+    return new Set(
+      flattenTree(tree.slice(from, from + paging.pageSize)).map((n) => n.id),
+    );
+  }, [flatMode, tree, from, paging.pageSize]);
 
   // In tree mode the dragged node's subtree is lifted out so it cannot be
   // dropped inside itself.
   const rows = flatMode
-    ? rowsForView
-    : activeId
-      ? removeDescendants(flat, activeId)
-      : flat;
+    ? rowsForView.slice(from, from + paging.pageSize)
+    : (activeId ? removeDescendants(flat, activeId) : flat).filter((n) =>
+        pageIds?.has(n.id),
+      );
 
   const projected =
     !flatMode && activeId && overId && activeId !== overId
@@ -173,8 +217,10 @@ export default function CategoryTree() {
       : null;
 
   function cycleSort(col: string) {
-    setSort((cur) =>
-      cur === col ? `-${col}` : cur === `-${col}` ? null : col,
+    applyFilter(() =>
+      setSort((cur) =>
+        cur === col ? `-${col}` : cur === `-${col}` ? null : col,
+      ),
     );
   }
   function sortIcon(col: string) {
@@ -274,7 +320,11 @@ export default function CategoryTree() {
             className="list-metric"
             data-kind={key}
             aria-pressed={scope === key}
-            onClick={() => setScope((cur) => (cur === key ? "total" : key))}
+            onClick={() =>
+              applyFilter(() =>
+                setScope((cur) => (cur === key ? "total" : key)),
+              )
+            }
           >
             <span className="list-metric-top">
               <span>{t(`cms.categories.overview.${key}`)}</span>
@@ -342,9 +392,7 @@ export default function CategoryTree() {
           </div>
         </div>
 
-        {/* No status axis here, so no tabs row — the toolbar carries the rule
-            that would otherwise come from it. */}
-        <div className="list-toolbar list-toolbar-edge">
+        <div className="list-toolbar">
           <form
             className="list-search"
             onSubmit={(event) => event.preventDefault()}
@@ -357,7 +405,7 @@ export default function CategoryTree() {
               placeholder={t("cms.categories.search_ph")}
               // The whole tree is already in memory, so searching as you type
               // costs nothing and waiting for Enter would be pure friction.
-              onChange={(event) => setQ(event.target.value)}
+              onChange={(event) => applyFilter(() => setQ(event.target.value))}
             />
             <Button
               type="submit"
@@ -368,6 +416,32 @@ export default function CategoryTree() {
               <ArrowRight className="size-4" aria-hidden />
             </Button>
           </form>
+        </div>
+
+        <div
+          className="list-tabs"
+          role="group"
+          aria-label={t("cms.categories.filter_status")}
+        >
+          <button
+            type="button"
+            aria-pressed={!status}
+            onClick={() => applyFilter(() => setStatus(""))}
+          >
+            {t("cms.categories.all_statuses")}
+          </button>
+          {STATUS_TABS.map((value) => (
+            <button
+              type="button"
+              key={value}
+              data-status={value}
+              aria-pressed={status === value}
+              onClick={() => applyFilter(() => setStatus(value))}
+            >
+              <i aria-hidden />
+              {t(`content_status.${value}`)}
+            </button>
+          ))}
         </div>
 
         {categories.isError ? (
@@ -454,6 +528,7 @@ export default function CategoryTree() {
                     <TableRow>
                       {sortHead("name", t("cms.categories.col.name"))}
                       {sortHead("slug", t("cms.categories.col.slug"))}
+                      <TableHead>{t("cms.categories.col.status")}</TableHead>
                       <TableHead>
                         {t("cms.categories.col.article_count")}
                       </TableHead>
@@ -530,6 +605,7 @@ export default function CategoryTree() {
                     )}
                   </div>
                   <div className="category-mobile-meta">
+                    <CategoryStatusBadge status={node.status} />
                     <span
                       className="category-count"
                       data-empty={node.articleCount === 0 ? "true" : "false"}
@@ -547,6 +623,17 @@ export default function CategoryTree() {
           </>
         )}
       </section>
+
+      {/* Outside the card on purpose: the panel holds the records, the pager
+          is how you ask for the next ones. It hides itself when everything
+          fits on one page. */}
+      <div className="list-pagination">
+        <ListPager
+          paging={paging}
+          total={total}
+          loading={categories.isFetching}
+        />
+      </div>
 
       <ConfirmDialog
         open={!!deleteTarget}

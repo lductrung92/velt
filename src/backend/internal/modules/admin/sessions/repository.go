@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/velt/backend/internal/modules/admin/shared"
@@ -24,10 +25,23 @@ type Repository interface {
 	RevokeSession(ctx context.Context, id uuid.UUID, at time.Time) error
 	RevokeAllUserSessions(ctx context.Context, userID uuid.UUID, at time.Time) error
 	UserExists(ctx context.Context, id uuid.UUID) (bool, error)
+	// PurgeSessions deletes sessions created before the cutoff, skipping
+	// keepUser's own — see Service.PurgeSessions.
+	PurgeSessions(ctx context.Context, before time.Time, keepUser uuid.UUID) (int64, error)
+}
+
+// querier is the slice of pgx both *pgxpool.Pool and pgx.Tx satisfy. The
+// repository takes it rather than the pool so the integration test for
+// PurgeSessions can run inside a transaction it rolls back — a DELETE
+// statement is not something to try out against a live table.
+type querier interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
 type pgxRepository struct {
-	pool *pgxpool.Pool
+	pool querier
 }
 
 // NewRepository builds the pgx-backed session repository.
@@ -116,4 +130,23 @@ func (r *pgxRepository) UserExists(ctx context.Context, id uuid.UUID) (bool, err
 	var exists bool
 	err := r.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE id = $1)`, id).Scan(&exists)
 	return exists, shared.Wrap("user exists", err)
+}
+
+// PurgeSessions deletes sessions created BEFORE the cutoff, keeping the rest.
+// A zero cutoff has no lower bound and clears everything that is left.
+//
+// keepUser's rows are never touched: the acting admin is holding one of them,
+// and the request that signs its own caller out is not a clean-up.
+func (r *pgxRepository) PurgeSessions(ctx context.Context, before time.Time, keepUser uuid.UUID) (int64, error) {
+	q := `DELETE FROM auth_sessions WHERE user_id <> $1`
+	args := []any{keepUser}
+	if !before.IsZero() {
+		q += ` AND created_at < $2`
+		args = append(args, before)
+	}
+	tag, err := r.pool.Exec(ctx, q, args...)
+	if err != nil {
+		return 0, fmt.Errorf("purge sessions: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }

@@ -53,3 +53,19 @@ func TestListParams_PublicRosterIgnoresTheCreatedRange(t *testing.T) {
 	require.Nil(t, p.CreatedFrom)
 	require.Nil(t, p.CreatedTo)
 }
+
+// The console sends the language its interface is in; the list reads it from
+// there, not from a query parameter it never sets.
+func TestStaffListParams_LocaleComesFromAcceptLanguage(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/api/members", nil)
+	r.Header.Set("Accept-Language", "en-GB,en;q=0.9")
+	p, err := staffListParams(r)
+	require.NoError(t, err)
+	require.Equal(t, "en", p.Locale)
+}
+
+func TestStaffListParams_NoAcceptLanguageIsTheSourceLanguage(t *testing.T) {
+	p, err := parseStaffListQuery(t, "")
+	require.NoError(t, err)
+	require.Equal(t, "", p.Locale)
+}

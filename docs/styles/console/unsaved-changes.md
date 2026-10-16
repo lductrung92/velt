@@ -3,7 +3,16 @@
 Thiết kế cho cơ chế chặn rời khỏi nơi có thay đổi chưa lưu, dùng chung cho mọi
 màn soạn thảo và mọi hộp thoại có form trong console.
 
-Trạng thái: **bản thiết kế, chờ duyệt**. Chưa cài đặt.
+Trạng thái: **đã gỡ một nửa (2026-10-15)**.
+
+- Phần **chặn điều hướng** (`UnsavedChangesProvider`, `useUnsavedChanges`,
+  `beforeunload`, hộp thoại "Rời trang khi chưa lưu?") đã bị gỡ khỏi console
+  theo yêu cầu: rời màn soạn thảo giờ đi thẳng, không hỏi.
+- Phần **chặn đóng hộp thoại** (`src/hooks/useDialogDismissGuard.ts`) vẫn còn và
+  vẫn dùng ở form thành viên, form menu, form item menu.
+
+Phần còn lại của tài liệu giữ nguyên làm hồ sơ thiết kế cũ; đừng đọc nó như mô
+tả hệ thống hiện tại.
 
 ---
 

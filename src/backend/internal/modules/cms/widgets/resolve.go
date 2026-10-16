@@ -5,39 +5,6 @@ import (
 	"encoding/json"
 )
 
-// --- games_list ---
-
-// GameItem is the resolved, web-ready shape of a game inside a games_list widget.
-type GameItem struct {
-	Slug        string   `json:"slug"`
-	Title       string   `json:"title"`
-	Description *string  `json:"description"`
-	AgeGroup    string   `json:"age_group"`
-	Subject     *string  `json:"subject"`
-	Skills      []string `json:"skills"`
-	CoverURL    *string  `json:"cover_url"`
-	PlayURL     string   `json:"play_url"`
-	AccessTier  string   `json:"access_tier"`
-}
-
-// GamesQuery is the resolved filter a games_list config maps to.
-type GamesQuery struct {
-	// Locale is the language the page is being read in. Empty means the base
-	// language, which is what every port falls back to anyway.
-	Locale   string
-	AgeGroup string
-	Subject  string
-	Skill    string
-	Q        string
-	Sort     string
-	Limit    int
-}
-
-// GamesPort is the games data the resolver needs.
-type GamesPort interface {
-	ListGames(ctx context.Context, q GamesQuery) ([]GameItem, error)
-}
-
 // --- articles_list ---
 
 // ArticleItem is a published-article card (text-only for v1; no featured image).
@@ -51,10 +18,15 @@ type ArticleItem struct {
 // ArticlesQuery is the resolved filter an articles_list config maps to. CategoryID
 // is the raw config string (the adapter parses it to a UUID).
 type ArticlesQuery struct {
+	// Locale is the language the page is being read in. Empty means the base
+	// language, which is what every port falls back to anyway.
 	Locale     string
 	CategoryID string
 	Tag        string
-	Limit      int
+	// Sort is already normalized to one the port can honour, so an adapter
+	// never has to guess what an editor meant.
+	Sort  string
+	Limit int
 }
 
 // ArticlesPort is the published-articles data the resolver needs.
@@ -85,7 +57,6 @@ type CategoriesPort interface {
 // Ports bundles the data sources a Resolver needs (cross-module DI). Any may be
 // nil — that widget then resolves to an empty list.
 type Ports struct {
-	Games      GamesPort
 	Articles   ArticlesPort
 	Categories CategoriesPort
 	Products   ProductsPort
@@ -96,24 +67,30 @@ type Ports struct {
 
 // ProductItem is a published-product card, the same fields the public catalogue
 // list serves — a landing grid and /products must not describe one product two
-// different ways.
+// different ways. That includes the cover's intrinsic size, which is absent
+// when the image has no `files` row.
 type ProductItem struct {
-	Slug       string   `json:"slug"`
-	Name       string   `json:"name"`
-	Summary    *string  `json:"summary"`
-	CoverURL   *string  `json:"cover_url"`
-	Lifecycle  string   `json:"lifecycle"`
-	IsFeatured bool     `json:"is_featured"`
-	Audience   []string `json:"audience"`
-	Platforms  []string `json:"platforms"`
-	Categories []string `json:"categories"`
+	Slug        string   `json:"slug"`
+	Name        string   `json:"name"`
+	Summary     *string  `json:"summary"`
+	CoverURL    *string  `json:"cover_url"`
+	CoverWidth  int      `json:"cover_width,omitempty"`
+	CoverHeight int      `json:"cover_height,omitempty"`
+	Lifecycle   string   `json:"lifecycle"`
+	IsFeatured  bool     `json:"is_featured"`
+	Audience    []string `json:"audience"`
+	Platforms   []string `json:"platforms"`
+	Categories  []string `json:"categories"`
 }
 
 // ProductsQuery is the resolved filter a product_grid config maps to.
 type ProductsQuery struct {
 	Locale   string
 	Category string
-	Limit    int
+	// Sort is already normalized to one the port can honour, so an adapter
+	// never has to guess what an editor meant.
+	Sort  string
+	Limit int
 }
 
 // ProductsPort is the published-catalogue data the resolver needs.
@@ -125,12 +102,14 @@ type ProductsPort interface {
 
 // MemberItem is an active team member as the public roster serves them.
 type MemberItem struct {
-	Slug      string   `json:"slug"`
-	FullName  string   `json:"full_name"`
-	Role      *string  `json:"role"`
-	Bio       *string  `json:"bio"`
-	AvatarURL *string  `json:"avatar_url"`
-	Skills    []string `json:"skills"`
+	Slug         string   `json:"slug"`
+	FullName     string   `json:"full_name"`
+	Role         *string  `json:"role"`
+	Bio          *string  `json:"bio"`
+	AvatarURL    *string  `json:"avatar_url"`
+	AvatarWidth  int      `json:"avatar_width,omitempty"`
+	AvatarHeight int      `json:"avatar_height,omitempty"`
+	Skills       []string `json:"skills"`
 }
 
 // MembersQuery is the resolved filter a team config maps to.
@@ -167,8 +146,6 @@ func (r *Resolver) Resolve(ctx context.Context, typ string, config json.RawMessa
 // it, yields the base language.
 func (r *Resolver) ResolveIn(ctx context.Context, typ string, config json.RawMessage, locale string) (any, error) {
 	switch typ {
-	case TypeGamesList:
-		return r.resolveGamesList(ctx, config, locale)
 	case TypeArticlesList:
 		return r.resolveArticlesList(ctx, config, locale)
 	case TypeCategoriesShowcase:
@@ -189,35 +166,26 @@ func clampLimit(n, def int) int {
 	return n
 }
 
-type gamesListConfig struct {
-	Filters struct {
-		AgeGroup string `json:"age_group"`
-		Subject  string `json:"subject"`
-		Skill    string `json:"skill"`
-		Q        string `json:"q"`
-	} `json:"filters"`
-	Limit int    `json:"limit"`
-	Sort  string `json:"sort"`
+// productSort and articleSort keep a widget's "sort" config inside the set the
+// underlying service orders by. Anything else — an older console, a hand-edited
+// config — means the default: an ordering nobody can honour must leave the
+// widget looking ordinary, not empty.
+func productSort(s string) string {
+	switch s {
+	case "name", "newest", "random":
+		return s
+	default:
+		return "featured"
+	}
 }
 
-func (r *Resolver) resolveGamesList(ctx context.Context, config json.RawMessage, locale string) (any, error) {
-	if r.ports.Games == nil {
-		return map[string]any{"items": []GameItem{}}, nil
+func articleSort(s string) string {
+	switch s {
+	case "oldest", "title", "random":
+		return s
+	default:
+		return "newest"
 	}
-	var c gamesListConfig
-	_ = json.Unmarshal(config, &c) // intentional: config is valid JSON (sanitized at write); a shape mismatch falls back to zero-value defaults below
-	items, err := r.ports.Games.ListGames(ctx, GamesQuery{
-		Locale:   locale,
-		AgeGroup: c.Filters.AgeGroup, Subject: c.Filters.Subject,
-		Skill: c.Filters.Skill, Q: c.Filters.Q, Sort: c.Sort, Limit: clampLimit(c.Limit, 8),
-	})
-	if err != nil {
-		return nil, err
-	}
-	if items == nil {
-		items = []GameItem{}
-	}
-	return map[string]any{"items": items}, nil
 }
 
 type articlesListConfig struct {
@@ -225,11 +193,13 @@ type articlesListConfig struct {
 		CategoryID string `json:"category_id"`
 		Tag        string `json:"tag"`
 	} `json:"filters"`
-	Limit int `json:"limit"`
+	Sort  string `json:"sort"`
+	Limit int    `json:"limit"`
 }
 
 type productGridConfig struct {
 	Category string `json:"category"`
+	Sort     string `json:"sort"`
 	Limit    int    `json:"limit"`
 }
 
@@ -241,7 +211,7 @@ func (r *Resolver) resolveProductGrid(ctx context.Context, config json.RawMessag
 	_ = json.Unmarshal(config, &c) // see resolveArticlesList: a shape mismatch falls back to defaults
 	items, err := r.ports.Products.ListProducts(ctx, ProductsQuery{
 		Locale:   locale,
-		Category: c.Category, Limit: clampLimit(c.Limit, 6),
+		Category: c.Category, Sort: productSort(c.Sort), Limit: clampLimit(c.Limit, 6),
 	})
 	if err != nil {
 		return nil, err
@@ -281,7 +251,8 @@ func (r *Resolver) resolveArticlesList(ctx context.Context, config json.RawMessa
 	_ = json.Unmarshal(config, &c) // intentional: config is valid JSON (sanitized at write); a shape mismatch falls back to zero-value defaults below
 	items, err := r.ports.Articles.ListArticles(ctx, ArticlesQuery{
 		Locale:     locale,
-		CategoryID: c.Filters.CategoryID, Tag: c.Filters.Tag, Limit: clampLimit(c.Limit, 6),
+		CategoryID: c.Filters.CategoryID, Tag: c.Filters.Tag,
+		Sort: articleSort(c.Sort), Limit: clampLimit(c.Limit, 6),
 	})
 	if err != nil {
 		return nil, err

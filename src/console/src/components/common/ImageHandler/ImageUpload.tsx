@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
+import { fileUrl } from "@/utils/fileUrl";
 
 import type { UploadAdapterResult } from "./hooks/useImageUpload";
 import { PickerModal } from "./picker/PickerModal";
@@ -16,6 +17,12 @@ const DEFAULT_MAX_MB = 5;
 
 export interface ImageUploadProps {
   type: ImageUploadType;
+  /**
+   * What the image is for — "Ảnh đại diện", "Ảnh bìa". It names the picker's
+   * second line, which is otherwise the same sentence for an avatar and for a
+   * product gallery.
+   */
+  subject?: string;
   /** Required when type='circle'. Preview = radius*2 square. */
   radius?: number;
   /** Required when type='rounded'. Width/height ratio (e.g. 16/9, 1). */
@@ -85,7 +92,7 @@ function pickDefault(type: ImageUploadType, override?: string): string {
 }
 
 function valueToSrc(value: ImageUploadValue, fallback: string): string {
-  if (value.kind === "uploaded") return value.url;
+  if (value.kind === "uploaded") return fileUrl(value.url);
   if (value.kind === "pending") return value.dataUrl;
   return fallback;
 }
@@ -274,6 +281,7 @@ export function ImageUpload(props: ImageUploadProps) {
         uploadPrefix={uploadPrefix}
         showCamera={showCamera}
         crop={props.crop}
+        subject={props.subject}
         outputMax={props.outputMax}
       />
     </>

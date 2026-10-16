@@ -113,6 +113,42 @@ func TestHTTP_GetPublic_CacheHeaders(t *testing.T) {
 	require.Equal(t, http.StatusNotModified, resp2.StatusCode)
 }
 
+// How long the public answer may be held is a setting, because it IS the delay
+// between saving a change and a browser noticing — 0 means "ask every time".
+func TestHTTP_GetPublic_MaxAgeFollowsTheSetting(t *testing.T) {
+	srv, _ := newTestServer(t)
+	resp := do(t, srv, http.MethodPut, "/api/settings",
+		`{"updates":{"cache.public_max_age_seconds":120}}`)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	_ = resp.Body.Close()
+
+	resp = do(t, srv, http.MethodGet, "/api/public/settings", "")
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, "public, max-age=120", resp.Header.Get("Cache-Control"))
+}
+
+func TestHTTP_GetPublic_ZeroMaxAgeMeansNoStore(t *testing.T) {
+	srv, _ := newTestServer(t)
+	resp := do(t, srv, http.MethodPut, "/api/settings",
+		`{"updates":{"cache.public_max_age_seconds":0}}`)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	_ = resp.Body.Close()
+
+	resp = do(t, srv, http.MethodGet, "/api/public/settings", "")
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, "no-store", resp.Header.Get("Cache-Control"))
+}
+
+// Purging writes the marker whose timestamp moves the token the public site
+// polls, and drops the snapshot this service was holding.
+func TestHTTP_PurgeCache(t *testing.T) {
+	srv, env := newTestServer(t)
+	resp := do(t, srv, http.MethodPost, "/api/settings/cache/purge", "")
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	require.Equal(t, 1, env.repo.purges)
+}
+
 func TestHTTP_TestEmail_NotConfigured(t *testing.T) {
 	srv, _ := newTestServer(t)
 	resp := do(t, srv, http.MethodPost, "/api/settings/email/test", `{"to":"a@b.com"}`)

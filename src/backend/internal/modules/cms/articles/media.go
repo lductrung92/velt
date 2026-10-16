@@ -12,6 +12,7 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/storage"
 )
 
@@ -90,7 +91,13 @@ func (s *Service) UploadArticleMedia(ctx context.Context, id *httpx.Identity, ar
 		return UploadMediaResponse{}, apperr.Internal()
 	}
 	s.Sec(ctx).Info("cms media uploaded", "actor", id.UserID, "article", articleID, "purpose", purpose)
-	return UploadMediaResponse{Path: key, URL: s.files.URL(ctx, key)}, nil
+	// The editor writes the returned URL straight into body_html, so this is
+	// where an inline image acquires its flat, resizable /img address. A mint
+	// that fails falls back to the legacy /api/files URL, which still serves.
+	url := media.MintOr(ctx, s.Media(), media.MintInput{
+		Key: key, Base: purpose, Data: buf, OwnerKind: "article", OwnerID: &articleID,
+	}, s.files.URL(ctx, key))
+	return UploadMediaResponse{Path: key, URL: url}, nil
 }
 
 // gcInlineMedia reclaims inline body images no longer referenced by the article's
@@ -98,8 +105,19 @@ func (s *Service) UploadArticleMedia(ctx context.Context, id *httpx.Identity, ar
 // old→new diff), so an image uploaded then removed before the save — a side effect
 // of upload-on-insert in the editor — is cleaned up too. featured-*/og-* live in
 // dedicated columns (reclaimed via shared.DeleteOldMedia) and are skipped here.
-// Best-effort + no-op when the store can't list. An <img> src is the served URL,
-// which embeds the storage key, so a key still present in the HTML is "live".
+// Best-effort + no-op when the store can't list.
+//
+// WHY THE BODY IS STILL READ. The `files` table says what every stored object is
+// called in public; it does NOT say which article body references it, and
+// nothing else does either. So liveness can only be decided by looking in the
+// body, and this is the one cleanup path that cannot be converted to a pure
+// table read. What the table fixes is the LOOKING: an inline image used to be
+// addressed by a URL containing its storage key, and now it is addressed by
+// /img/{slug}.{ext}, which contains no key at all. Matching on the key alone
+// would read every minted inline image as unreferenced and delete it on the
+// next save. An entry is live when the body names EITHER its storage key (a
+// legacy /api/files URL, still in every already-published body) OR its slug
+// (the flat /files and /img URLs, which both carry it).
 func (s *Service) gcInlineMedia(ctx context.Context, articleID uuid.UUID, bodyHTML string) {
 	lister, ok := s.files.(interface {
 		List(ctx context.Context, prefix string) ([]storage.Entry, error)
@@ -112,15 +130,47 @@ func (s *Service) gcInlineMedia(ctx context.Context, articleID uuid.UUID, bodyHT
 	if err != nil {
 		return
 	}
+	keys := make([]string, 0, len(entries))
 	for _, e := range entries {
 		if e.IsDir || !strings.HasPrefix(path.Base(e.Path), "inline-") {
 			continue
 		}
-		if strings.Contains(bodyHTML, e.Path) {
-			continue // still referenced by an <img src=…/inline-…>
-		}
-		_ = s.files.Delete(ctx, e.Path)
+		keys = append(keys, e.Path)
 	}
+	if len(keys) == 0 {
+		return
+	}
+	slugs := s.publicSlugs(ctx, keys)
+	for _, key := range keys {
+		if strings.Contains(bodyHTML, key) {
+			continue // a legacy /api/files URL still names the key
+		}
+		if slug, ok := slugs[key]; ok && strings.Contains(bodyHTML, slug) {
+			continue // a flat /img or /files URL names the slug instead
+		}
+		_ = s.files.Delete(ctx, key)
+		media.Forget(ctx, s.MediaForget(), key)
+	}
+}
+
+// publicSlugs maps each storage key to the slug its public URLs carry, in ONE
+// query for the whole folder. Keys with no row are simply absent: they predate
+// the backfill and can only be addressed by key, which the caller already
+// checks for.
+func (s *Service) publicSlugs(ctx context.Context, keys []string) map[string]string {
+	lookup := s.MediaLookup()
+	if lookup == nil {
+		return nil
+	}
+	recs, err := lookup.ByStorageKeys(ctx, keys)
+	if err != nil {
+		return nil
+	}
+	out := make(map[string]string, len(recs))
+	for _, r := range recs {
+		out[r.StorageKey] = r.Slug
+	}
+	return out
 }
 
 // sniffImageExt detects the image type by magic bytes (never trusting the client

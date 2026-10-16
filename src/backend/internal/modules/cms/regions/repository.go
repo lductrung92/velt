@@ -15,7 +15,10 @@ type Repository interface {
 	AllBlocks(ctx context.Context) ([]blockRow, error)
 	RegionBlocks(ctx context.Context, group, slot string) ([]blockRow, error)
 	MenuExists(ctx context.Context, menuID uuid.UUID) (bool, error)
-	ReplaceRegionBlocks(ctx context.Context, group, slot string, blocks []blockWrite) error
+	BlockExists(ctx context.Context, blockID uuid.UUID) (bool, error)
+	// ReplaceRegionBlocks answers with the ids it deleted, which is what the
+	// caller needs to clear whatever was stored against them.
+	ReplaceRegionBlocks(ctx context.Context, group, slot string, blocks []blockWrite) ([]uuid.UUID, error)
 }
 
 type pgxRepository struct {
@@ -73,8 +76,21 @@ func (r *pgxRepository) MenuExists(ctx context.Context, menuID uuid.UUID) (bool,
 	return ok, nil
 }
 
+// BlockExists reports whether one block is still there. The translation gate
+// asks before storing text against an id, so a mistyped one cannot leave a row
+// belonging to nothing.
+func (r *pgxRepository) BlockExists(ctx context.Context, blockID uuid.UUID) (bool, error) {
+	var ok bool
+	err := r.pool.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM cms_region_blocks WHERE id = $1)`, blockID).Scan(&ok)
+	if err != nil {
+		return false, fmt.Errorf("region block exists: %w", err)
+	}
+	return ok, nil
+}
+
 // ReplaceRegionBlocks writes the whole content of one (group, slot) list in one
-// transaction.
+// transaction, and returns the ids it removed.
 //
 // A block the client sends back with its id KEEPS that id: it is updated in
 // place, and only the blocks missing from the list are deleted. The same reason
@@ -83,17 +99,27 @@ func (r *pgxRepository) MenuExists(ctx context.Context, menuID uuid.UUID) (bool,
 //
 // An id that is not this list's is treated as absent and the block is inserted
 // fresh, so a stray id cannot drag a block out of another group or slot.
-func (r *pgxRepository) ReplaceRegionBlocks(ctx context.Context, group, slot string, blocks []blockWrite) error {
-	return pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
+func (r *pgxRepository) ReplaceRegionBlocks(ctx context.Context, group, slot string, blocks []blockWrite) ([]uuid.UUID, error) {
+	var removed []uuid.UUID
+	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
 		keep := keptIDs(blocks)
-		if _, e := tx.Exec(ctx,
+		rows, e := tx.Query(ctx,
 			`DELETE FROM cms_region_blocks
-			  WHERE page_group = $1 AND region = $2 AND NOT (id = ANY($3::uuid[]))`,
-			group, slot, keep); e != nil {
+			  WHERE page_group = $1 AND region = $2 AND NOT (id = ANY($3::uuid[]))
+			  RETURNING id`,
+			group, slot, keep)
+		if e != nil {
+			return e
+		}
+		if removed, e = pgx.CollectRows(rows, pgx.RowTo[uuid.UUID]); e != nil {
 			return e
 		}
 		return writeBlocks(ctx, tx, group, slot, blocks)
 	})
+	if err != nil {
+		return nil, err
+	}
+	return removed, nil
 }
 
 // keptIDs collects the ids the client sent back.

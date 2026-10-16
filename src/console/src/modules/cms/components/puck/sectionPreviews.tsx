@@ -2,6 +2,7 @@ import DOMPurify from "dompurify";
 import { ImageIcon } from "lucide-react";
 import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
+import { fileUrl } from "@/utils/fileUrl";
 
 import type { SectionConfig } from "../../services/landing.service";
 import type { BuilderSectionType } from "../landingSections/types";
@@ -99,7 +100,7 @@ function Html({ html }: { html: string }) {
 
 // A framed image, or a muted placeholder when no url is set yet.
 function Img({ url, className }: { url: string; className: string }) {
-  if (url) return <img src={url} alt="" className={className} />;
+  if (url) return <img src={fileUrl(url)} alt="" className={className} />;
   return (
     <div className={`flex items-center justify-center bg-muted ${className}`}>
       <ImageIcon className="size-6 text-muted-foreground" />

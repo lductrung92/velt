@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { RowAction, RowActions } from "@/components/common/RowActions";
 import { TableCell, TableRow } from "@/components/ui/table";
 
+import { CategoryStatusBadge } from "./CategoryStatusBadge";
 import { INDENT_WIDTH, type FlatCategory } from "../utils/categoryTree";
 
 // One row of the category tree. Indents by `depth` (overridable so the dragged
@@ -70,6 +71,9 @@ export function CategoryTreeRow({
       </TableCell>
       <TableCell>
         <span className="category-slug">{node.slug}</span>
+      </TableCell>
+      <TableCell>
+        <CategoryStatusBadge status={node.status} />
       </TableCell>
       <TableCell>
         <span

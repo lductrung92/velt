@@ -10,8 +10,6 @@
     "empty_title": "Chưa có dữ liệu",
     "empty_description": "Các mục vừa cập nhật sẽ xuất hiện tại đây để bạn tiếp tục công việc.",
     "create_first": "Tạo mục đầu tiên",
-    "quick_title": "Tạo nhanh",
-    "quick_description": "Bắt đầu công việc mới chỉ với một thao tác.",
     "recent_products": "Sản phẩm vừa cập nhật",
     "recent_articles": "Bài viết vừa cập nhật",
     "stats": {
@@ -19,12 +17,6 @@
       "articles": "Bài viết",
       "pages": "Trang nội dung",
       "members": "Thành viên"
-    },
-    "actions": {
-      "product": "Thêm sản phẩm",
-      "article": "Viết bài mới",
-      "page": "Tạo trang",
-      "member": "Thêm thành viên"
     },
     "workspace": "ZUKATEK WORKSPACE",
     "welcome": "Chào {{name}} 👋",
@@ -34,12 +26,6 @@
     "empty_articles": "Chia sẻ câu chuyện đầu tiên",
     "empty_products_description": "Thêm sản phẩm để quản lý thông tin và giới thiệu đến khách hàng.",
     "empty_articles_description": "Viết bài để chia sẻ kiến thức, cập nhật và tin tức của Zukatek.",
-    "action_descriptions": {
-      "product": "Xây dựng danh mục sản phẩm",
-      "article": "Chia sẻ tin tức và kiến thức",
-      "page": "Thiết kế nội dung website",
-      "member": "Bổ sung hồ sơ đội ngũ"
-    },
     "daily": {
       "title": "Lịch & thời tiết",
       "calendar_title": "Lịch âm · dương",
@@ -121,9 +107,12 @@
     "close": "Đóng",
     "actions": "Thao tác",
     "pagination": {
-      "page_info": "{{from}}–{{to}} / {{total}}",
+      "page_info": "Hiển thị {{from}}–{{to}} trong tổng số {{total}}",
       "prev": "Trước",
-      "next": "Sau"
+      "next": "Sau",
+      "loaded": "Đã tải {{loaded}} trong tổng số {{total}}",
+      "load_more": "Xem thêm",
+      "ceiling": "Một lần xem tối đa {{max}} dòng — hãy lọc hoặc tìm để thu hẹp danh sách."
     },
     "language": "Ngôn ngữ",
     "theme": {
@@ -148,10 +137,6 @@
       "time": "Giờ"
     },
     "unsaved": {
-      "title": "Rời trang khi chưa lưu?",
-      "hint": "Những thay đổi chưa lưu sẽ bị mất. Bạn có thể huỷ để tiếp tục chỉnh sửa.",
-      "hint_named": "Những thay đổi chưa lưu ở {{what}} sẽ bị mất. Bạn có thể huỷ để tiếp tục chỉnh sửa.",
-      "confirm": "Rời trang",
       "close_title": "Đóng khi chưa lưu?",
       "close_hint": "Những gì bạn vừa nhập sẽ bị mất.",
       "close_confirm": "Đóng"
@@ -163,6 +148,7 @@
       "change": "Đổi ảnh",
       "remove": "Xoá ảnh",
       "modal_title": "Chọn ảnh",
+      "modal_subject": "Tải lên, chụp mới hoặc chọn ảnh có sẵn",
       "tabs": {
         "illustrative": "Ảnh minh họa",
         "upload": "Tải lên",
@@ -378,30 +364,33 @@
       "never_logged_in": "Chưa đăng nhập",
       "roles_more": "+{{n}}",
       "create_title": "Tạo người dùng",
-      "create_desc": "Hệ thống sẽ gửi email đặt mật khẩu cho người dùng mới.",
       "edit_title": "Sửa người dùng",
-      "edit_desc": "Cập nhật họ tên và trạng thái tài khoản.",
       "email_label": "Email",
       "full_name_label": "Họ tên",
       "full_name_ph": "Nhập họ tên",
       "status_label": "Trạng thái",
       "role_label": "Vai trò",
       "action_edit": "Sửa",
-      "action_reset": "Gửi mail đặt lại mật khẩu",
       "action_delete": "Xoá",
       "delete_title": "Xoá người dùng",
       "delete_desc": "Vô hiệu hoá tài khoản \"{{name}}\"? Phiên đăng nhập của họ sẽ bị thu hồi.",
-      "reset_title": "Đặt lại mật khẩu",
-      "reset_desc": "Gửi email đặt lại mật khẩu cho \"{{name}}\"?",
-      "created": "Đã tạo người dùng — đã gửi mail đặt mật khẩu",
+      "created": "Đã tạo người dùng — hãy gửi mật khẩu tạm cho họ",
       "updated": "Đã cập nhật người dùng",
       "deleted": "Đã xoá người dùng",
-      "reset_sent": "Đã gửi mail đặt lại mật khẩu",
       "list_title": "Danh sách người dùng",
       "empty_title": "Chưa có người dùng nào",
       "empty_hint": "Tạo tài khoản đầu tiên để bắt đầu phân quyền.",
       "no_results": "Không tìm thấy người dùng",
-      "no_results_hint": "Thử đổi từ khoá hoặc bỏ bớt bộ lọc."
+      "no_results_hint": "Thử đổi từ khoá hoặc bỏ bớt bộ lọc.",
+      "role_filter_label": "Lọc theo vai trò",
+      "role_all": "Tất cả vai trò",
+      "action_credentials": "Thông tin đăng nhập",
+      "credentials_title": "Thông tin đăng nhập",
+      "login_label": "Tên đăng nhập",
+      "temp_password_label": "Mật khẩu tạm",
+      "temp_password_once": "Mật khẩu chỉ hiển thị một lần. Hãy sao chép và gửi cho người dùng ngay; đóng cửa sổ này là không xem lại được.",
+      "temp_password_hidden": "Mật khẩu hiện tại đã được mã hoá nên không xem lại được. Tạo lại mật khẩu để lấy mật khẩu tạm mới.",
+      "regenerate": "Tạo lại mật khẩu"
     },
     "rbac": {
       "title": "Vai trò & Quyền",
@@ -513,7 +502,11 @@
       "empty_title": "Không có phiên nào",
       "empty_hint": "Phiên đăng nhập sẽ xuất hiện ở đây khi có người đăng nhập.",
       "no_results": "Không tìm thấy phiên",
-      "no_results_hint": "Thử bỏ bộ lọc phiên đang hoạt động."
+      "no_results_hint": "Thử bỏ bộ lọc phiên đang hoạt động.",
+      "cleanup": "Dọn dẹp",
+      "cleanup_warning": "Những phiên cũ hơn mốc bạn chọn sẽ bị xóa vĩnh viễn; ai đang đăng nhập bằng các phiên đó sẽ bị đăng xuất. Các phiên của chính bạn luôn được giữ lại.",
+      "cleanup_done_one": "Đã xóa {{count}} phiên",
+      "cleanup_done_other": "Đã xóa {{count}} phiên"
     },
     "home": {
       "title": "Quản trị",
@@ -521,6 +514,22 @@
       "users": "Người dùng",
       "active_sessions": "Phiên đang hoạt động",
       "roles": "Vai trò"
+    },
+    "cleanup": {
+      "title": "Dọn dẹp",
+      "window_label": "Xóa dữ liệu cũ hơn",
+      "window_ph": "Chọn mốc thời gian",
+      "window_hint": "Mốc nào cũng giữ lại mọi thứ từ bây giờ lùi về tới đó và xóa phần cũ hơn.",
+      "confirm": "Xóa vĩnh viễn",
+      "window": {
+        "all": "Tất cả",
+        "3d": "3 ngày trước",
+        "7d": "7 ngày trước",
+        "1m": "1 tháng trước",
+        "3m": "3 tháng trước",
+        "6m": "6 tháng trước",
+        "1y": "1 năm trước"
+      }
     }
   },
   "cms": {
@@ -529,8 +538,6 @@
       "subtitle": "Trang tĩnh có thể nhúng widget.",
       "delete_confirm_title": "Xoá trang?",
       "delete_confirm_body": "Xoá \"{{title}}\"? Không thể hoàn tác.",
-      "publish": "Xuất bản",
-      "unpublish": "Gỡ xuất bản",
       "kind": {
         "label": "Kiểu trang",
         "content": "Trang nội dung",
@@ -570,7 +577,7 @@
         "settings": "Cài đặt trang",
         "permalink": "Đường dẫn",
         "kind_hint": "Trang landing được dựng bằng trình kéo thả ngay sau khi tạo.",
-        "publish_hint": "Dùng nút Xuất bản ở trên để đưa trang lên website.",
+        "publish_hint": "Trạng thái được áp dụng khi bạn bấm Lưu. Gỡ khỏi website thì trang chuyển sang Lưu trữ.",
         "search_preview": "Minh họa hiển thị tìm kiếm",
         "preview_title": "Tiêu đề trang của bạn",
         "preview_description": "Mô tả SEO sẽ hiển thị ở đây.",
@@ -590,23 +597,28 @@
         "preview_empty": "Chưa có nội dung."
       },
       "widget": {
-        "games_list": {
-          "name": "Danh sách games",
+        "all_categories": "Tất cả danh mục",
+        "product_grid": {
+          "name": "Danh sách sản phẩm",
           "heading": "Tiêu đề",
-          "age_group": "Độ tuổi",
-          "subject": "Môn",
-          "skill": "Kỹ năng",
+          "category": "Danh mục",
+          "sort": "Hiển thị",
+          "sort_featured": "Nổi bật",
+          "sort_newest": "Mới nhất",
+          "sort_name": "Theo tên A-Z",
+          "sort_random": "Ngẫu nhiên",
           "limit": "Số lượng",
-          "columns": "Số cột",
-          "layout": "Bố cục",
-          "layout_grid": "Lưới",
-          "layout_carousel": "Băng chuyền"
+          "columns": "Số cột"
         },
         "articles_list": {
           "name": "Danh sách bài viết",
           "heading": "Tiêu đề",
-          "category_id": "ID danh mục",
-          "tag": "Tag (slug)",
+          "category_id": "Chuyên mục",
+          "sort": "Hiển thị",
+          "sort_newest": "Mới nhất",
+          "sort_oldest": "Cũ nhất",
+          "sort_title": "Theo tiêu đề A-Z",
+          "sort_random": "Ngẫu nhiên",
           "limit": "Số lượng",
           "columns": "Số cột"
         },
@@ -630,7 +642,6 @@
           "sub": "Mô tả",
           "button_label": "Nhãn nút",
           "button_href": "Liên kết nút",
-          "button_hint": "Nút chỉ hiện khi có cả nhãn và liên kết.",
           "align": "Căn",
           "align_left": "Trái",
           "align_center": "Giữa"
@@ -655,7 +666,6 @@
       "empty_hint": "Trang tĩnh như Giới thiệu hay Liên hệ sẽ nằm ở đây, kèm cây phân cấp.",
       "no_results": "Không tìm thấy trang",
       "no_results_hint": "Thử bỏ bớt bộ lọc hoặc đổi từ khoá tìm kiếm.",
-      "flat_notice": "Đang lọc nên danh sách hiển thị phẳng, không theo cây.",
       "child_count_one": "{{count}} trang con",
       "child_count_other": "{{count}} trang con",
       "col": {
@@ -667,7 +677,7 @@
       "overview": {
         "label": "Tổng quan trang",
         "total": "Tổng số trang",
-        "total_hint": "Toàn bộ cây trang",
+        "total_hint": "Toàn bộ trang đã tạo",
         "draft": "Bản nháp",
         "draft_hint": "Chưa công khai",
         "published": "Đã xuất bản",
@@ -734,10 +744,11 @@
     "landings": {
       "translate": {
         "title": "Dịch khối: {{section}}",
-        "open": "Dịch khối này",
         "hint": "Mỗi ô là một đoạn chữ trong khối. Để trống thì site giữ nguyên bản tiếng Việt.",
         "empty": "Khối này không có chữ để dịch.",
-        "saved": "Đã lưu bản dịch của khối"
+        "saved": "Đã lưu bản dịch của khối",
+        "title_short": "Bản dịch",
+        "hint_new": "Lưu trang trước thì bản dịch mới được ghi."
       },
       "field": {
         "name": "Tên",
@@ -759,7 +770,11 @@
         "reorder": "Kéo để sắp xếp",
         "move_down": "Xuống",
         "config_invalid": "Cấu hình JSON không hợp lệ",
-        "delete_section_title": "Xoá section?"
+        "delete_section_title": "Xoá section?",
+        "edit": "Sửa",
+        "edit_title": "Thiết lập",
+        "toggle_library": "Ẩn/hiện thư viện khối",
+        "canvas": "Bố cục trang"
       },
       "preview": {
         "dynamic_hint": "Nội dung tải khi xuất bản",
@@ -855,7 +870,13 @@
         "show_all_href": "Liên kết xem tất cả",
         "email": "Email",
         "zalo": "Zalo",
-        "note": "Ghi chú"
+        "note": "Ghi chú",
+        "answer_html": "Câu trả lời",
+        "body_html": "Nội dung",
+        "cta_label": "Nhãn nút kêu gọi",
+        "cta_href": "Liên kết nút kêu gọi",
+        "headline": "Tiêu đề",
+        "subtitle": "Phụ đề"
       }
     },
     "menus": {
@@ -952,7 +973,8 @@
         "sort_order": "Thứ tự",
         "article_count": "Bài viết",
         "description": "Mô tả",
-        "actions": "Thao tác"
+        "actions": "Thao tác",
+        "status": "Trạng thái"
       },
       "seo": {
         "heading": "SEO",
@@ -1005,7 +1027,9 @@
         "used_hint": "Đang được dùng",
         "unused": "Chưa có bài",
         "unused_hint": "Có thể gộp hoặc bỏ"
-      }
+      },
+      "filter_status": "Lọc theo trạng thái",
+      "all_statuses": "Tất cả"
     },
     "articles": {
       "title": "Bài viết",
@@ -1031,12 +1055,17 @@
       "toast": {
         "delete_success": "Đã xoá bài viết",
         "create_success": "Đã tạo bài viết",
-        "update_success": "Đã lưu bài viết"
+        "update_success": "Đã lưu bài viết",
+        "archived": "Đã chuyển bài viết vào lưu trữ."
       },
       "dialog": {
         "delete": {
           "title": "Xoá bài viết",
           "description": "Xoá “{{title}}”? Hành động không thể hoàn tác."
+        },
+        "archive": {
+          "title": "Lưu trữ bài viết?",
+          "description": "\"{{title}}\" sẽ được gỡ khỏi website và chuyển sang lưu trữ. Có thể đưa lại bằng cách đổi trạng thái trong trình soạn."
         }
       },
       "editor": {
@@ -1111,20 +1140,44 @@
         "total_hint": "Toàn bộ bài viết",
         "draft": "Bản nháp",
         "draft_hint": "Đang soạn dở",
-        "pending_review": "Chờ duyệt",
-        "pending_review_hint": "Cần người duyệt",
         "published": "Đã xuất bản",
-        "published_hint": "Đang hiển thị công khai"
+        "published_hint": "Đang hiển thị công khai",
+        "archived": "Lưu trữ",
+        "archived_hint": "Đã lưu trữ"
       },
-      "one": "bài viết"
+      "one": "bài viết",
+      "archive": "Lưu trữ"
     },
     "appearance": {
       "title": "Giao diện",
-      "subtitle": "Kéo khối và menu vào các vùng của trang công khai.",
+      "subtitle": "Quản lý khối nội dung và menu theo từng nhóm trang.",
       "one": "giao diện",
+      "ui": {
+        "library": "Thư viện khối",
+        "groups_hint": "Chọn phạm vi áp dụng bố cục.",
+        "palette_hint": "Kéo thả hoặc nhấn + để thêm khối.",
+        "add_to": "Thêm vào vùng",
+        "no_target": "chưa chọn vùng",
+        "add": "Thêm {{label}}",
+        "layout": "BỐ CỤC HIỂN THỊ",
+        "regions": "{{n}} vùng",
+        "common_hint": "Bố cục chung được kế thừa bởi các nhóm trang bên dưới.",
+        "group_hint": "Thiết lập riêng cho nhóm này hoặc kế thừa bố cục từ nhóm cha.",
+        "board_hint": "Chọn khối để thiết lập. Kéo tay nắm để đổi thứ tự.",
+        "select_region": "Chọn vùng {{slot}}",
+        "targeted": "Đang chọn",
+        "drop_hint": "Hoặc chọn vùng này rồi nhấn + trong thư viện.",
+        "select_block": "Thiết lập theo từng khối",
+        "unchanged": "Chưa có thay đổi",
+        "unsaved": "{{n}} vùng chưa lưu",
+        "menus_only": "Header và footer chỉ nhận menu.",
+        "chrome_inherited": "Dùng của nhóm Chung",
+        "chrome_toggle": "Dùng {{slot}} riêng cho nhóm này"
+      },
       "settings": "Thiết lập",
-      "settings_hint": "Chọn một khối ở giữa để chỉnh thiết lập của nó.",
-      "which_menu": "Menu hiển thị",
+      "settings_hint": "Chọn một khối trong bố cục để chỉnh nội dung và cách hiển thị.",
+      "translate_heading": "Bản dịch của khối",
+      "translate_hint": "Để trống thì site hiển thị nội dung gốc tiếng Việt. Bản dịch lưu cùng nút Lưu.",
       "menu_block": "Menu: {{name}}",
       "menu_missing": "Menu đã bị xoá",
       "drop_here": "Kéo khối vào đây",
@@ -1134,6 +1187,9 @@
       "hide": "Ẩn {{label}}",
       "show": "Hiện {{label}}",
       "remove": "Xoá {{label}}",
+      "edit": "Sửa {{label}}",
+      "blank_widget": "Chưa nhập nội dung nên site sẽ bỏ qua khối này.",
+      "blank_menu": "Chưa chọn menu nên site sẽ bỏ qua khối này.",
       "palette": {
         "widgets": "Khối",
         "menus": "Menu",
@@ -1235,7 +1291,16 @@
     "bullet_list": "Danh sách chấm",
     "ordered_list": "Danh sách số",
     "blockquote": "Trích dẫn",
-    "image": "Chèn ảnh"
+    "align_left": "Canh trái",
+    "align_center": "Canh giữa",
+    "align_right": "Canh phải",
+    "image": "Chèn ảnh",
+    "image_resize": "Kéo để đổi kích thước ảnh",
+    "image_align_left": "Canh trái, chữ chảy bên phải",
+    "image_align_center": "Canh giữa",
+    "image_align_right": "Canh phải, chữ chảy bên trái",
+    "image_replace": "Thay ảnh khác",
+    "image_remove": "Xoá ảnh"
   },
   "members": {
     "title": "Thành viên",
@@ -1270,10 +1335,12 @@
       "bio": "Giới thiệu",
       "skills": "Kỹ năng",
       "skills_ph": "Nhập rồi nhấn Enter",
+      "avatar": "Ảnh đại diện",
       "email": "Email",
       "email_help": "Email công khai để khách liên hệ, khác email đăng nhập.",
       "zalo": "Zalo",
       "links": "Liên kết",
+      "links_empty": "Chưa có liên kết nào",
       "link_label": "Nhãn",
       "permalink": "Đường dẫn"
     },
@@ -1347,7 +1414,9 @@
       "search_preview": "Minh họa hiển thị tìm kiếm",
       "preview_title": "Tên sản phẩm",
       "preview_description": "Mô tả ngắn hiển thị trong kết quả tìm kiếm.",
-      "social": "Chia sẻ mạng xã hội"
+      "social": "Chia sẻ mạng xã hội",
+      "publish": "Xuất bản",
+      "publish_hint": "Trạng thái được áp dụng khi bạn bấm Lưu."
     },
     "field": {
       "slug_ph": "tu-dong-tao-tu-ten",
@@ -1368,18 +1437,10 @@
       "categories": "Danh mục",
       "members": "Thành viên phát triển"
     },
-    "transition": {
-      "menu": "Xuất bản",
-      "publish": "Xuất bản",
-      "unpublish": "Gỡ xuất bản",
-      "archive": "Lưu trữ",
-      "publish_done": "Đã xuất bản sản phẩm",
-      "unpublish_done": "Đã gỡ xuất bản",
-      "archive_done": "Đã chuyển vào lưu trữ"
-    },
     "delete": {
       "title": "Xoá sản phẩm?",
-      "description": "Xoá {{name}} cùng toàn bộ ảnh của nó. Nếu chỉ muốn gỡ khỏi website, hãy dùng Lưu trữ."
+      "description": "Xoá {{name}} cùng toàn bộ ảnh của nó. Nếu chỉ muốn gỡ khỏi website, hãy dùng Lưu trữ.",
+      "success": "Đã xoá sản phẩm"
     },
     "categories": {
       "title": "Danh mục",
@@ -1397,7 +1458,8 @@
         "description": "Mô tả",
         "sort_order": "Thứ tự",
         "actions": "Thao tác",
-        "product_count": "SẢN PHẨM"
+        "product_count": "SẢN PHẨM",
+        "status": "Trạng thái"
       },
       "editor": {
         "basic": "Thông tin cơ bản",
@@ -1440,7 +1502,9 @@
         "used_hint": "Đang được dùng",
         "unused": "Chưa có sản phẩm",
         "unused_hint": "Có thể gộp hoặc bỏ"
-      }
+      },
+      "filter_status": "Lọc theo trạng thái",
+      "all_statuses": "Tất cả"
     },
     "gallery": {
       "add_image": "Tải ảnh lên",
@@ -1449,7 +1513,10 @@
       "caption_ph": "Mô tả ngắn cho ảnh",
       "reorder": "Kéo để đổi thứ tự",
       "video_url": "Link video",
-      "video_hosts": "Chỉ hỗ trợ YouTube và Vimeo (https)."
+      "video_hosts": "Chỉ hỗ trợ YouTube và Vimeo (https).",
+      "replace": "Đổi ảnh",
+      "replace_video": "Đổi video",
+      "preview": "Xem trước"
     },
     "members": {
       "add": "Thêm thành viên",
@@ -1603,7 +1670,6 @@
     "reply_ph": "Trả lời khách…",
     "bot_still_answering": "AI đang hỗ trợ khách. Tiếp nhận hội thoại để trực tiếp trả lời.",
     "empty_hint": "Hội thoại mới từ website sẽ xuất hiện tại đây.",
-    "support_workspace": "Không gian hỗ trợ khách hàng",
     "conversations": "Hội thoại",
     "refresh": "Làm mới hội thoại",
     "search_ph": "Tìm nội dung hoặc mã hội thoại...",
@@ -1658,7 +1724,7 @@
       "contacted": "Đã liên hệ",
       "qualified": "Tiềm năng",
       "won": "Chốt",
-      "lost": "Mất"
+      "lost": "Rời đi"
     },
     "source": {
       "chat": "Trò chuyện",
@@ -1852,13 +1918,18 @@
         "created": "Tạo người dùng",
         "deleted": "Xoá người dùng",
         "disabled": "Vô hiệu hoá người dùng",
+        "password_reset": "Đặt lại mật khẩu",
         "password_reset_sent": "Gửi liên kết đặt lại mật khẩu",
         "role_assigned": "Gán vai trò",
         "role_removed": "Gỡ vai trò",
         "updated": "Sửa người dùng"
       }
     },
-    "range": "Khoảng thời gian"
+    "range": "Khoảng thời gian",
+    "cleanup": "Dọn dẹp",
+    "cleanup_warning": "Những hoạt động cũ hơn mốc bạn chọn sẽ bị xóa vĩnh viễn khỏi nhật ký và không thể khôi phục.",
+    "cleanup_done_one": "Đã xóa {{count}} hoạt động",
+    "cleanup_done_other": "Đã xóa {{count}} hoạt động"
   },
   "tr": {
     "tabs": "Ngôn ngữ nội dung",
@@ -1880,7 +1951,8 @@
       "translation": "Ngôn ngữ",
       "email": "Email",
       "storage": "Lưu trữ",
-      "ai": "AI"
+      "ai": "AI",
+      "cache": "Cache"
     },
     "secret": {
       "set": "Đã đặt",
@@ -1929,7 +2001,7 @@
       "cms_publish_allow_now": "Chỉ xuất bản ngay",
       "cms_newsletter_notify_on_publish": "Gửi thư khi xuất bản",
       "cms_home_page_slug": "Trang chủ",
-      "site_cache_ttl_seconds": "Cache trang (giây)",
+      "site_cache_ttl_seconds": "Cache trang của website",
       "site_og_image_url": "Ảnh khi chia sẻ link",
       "site_brand_tagline": "Giới thiệu dưới logo (footer)",
       "site_footer_note_title": "Tiêu đề cột cuối (footer)",
@@ -1960,7 +2032,11 @@
       "ai_max_turns": "Số lượt tối đa mỗi hội thoại",
       "ai_daily_token_cap": "Hạn mức token mỗi ngày",
       "ai_max_message_len": "Độ dài tối đa một tin nhắn",
-      "ai_system_persona": "Tính cách trợ lý"
+      "ai_system_persona": "Tính cách trợ lý",
+      "app_page_size": "Số dòng mỗi trang",
+      "app_pagination_template": "Kiểu phân trang",
+      "cache_public_max_age_seconds": "Cache phản hồi công khai",
+      "cache_console_refresh_seconds": "Console tự đọc lại cấu hình"
     },
     "help": {
       "app_name": "Hiện ở console và làm tên thương hiệu trên site.",
@@ -1981,7 +2057,7 @@
       "cms_publish_allow_now": "Tắt thì có thêm lựa chọn hẹn giờ xuất bản.",
       "cms_newsletter_notify_on_publish": "Gửi mail cho người đăng ký mỗi khi có bài mới.",
       "cms_home_page_slug": "Chọn trang đã xuất bản để làm trang chủ. Để trống thì site dùng trang chủ mặc định.",
-      "site_cache_ttl_seconds": "Site phục vụ lại trang đã dựng trong bao lâu. 0 = tắt cache, tiện khi đang sửa nội dung.",
+      "site_cache_ttl_seconds": "Số giây website được phục vụ lại một trang đã dựng sẵn. Đặt 0 khi đang sửa nội dung để thấy ngay.",
       "site_og_image_url": "Hiện khi dán link site lên mạng xã hội. Bài viết có ảnh bìa riêng thì dùng ảnh đó.",
       "site_brand_tagline": "Xuống dòng được giữ nguyên. Để trống thì dùng nội dung mặc định.",
       "site_footer_note_text": "Xuống dòng được giữ nguyên.",
@@ -2000,7 +2076,11 @@
       "translation_enabled": "Bật thì site có thêm địa chỉ /<mã ngôn ngữ> và nút đổi ngôn ngữ. Tắt thì chỉ còn tiếng Việt; bản dịch đã lưu vẫn giữ nguyên.",
       "translation_locales": "Danh sách mã ngôn ngữ, cách nhau bởi dấu phẩy. Ví dụ: en hoặc en,ja.",
       "ai_base_url": "Để trống nếu dùng endpoint mặc định.",
-      "ai_system_persona": "Thêm vào phần mô tả sẵn có; không ghi đè các quy tắc an toàn."
+      "ai_system_persona": "Thêm vào phần mô tả sẵn có; không ghi đè các quy tắc an toàn.",
+      "app_page_size": "Áp dụng cho mọi bảng danh sách trong console. Từ 2 đến 100 dòng.",
+      "app_pagination_template": "Cách bảng mời xem tiếp phần còn lại.",
+      "cache_public_max_age_seconds": "Số giây trình duyệt và CDN được giữ bản cũ của cấu hình công khai. Nên đặt nhỏ hơn hoặc bằng chu kỳ tự đọc lại bên dưới, nếu không tab console sẽ đọc lại nhưng vẫn nhận bản trong cache trình duyệt.",
+      "cache_console_refresh_seconds": "Số giây giữa hai lần một tab console đang mở đọc lại cấu hình. Đặt 0 thì chỉ cập nhật khi tải lại trang."
     },
     "value": {
       "local": "Ổ đĩa máy chủ",
@@ -2008,7 +2088,11 @@
       "vi": "Tiếng Việt",
       "en": "English",
       "anthropic": "Anthropic (Claude)",
-      "openai": "OpenAI / tương thích OpenAI"
+      "openai": "OpenAI / tương thích OpenAI",
+      "numbered": "Số trang + mũi tên",
+      "prev_next": "Chỉ Trước – Sau",
+      "load_more": "Nút Xem thêm",
+      "infinite": "Cuộn vô hạn"
     },
     "section": {
       "general_brand": {
@@ -2097,7 +2181,21 @@
       "other": {
         "title": "Khác",
         "help": "Những khoá chưa được xếp nhóm — thường là khoá mới thêm ở backend."
+      },
+      "general_pagination": {
+        "title": "Phân trang",
+        "help": "Số dòng mỗi trang và kiểu phân trang của các bảng danh sách."
+      },
+      "cache_ttl": {
+        "title": "Thời gian cache",
+        "help": "Mỗi mục là độ trễ giữa lúc bạn bấm Lưu và lúc nơi đó thấy thay đổi. Đặt 0 là không cho cache."
       }
+    },
+    "cache_purge": {
+      "label": "Xoá cache ngay",
+      "help": "Kết thúc mọi khoảng chờ ở trên mà không đổi giá trị nào: bỏ bản cache phía API và báo website bỏ toàn bộ trang đã dựng.",
+      "run": "Xoá cache",
+      "ok": "Đã xoá cache. Website sẽ dựng lại trang trong khoảng 10 giây."
     }
   }
 }

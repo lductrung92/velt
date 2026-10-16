@@ -21,6 +21,10 @@ type Repository interface {
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	ListUsers(ctx context.Context, f ListUsersFilter) ([]User, int, error)
 	CreateUser(ctx context.Context, email, fullName, passwordHash string, roleIDs []uuid.UUID, assignedBy uuid.UUID) (*User, error)
+	// SetPassword replaces the password hash, revokes every live session and
+	// burns any outstanding reset token in ONE transaction, so a regenerated
+	// temporary password is the only way back into the account.
+	SetPassword(ctx context.Context, id uuid.UUID, passwordHash string, at time.Time) error
 	HardDeleteUser(ctx context.Context, id uuid.UUID) error
 	AssignRole(ctx context.Context, userID, roleID, assignedBy uuid.UUID) error
 	RemoveRole(ctx context.Context, userID, roleID uuid.UUID) error
@@ -103,6 +107,12 @@ func (r *pgxRepository) ListUsers(ctx context.Context, f ListUsersFilter) ([]Use
 		args = append(args, "%"+f.Query+"%")
 		conds = append(conds, fmt.Sprintf("(email ILIKE $%d OR full_name ILIKE $%d)", len(args), len(args)))
 	}
+	if f.Role != "" {
+		args = append(args, f.Role)
+		conds = append(conds, fmt.Sprintf(
+			`EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
+			          WHERE ur.user_id = users.id AND r.code = $%d)`, len(args)))
+	}
 	where := strings.Join(conds, " AND ")
 
 	var total int
@@ -157,6 +167,27 @@ func (r *pgxRepository) CreateUser(ctx context.Context, email, fullName, passwor
 		return nil, err
 	}
 	return &u, nil
+}
+
+func (r *pgxRepository) SetPassword(ctx context.Context, id uuid.UUID, passwordHash string, at time.Time) error {
+	return shared.Wrap("set password", pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx,
+			`UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`, id, passwordHash); err != nil {
+			return fmt.Errorf("update password: %w", err)
+		}
+		// A reset link mailed before this one is no longer the admin's intent:
+		// leaving it live would let an old inbox overwrite the password that was
+		// just handed over in person.
+		if _, err := tx.Exec(ctx,
+			`UPDATE password_reset_tokens SET used_at = $2 WHERE user_id = $1 AND used_at IS NULL`, id, at); err != nil {
+			return fmt.Errorf("burn reset tokens: %w", err)
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE auth_sessions SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL`, id, at); err != nil {
+			return fmt.Errorf("revoke sessions: %w", err)
+		}
+		return nil
+	}))
 }
 
 func (r *pgxRepository) HardDeleteUser(ctx context.Context, id uuid.UUID) error {

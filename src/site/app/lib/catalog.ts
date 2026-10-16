@@ -99,5 +99,5 @@ export function readFilters(url: URL, products: Product[]): Filters {
     page: Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1,
   };
 }
-export const productPath = (product: Product) =>
+export const productPath = (product: Pick<Product, "id">) =>
   `/products/${encodeURIComponent(product.id)}`;

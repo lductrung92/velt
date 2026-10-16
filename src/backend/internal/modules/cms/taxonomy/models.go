@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/velt/backend/internal/modules/cms/shared"
+	"github.com/velt/backend/internal/platform/localize"
 )
 
 const (
@@ -18,6 +19,21 @@ const (
 
 // maxTagPageSize caps the server-side tag list page size.
 const maxTagPageSize = 100
+
+// Category status values (cms_categories.status CHECK).
+//
+// Three, not the article workflow's six: a category is never submitted for
+// review and never scheduled, so those states would be unreachable.
+const (
+	CategoryStatusDraft     = "draft"
+	CategoryStatusPublished = "published"
+	CategoryStatusArchived  = "archived"
+)
+
+// validCategoryStatus is the set accepted by the list `status` filter.
+var validCategoryStatus = map[string]bool{
+	CategoryStatusDraft: true, CategoryStatusPublished: true, CategoryStatusArchived: true,
+}
 
 // --- Domain rows (internal) ---
 
@@ -29,6 +45,7 @@ type Category struct {
 	ParentID       *uuid.UUID
 	Description    *string
 	SortOrder      int
+	Status         string
 	SEOTitle       *string
 	SEODescription *string
 	SEOKeywords    *string
@@ -50,6 +67,7 @@ type categoryWrite struct {
 	ParentID       *uuid.UUID
 	Description    *string
 	SortOrder      int
+	Status         string
 	SEOTitle       *string
 	SEODescription *string
 	SEOKeywords    *string
@@ -80,12 +98,15 @@ type CategorySEO struct {
 
 // CreateCategoryRequest creates a category. Slug is derived from name when omitted.
 type CreateCategoryRequest struct {
-	Name        string       `json:"name" validate:"required,max=160"`
-	Slug        *string      `json:"slug" validate:"omitempty,max=160"`
-	ParentID    *uuid.UUID   `json:"parent_id"`
-	Description *string      `json:"description" validate:"omitempty,max=2000"`
-	SortOrder   *int         `json:"sort_order" validate:"omitempty,min=0"`
-	SEO         *CategorySEO `json:"seo"`
+	Name        string     `json:"name" validate:"required,max=160"`
+	Slug        *string    `json:"slug" validate:"omitempty,max=160"`
+	ParentID    *uuid.UUID `json:"parent_id"`
+	Description *string    `json:"description" validate:"omitempty,max=2000"`
+	SortOrder   *int       `json:"sort_order" validate:"omitempty,min=0"`
+	// Status defaults to published: a category that exists is in use, and the
+	// rows already in the table mean exactly that.
+	Status *string      `json:"status" validate:"omitempty,oneof=draft published archived"`
+	SEO    *CategorySEO `json:"seo"`
 }
 
 // UpdateCategoryRequest patches a category. parent_id uses Optional so it can be
@@ -96,6 +117,7 @@ type UpdateCategoryRequest struct {
 	ParentID       shared.Optional[uuid.UUID] `json:"parent_id"`
 	Description    *string                    `json:"description" validate:"omitempty,max=2000"`
 	SortOrder      *int                       `json:"sort_order" validate:"omitempty,min=0"`
+	Status         *string                    `json:"status" validate:"omitempty,oneof=draft published archived"`
 	SEO            *CategorySEO               `json:"seo"`
 	RegenerateSlug bool                       `json:"regenerate_slug"`
 	UpdatedAt      *time.Time                 `json:"updated_at" validate:"required"`
@@ -134,12 +156,19 @@ type TagListParams struct {
 
 // CategoryResponse is a category node in the category tree (children nested).
 type CategoryResponse struct {
-	ID           uuid.UUID          `json:"id"`
-	Name         string             `json:"name"`
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	// NameDisplay is Name in the language the request asked for, falling back
+	// to Name itself. It is for SHOWING a category — a list, a picker, a
+	// breadcrumb — and nothing else: the editor is hydrated from this same
+	// list, so Name has to keep carrying the stored Vietnamese or the next
+	// save would write the translation over it.
+	NameDisplay  string             `json:"name_display"`
 	Slug         string             `json:"slug"`
 	ParentID     *uuid.UUID         `json:"parent_id"`
 	Description  *string            `json:"description"`
 	SortOrder    int                `json:"sort_order"`
+	Status       string             `json:"status"`
 	ArticleCount int                `json:"article_count"`
 	SEO          CategorySEO        `json:"seo"`
 	Children     []CategoryResponse `json:"children"`
@@ -156,10 +185,14 @@ type TagResponse struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
-func toCategoryResponse(c categoryWithCount) CategoryResponse {
+// toCategoryResponse converts one row. `tr` is the request locale's stored
+// values for this category, nil when there are none — a write path passes nil,
+// so a create/update answers with exactly what it persisted.
+func toCategoryResponse(c categoryWithCount, tr map[string]any) CategoryResponse {
 	return CategoryResponse{
-		ID: c.ID, Name: c.Name, Slug: c.Slug, ParentID: c.ParentID,
-		Description: c.Description, SortOrder: c.SortOrder, ArticleCount: c.ArticleCount,
+		ID: c.ID, Name: c.Name, NameDisplay: localize.Str(tr, "name", c.Name),
+		Slug: c.Slug, ParentID: c.ParentID,
+		Description: c.Description, SortOrder: c.SortOrder, Status: c.Status, ArticleCount: c.ArticleCount,
 		SEO:      CategorySEO{Title: c.SEOTitle, Description: c.SEODescription, Keywords: c.SEOKeywords},
 		Children: []CategoryResponse{}, CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
 	}

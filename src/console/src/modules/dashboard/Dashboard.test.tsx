@@ -76,6 +76,9 @@ describe("Dashboard", () => {
           { id: "root", children: [{ id: "child", children: [] }] },
         ]),
       ),
+      http.get(`${API}/activity`, () =>
+        HttpResponse.json({ items: [], total: 0, page: 1, page_size: 20 }),
+      ),
     );
     renderDashboard(["*"]);
     expect(
@@ -96,9 +99,6 @@ describe("Dashboard", () => {
         expect.stringContaining("5"),
       ]),
     );
-    expect(
-      screen.getByRole("link", { name: t("dashboard.actions.product") }),
-    ).toHaveAttribute("href", "/products/new");
   });
 
   it("does not request protected module data or show actions without permission", async () => {
@@ -139,8 +139,9 @@ describe("Dashboard", () => {
           link.textContent?.includes(t("dashboard.manage")),
       )!;
     expect(within(productCard).getByText("0")).toBeInTheDocument();
+    // No activity.read, no activity card — and no request for it either.
     expect(
-      screen.queryByRole("heading", { name: t("dashboard.quick_title") }),
+      screen.queryByRole("heading", { name: t("activity.title") }),
     ).not.toBeInTheDocument();
   });
 
@@ -163,6 +164,9 @@ describe("Dashboard", () => {
         asked.pages = `${q.get("created_from")}..${q.get("created_to")}`;
         return HttpResponse.json([]);
       }),
+      http.get(`${API}/activity`, () =>
+        HttpResponse.json({ items: [], total: 0, page: 1, page_size: 20 }),
+      ),
     );
     const user = userEvent.setup();
     renderDashboard(["*"]);
@@ -185,5 +189,55 @@ describe("Dashboard", () => {
     expect(asked.articles).toBe(asked.products);
     expect(asked.pages).toBe(asked.products);
     expect(asked.members).toBe(asked.products);
+  });
+
+  it("shows the newest activity on the card and the rest in a modal that cannot purge", async () => {
+    const entries = Array.from({ length: 7 }, (_, index) => ({
+      id: index + 1,
+      occurred_at: "2026-10-14T08:00:00Z",
+      action: "article.published",
+      entity: "article",
+      entity_id: `a${index}`,
+      entity_label: `Bai viet ${index}`,
+      actor_id: "u1",
+      actor_label: "Bien tap vien",
+      ip: null,
+      correlation_id: null,
+      metadata: {},
+    }));
+    server.use(
+      http.get(`${API}/activity`, ({ request }) => {
+        // One request feeds both views, through the admin hook.
+        expect(new URL(request.url).searchParams.get("page_size")).toBe("20");
+        return HttpResponse.json({
+          items: entries,
+          total: entries.length,
+          page: 1,
+          page_size: 20,
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderDashboard(["activity.read"]);
+
+    const card = await screen.findByTestId("dashboard-activity-list");
+    expect(
+      within(card).getAllByTestId("dashboard-activity-entry"),
+    ).toHaveLength(5);
+    expect(
+      within(card).getAllByText(t("activity.action.article.published"))[0],
+    ).toBeVisible();
+
+    await user.click(
+      screen.getByRole("button", { name: t("dashboard.view_all") }),
+    );
+    const modal = await screen.findByRole("dialog");
+    expect(
+      within(modal).getAllByTestId("dashboard-activity-entry"),
+    ).toHaveLength(7);
+    // Cleaning up deletes rows for good: that stays on the admin screen.
+    expect(
+      within(modal).queryByRole("button", { name: t("activity.cleanup") }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
-import { UnsavedChangesProvider } from "@/app/UnsavedChangesProvider";
 
 import { AppLayoutCombo } from "@/components/common/AppLayoutCombo";
 import {
@@ -81,12 +80,7 @@ export const router = createBrowserRouter([
   {
     element: (
       <ProtectedRoute>
-        {/* Inside the router on purpose: useBlocker needs the route context,
-            and RouterProvider takes no children. One provider here covers
-            every protected screen. */}
-        <UnsavedChangesProvider>
-          <AppLayoutCombo />
-        </UnsavedChangesProvider>
+        <AppLayoutCombo />
       </ProtectedRoute>
     ),
     children: [

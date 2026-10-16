@@ -40,13 +40,10 @@ func TestIT_PageCRUDTreeAndPublish(t *testing.T) {
 	child, err := repo.CreatePage(ctx, cw)
 	require.NoError(t, err)
 
-	pages, err := repo.ListPages(ctx, PageListParams{})
+	pages, total, err := repo.ListPages(ctx, PageListParams{Page: 1, PageSize: 50})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(pages), 2)
-
-	hc, err := repo.PageHasChildren(ctx, root.ID)
-	require.NoError(t, err)
-	require.True(t, hc)
+	require.GreaterOrEqual(t, total, 2)
 
 	pub, err := repo.PublishPage(ctx, root.ID, []byte(`{"slug":"x"}`))
 	require.NoError(t, err)
@@ -79,55 +76,60 @@ func TestIT_PageRootSlugUnique(t *testing.T) {
 	require.ErrorIs(t, err, shared.ErrConflict)
 }
 
-func TestIT_PageDeleteWithChildrenRefuses(t *testing.T) {
+// Deleting a page that still has a leftover child detaches the child and goes
+// ahead: nothing can re-parent it any more, so refusing would strand the page.
+func TestIT_PageDeleteDetachesLeftoverChildren(t *testing.T) {
 	repo := pagesDB(t)
 	ctx := context.Background()
 	root, err := repo.CreatePage(ctx, itPageWrite("cmsit-pdel-"+uuid.NewString()[:8]))
 	require.NoError(t, err)
 	cw := itPageWrite("cmsit-pdelc-" + uuid.NewString()[:8])
 	cw.ParentID = &root.ID
-	_, err = repo.CreatePage(ctx, cw)
-	require.NoError(t, err)
-	require.ErrorIs(t, repo.DeletePage(ctx, root.ID), shared.ErrInUse)
-}
-
-func TestIT_PageCycleDetection(t *testing.T) {
-	repo := pagesDB(t)
-	ctx := context.Background()
-	root, err := repo.CreatePage(ctx, itPageWrite("cmsit-pcyc-"+uuid.NewString()[:8]))
-	require.NoError(t, err)
-	cw := itPageWrite("cmsit-pcycc-" + uuid.NewString()[:8])
-	cw.ParentID = &root.ID
 	child, err := repo.CreatePage(ctx, cw)
 	require.NoError(t, err)
-	cyc, err := repo.PageCreatesCycle(ctx, root.ID, child.ID)
+
+	require.NoError(t, repo.DeletePage(ctx, root.ID))
+	kept, err := repo.GetPage(ctx, child.ID)
 	require.NoError(t, err)
-	require.True(t, cyc)
+	require.Nil(t, kept.ParentID)
 }
 
-func TestIT_PageUpdateOptLockAndCycleRecheck(t *testing.T) {
+func TestIT_PageUpdateIsOptimisticallyLocked(t *testing.T) {
 	repo := pagesDB(t)
 	ctx := context.Background()
 	root, err := repo.CreatePage(ctx, itPageWrite("cmsit-pupd-"+uuid.NewString()[:8]))
-	require.NoError(t, err)
-	cw := itPageWrite("cmsit-pupc-" + uuid.NewString()[:8])
-	cw.ParentID = &root.ID
-	child, err := repo.CreatePage(ctx, cw)
 	require.NoError(t, err)
 
 	w := itPageWrite(root.Slug)
 	w.Title = "cmsit-changed"
 	stale := root.UpdatedAt.Add(-time.Hour)
-	_, err = repo.UpdatePage(ctx, root.ID, w, stale, false)
+	_, err = repo.UpdatePage(ctx, root.ID, w, stale)
 	require.ErrorIs(t, err, shared.ErrOptLock)
-	upd, err := repo.UpdatePage(ctx, root.ID, w, root.UpdatedAt, false)
+	upd, err := repo.UpdatePage(ctx, root.ID, w, root.UpdatedAt)
 	require.NoError(t, err)
 	require.Equal(t, "cmsit-changed", upd.Title)
+}
 
-	mw := itPageWrite(upd.Slug)
-	mw.ParentID = &child.ID
-	_, err = repo.UpdatePage(ctx, root.ID, mw, upd.UpdatedAt, true)
-	require.ErrorIs(t, err, shared.ErrPageCycle)
+// A row that carries a parent from before keeps it: the column was left in
+// place, and an ordinary save must not quietly move the page to the root.
+func TestIT_PageUpdateKeepsAnExistingParent(t *testing.T) {
+	repo := pagesDB(t)
+	ctx := context.Background()
+	root, err := repo.CreatePage(ctx, itPageWrite("cmsit-pkeep-"+uuid.NewString()[:8]))
+	require.NoError(t, err)
+	cw := itPageWrite("cmsit-pkeepc-" + uuid.NewString()[:8])
+	cw.ParentID = &root.ID
+	child, err := repo.CreatePage(ctx, cw)
+	require.NoError(t, err)
+
+	// What the service sends on a save: the current row, merged with the edit.
+	w := itPageWrite(child.Slug)
+	w.ParentID = child.ParentID
+	w.Title = "cmsit-kept"
+	upd, err := repo.UpdatePage(ctx, child.ID, w, child.UpdatedAt)
+	require.NoError(t, err)
+	require.NotNil(t, upd.ParentID)
+	require.Equal(t, root.ID, *upd.ParentID)
 }
 
 // --- created_at range filter ---
@@ -173,20 +175,15 @@ func itPageRangeFixture(t *testing.T) (Repository, string, func(name string, par
 	return NewRepository(pool), token, seed
 }
 
-// itTreeSlugs flattens the tree the service builds, keeping only this run's
-// rows, so a node count can be compared against the rows that matched.
-func itTreeSlugs(tree []PageResponse, token string) []string {
+// itSlugs keeps only this run's rows, so a count can be compared against the
+// rows that matched.
+func itSlugs(rows []Page, token string) []string {
 	out := []string{}
-	var walk func(nodes []PageResponse)
-	walk = func(nodes []PageResponse) {
-		for _, n := range nodes {
-			if strings.HasPrefix(n.Slug, token) {
-				out = append(out, n.Slug)
-			}
-			walk(n.Children)
+	for _, p := range rows {
+		if strings.HasPrefix(p.Slug, token) {
+			out = append(out, p.Slug)
 		}
 	}
-	walk(tree)
 	sort.Strings(out)
 	return out
 }
@@ -197,12 +194,14 @@ func TestIT_PageCreatedRangeIncludesAndExcludes(t *testing.T) {
 	seed("inside", nil, time.Date(2026, 10, 11, 9, 0, 0, 0, vnZone))
 	seed("after", nil, time.Date(2026, 10, 14, 0, 0, 0, 0, vnZone))
 
-	rows, err := repo.ListPages(context.Background(), PageListParams{
+	rows, _, err := repo.ListPages(context.Background(), PageListParams{
 		CreatedFrom: itDayVN(t, "2026-10-10"),
 		CreatedTo:   itEndOfDayVN(t, "2026-10-13"),
+		Page:        1,
+		PageSize:    50,
 	})
 	require.NoError(t, err)
-	require.Equal(t, []string{token + "-inside"}, itTreeSlugs(buildPageTree(rows), token))
+	require.Equal(t, []string{token + "-inside"}, itSlugs(rows, token))
 }
 
 // The last second of created_to is inside the range: "to 13 Oct" means through
@@ -212,36 +211,39 @@ func TestIT_PageCreatedToIsInclusiveOfTheWholeDay(t *testing.T) {
 	seed("lastsecond", nil, time.Date(2026, 10, 13, 23, 59, 59, 0, vnZone))
 	seed("nextmidnight", nil, time.Date(2026, 10, 14, 0, 0, 0, 0, vnZone))
 
-	rows, err := repo.ListPages(context.Background(), PageListParams{
+	rows, _, err := repo.ListPages(context.Background(), PageListParams{
 		CreatedFrom: itDayVN(t, "2026-10-13"),
 		CreatedTo:   itEndOfDayVN(t, "2026-10-13"),
+		Page:        1,
+		PageSize:    50,
 	})
 	require.NoError(t, err)
-	require.Equal(t, []string{token + "-lastsecond"}, itTreeSlugs(buildPageTree(rows), token))
+	require.Equal(t, []string{token + "-lastsecond"}, itSlugs(rows, token))
 }
 
-// The tree shape must not smuggle extra rows past the filter: a child inside
-// the range whose parent falls outside it surfaces as a root, so the number of
-// nodes the console renders still equals the number of rows that matched.
-func TestIT_PageInRangeChildOfOutOfRangeParentBecomesARoot(t *testing.T) {
+// A page of results reports the WHOLE match count, not the size of the slice:
+// the pager draws its page numbers from it.
+func TestIT_PageListPagesAndCountsTheWholeMatch(t *testing.T) {
 	repo, token, seed := itPageRangeFixture(t)
-	parent := seed("oldparent", nil, time.Date(2026, 9, 1, 10, 0, 0, 0, vnZone))
-	seed("newchild", &parent, time.Date(2026, 10, 11, 10, 0, 0, 0, vnZone))
+	day := time.Date(2026, 10, 11, 9, 0, 0, 0, vnZone)
+	seed("one", nil, day)
+	seed("two", nil, day)
+	seed("three", nil, day)
 
-	rows, err := repo.ListPages(context.Background(), PageListParams{
-		CreatedFrom: itDayVN(t, "2026-10-10"),
-		CreatedTo:   itEndOfDayVN(t, "2026-10-13"),
-	})
-	require.NoError(t, err)
-	tree := buildPageTree(rows)
-	require.Equal(t, []string{token + "-newchild"}, itTreeSlugs(tree, token))
-
-	var roots []string
-	for _, n := range tree {
-		if strings.HasPrefix(n.Slug, token) {
-			roots = append(roots, n.Slug)
-			require.Empty(t, n.Children)
-		}
+	params := PageListParams{
+		CreatedFrom: itDayVN(t, "2026-10-11"),
+		CreatedTo:   itEndOfDayVN(t, "2026-10-11"),
+		Page:        1,
+		PageSize:    2,
 	}
-	require.Equal(t, []string{token + "-newchild"}, roots)
+	first, total, err := repo.ListPages(context.Background(), params)
+	require.NoError(t, err)
+	require.Len(t, itSlugs(first, token), 2)
+	require.Equal(t, 3, total)
+
+	params.Page = 2
+	second, total, err := repo.ListPages(context.Background(), params)
+	require.NoError(t, err)
+	require.Len(t, itSlugs(second, token), 1)
+	require.Equal(t, 3, total)
 }

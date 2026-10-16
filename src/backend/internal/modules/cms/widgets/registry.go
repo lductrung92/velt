@@ -1,5 +1,5 @@
 // Package widgets is the shared registry of CMS content widgets — typed,
-// configurable blocks (games list, articles list, …) embeddable in pages (and
+// configurable blocks (articles list, product grid, …) embeddable in pages (and
 // later landing / inline rich text). One vocabulary, three concerns: validate
 // config (here), resolve fresh data (resolve.go), and the type catalog. The
 // renderers live in the web tier. Mirrors the landing-section config pattern so
@@ -16,7 +16,6 @@ import (
 
 // Widget type ids (the shared vocabulary; see docs/domains/cms/widgets.md §2).
 const (
-	TypeGamesList          = "games_list"
 	TypeArticlesList       = "articles_list"
 	TypeCategoriesShowcase = "categories_showcase"
 	TypeRichText           = "rich_text"
@@ -31,7 +30,6 @@ const (
 const maxConfigBytes = 64 * 1024
 
 var known = map[string]bool{
-	TypeGamesList:          true,
 	TypeArticlesList:       true,
 	TypeCategoriesShowcase: true,
 	TypeRichText:           true,

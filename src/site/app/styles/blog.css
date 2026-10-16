@@ -208,6 +208,7 @@
   overflow: hidden;
 }
 .blog-cover > img,
+.blog-cover > picture > img,
 .blog-cover > svg {
   display: block;
   width: 100%;
@@ -693,6 +694,56 @@
   border-radius: 0.75rem;
   margin: 1.75rem auto;
 }
+/* The classes the body sanitizer lets through (htmlsan.go): where the image
+   sits, and how much of the column it takes.
+
+   The width lives here rather than in the `width` attribute because that
+   attribute now carries the file's REAL pixel size — the pair the browser uses
+   to hold the right box before the image arrives, which is what keeps the text
+   from jumping. A percentage there could not say the shape. `height: auto`
+   from the rule above keeps the ratio once CSS takes over the width. */
+.blog-prose img.kd-img--w25 {
+  width: 25%;
+}
+.blog-prose img.kd-img--w50 {
+  width: 50%;
+}
+.blog-prose img.kd-img--w75 {
+  width: 75%;
+}
+.blog-prose img.kd-img--w100 {
+  width: 100%;
+}
+.blog-prose img.kd-img--center {
+  display: block;
+}
+.blog-prose img.kd-img--left,
+.blog-prose img.kd-img--right {
+  margin-block: 0.5rem;
+}
+.blog-prose img.kd-img--left {
+  float: left;
+  margin-right: 1.75rem;
+}
+.blog-prose img.kd-img--right {
+  float: right;
+  margin-left: 1.75rem;
+}
+/* The only two text alignment classes the body sanitizer lets through
+   (htmlsan.go), on p and h1-h6. Left is the default, so it carries no class. */
+.blog-prose .kd-text--center {
+  text-align: center;
+}
+.blog-prose .kd-text--right {
+  text-align: right;
+}
+/* A float taller than the text beside it would otherwise escape into the
+   signoff and the related posts below. */
+.blog-prose::after {
+  content: "";
+  display: block;
+  clear: both;
+}
 .blog-prose pre {
   overflow: auto;
   max-width: 100%;
@@ -917,6 +968,14 @@
   }
   .blog-prose h2 {
     font-size: 1.5rem;
+  }
+  /* A half-width float leaves a column of two or three words beside it, which
+     is unreadable at this width — so the image takes the whole column. */
+  .blog-prose img.kd-img--left,
+  .blog-prose img.kd-img--right {
+    float: none;
+    width: 100%;
+    margin: 1.75rem 0;
   }
   .blog-endnote {
     padding-block: 2.5rem;

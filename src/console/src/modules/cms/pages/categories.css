@@ -16,6 +16,17 @@
   --list-metric-accent: var(--warning-ink);
 }
 
+/* --- Status tab dots, same palette as the articles/pages lists --- */
+[data-list="categories"] .list-tabs button[data-status="draft"] i {
+  background: hsl(220 9% 46%);
+}
+[data-list="categories"] .list-tabs button[data-status="published"] i {
+  background: hsl(var(--success-ink));
+}
+[data-list="categories"] .list-tabs button[data-status="archived"] i {
+  background: hsl(var(--earth-ink));
+}
+
 /* The name column takes the slack; counts and actions keep their own width. */
 [data-list="categories"] .list-desktop td:first-child,
 [data-list="categories"] .list-desktop th:first-child {

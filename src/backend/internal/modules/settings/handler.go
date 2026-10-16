@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/velt/backend/internal/apperr"
@@ -65,7 +66,13 @@ func (h *Handler) GetPublic(w http.ResponseWriter, r *http.Request) {
 	sum := sha256.Sum256(body)
 	etag := `"` + hex.EncodeToString(sum[:16]) + `"`
 
-	w.Header().Set("Cache-Control", "public, max-age=60")
+	// How long this answer may be held is itself a setting (Settings → Cache):
+	// it is the delay between saving a change and a browser or CDN noticing.
+	if maxAge := h.svc.GetInt(r.Context(), CachePublicMaxAge); maxAge > 0 {
+		w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", maxAge))
+	} else {
+		w.Header().Set("Cache-Control", "no-store")
+	}
 	w.Header().Set("ETag", etag)
 	if match := r.Header.Get("If-None-Match"); match == etag {
 		w.WriteHeader(http.StatusNotModified)
@@ -74,6 +81,16 @@ func (h *Handler) GetPublic(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(body)
+}
+
+// PurgeCache handles POST /api/settings/cache/purge.
+func (h *Handler) PurgeCache(w http.ResponseWriter, r *http.Request) {
+	id, _ := httpx.IdentityFromContext(r.Context())
+	if err := h.svc.PurgeCache(r.Context(), id); err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // TestEmail handles POST /api/settings/email/test.

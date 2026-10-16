@@ -19,11 +19,15 @@ type fakeTranslator struct {
 	values  map[uuid.UUID]map[string]map[string]any
 	err     error
 	purged  []uuid.UUID
+	// calls counts Bundle calls, so a test can prove a list page costs one
+	// round trip rather than one per row.
+	calls int
 }
 
 func (f *fakeTranslator) Locales(context.Context) []string { return f.locales }
 
 func (f *fakeTranslator) Bundle(_ context.Context, _ string, _ []uuid.UUID, _ []string) (map[uuid.UUID]map[string]map[string]any, error) {
+	f.calls++
 	if f.err != nil {
 		return nil, f.err
 	}

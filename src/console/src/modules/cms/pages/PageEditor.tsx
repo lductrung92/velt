@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
-  Globe,
   Globe2,
   Languages,
   Lock,
@@ -9,7 +8,7 @@ import {
   Save,
   Search,
   SlidersHorizontal,
-  Undo2,
+  Trash2,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -19,6 +18,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { Alert } from "@/components/common/Alert";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EditorActionBar } from "@/components/common/EditorActionBar";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SlugField } from "@/components/common/SlugField";
@@ -38,7 +38,6 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TextField } from "@/components/ui/text-field";
 import { Textarea } from "@/components/ui/textarea";
-import { useUnsavedChanges } from "@/app/UnsavedChangesProvider";
 import { usePermission } from "@/modules/auth";
 import { LanguageTabs } from "@/modules/translation/components/LanguageTabs";
 import { TranslatedField } from "@/modules/translation/components/TranslatedField";
@@ -55,11 +54,14 @@ import {
 } from "../components/puck/LandingDesigner";
 import { PageStatusBadge } from "../components/PageStatusBadge";
 import { WidgetSelect } from "../components/WidgetSelect";
-import { EMPTY_SEO, normalizeSeo, seoEquals } from "../components/pageSeo";
+import { EMPTY_SEO, normalizeSeo } from "../components/pageSeo";
 import { useCmsSettings } from "../hooks/useCmsSettings";
+import { Select, type SelectOption } from "@/components/common/Select";
+
 import { useLanding } from "../hooks/useCmsLanding";
 import {
   useCreatePage,
+  useDeletePage,
   usePage,
   usePublishPage,
   useUpdatePage,
@@ -68,6 +70,7 @@ import type {
   CreatePageBody,
   PageKind,
   PageSEO,
+  PageStatus,
   UpdatePageBody,
 } from "../services/pages.service";
 import "@/styles/editor-page.css";
@@ -120,6 +123,7 @@ export default function PageEditor() {
 
   const { hasPermission } = usePermission();
   const canPublish = hasPermission("cms.page.publish");
+  const canDelete = hasPermission("cms.page.delete");
   const canDesign = hasPermission("cms.landing.manage");
 
   const pageQuery = usePage(id);
@@ -128,6 +132,8 @@ export default function PageEditor() {
   const create = useCreatePage();
   const update = useUpdatePage();
   const publish = usePublishPage();
+  const del = useDeletePage();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // A landing page being edited: the body editor is hidden and the visual (Puck)
   // builder is embedded inline (no separate /design screen). Its design is loaded
@@ -138,7 +144,6 @@ export default function PageEditor() {
   const [savingDesign, setSavingDesign] = useState(false);
   // Puck design edits live inside LandingDesigner, so surface their dirtiness here
   // to fold into the unsaved-changes guard (cleared on a successful save).
-  const [designDirty, setDesignDirty] = useState(false);
 
   // Pages share the CMS slug-edit flag with articles (backend Base.AllowSlugEdit
   // reads cms.article.allow_slug_edit for both). OFF → the permalink has no way
@@ -183,11 +188,6 @@ export default function PageEditor() {
   // sits outside it.
   const tr = useEntityTranslation("page", page?.id);
   // seo lives outside the form, so fold its changes into the guard.
-  const seoDirty = isEdit && !!page && !seoEquals(seo, page.seo);
-  useUnsavedChanges({
-    when: form.formState.isDirty || seoDirty || designDirty || tr.dirty,
-    what: t("cms.pages.one"),
-  });
 
   useEffect(() => {
     if (!page || seededId.current === page.id) return;
@@ -265,9 +265,28 @@ export default function PageEditor() {
           setSavingDesign(false);
         }
       }
+      // 3) Status, last: publishing freezes a snapshot of the page, so it has
+      // to read the fields that were just written, not the ones before them.
+      if (nextStatus !== status) {
+        try {
+          await publish.mutateAsync({
+            id: page.id,
+            publish: nextStatus === "published",
+          });
+          toast.success(
+            t(
+              nextStatus === "published"
+                ? "cms.pages.toast.published"
+                : "cms.pages.toast.unpublished",
+            ),
+          );
+        } catch (err) {
+          toast.error(parseApiError(err, t).message);
+          return;
+        }
+      }
       // Clean save → clear dirtiness so the unsaved-changes guard doesn't fire.
       form.reset(values);
-      setDesignDirty(false);
       toast.success(t("cms.pages.toast.saved"));
       return;
     }
@@ -294,27 +313,40 @@ export default function PageEditor() {
     }
   });
 
-  function togglePublish() {
-    if (!page) return;
-    const goPublish = page.status !== "published";
-    publish.mutate(
-      { id: page.id, publish: goPublish },
-      {
-        onSuccess: () =>
-          toast.success(
-            t(
-              goPublish
-                ? "cms.pages.toast.published"
-                : "cms.pages.toast.unpublished",
-            ),
-          ),
-        onError: (e) => toast.error(parseApiError(e, t).message),
-      },
-    );
-  }
+  const saving =
+    create.isPending || update.isPending || publish.isPending || savingDesign;
 
-  const saving = create.isPending || update.isPending || savingDesign;
+  const handleDelete = async () => {
+    if (!id) return;
+    try {
+      await del.mutateAsync(id);
+      toast.success(t("cms.pages.toast.deleted"));
+      navigate("/cms/pages");
+    } catch (err) {
+      toast.error(parseApiError(err, t).message);
+    }
+  };
   const status = useMemo(() => page?.status ?? "draft", [page]);
+  // What Save will leave the page in. A page is published through its own
+  // endpoint rather than a column on the update, so the picker holds the choice
+  // until Save makes it — the same moment the article's does.
+  const [nextStatus, setNextStatus] = useState<PageStatus>("draft");
+  useEffect(() => setNextStatus(status), [status]);
+  /**
+   * Where this page can go from here, and where it is.
+   *
+   * The backend offers exactly two moves — publish and unpublish — and
+   * unpublishing ARCHIVES rather than returning to draft, so draft is a state a
+   * page leaves once and never comes back to. Listing it as a choice on a
+   * published page would be offering a move nothing can make.
+   */
+  const statusOptions: SelectOption[] = useMemo(
+    () =>
+      [status, status === "published" ? "archived" : "published"].map(
+        (value) => ({ value, label: t(`content_status.${value}`) }),
+      ),
+    [status, t],
+  );
 
   // The SEO fields carry no validation rules of their own, so they are rendered
   // from one row shape rather than through FormField.
@@ -391,21 +423,16 @@ export default function PageEditor() {
             </Button>
           }
         >
-          {isEdit && canPublish && (
+          {isEdit && <PageStatusBadge status={status} />}
+          {isEdit && canDelete && (
             <Button
               type="button"
-              variant="outline"
-              loading={publish.isPending}
-              onClick={togglePublish}
+              variant="destructive"
+              disabled={saving}
+              onClick={() => setConfirmDelete(true)}
             >
-              {status === "published" ? (
-                <Undo2 className="size-4" />
-              ) : (
-                <Globe className="size-4" />
-              )}
-              {status === "published"
-                ? t("cms.pages.unpublish")
-                : t("cms.pages.publish")}
+              <Trash2 className="size-4" />
+              {t("common.delete")}
             </Button>
           )}
           <Button type="submit" loading={saving}>
@@ -565,10 +592,28 @@ export default function PageEditor() {
                   )}
                   {isEdit && (
                     <div className="space-y-2">
-                      <Label>{t("cms.pages.field.status")}</Label>
-                      <div>
-                        <PageStatusBadge status={status} />
-                      </div>
+                      <Label htmlFor="cms-page-status">
+                        {t("cms.pages.field.status")}
+                      </Label>
+                      {canPublish ? (
+                        <Select<SelectOption>
+                          inputId="cms-page-status"
+                          aria-label={t("cms.pages.field.status")}
+                          options={statusOptions}
+                          isClearable={false}
+                          value={
+                            statusOptions.find((o) => o.value === nextStatus) ??
+                            null
+                          }
+                          onChange={(option) =>
+                            option && setNextStatus(option.value as PageStatus)
+                          }
+                        />
+                      ) : (
+                        <div>
+                          <PageStatusBadge status={status} />
+                        </div>
+                      )}
                       <p className="text-xs leading-5 text-muted-foreground">
                         {t("cms.pages.editor.publish_hint")}
                       </p>
@@ -652,10 +697,24 @@ export default function PageEditor() {
                 key={landingQuery.data.id}
                 ref={designerRef}
                 detail={landingQuery.data}
-                onDirty={() => setDesignDirty(true)}
               />
             ))}
         </div>
+
+        {/* Same prompt the list screen shows for the same record. */}
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title={t("cms.pages.delete_confirm_title")}
+          description={t("cms.pages.delete_confirm_body", {
+            title: page?.title ?? "",
+          })}
+          confirmLabel={t("common.delete")}
+          confirmIcon={Trash2}
+          destructive
+          loading={del.isPending}
+          onConfirm={() => void handleDelete()}
+        />
       </form>
     </Form>
   );

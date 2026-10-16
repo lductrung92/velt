@@ -19,6 +19,8 @@ function category(over: Record<string, unknown> = {}) {
     id: "c1",
     slug: "cong-tac",
     name: "Cộng tác",
+    name_display: "Cộng tác",
+    status: "draft",
     description: "Công cụ làm việc nhóm",
     sort_order: 3,
     seo: {
@@ -189,6 +191,42 @@ describe("ProductCategoryEditor", () => {
     expect(posted.mock.calls[0][0]).not.toHaveProperty("slug");
   });
 
+  // The list can show and filter a status; this is the only screen that can
+  // set one.
+  it("shows the stored status and PATCHes the one that was picked", async () => {
+    signIn(MANAGER);
+    let patchBody: Record<string, unknown> | undefined;
+    server.use(
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({ items: [category()] }),
+      ),
+      http.patch(`${API}/product-categories/c1`, async ({ request }) => {
+        patchBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(category({ status: "archived" }));
+      }),
+    );
+    renderAt("/product-categories/c1");
+
+    await screen.findByDisplayValue("Cộng tác");
+    const status = document.getElementById(
+      "product-category-status",
+    ) as HTMLElement;
+    expect(status).toHaveTextContent(i18n.t("content_status.draft"));
+    await userEvent.click(status);
+    await userEvent.click(
+      await screen.findByRole("option", {
+        name: i18n.t("content_status.archived"),
+      }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
+
+    await waitFor(() =>
+      expect(patchBody).toMatchObject({ status: "archived" }),
+    );
+  });
+
   it("prefills every field when editing", async () => {
     signIn(MANAGER);
     server.use(
@@ -273,5 +311,34 @@ describe("ProductCategoryEditor", () => {
     renderAt("/product-categories/missing");
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+  // The lists on screen answer in the language the console is read in. This
+  // form is saved back into the Vietnamese row, so it must ask for that one
+  // however the console is set.
+  // The list is read in whatever language the console is in — but the FORM is
+  // filled from `name`, the stored value, never from the translated
+  // `name_display` beside it. Without that split, saving a category while
+  // reading English would write the English name into the Vietnamese row.
+  it("fills the form from the stored name, not the translated one", async () => {
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({
+          items: [
+            category({ name: "Cộng tác", name_display: "Collaboration" }),
+          ],
+        }),
+      ),
+    );
+    await i18n.changeLanguage("en");
+    try {
+      renderAt("/product-categories/c1");
+      expect(await screen.findByDisplayValue("Cộng tác")).toBeInTheDocument();
+      expect(
+        screen.queryByDisplayValue("Collaboration"),
+      ).not.toBeInTheDocument();
+    } finally {
+      await i18n.changeLanguage("vi");
+    }
   });
 });

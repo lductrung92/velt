@@ -237,9 +237,15 @@ describe("SystemSettings", () => {
         }),
       ),
       http.get(`${API}/ai/status`, () =>
-        HttpResponse.json({ enabled: true, degraded: false, provider: "anthropic" }),
+        HttpResponse.json({
+          enabled: true,
+          degraded: false,
+          provider: "anthropic",
+        }),
       ),
-      http.get(`${API}/ai/usage`, () => HttpResponse.json({ days: [], total_tokens: 0 })),
+      http.get(`${API}/ai/usage`, () =>
+        HttpResponse.json({ days: [], total_tokens: 0 }),
+      ),
       http.get(`${API}/ai/mcp/tokens`, () => HttpResponse.json([])),
     );
     renderPage();

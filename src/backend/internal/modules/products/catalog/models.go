@@ -202,6 +202,10 @@ type ListParams struct {
 	Sort        string
 	Page        int
 	PageSize    int
+	// Locale is the language the console is reading in (Accept-Language), "" for
+	// the source language. The list overlays the stored translation of the text
+	// it shows; the product's own row is untouched.
+	Locale string
 }
 
 // --- Response DTOs ---

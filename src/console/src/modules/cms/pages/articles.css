@@ -5,11 +5,11 @@
 [data-list="articles"] .list-metric[data-kind="draft"] {
   --list-metric-accent: 220 9% 46%;
 }
-[data-list="articles"] .list-metric[data-kind="pending_review"] {
-  --list-metric-accent: var(--warning-ink);
-}
 [data-list="articles"] .list-metric[data-kind="published"] {
   --list-metric-accent: var(--success-ink);
+}
+[data-list="articles"] .list-metric[data-kind="archived"] {
+  --list-metric-accent: var(--earth-ink);
 }
 .dark [data-list="articles"] .list-metric[data-kind="draft"] {
   --list-metric-accent: 220 13% 69%;
@@ -30,7 +30,7 @@
   background: hsl(var(--success-ink));
 }
 [data-list="articles"] .list-tabs button[data-status="archived"] i {
-  background: hsl(var(--muted-foreground));
+  background: hsl(var(--earth-ink));
 }
 
 /* --- Row content --- */

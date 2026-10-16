@@ -195,3 +195,52 @@
   width: 16px;
   height: 16px;
 }
+
+/* ── one panel on the left, no switcher ── Puck's nav is the vertical strip that
+ * flips the left sidebar between Blocks and Outline. With the section list gone
+ * (sections are reordered on the canvas and edited from their own action bar)
+ * there is one panel left, so the strip is a column of chrome that switches
+ * between one thing. ── */
+.kd-puck [class*="PuckLayout-nav"] {
+  display: none;
+}
+
+/* The strip leaves a 68px column behind: the layout grid still reserves its
+ * track. Zeroing Puck's own variable collapses it without restating the whole
+ * template (the left panel stays resizable). */
+.kd-puck [class*="PuckLayout"] {
+  --puck-pluginbar-width: 0px;
+}
+
+/*
+ * The section panel: form first, the two switches on one line beneath it.
+ *
+ * Puck renders one wrapper per declared field, in declaration order, and names
+ * each wrapper with a hashed class — so the layout is expressed by POSITION,
+ * not by a class that will change on the next release. The form takes a full
+ * line; the last two wrappers (the "Hiện" and "Toàn chiều rộng" switches, in
+ * that order in puckConfig.tsx) share the last one.
+ *
+ * They sit at the end because they describe the section rather than fill it,
+ * and they were at the top pushing the actual content below the fold.
+ */
+.kd-puck-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.kd-puck-fields > * {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.kd-puck-fields > div:nth-last-child(2),
+.kd-puck-fields > div:last-child {
+  flex: 0 0 auto;
+}
+/* Space above them, so a switch is not read as one more form field. A rule
+   would only span the switch it sits on — these two are sized to their own
+   labels, not to the row — and a line with a gap in it reads as a mistake. */
+.kd-puck-fields > div:nth-last-child(2),
+.kd-puck-fields > div:last-child {
+  margin-top: 8px;
+}

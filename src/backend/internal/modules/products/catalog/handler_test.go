@@ -45,3 +45,19 @@ func TestListParams_CreatedFromAfterCreatedToIs422(t *testing.T) {
 	require.Equal(t, http.StatusUnprocessableEntity, ae.Status)
 	require.Equal(t, "after_created_to", ae.Details["fields"].(map[string]any)["created_from"])
 }
+
+// The console sends the language its interface is in; the list reads it from
+// there, not from a query parameter it never sets.
+func TestListParams_LocaleComesFromAcceptLanguage(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/api/products", nil)
+	r.Header.Set("Accept-Language", "en-GB,en;q=0.9")
+	p, err := listParams(r)
+	require.NoError(t, err)
+	require.Equal(t, "en", p.Locale)
+}
+
+func TestListParams_NoAcceptLanguageIsTheSourceLanguage(t *testing.T) {
+	p, err := parseListQuery(t, "")
+	require.NoError(t, err)
+	require.Equal(t, "", p.Locale)
+}

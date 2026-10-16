@@ -359,9 +359,15 @@ console chưa đặt tên sẽ hiện ra khoá thô, và test của màn hình b
   `widgets/registry.go:5-6` đã ghi "có thể hợp nhất sau" từ lâu.
 - Hai vị trí mới `after_article` và `aside` đang dùng CSS chung của `.region`;
   chưa ai nhìn chúng trên trình duyệt với nội dung thật.
-- Site không có renderer cho widget nào trước đợt này. Năm renderer trong
-  `RegionSlot.tsx` là mới; `product_grid` và `team` vẫn chỉ là landing section,
-  không đặt vào vùng được.
+- Site không có renderer cho widget nào trước đợt này. Các renderer trong
+  `RegionSlot.tsx` là mới. `product_grid` giờ đặt được vào vùng; `team` thì
+  chưa — backend có `TypeTeam` và `resolveTeam` nhưng site chưa vẽ được, đúng
+  khoảng trống mà `product_grid` vừa lấp.
+- Loại `games_list` đã bị **xoá hẳn**: sản phẩm không có game. Một khối cũ còn
+  trong DB không làm sập gì — site bỏ qua loại nó không vẽ được — nhưng API
+  **không** bỏ nó: `ResolveIn` trả `nil, nil` cho loại lạ, nên khối vẫn ra
+  response với `data: null`. Và sau khi backend lên bản mới, *ghi* một khối
+  `games_list` là 422. Nếu môi trường nào còn khối cũ thì phải dọn tay.
 
 ## 12. Kiểm chứng đã làm
 

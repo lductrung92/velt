@@ -9,6 +9,7 @@ import {
 } from "../lib/catalog";
 import { demoLink, safeUrl } from "../lib/links";
 import { Icon } from "./Icon";
+import { Img } from "./Img";
 
 export function ProductVisual({
   product,
@@ -28,10 +29,16 @@ export function ProductVisual({
       aria-hidden={!image}
     >
       {image ? (
-        <img
+        <Img
           src={image}
+          width={product.imageWidth}
+          height={product.imageHeight}
           alt={t("catalog.visual_alt", { name: product.name })}
-          loading="lazy"
+          sizes={
+            large
+              ? "(min-width: 1264px) 568px, (min-width: 768px) 48vw, calc(100vw - 48px)"
+              : "(min-width: 1264px) 384px, (min-width: 1024px) 32vw, (min-width: 768px) 48vw, calc(100vw - 48px)"
+          }
         />
       ) : (
         <>

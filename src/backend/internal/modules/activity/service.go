@@ -8,6 +8,7 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/platform/retention"
 )
 
 // Service is the activity-log read use-case layer.
@@ -37,7 +38,7 @@ func NewService(repo Repository, opts Options) *Service {
 
 // List returns a page of the log. Requires activity.read.
 func (s *Service) List(ctx context.Context, id *httpx.Identity, p ListParams) (ListResponse, error) {
-	if err := s.require(ctx, id); err != nil {
+	if err := s.require(ctx, id, permRead); err != nil {
 		return ListResponse{}, err
 	}
 	p, searchFrom := s.normalize(p)
@@ -55,7 +56,7 @@ func (s *Service) List(ctx context.Context, id *httpx.Identity, p ListParams) (L
 // Actions returns the action codes present in the log. Requires activity.read:
 // the set of codes alone says which parts of the system are in use.
 func (s *Service) Actions(ctx context.Context, id *httpx.Identity) (ActionsResponse, error) {
-	if err := s.require(ctx, id); err != nil {
+	if err := s.require(ctx, id, permRead); err != nil {
 		return ActionsResponse{}, err
 	}
 	codes, err := s.repo.Actions(ctx)
@@ -64,6 +65,33 @@ func (s *Service) Actions(ctx context.Context, id *httpx.Identity) (ActionsRespo
 		return ActionsResponse{}, apperr.Internal()
 	}
 	return ActionsResponse{Items: codes}, nil
+}
+
+// Purge deletes everything older than the given retention window and returns
+// how many rows went. Requires activity.purge, NOT activity.read: whoever may
+// read the log is not thereby allowed to empty it.
+//
+// The cutoff is dated from the server's clock rather than taken from the
+// request, so a client with a wrong clock cannot widen the delete.
+func (s *Service) Purge(ctx context.Context, id *httpx.Identity, olderThan string) (PurgeResponse, error) {
+	if err := s.require(ctx, id, permPurge); err != nil {
+		return PurgeResponse{}, err
+	}
+	before, ok := retention.Cutoff(olderThan, s.now())
+	if !ok {
+		return PurgeResponse{}, apperr.Validation(map[string]string{"older_than": "invalid"})
+	}
+	deleted, err := s.repo.Purge(ctx, before)
+	if err != nil {
+		s.sec(ctx).Error("activity: purge", "err", err)
+		return PurgeResponse{}, apperr.Internal()
+	}
+	// The purge cannot be recorded in the log it just emptied by this module —
+	// nothing here holds a recorder — so it is reported where the rest of this
+	// package's security events go.
+	s.sec(ctx).Warn("activity log purged",
+		"actor", id.UserID, "older_than", olderThan, "deleted", deleted)
+	return PurgeResponse{Deleted: deleted}, nil
 }
 
 // normalize clamps paging and bounds a free-text search. It returns the window
@@ -93,14 +121,14 @@ func (s *Service) normalize(p ListParams) (ListParams, *time.Time) {
 	return p, &from
 }
 
-func (s *Service) require(ctx context.Context, id *httpx.Identity) error {
+func (s *Service) require(ctx context.Context, id *httpx.Identity, perm string) error {
 	if id == nil {
 		return apperr.Unauthorized("unauthorized")
 	}
-	if id.Has(permRead) {
+	if id.Has(perm) {
 		return nil
 	}
-	s.sec(ctx).Warn("activity read denied", "actor", id.UserID, "action", "permission:"+permRead)
+	s.sec(ctx).Warn("activity access denied", "actor", id.UserID, "action", "permission:"+perm)
 	return apperr.AccessDenied("access_denied")
 }
 

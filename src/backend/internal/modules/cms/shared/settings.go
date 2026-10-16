@@ -120,7 +120,10 @@ func SettingDefs() []settings.SettingDef {
 		{Key: FlagNewsletterNotify, Group: GroupCMS, Type: settings.TypeBool, Default: false, Description: "Email newsletter subscribers when an article is published"},
 		{Key: FlagPublishAllowNow, Group: GroupCMS, Type: settings.TypeBool, Default: true, Description: "ON: only immediate publish (hide scheduling); OFF: also offer scheduled publish"},
 		{Key: HomePageSlug, Group: GroupCMS, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Slug of the published CMS page served as the public homepage; empty → built-in home"},
-		{Key: SiteCacheTTL, Group: GroupSite, Type: settings.TypeInt, Default: 60, Min: ptr(0), Max: ptr(86400), IsPublic: true, Description: "Seconds the public site may serve a cached page; 0 disables caching"},
+		// Shown with the other cache knobs, not with the site's copy: it is the
+		// same question as theirs. The KEY is unchanged, so every stored value
+		// and every reader stays as it was.
+		{Key: SiteCacheTTL, Group: settings.GroupCache, Type: settings.TypeInt, Default: 60, Min: ptr(0), Max: ptr(86400), IsPublic: true, Description: "Seconds the public site may serve a cached page; 0 disables caching"},
 		{Key: SiteOGImageURL, Group: GroupSite, Type: settings.TypeString, Format: "url_or_path", Default: "", IsPublic: true, Description: "Image shown when a page is shared; empty → no image unless the content has one"},
 		{Key: SiteBrandTagline, Group: GroupSite, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Footer line under the logo (newlines kept); empty → the site's built-in copy"},
 		{Key: SiteFooterNoteTitle, Group: GroupSite, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Heading of the footer's last column; empty → the site's built-in copy"},

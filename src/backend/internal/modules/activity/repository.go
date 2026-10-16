@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -15,9 +18,20 @@ const entryColumns = `id, occurred_at, action, entity, entity_id, entity_label,
 type Repository interface {
 	List(ctx context.Context, p ListParams) ([]Entry, int, error)
 	Actions(ctx context.Context) ([]string, error)
+	Purge(ctx context.Context, before time.Time) (int64, error)
 }
 
-type pgxRepository struct{ pool *pgxpool.Pool }
+// querier is the slice of pgx both *pgxpool.Pool and pgx.Tx satisfy. The
+// repository takes it rather than the pool so the integration test for Purge
+// can run inside a transaction it rolls back — a DELETE statement is not
+// something to try out against a live table.
+type querier interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+type pgxRepository struct{ pool querier }
 
 // NewRepository builds the Postgres-backed activity repository.
 func NewRepository(pool *pgxpool.Pool) Repository { return &pgxRepository{pool: pool} }
@@ -130,4 +144,24 @@ func (r *pgxRepository) Actions(ctx context.Context) ([]string, error) {
 		out = append(out, code)
 	}
 	return out, rows.Err()
+}
+
+// Purge deletes every row that occurred BEFORE the cutoff, keeping the rest.
+// A zero cutoff has no lower bound and empties the table.
+//
+// Deliberately one statement and no batching: the purge runs behind an admin
+// pressing a button, and a partial delete that reported a number nobody can
+// reconcile would be worse than a slow one.
+func (r *pgxRepository) Purge(ctx context.Context, before time.Time) (int64, error) {
+	q := `DELETE FROM activity_log`
+	args := []any{}
+	if !before.IsZero() {
+		q += ` WHERE occurred_at < $1`
+		args = append(args, before)
+	}
+	tag, err := r.pool.Exec(ctx, q, args...)
+	if err != nil {
+		return 0, fmt.Errorf("purge activity: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }

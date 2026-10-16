@@ -9,16 +9,39 @@ export type PageStatus = "draft" | "scheduled" | "published" | "archived";
 // kind=landing → backend auto-creates a landing and attaches it (landing_id).
 export type PageKind = "content" | "landing";
 
-// GET /cms/pages returns roots with `children` nested (no body).
-export interface PageNode {
+/**
+ * One row of the pages list.
+ *
+ * Flat, and with no parent: a page's address is a single slug segment, the site
+ * routes none of them under another, and nothing here could ever set a parent.
+ * The column still exists in the database — no data was discarded — but it is
+ * not part of what the list says any more.
+ */
+export interface PageListItem {
   id: string;
   title: string;
   slug: string;
-  parent_id: string | null;
-  sort_order: number;
+  template: string | null;
   status: PageStatus;
   landing_id: string | null;
-  children: PageNode[];
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PageListResult {
+  items: PageListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+/** A page as a picker needs it: the whole set, never one page of it. */
+export interface PageOption {
+  id: string;
+  title: string;
+  slug: string;
+  status: PageStatus;
 }
 
 export interface PageSEO {
@@ -40,7 +63,6 @@ export interface PageDetail {
   slug: string;
   body_html: string | null;
   body_json: TiptapDoc | null;
-  parent_id: string | null;
   sort_order: number;
   template: string | null;
   status: PageStatus;
@@ -57,7 +79,6 @@ export interface CreatePageBody {
   title: string;
   kind?: PageKind;
   slug?: string;
-  parent_id?: string | null;
   sort_order?: number;
   body_html?: string;
   body_json?: TiptapDoc;
@@ -76,20 +97,25 @@ export interface UpdatePageBody {
   regenerate_slug?: boolean;
 }
 
-/**
- * The pages list is a TREE, so a range filters the rows underneath it: a page
- * inside the range whose parent is outside surfaces as a root rather than
- * disappearing, which keeps the node count equal to the number of matches.
- */
 export interface PageListParams {
+  q?: string;
+  status?: PageStatus | "";
+  /** "1" narrows the list to pages built with the landing designer. */
+  landing?: "1";
   /** ISO day (YYYY-MM-DD), Vietnam time; the whole `created_to` day counts. */
   created_from?: string;
   created_to?: string;
+  page?: number;
+  page_size?: number;
 }
 
 export const pagesService = {
-  async list(params?: PageListParams): Promise<PageNode[]> {
-    const { data } = await api.get<PageNode[]>("/cms/pages", { params });
+  async list(params?: PageListParams): Promise<PageListResult> {
+    const { data } = await api.get<PageListResult>("/cms/pages", { params });
+    return data;
+  },
+  async options(): Promise<PageOption[]> {
+    const { data } = await api.get<PageOption[]>("/cms/pages/options");
     return data;
   },
   async get(id: string): Promise<PageDetail> {

@@ -45,7 +45,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	res, err := h.svc.List(r.Context(), id)
+	res, err := h.svc.List(r.Context(), id, httpx.Locale(r), r.URL.Query().Get("status"))
 	if err != nil {
 		httpx.WriteError(w, err)
 		return

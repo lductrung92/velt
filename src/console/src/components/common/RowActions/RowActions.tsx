@@ -35,6 +35,7 @@ export function RowAction({
   onClick,
   destructive,
   disabled,
+  pressed,
 }: {
   icon: LucideIcon;
   /** Already translated: it is both the accessible name and the tooltip. */
@@ -44,6 +45,8 @@ export function RowAction({
   onClick?: () => void;
   destructive?: boolean;
   disabled?: boolean;
+  /** For an action that is on or off — an eye, a pin. Omit for a plain verb. */
+  pressed?: boolean;
 }) {
   const glyph = (
     <Icon
@@ -67,6 +70,7 @@ export function RowAction({
       size="icon"
       aria-label={label}
       title={label}
+      aria-pressed={pressed}
       disabled={disabled}
       onClick={onClick}
     >

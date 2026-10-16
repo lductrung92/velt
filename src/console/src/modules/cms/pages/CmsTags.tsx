@@ -28,10 +28,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DEFAULT_PAGE_SIZE,
-  TablePagination,
-} from "@/components/ui/table-pagination";
+import { ListPager } from "@/components/ui/list-pager";
+import { usePaging } from "@/hooks/usePaging";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
 
@@ -53,7 +51,10 @@ export default function CmsTags() {
   const { hasPermission } = usePermission();
   const canManage = hasPermission("cms.taxonomy.manage");
 
-  const [page, setPage] = useState(1);
+  // Page, page size and pager style all come from the shared settings
+  // (Settings → General → Pagination), so every list pages the same way.
+  const paging = usePaging();
+  const { page, setPage } = paging;
   // Sort: 3-state cycle per column (idle → asc → desc → idle); idle falls back
   // to the server default (name ASC).
   const [sort, setSort] = useState<string | null>(null);
@@ -71,7 +72,7 @@ export default function CmsTags() {
   // the lightweight options list separately.
   const tags = useTags({
     page,
-    page_size: DEFAULT_PAGE_SIZE,
+    page_size: paging.pageSize,
     q: q || undefined,
     sort: sort ?? undefined,
   });
@@ -347,17 +348,21 @@ export default function CmsTags() {
               ))}
             </div>
 
-            <div className="list-pagination">
-              <TablePagination
-                page={page}
-                total={total}
-                pageSize={DEFAULT_PAGE_SIZE}
-                onPageChange={setPage}
-              />
-            </div>
           </>
         )}
       </section>
+
+      {/* Outside the card on purpose: the panel holds the records, the
+          pager is how you ask for the next ones. It hides itself when
+          everything fits on one page, so it costs nothing while loading
+          or on an empty list. */}
+      <div className="list-pagination">
+        <ListPager
+          paging={paging}
+          total={total}
+          loading={tags.isFetching}
+        />
+      </div>
 
       <TagFormDialog
         open={formOpen}

@@ -5,7 +5,6 @@ import {
   Plus,
   RotateCcw,
   Search,
-  Send,
   Trash2,
   User as UserIcon,
   Users,
@@ -20,6 +19,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { FilterChips, type FilterChip } from "@/components/common/FilterChips";
 import { PageHeader } from "@/components/common/PageHeader";
 import { RoleBadge } from "@/components/common/RoleBadge";
+import { Select } from "@/components/common/Select";
 import { SortableHead } from "@/components/common/SortableHead";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -33,25 +33,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DEFAULT_PAGE_SIZE,
-  TablePagination,
-} from "@/components/ui/table-pagination";
+import { ListPager } from "@/components/ui/list-pager";
+import { usePaging } from "@/hooks/usePaging";
 import { usePermission } from "@/modules/auth";
 import { useAuthStore } from "@/store/auth.store";
 import { parseApiError } from "@/utils/apiError";
 import { formatDate, formatDateTime } from "@/utils/format";
 
+import { UserCredentialsDialog } from "../components/UserCredentialsDialog";
 import { UserFormDialog } from "../components/UserFormDialog";
-import {
-  useDeleteUser,
-  useResetUserPassword,
-  useUsers,
-} from "../hooks/useAdminUsers";
+import { useRoles } from "../hooks/useAdminRoles";
+import { useDeleteUser, useUsers } from "../hooks/useAdminUsers";
 import type { AdminUser, UserStatus } from "../services/admin.service";
 
 import "@/styles/list-page.css";
 import "./users.css";
+import { fileUrl } from "@/utils/fileUrl";
 
 const STATUS_TONE: Record<UserStatus, "success" | "neutral" | "warning"> = {
   active: "success",
@@ -65,7 +62,8 @@ type DialogState =
   | { kind: "create" }
   | { kind: "edit"; user: AdminUser }
   | null;
-type ConfirmState = { kind: "delete" | "reset"; user: AdminUser } | null;
+/** The credentials modal, optionally seeded with a just-minted password. */
+type CredentialsState = { user: AdminUser; password?: string } | null;
 
 export default function UserManagement() {
   const { t } = useTranslation();
@@ -77,7 +75,15 @@ export default function UserManagement() {
   const [q, setQ] = useState("");
   const [draftQ, setDraftQ] = useState("");
   const [status, setStatus] = useState<UserStatus | "">("");
-  const [page, setPage] = useState(1);
+  // Role narrows server-side like status does, keyed on the role CODE. The
+  // catalog needs roles.read, which a users.read-only role may not carry.
+  const [role, setRole] = useState("");
+  const canReadRoles = hasPermission("roles.read");
+  const roles = useRoles(canReadRoles);
+  // Page, page size and pager style all come from the shared settings
+  // (Settings → General → Pagination), so every list pages the same way.
+  const paging = usePaging();
+  const { page, setPage } = paging;
 
   // Sort: 3-state cycle per column (idle → asc → desc → idle). Default is
   // created_at desc; `null` (idle) falls back to that. Roles/actions never sort.
@@ -86,8 +92,9 @@ export default function UserManagement() {
   const params = {
     q,
     status,
+    role,
     page,
-    page_size: DEFAULT_PAGE_SIZE,
+    page_size: paging.pageSize,
     sort: sort ?? "-created_at",
   };
   const users = useUsers(params);
@@ -122,19 +129,30 @@ export default function UserManagement() {
       value: t(`admin.users.status.${status}`),
       onRemove: () => narrow(() => setStatus("")),
     });
+  const roleOptions = (roles.data ?? []).map((r) => ({
+    value: r.code,
+    label: r.name,
+  }));
+  if (role)
+    chips.push({
+      key: "role",
+      label: t("admin.users.col.roles"),
+      value: roleOptions.find((o) => o.value === role)?.label ?? role,
+      onRemove: () => narrow(() => setRole("")),
+    });
 
   const [dialog, setDialog] = useState<DialogState>(null);
-  const [confirm, setConfirm] = useState<ConfirmState>(null);
+  const [credentials, setCredentials] = useState<CredentialsState>(null);
+  const [confirm, setConfirm] = useState<AdminUser | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const del = useDeleteUser();
-  const reset = useResetUserPassword();
 
   const canCreate = hasPermission("users.create");
   const canUpdate = hasPermission("users.update");
   const canDelete = hasPermission("users.delete");
 
-  function openConfirm(next: ConfirmState) {
+  function openConfirm(next: AdminUser) {
     setConfirmError(null);
     setConfirm(next);
   }
@@ -142,29 +160,17 @@ export default function UserManagement() {
   function runConfirm() {
     if (!confirm) return;
     setConfirmError(null);
-    const onError = (err: unknown) =>
-      setConfirmError(parseApiError(err, t).message);
-    if (confirm.kind === "delete") {
-      del.mutate(confirm.user.id, {
-        onSuccess: () => {
-          toast.success(t("admin.users.deleted"));
-          setConfirm(null);
-        },
-        onError,
-      });
-    } else {
-      reset.mutate(confirm.user.id, {
-        onSuccess: () => {
-          toast.success(t("admin.users.reset_sent"));
-          setConfirm(null);
-        },
-        onError,
-      });
-    }
+    del.mutate(confirm.id, {
+      onSuccess: () => {
+        toast.success(t("admin.users.deleted"));
+        setConfirm(null);
+      },
+      onError: (err) => setConfirmError(parseApiError(err, t).message),
+    });
   }
 
   const items = users.data?.items ?? [];
-  const hasFilter = q !== "" || status !== "";
+  const hasFilter = q !== "" || status !== "" || role !== "";
 
   // Sortable column header — 3-state cycle, ArrowUpDown/ArrowUp/ArrowDown icon +
   // aria-sort (table.md §2). Roles + actions render a plain <TableHead>.
@@ -176,7 +182,11 @@ export default function UserManagement() {
     <div className="flex items-center gap-2">
       <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
         {u.avatar_url ? (
-          <img src={u.avatar_url} alt="" className="size-full object-cover" />
+          <img
+            src={fileUrl(u.avatar_url)}
+            alt=""
+            className="size-full object-cover"
+          />
         ) : (
           <UserIcon className="size-4 text-muted-foreground" />
         )}
@@ -195,8 +205,8 @@ export default function UserManagement() {
       canUpdate={canUpdate}
       canDelete={canDelete}
       onEdit={() => setDialog({ kind: "edit", user: u })}
-      onReset={() => openConfirm({ kind: "reset", user: u })}
-      onDelete={() => openConfirm({ kind: "delete", user: u })}
+      onCredentials={() => setCredentials({ user: u })}
+      onDelete={() => openConfirm(u)}
     />
   );
 
@@ -271,6 +281,23 @@ export default function UserManagement() {
               <ArrowRight className="size-4" aria-hidden />
             </Button>
           </form>
+          {canReadRoles && (
+            <div className="list-filter-controls">
+              <div className="list-filter-select">
+                <Select<{ value: string; label: string }>
+                  inputId="user-role-filter"
+                  aria-label={t("admin.users.role_filter_label")}
+                  isSearchable={false}
+                  placeholder={t("admin.users.role_all")}
+                  options={roleOptions}
+                  value={roleOptions.find((o) => o.value === role) ?? null}
+                  onChange={(option) =>
+                    narrow(() => setRole(option?.value ?? ""))
+                  }
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div
@@ -311,6 +338,7 @@ export default function UserManagement() {
                     setQ("");
                     setDraftQ("");
                     setStatus("");
+                    setRole("");
                   })
               : undefined
           }
@@ -362,7 +390,7 @@ export default function UserManagement() {
             </h3>
             <p>
               {t(
-                q || status
+                hasFilter
                   ? "admin.users.no_results_hint"
                   : "admin.users.empty_hint",
               )}
@@ -464,24 +492,43 @@ export default function UserManagement() {
                 </div>
               ))}
             </div>
-
-            <div className="list-pagination">
-              <TablePagination
-                page={page}
-                pageSize={DEFAULT_PAGE_SIZE}
-                total={users.data?.total ?? 0}
-                onPageChange={setPage}
-              />
-            </div>
           </>
         )}
       </section>
+
+      {/* Outside the card on purpose: the panel holds the records, the
+          pager is how you ask for the next ones. It hides itself when
+          everything fits on one page, so it costs nothing while loading
+          or on an empty list. */}
+      <div className="list-pagination">
+        <ListPager
+          paging={paging}
+          total={users.data?.total ?? 0}
+          loading={users.isFetching}
+        />
+      </div>
 
       {dialog && (
         <UserFormDialog
           mode={dialog.kind}
           user={dialog.kind === "edit" ? dialog.user : undefined}
+          // A new account is unusable until someone has its temporary password,
+          // and this is the one moment it is readable.
+          onCreated={(created) =>
+            setCredentials({
+              user: created,
+              password: created.temporary_password,
+            })
+          }
           onClose={() => setDialog(null)}
+        />
+      )}
+
+      {credentials && (
+        <UserCredentialsDialog
+          user={credentials.user}
+          initialPassword={credentials.password}
+          onClose={() => setCredentials(null)}
         />
       )}
 
@@ -489,24 +536,14 @@ export default function UserManagement() {
         <ConfirmDialog
           open
           onOpenChange={(o) => !o && setConfirm(null)}
-          title={
-            confirm.kind === "delete"
-              ? t("admin.users.delete_title")
-              : t("admin.users.reset_title")
-          }
-          description={
-            confirm.kind === "delete"
-              ? t("admin.users.delete_desc", { name: confirm.user.full_name })
-              : t("admin.users.reset_desc", { name: confirm.user.full_name })
-          }
-          confirmLabel={
-            confirm.kind === "delete"
-              ? t("common.delete")
-              : t("admin.users.action_reset")
-          }
-          confirmIcon={confirm.kind === "delete" ? Trash2 : Send}
-          destructive={confirm.kind === "delete"}
-          loading={confirm.kind === "delete" ? del.isPending : reset.isPending}
+          title={t("admin.users.delete_title")}
+          description={t("admin.users.delete_desc", {
+            name: confirm.full_name,
+          })}
+          confirmLabel={t("common.delete")}
+          confirmIcon={Trash2}
+          destructive
+          loading={del.isPending}
           error={confirmError}
           onConfirm={runConfirm}
         />
@@ -543,7 +580,7 @@ function UserRowActions({
   canUpdate,
   canDelete,
   onEdit,
-  onReset,
+  onCredentials,
   onDelete,
 }: {
   user: AdminUser;
@@ -551,7 +588,7 @@ function UserRowActions({
   canUpdate: boolean;
   canDelete: boolean;
   onEdit: () => void;
-  onReset: () => void;
+  onCredentials: () => void;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
@@ -569,10 +606,10 @@ function UserRowActions({
       {canUpdate && (
         <RowAction
           icon={KeyRound}
-          label={t("admin.users.action_reset")}
-          // Reset is meaningless on a non-active account (BE → 409).
+          label={t("admin.users.action_credentials")}
+          // Regenerating is meaningless on a non-active account (BE → 409).
           disabled={user.status !== "active"}
-          onClick={onReset}
+          onClick={onCredentials}
         />
       )}
       {canDelete && !isSelf && (

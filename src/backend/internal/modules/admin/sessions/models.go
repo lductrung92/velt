@@ -29,6 +29,18 @@ type SessionResponse struct {
 	IsLastSuperAdmin bool       `json:"is_last_super_admin"`
 }
 
+// PurgeRequest asks for every session older than a retention window to be
+// deleted. OlderThan is a window code from platform/retention ("3d", "1y",
+// "all"), never an instant: the server dates the cutoff from its own clock.
+type PurgeRequest struct {
+	OlderThan string `json:"older_than" validate:"required"`
+}
+
+// PurgeResponse reports how many sessions went, so the console can say so.
+type PurgeResponse struct {
+	Deleted int64 `json:"deleted"`
+}
+
 // ListFilter parameterizes the session list query.
 type ListFilter struct {
 	UserID   *uuid.UUID

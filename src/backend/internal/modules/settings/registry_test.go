@@ -9,7 +9,7 @@ import (
 
 func TestRegistry_FoundationShape(t *testing.T) {
 	r := DefaultRegistry()
-	require.Equal(t, []string{"general", "email", "storage"}, r.Groups())
+	require.Equal(t, []string{"general", "cache", "email", "storage"}, r.Groups())
 
 	pw, ok := r.Get("mail.smtp_password")
 	require.True(t, ok)

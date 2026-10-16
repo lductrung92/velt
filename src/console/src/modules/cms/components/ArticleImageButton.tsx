@@ -2,12 +2,10 @@ import type { Editor } from "@tiptap/react";
 import { ImagePlus, Loader2 } from "lucide-react";
 import { useRef, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { parseApiError } from "@/utils/apiError";
 
-import { useUploadArticleMedia } from "../hooks/useCmsArticles";
+import { useInlineImage } from "../hooks/useInlineImage";
 
 // Toolbar button for the article body editor.
 //
@@ -27,30 +25,16 @@ export function ArticleImageButton({
   onDeferred?: (pending: { url: string; file: File }) => void;
 }) {
   const { t } = useTranslation();
-  const upload = useUploadArticleMedia();
+  const image = useInlineImage({ articleId, onDeferred });
   const inputRef = useRef<HTMLInputElement>(null);
-  const disabled = !editor || upload.isPending || (!articleId && !onDeferred);
+  const disabled = !editor || image.isPending || !image.ready;
 
   async function onPick(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = ""; // let the same file be re-picked later
     if (!file || !editor) return;
-    if (!articleId) {
-      const url = URL.createObjectURL(file);
-      onDeferred?.({ url, file });
-      editor.chain().focus().setImage({ src: url, alt: file.name }).run();
-      return;
-    }
-    try {
-      const res = await upload.mutateAsync({
-        id: articleId,
-        file,
-        purpose: "inline",
-      });
-      editor.chain().focus().setImage({ src: res.url, alt: file.name }).run();
-    } catch (err) {
-      toast.error(parseApiError(err, t).message);
-    }
+    const picked = await image.take(file);
+    if (picked) editor.chain().focus().setImage(picked).run();
   }
 
   return (
@@ -64,7 +48,7 @@ export function ArticleImageButton({
         disabled={disabled}
         onClick={() => inputRef.current?.click()}
       >
-        {upload.isPending ? (
+        {image.isPending ? (
           <Loader2 className="size-4 animate-spin" />
         ) : (
           <ImagePlus className="size-4" />

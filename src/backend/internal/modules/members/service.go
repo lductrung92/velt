@@ -16,6 +16,8 @@ import (
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/platform/activity"
+	"github.com/velt/backend/internal/platform/localize"
+	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/storage"
 )
 
@@ -45,6 +47,12 @@ type Service struct {
 	// acts is wired after construction and may stay nil, which is what this
 	// module looked like before the activity log existed.
 	acts activity.Recorder
+	// media mints the public slug for an uploaded avatar and forgets it again
+	// when the avatar is replaced or removed; nil before it is wired.
+	media media.Keeper
+	// assets upgrades a stored avatar URL to its flat /img address and attaches
+	// the size recorded for it, on the PUBLIC roster only; nil answers nothing.
+	assets *media.PublicURLs
 }
 
 // NewService wires the members service. store and urls are the same storage
@@ -59,6 +67,29 @@ func NewService(repo Repository, store storage.Storage, urls storage.URLer, sett
 
 // SetActivity wires the activity recorder (called once at startup).
 func (s *Service) SetActivity(r activity.Recorder) { s.acts = r }
+
+// SetMedia wires the files-table keeper (called once at startup). Nil means an
+// uploaded avatar keeps returning the legacy /api/files URL, which still serves.
+func (s *Service) SetMedia(m media.Keeper) { s.media = m }
+
+// SetMediaURLs wires the read-path media mapping (called once at startup).
+// Unset → the legacy /api/files avatar URLs and no dimensions.
+func (s *Service) SetMediaURLs(m *media.PublicURLs) { s.assets = m }
+
+// upgradeAvatars rewrites each member's avatar to its flat /img address and
+// attaches the intrinsic size, in ONE lookup for the whole roster. Only the
+// public reads call it: the console list reads the same struct and must keep
+// answering exactly as it does today.
+func (s *Service) upgradeAvatars(ctx context.Context, items []Response) {
+	values := make([]string, 0, len(items))
+	for i := range items {
+		media.Collect(&values, items[i].AvatarURL)
+	}
+	found := s.assets.Resolve(ctx, values)
+	for i := range items {
+		items[i].AvatarWidth, items[i].AvatarHeight = media.Apply(found, &items[i].AvatarURL)
+	}
+}
 
 // record files one entry in the activity log. A nil recorder is a no-op: the
 // log is a record OF the action, never a condition for it.
@@ -107,7 +138,21 @@ func (s *Service) List(ctx context.Context, id *httpx.Identity, p ListParams) (L
 	if err := s.require(ctx, id, permView); err != nil {
 		return ListResponse{}, err
 	}
-	return s.list(ctx, p)
+	res, err := s.list(ctx, p)
+	if err != nil {
+		return ListResponse{}, err
+	}
+	ids := make([]uuid.UUID, 0, len(res.Items))
+	for i := range res.Items {
+		ids = append(ids, res.Items[i].ID)
+	}
+	// One lookup for the whole page. Only role and bio are overlaid — a name is
+	// not a translator's to rewrite — and the editor reads Get, not this.
+	tr := localize.Fields(ctx, s.tr, EntityMember, p.Locale, ids)
+	for i := range res.Items {
+		overlayMember(&res.Items[i], tr[res.Items[i].ID])
+	}
+	return res, nil
 }
 
 // ListPublic returns active members for the public site. No auth, no permission.
@@ -118,6 +163,7 @@ func (s *Service) ListPublic(ctx context.Context, p ListParams) (ListResponse, e
 	if err != nil {
 		return ListResponse{}, err
 	}
+	s.upgradeAvatars(ctx, res.Items)
 	locale := s.resolveLocale(ctx, p.Locale)
 	if locale == baseLocale {
 		return res, nil
@@ -169,7 +215,9 @@ func (s *Service) GetPublicBySlug(ctx context.Context, locale, slug string) (Res
 	if !m.IsActive {
 		return Response{}, apperr.NotFound("not_found")
 	}
-	res := s.toResponse(ctx, *m)
+	one := []Response{s.toResponse(ctx, *m)}
+	s.upgradeAvatars(ctx, one)
+	res := one[0]
 	if loc := s.resolveLocale(ctx, locale); loc != baseLocale {
 		overlayMember(&res, s.translations(ctx, loc, []uuid.UUID{m.ID})[m.ID])
 	}
@@ -396,7 +444,16 @@ func (s *Service) UploadAvatar(ctx context.Context, id *httpx.Identity, memberID
 	s.deleteFile(ctx, cur.AvatarPath)
 
 	cur.AvatarPath = &key
-	return s.toResponse(ctx, *cur), nil
+	resp := s.toResponse(ctx, *cur)
+	// The console renders the response's avatar_url immediately, so the freshly
+	// minted flat URL goes here; everything else keeps deriving the URL from the
+	// stored path, which the legacy route still serves.
+	if u := media.MintOr(ctx, s.media, media.MintInput{
+		Key: key, Base: "avatar", Data: buf, OwnerKind: "member", OwnerID: &memberID,
+	}, ""); u != "" {
+		resp.AvatarURL = &u
+	}
+	return resp, nil
 }
 
 // DeleteAvatar clears a member's avatar. Requires members.manage.
@@ -426,6 +483,9 @@ func (s *Service) deleteFile(ctx context.Context, path *string) {
 	if err := s.store.Delete(ctx, *path); err != nil {
 		s.sec(ctx).Warn("members: delete old media failed", "path", *path, "err", err)
 	}
+	// The bytes are gone; so must be the public identity that pointed at them
+	// and every derivative rendered from them.
+	media.Forget(ctx, s.media, *path)
 }
 
 // mediaPrefix is the storage folder that owns a member's uploaded media.

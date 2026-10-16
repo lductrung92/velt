@@ -21,8 +21,15 @@ export interface FlatCategory {
   parentId: string | null;
   depth: number;
   sortOrder: number;
+  /**
+   * The name to SHOW: `name_display`, i.e. the translation where somebody has
+   * written one. The stored name is deliberately not carried here — this
+   * projection feeds rows, search and pickers, never a write body, and the
+   * editor reads the category itself (`Category.name`).
+   */
   name: string;
   slug: string;
+  status: Category["status"];
   articleCount: number;
   updatedAt: string;
   hasChildren: boolean;
@@ -55,8 +62,9 @@ export function flattenTree(
       parentId,
       depth,
       sortOrder: node.sort_order,
-      name: node.name,
+      name: node.name_display,
       slug: node.slug,
+      status: node.status,
       articleCount: node.article_count,
       updatedAt: node.updated_at,
       hasChildren: node.children.length > 0,

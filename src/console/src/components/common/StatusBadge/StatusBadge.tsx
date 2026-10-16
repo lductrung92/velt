@@ -6,7 +6,12 @@ import { cn } from "@/lib/utils";
 // Status pill built on the Badge primitive. `tone` maps to a dark-mode-aware
 // colour; text is passed in already-translated (statuses are domain-specific,
 // so the label lives at the call site). docs/styles/console status-badge.
-export type StatusTone = "success" | "neutral" | "warning" | "danger";
+export type StatusTone =
+  | "success"
+  | "neutral"
+  | "warning"
+  | "danger"
+  | "archive";
 
 const TONE: Record<StatusTone, string> = {
   success:
@@ -16,6 +21,9 @@ const TONE: Record<StatusTone, string> = {
     "border-amber-500/30 bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
   danger:
     "border-destructive/30 bg-destructive/10 text-destructive-ink dark:bg-destructive/20",
+  // Put away, not wrong: an earth brown that reads as its own state beside
+  // draft's grey without borrowing the alarm of warning or danger.
+  archive: "border-earth/30 bg-earth/10 text-earth-ink dark:bg-earth/20",
 };
 
 export function StatusBadge({

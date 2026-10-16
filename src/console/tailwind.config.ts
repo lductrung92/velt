@@ -51,6 +51,10 @@ export default {
           DEFAULT: "hsl(var(--purple))",
           ink: "hsl(var(--purple-ink))",
         },
+        earth: {
+          DEFAULT: "hsl(var(--earth))",
+          ink: "hsl(var(--earth-ink))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",

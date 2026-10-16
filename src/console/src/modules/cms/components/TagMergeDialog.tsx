@@ -3,16 +3,10 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { ModalHeader } from "@/components/common/ModalHeader";
 import { Select } from "@/components/common/Select";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { parseApiError } from "@/utils/apiError";
 
 import { useMergeTags } from "../hooks/useCmsTags";
@@ -59,12 +53,14 @@ export function TagMergeDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent closeLabel={t("common.close")}>
-        <DialogHeader>
-          <DialogTitle>{t("cms.tags.dialog.merge.title")}</DialogTitle>
-          <DialogDescription>
-            {t("cms.tags.dialog.merge.desc", { name: source?.name ?? "" })}
-          </DialogDescription>
-        </DialogHeader>
+        <ModalHeader
+          icon={GitMerge}
+          title={t("cms.tags.dialog.merge.title")}
+          subject={source?.name ?? ""}
+        />
+        <p className="text-sm text-muted-foreground">
+          {t("cms.tags.dialog.merge.desc", { name: source?.name ?? "" })}
+        </p>
         <div className="space-y-1.5">
           <span className="text-sm font-medium">
             {t("cms.tags.dialog.merge.target")}

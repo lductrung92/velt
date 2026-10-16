@@ -25,20 +25,24 @@ function catTree() {
     {
       id: "a",
       name: "Tin tức",
+      name_display: "Tin tức",
       slug: "tin-tuc",
       parent_id: null,
       description: null,
       sort_order: 0,
+      status: "published",
       article_count: 2,
       seo: emptySeo(),
       children: [
         {
           id: "a1",
           name: "Sự kiện",
+          name_display: "Sự kiện",
           slug: "su-kien",
           parent_id: "a",
           description: null,
           sort_order: 0,
+          status: "published",
           article_count: 0,
           seo: emptySeo(),
           children: [],
@@ -52,10 +56,12 @@ function catTree() {
     {
       id: "b",
       name: "Hướng dẫn",
+      name_display: "Hướng dẫn",
       slug: "huong-dan",
       parent_id: null,
       description: null,
       sort_order: 1,
+      status: "draft",
       article_count: 0,
       seo: emptySeo(),
       children: [],
@@ -117,7 +123,19 @@ const table = () => screen.getByTestId("cms-categories-table");
 const inTable = () => within(table());
 const ready = () => screen.findByTestId("cms-categories-table");
 
-beforeEach(() => useAuthStore.getState().clear());
+// usePaging reads the public config; without a handler MSW fails the request
+// (the suite is set to error on unhandled ones) and the pager silently falls
+// back to its defaults.
+function settings(pageSize = 10) {
+  return http.get(`${API}/public/settings`, () =>
+    HttpResponse.json({ "app.page_size": pageSize }),
+  );
+}
+
+beforeEach(() => {
+  useAuthStore.getState().clear();
+  server.use(settings());
+});
 afterEach(() => useAuthStore.getState().clear());
 
 describe("CategoryTree", () => {
@@ -324,5 +342,74 @@ describe("CategoryTree", () => {
     expect(rows[0]).toHaveTextContent("Hướng dẫn");
     expect(rows[1]).toHaveTextContent("Sự kiện");
     expect(rows[2]).toHaveTextContent("Tin tức");
+  });
+  it("status: the badge renders in the table", async () => {
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/cms/categories`, () => HttpResponse.json(catTree())),
+    );
+    renderPage();
+    await ready();
+
+    // Labels come from the shared content_status.* bundle, not a parallel set.
+    expect(
+      inTable().getAllByText(i18n.t("content_status.published")),
+    ).toHaveLength(2);
+    expect(
+      inTable().getByText(i18n.t("content_status.draft")),
+    ).toBeInTheDocument();
+  });
+
+  it("status tabs: picking one filters the tree and flattens it", async () => {
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/cms/categories`, () => HttpResponse.json(catTree())),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await ready();
+    expect(inTable().getAllByRole("row").slice(1)).toHaveLength(3);
+
+    await user.click(
+      screen.getByRole("button", { name: i18n.t("content_status.draft") }),
+    );
+    const rows = inTable().getAllByRole("row").slice(1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("Hướng dẫn");
+    // A filtered view is a flat view, so drag-to-reparent is off.
+    expect(
+      inTable().queryAllByRole("button", { name: REORDER() }),
+    ).toHaveLength(0);
+
+    // Back to everything.
+    await user.click(
+      screen.getByRole("button", {
+        name: i18n.t("cms.categories.all_statuses"),
+      }),
+    );
+    expect(inTable().getAllByRole("row").slice(1)).toHaveLength(3);
+  });
+
+  it("pager: the tree pages by root, so a subtree is never split", async () => {
+    signIn(MANAGER);
+    server.use(
+      settings(1),
+      http.get(`${API}/cms/categories`, () => HttpResponse.json(catTree())),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await ready();
+
+    // One root per page — and its child comes with it.
+    await waitFor(() =>
+      expect(inTable().getAllByRole("row").slice(1)).toHaveLength(2),
+    );
+    expect(inTable().getByText("Tin tức")).toBeInTheDocument();
+    expect(inTable().getByText("Sự kiện")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "2" }));
+    const rows = inTable().getAllByRole("row").slice(1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("Hướng dẫn");
   });
 });

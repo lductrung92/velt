@@ -53,11 +53,17 @@
     --success-ink: 160 75% 28.5%;
     --warning-ink: 32 95% 34%;
     --purple-ink: 265 65% 58.5%;
+    /* Archived: a dull earth brown. Grey was taken by draft, and the two were
+       a fifth of a percent apart in lightness — unreadable as two states. Low
+       saturation keeps it clear of --warning-ink's vivid orange. 7.3:1 on the
+       page. */
+    --earth-ink: 20 38% 34%;
     /* Tint bases. Only ever used with an alpha, e.g. hsl(var(--success) / 0.1),
        which is why they may be lighter than the ink they sit behind. */
     --success: 160 75% 36%;
     --warning: 32 95% 44%;
     --purple: 265 65% 58%;
+    --earth: 20 45% 42%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 217 100% 49.6%;
@@ -103,9 +109,11 @@
     --success-ink: 160 60% 55%;
     --warning-ink: 38 92% 62%;
     --purple-ink: 265 70% 72%;
+    --earth-ink: 25 45% 70%;
     --success: 160 60% 48%;
     --warning: 38 92% 55%;
     --purple: 265 70% 68%;
+    --earth: 25 45% 62%;
   }
 
   * {

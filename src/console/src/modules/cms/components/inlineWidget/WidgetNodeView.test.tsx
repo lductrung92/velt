@@ -27,11 +27,16 @@ vi.mock("@tiptap/react", () => ({
 // without a QueryClient / network.
 vi.mock("../../hooks/useWidgetPreview", () => ({ useWidgetPreview: vi.fn() }));
 
+// Same reason: the sub-form's category picker reads the taxonomy.
+vi.mock("../../hooks/useCmsCategories", () => ({
+  useCategories: () => ({ data: [] }),
+}));
+
 beforeEach(() => {
   vi.mocked(useWidgetPreview).mockReturnValue({
     isLoading: false,
     isError: false,
-    data: { type: "games_list", data: { items: [] } },
+    data: { type: "articles_list", data: { items: [] } },
   } as unknown as ReturnType<typeof useWidgetPreview>);
 });
 
@@ -50,7 +55,7 @@ function makeProps(
     node: {
       attrs: {
         wid: "w1",
-        wtype: over.wtype ?? "games_list",
+        wtype: over.wtype ?? "articles_list",
         config: over.config ?? { title: "" },
       },
     },
@@ -74,7 +79,7 @@ describe("WidgetNodeView", () => {
     renderView(makeProps().props);
     expect(screen.getByText(t("cms.pages.inline.config"))).toBeInTheDocument();
     expect(
-      screen.getByLabelText(t("cms.pages.widget.games_list.heading")),
+      screen.getByLabelText(t("cms.pages.widget.articles_list.heading")),
     ).toBeInTheDocument();
   });
 
@@ -107,7 +112,7 @@ describe("WidgetNodeView", () => {
     const { props, updateAttributes } = makeProps({ config: { title: "" } });
     renderView(props);
     fireEvent.change(
-      screen.getByLabelText(t("cms.pages.widget.games_list.heading")),
+      screen.getByLabelText(t("cms.pages.widget.articles_list.heading")),
       {
         target: { value: "Trò chơi nổi bật" },
       },
@@ -130,7 +135,7 @@ describe("WidgetNodeView", () => {
       screen.queryByLabelText(t("cms.pages.inline.remove")),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByLabelText(t("cms.pages.widget.games_list.heading")),
+      screen.getByLabelText(t("cms.pages.widget.articles_list.heading")),
     ).toBeDisabled();
   });
 });

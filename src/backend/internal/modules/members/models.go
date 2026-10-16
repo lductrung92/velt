@@ -118,9 +118,10 @@ type ListParams struct {
 	CreatedTo   *time.Time
 	Page        int
 	PageSize    int
-	// Locale is the requested language of the public roster; empty, unknown or
-	// "vi" all mean the Vietnamese columns as stored. The console list ignores
-	// it — an editor works in the source language.
+	// Locale is the language being read in — ?locale= on the public roster,
+	// Accept-Language in the console. Empty or "vi" means the Vietnamese
+	// columns as stored. Both lists overlay only `role` and `bio`; the editor
+	// reads one member through Get and is never translated.
 	Locale string
 }
 
@@ -128,21 +129,28 @@ type ListParams struct {
 
 // Response is a member as returned by the API. AvatarURL is the served URL
 // built from the stored path; the path itself never leaves the server.
+//
+// AvatarWidth/AvatarHeight are the avatar's intrinsic pixel size and are filled
+// in on the PUBLIC roster only — the console renders avatars at a fixed size
+// and reads the same struct, so its responses are left byte-identical. They are
+// omitted when the avatar has no `files` row.
 type Response struct {
-	ID        uuid.UUID `json:"id"`
-	Slug      string    `json:"slug"`
-	FullName  string    `json:"full_name"`
-	Role      *string   `json:"role"`
-	Bio       *string   `json:"bio"`
-	AvatarURL *string   `json:"avatar_url"`
-	Email     *string   `json:"email"`
-	Zalo      *string   `json:"zalo"`
-	Links     []Link    `json:"links"`
-	Skills    []string  `json:"skills"`
-	SortOrder int       `json:"sort_order"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID           uuid.UUID `json:"id"`
+	Slug         string    `json:"slug"`
+	FullName     string    `json:"full_name"`
+	Role         *string   `json:"role"`
+	Bio          *string   `json:"bio"`
+	AvatarURL    *string   `json:"avatar_url"`
+	AvatarWidth  int       `json:"avatar_width,omitempty"`
+	AvatarHeight int       `json:"avatar_height,omitempty"`
+	Email        *string   `json:"email"`
+	Zalo         *string   `json:"zalo"`
+	Links        []Link    `json:"links"`
+	Skills       []string  `json:"skills"`
+	SortOrder    int       `json:"sort_order"`
+	IsActive     bool      `json:"is_active"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 // ListResponse is the paginated console list envelope (same shape as cms).

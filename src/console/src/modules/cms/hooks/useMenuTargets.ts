@@ -6,7 +6,7 @@ import {
   categoriesService,
   type Category,
 } from "../services/categories.service";
-import { pagesService, type PageNode } from "../services/pages.service";
+import { pagesService } from "../services/pages.service";
 import { articlesService } from "../services/articles.service";
 import { cmsKeys } from "./cmsKeys";
 
@@ -20,15 +20,10 @@ const PREFIX = "— ";
 
 function flattenCategories(tree: Category[], depth = 0): SelectOption[] {
   return tree.flatMap((c) => [
-    { value: c.id, label: PREFIX.repeat(depth) + c.name },
+    // The option SHOWS a category and sends its id, so it takes the
+    // translated name; the stored one belongs to the editor.
+    { value: c.id, label: PREFIX.repeat(depth) + c.name_display },
     ...flattenCategories(c.children, depth + 1),
-  ]);
-}
-
-function flattenPages(tree: PageNode[], depth = 0): SelectOption[] {
-  return tree.flatMap((p) => [
-    { value: p.id, label: PREFIX.repeat(depth) + p.title },
-    ...flattenPages(p.children, depth + 1),
   ]);
 }
 
@@ -50,15 +45,17 @@ export function useArticleTargets(q: string, enabled: boolean) {
   } satisfies TargetOptionsResult;
 }
 
-// Page picker — full tree, filtered client-side by the <Select>.
+// Page picker — every page, filtered client-side by the <Select>. The list
+// endpoint is paginated; this one is not, because a picker that stopped at page
+// one would hide the page somebody is looking for.
 export function usePageTargets(enabled: boolean) {
   const query = useQuery({
     queryKey: cmsKeys.menuTargets("page", ""),
-    queryFn: () => pagesService.list(),
+    queryFn: () => pagesService.options(),
     enabled,
   });
   return {
-    options: flattenPages(query.data ?? []),
+    options: (query.data ?? []).map((p) => ({ value: p.id, label: p.title })),
     isLoading: query.isFetching,
   } satisfies TargetOptionsResult;
 }

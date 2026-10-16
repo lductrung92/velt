@@ -9,13 +9,34 @@ export interface CategorySEO {
   keywords?: string | null;
 }
 
+/**
+ * A category's state. Three, not the article workflow's six: a category is
+ * never submitted for review and never scheduled.
+ */
+export type CategoryStatus = "draft" | "published" | "archived";
+
+export const CATEGORY_STATUSES: CategoryStatus[] = [
+  "published",
+  "draft",
+  "archived",
+];
+
 export interface Category {
   id: string;
+  /**
+   * The stored (Vietnamese) name. This is what the editor edits and what a
+   * create/update sends back, so it must never be rendered in a list: the
+   * editor is hydrated from this very response, and showing a translation
+   * here would mean saving it over the original.
+   */
   name: string;
+  /** `name` in the language the console is being read in — for SHOWING only. */
+  name_display: string;
   slug: string;
   parent_id: string | null;
   description: string | null;
   sort_order: number;
+  status: CategoryStatus;
   article_count: number;
   seo: CategorySEO;
   children: Category[];
@@ -30,6 +51,8 @@ export interface CreateCategoryBody {
   parent_id?: string | null;
   description?: string;
   sort_order?: number;
+  /** Omitted on create means published — a new category is in use. */
+  status?: CategoryStatus;
   seo?: CategorySEO;
 }
 
@@ -43,6 +66,7 @@ export interface UpdateCategoryBody {
   parent_id?: string | null;
   description?: string;
   sort_order?: number;
+  status?: CategoryStatus;
   seo?: CategorySEO;
   regenerate_slug?: boolean;
   updated_at: string;

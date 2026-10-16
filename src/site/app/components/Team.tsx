@@ -4,6 +4,7 @@ import { useSite } from "../context";
 import { demoLink, safeUrl, withReferral } from "../lib/links";
 import { teamConfig } from "../lib/sections";
 import { Icon } from "./Icon";
+import { Img } from "./Img";
 import { Modal } from "./Modal";
 import { TeamGlobe } from "./team/TeamGlobe";
 
@@ -27,7 +28,16 @@ export function Portrait({
       aria-hidden="true"
     >
       {image ? (
-        <img src={image} alt="" loading="lazy" />
+        // The portrait fills the card; the dialog crops it to 110px.
+        <Img
+          src={image}
+          width={member.imageWidth}
+          height={member.imageHeight}
+          alt=""
+          sizes={
+            detail ? "110px" : "(min-width: 768px) 360px, calc(100vw - 48px)"
+          }
+        />
       ) : (
         <>
           <span className="portrait-ring" />
@@ -184,10 +194,12 @@ export function Team({
                     >
                       <span className="member-order" aria-hidden="true">
                         {safeUrl(person.image) ? (
-                          <img
+                          <Img
                             src={safeUrl(person.image)}
+                            width={person.imageWidth}
+                            height={person.imageHeight}
                             alt=""
-                            loading="lazy"
+                            sizes="44px"
                           />
                         ) : (
                           <span>
@@ -344,10 +356,13 @@ export function Team({
               product && (
                 <>
                   {safeUrl(product.image) && (
-                    <img
+                    <Img
                       className="project-detail-image"
                       src={safeUrl(product.image)}
+                      width={product.imageWidth}
+                      height={product.imageHeight}
                       alt={t("team.product_image_alt", { name: product.name })}
+                      sizes="(min-width: 684px) 556px, calc(100vw - 72px)"
                     />
                   )}
                   {product.status && (

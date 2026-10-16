@@ -14,6 +14,22 @@ const (
 	permManage = "products.category.manage" // create/update/delete/reorder
 )
 
+// Category status values (product_categories.status CHECK).
+//
+// Three, not the editorial workflow's six: a category is never submitted for
+// review and never scheduled, so those states would be unreachable. Same
+// vocabulary as the CMS taxonomy's, so both admin screens stay interchangeable.
+const (
+	StatusDraft     = "draft"
+	StatusPublished = "published"
+	StatusArchived  = "archived"
+)
+
+// validStatus is the set accepted by the list `status` filter.
+var validStatus = map[string]bool{
+	StatusDraft: true, StatusPublished: true, StatusArchived: true,
+}
+
 // --- Domain row (internal) ---
 
 // Category is a product-category row.
@@ -23,6 +39,7 @@ type Category struct {
 	Name           string
 	Description    *string
 	SortOrder      int
+	Status         string
 	ProductCount   int
 	SEOTitle       *string
 	SEODescription *string
@@ -38,6 +55,7 @@ type write struct {
 	Slug           string
 	Name           string
 	Description    *string
+	Status         string
 	SEOTitle       *string
 	SEODescription *string
 	SEOKeywords    *string
@@ -59,11 +77,14 @@ type CategorySEO struct {
 
 // CreateRequest is the POST /api/product-categories body.
 type CreateRequest struct {
-	Name        string       `json:"name" validate:"required,max=160"`
-	Slug        *string      `json:"slug" validate:"omitempty,max=160"`
-	Description *string      `json:"description" validate:"omitempty,max=1000"`
-	SortOrder   *int         `json:"sort_order" validate:"omitempty,min=0,max=100000"`
-	SEO         *CategorySEO `json:"seo"`
+	Name        string  `json:"name" validate:"required,max=160"`
+	Slug        *string `json:"slug" validate:"omitempty,max=160"`
+	Description *string `json:"description" validate:"omitempty,max=1000"`
+	SortOrder   *int    `json:"sort_order" validate:"omitempty,min=0,max=100000"`
+	// Status defaults to published: a category that exists is in use, and the
+	// rows already in the table mean exactly that.
+	Status *string      `json:"status" validate:"omitempty,oneof=draft published archived"`
+	SEO    *CategorySEO `json:"seo"`
 }
 
 // UpdateRequest is the PATCH body. Every field is a pointer so "absent" (leave
@@ -74,6 +95,7 @@ type UpdateRequest struct {
 	Slug        *string      `json:"slug" validate:"omitempty,max=160"`
 	Description *string      `json:"description" validate:"omitempty,max=1000"`
 	SortOrder   *int         `json:"sort_order" validate:"omitempty,min=0,max=100000"`
+	Status      *string      `json:"status" validate:"omitempty,oneof=draft published archived"`
 	SEO         *CategorySEO `json:"seo"`
 }
 
@@ -89,11 +111,18 @@ type ReorderRequest struct {
 // products currently sit in it — the console shows it before asking to confirm
 // a delete, since deleting unlinks those products rather than removing them.
 type Response struct {
-	ID           uuid.UUID   `json:"id"`
-	Slug         string      `json:"slug"`
-	Name         string      `json:"name"`
+	ID   uuid.UUID `json:"id"`
+	Slug string    `json:"slug"`
+	Name string    `json:"name"`
+	// NameDisplay is Name in the language the request asked for, falling back
+	// to Name itself. It is for SHOWING a category — a list, a picker — and
+	// nothing else: this list is also what hydrates the category editor, so
+	// Name has to keep carrying the stored Vietnamese or the next save would
+	// write the translation over it. Same contract as the CMS taxonomy's.
+	NameDisplay  string      `json:"name_display"`
 	Description  *string     `json:"description"`
 	SortOrder    int         `json:"sort_order"`
+	Status       string      `json:"status"`
 	ProductCount int         `json:"product_count"`
 	SEO          CategorySEO `json:"seo"`
 	CreatedAt    time.Time   `json:"created_at"`

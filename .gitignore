@@ -130,3 +130,7 @@ deploy/**/.env
 deploy/**/*.local.env
 deploy/**/secrets.*
 bugs/
+# Ảnh biến thể do internal/platform/media sinh ra (MEDIA_CACHE_ROOT). Dựng lại
+# được từ tệp gốc: xoá nó tốn CPU, không mất dữ liệu.
+src/backend/cache/
+output/

@@ -187,7 +187,7 @@ func TestPublicListParamsNormalize(t *testing.T) {
 		for _, bad := range []string{"", "updated_at", "name; DROP TABLE products", "../"} {
 			require.Equal(t, "featured", PublicListParams{Sort: bad}.normalize().Sort)
 		}
-		for _, good := range []string{"name", "newest", "featured"} {
+		for _, good := range []string{"name", "newest", "featured", "random"} {
 			require.Equal(t, good, PublicListParams{Sort: good}.normalize().Sort)
 		}
 	})
@@ -264,6 +264,7 @@ func TestPublicSortClauseIsFixedText(t *testing.T) {
 	// Guards the only place user input could reach the SQL text.
 	require.Contains(t, publicSortClause("name"), "'name'")
 	require.Contains(t, publicSortClause("newest"), "published_at")
+	require.Equal(t, "random()", publicSortClause("random"))
 	require.Equal(t, publicSortClause("featured"), publicSortClause("anything else"))
 }
 

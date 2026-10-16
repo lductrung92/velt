@@ -22,6 +22,20 @@ func TestArticleListParams_CreatedRangeResolvesToHalfOpenBounds(t *testing.T) {
 	require.Equal(t, "2026-10-14T00:00:00+07:00", p.CreatedTo.Format("2006-01-02T15:04:05Z07:00"))
 }
 
+// The console sends the language its interface is in; only the primary subtag
+// reaches the list.
+func TestArticleListParams_LocaleComesFromAcceptLanguage(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/api/cms/articles", nil)
+	r.Header.Set("Accept-Language", "en-GB,en;q=0.9")
+	p, err := articleListParams(r)
+	require.NoError(t, err)
+	require.Equal(t, "en", p.Locale)
+
+	p, err = parseArticleListQuery(t, "")
+	require.NoError(t, err)
+	require.Equal(t, "", p.Locale)
+}
+
 func TestArticleListParams_CreatedRangeIsOptional(t *testing.T) {
 	p, err := parseArticleListQuery(t, "status=draft")
 	require.NoError(t, err)

@@ -12,6 +12,7 @@ import (
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/cms/shared"
 	"github.com/velt/backend/internal/platform/htmlsan"
+	"github.com/velt/backend/internal/platform/localize"
 )
 
 // LandingAdminPort drives the landing attached to a page through the page's own
@@ -46,15 +47,67 @@ func NewService(base *shared.Base, repo Repository, landing LandingAdminPort) *S
 
 // ListPages returns the page tree (no pagination), optionally narrowed to a
 // created-at range. Requires cms.page.view.
-func (s *Service) ListPages(ctx context.Context, id *httpx.Identity, p PageListParams) ([]PageResponse, error) {
+// validPageStatus guards the list filter: an unknown status must be a 422, not
+// a silently empty list.
+func validPageStatus(v string) bool {
+	switch v {
+	case PageStatusDraft, PageStatusScheduled, PageStatusPublished, PageStatusArchived:
+		return true
+	}
+	return false
+}
+
+func (s *Service) ListPages(ctx context.Context, id *httpx.Identity, p PageListParams) (PageListResult, error) {
+	if err := s.Require(ctx, id, permView); err != nil {
+		return PageListResult{}, err
+	}
+	if p.Status != "" && !validPageStatus(p.Status) {
+		return PageListResult{}, apperr.Validation(map[string]string{"status": "invalid_value"})
+	}
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.PageSize < 1 || p.PageSize > maxPageListSize {
+		p.PageSize = 20
+	}
+	rows, total, err := s.repo.ListPages(ctx, p)
+	if err != nil {
+		return PageListResult{}, apperr.Internal()
+	}
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.ID)
+	}
+	tr := localize.Fields(ctx, s.tr, EntityPage, p.Locale, ids)
+	items := make([]PageListItem, 0, len(rows))
+	for _, row := range rows {
+		item := toPageListItem(row)
+		item.Title = localize.Str(tr[row.ID], "title", item.Title)
+		items = append(items, item)
+	}
+	return PageListResult{Items: items, Total: total, Page: p.Page, PageSize: p.PageSize}, nil
+}
+
+// ListPageOptions returns every page a selector may offer (home page, menu
+// target). Requires cms.page.view. locale is the language the picker is read
+// in; "" leaves every title as the page wrote it.
+func (s *Service) ListPageOptions(ctx context.Context, id *httpx.Identity, locale string) ([]PageOption, error) {
 	if err := s.Require(ctx, id, permView); err != nil {
 		return nil, err
 	}
-	rows, err := s.repo.ListPages(ctx, p)
+	out, err := s.repo.ListPageOptions(ctx)
 	if err != nil {
 		return nil, apperr.Internal()
 	}
-	return buildPageTree(rows), nil
+	ids := make([]uuid.UUID, 0, len(out))
+	for _, o := range out {
+		ids = append(ids, o.ID)
+	}
+	tr := localize.Fields(ctx, s.tr, EntityPage, locale, ids)
+	for i := range out {
+		out[i].Title = localize.Str(tr[out[i].ID], "title", out[i].Title)
+	}
+	return out, nil
 }
 
 // GetPage returns one page (full working copy + snapshot). Requires cms.page.view.
@@ -83,13 +136,8 @@ func (s *Service) CreatePage(ctx context.Context, id *httpx.Identity, req Create
 	if base == "" {
 		return PageDetailResponse{}, apperr.Validation(map[string]string{"slug": "invalid_slug"})
 	}
-	if req.ParentID != nil {
-		if err := s.assertPageExists(ctx, *req.ParentID); err != nil {
-			return PageDetailResponse{}, err
-		}
-	}
 	w := pageWrite{
-		Title: title, ParentID: req.ParentID, SortOrder: derefInt(req.SortOrder),
+		Title: title, SortOrder: derefInt(req.SortOrder),
 		Template: req.Template, OGPath: req.OGPath, LandingID: req.LandingID,
 		BodyHTML: sanitizeBody(req.BodyHTML), BodyJSON: req.BodyJSON,
 	}
@@ -152,16 +200,7 @@ func (s *Service) UpdatePage(ctx context.Context, id *httpx.Identity, pageID uui
 	if w.Title == "" {
 		return PageDetailResponse{}, apperr.Validation(map[string]string{"title": "required"})
 	}
-	if req.ParentID.Set {
-		if err := s.resolvePageParentMove(ctx, pageID, req.ParentID.Value); err != nil {
-			return PageDetailResponse{}, err
-		}
-		w.ParentID = req.ParentID.Value
-	}
-	// Re-check the cycle in-tx only for a real move to a non-root parent.
-	recheckCycle := req.ParentID.Set && req.ParentID.Value != nil
-
-	updated, err := s.writePageUpdate(ctx, pageID, w, req, recheckCycle)
+	updated, err := s.writePageUpdate(ctx, pageID, w, req)
 	if err != nil {
 		return PageDetailResponse{}, err
 	}
@@ -178,7 +217,7 @@ func (s *Service) UpdatePage(ctx context.Context, id *httpx.Identity, pageID uui
 
 // writePageUpdate applies the slug plan (business-rules §1, uniqueness scoped to
 // the parent) and persists the update.
-func (s *Service) writePageUpdate(ctx context.Context, pageID uuid.UUID, w pageWrite, req UpdatePageRequest, recheckCycle bool) (*Page, error) {
+func (s *Service) writePageUpdate(ctx context.Context, pageID uuid.UUID, w pageWrite, req UpdatePageRequest) (*Page, error) {
 	allow := s.AllowSlugEdit(ctx)
 	slugBase, change := shared.UpdateSlugPlan(allow, req.RegenerateSlug, req.Slug, w.Title)
 	if change && slugBase == "" {
@@ -186,7 +225,7 @@ func (s *Service) writePageUpdate(ctx context.Context, pageID uuid.UUID, w pageW
 	}
 	write := func(slug string) (*Page, error) {
 		w.Slug = slug
-		return s.repo.UpdatePage(ctx, pageID, w, *req.UpdatedAt, recheckCycle)
+		return s.repo.UpdatePage(ctx, pageID, w, *req.UpdatedAt)
 	}
 	if !change {
 		updated, err := write(w.Slug)
@@ -213,16 +252,9 @@ func (s *Service) DeletePage(ctx context.Context, id *httpx.Identity, pageID uui
 	if err != nil {
 		return mapGetErr(err)
 	}
-	hasChildren, err := s.repo.PageHasChildren(ctx, pageID)
-	if err != nil {
-		return apperr.Internal()
-	}
-	if hasChildren {
-		return apperr.Conflict("page_has_children")
-	}
 	if err := s.repo.DeletePage(ctx, pageID); err != nil {
-		if errors.Is(err, shared.ErrInUse) {
-			return apperr.Conflict("page_has_children")
+		if errors.Is(err, shared.ErrNotFound) {
+			return apperr.NotFound("not_found")
 		}
 		return apperr.Internal()
 	}
@@ -424,28 +456,6 @@ func (s *Service) assertPageExists(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// resolvePageParentMove validates a move: nil parent (root) always allowed; else
-// parent must exist and the move must not create a cycle.
-func (s *Service) resolvePageParentMove(ctx context.Context, pageID uuid.UUID, newParent *uuid.UUID) error {
-	if newParent == nil {
-		return nil
-	}
-	if *newParent == pageID {
-		return apperr.Unprocessable("page_cycle")
-	}
-	if err := s.assertPageExists(ctx, *newParent); err != nil {
-		return err
-	}
-	cycles, err := s.repo.PageCreatesCycle(ctx, pageID, *newParent)
-	if err != nil {
-		return apperr.Internal()
-	}
-	if cycles {
-		return apperr.Unprocessable("page_cycle")
-	}
-	return nil
-}
-
 func mapGetErr(err error) error {
 	if errors.Is(err, shared.ErrNotFound) {
 		return apperr.NotFound("not_found")
@@ -499,41 +509,4 @@ func applyPageSEO(w *pageWrite, seo *shared.PageSEO) {
 	w.SEONofollow = seo.NoFollow
 	w.OGTitle = seo.OGTitle
 	w.OGDescription = seo.OGDescription
-}
-
-// buildPageTree assembles flat (pre-ordered) rows into a nested tree.
-func buildPageTree(rows []Page) []PageResponse {
-	type node struct {
-		resp     PageResponse
-		children []*node
-	}
-	byID := make(map[uuid.UUID]*node, len(rows))
-	for _, p := range rows {
-		byID[p.ID] = &node{resp: toPageResponse(p)}
-	}
-	roots := []*node{}
-	for _, p := range rows {
-		n := byID[p.ID]
-		if p.ParentID != nil {
-			if parent, ok := byID[*p.ParentID]; ok {
-				parent.children = append(parent.children, n)
-				continue
-			}
-		}
-		roots = append(roots, n)
-	}
-	var materialize func(n *node) PageResponse
-	materialize = func(n *node) PageResponse {
-		out := n.resp
-		out.Children = make([]PageResponse, 0, len(n.children))
-		for _, c := range n.children {
-			out.Children = append(out.Children, materialize(c))
-		}
-		return out
-	}
-	result := make([]PageResponse, 0, len(roots))
-	for _, n := range roots {
-		result = append(result, materialize(n))
-	}
-	return result
 }

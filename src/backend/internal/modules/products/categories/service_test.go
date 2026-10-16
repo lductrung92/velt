@@ -52,13 +52,13 @@ func TestCreate_RequiresManagePermission(t *testing.T) {
 
 func TestList_RequiresViewPermission(t *testing.T) {
 	svc, _ := newSvc(t)
-	_, err := svc.List(context.Background(), &httpx.Identity{UserID: uuid.New()})
+	_, err := svc.List(context.Background(), &httpx.Identity{UserID: uuid.New()}, "", "")
 	require.Equal(t, 403, status(t, err))
 }
 
 func TestUnauthenticatedIsRejected(t *testing.T) {
 	svc, _ := newSvc(t)
-	_, err := svc.List(context.Background(), nil)
+	_, err := svc.List(context.Background(), nil, "", "")
 	require.Equal(t, 401, status(t, err))
 }
 
@@ -250,7 +250,7 @@ func TestList_IsOrderedBySortOrder(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, svc.Reorder(ctx, id, []uuid.UUID{b.ID, a.ID}))
 
-	res, err := svc.List(ctx, id)
+	res, err := svc.List(ctx, id, "", "")
 	require.NoError(t, err)
 	require.Equal(t, []string{"B", "A"}, []string{res.Items[0].Name, res.Items[1].Name})
 }
@@ -266,10 +266,10 @@ func TestList_RefusesWithoutPermission(t *testing.T) {
 	_, err := svc.Create(ctx, manager(), CreateRequest{Name: "Cộng tác"})
 	require.NoError(t, err)
 
-	_, err = svc.List(ctx, nil)
+	_, err = svc.List(ctx, nil, "", "")
 	require.Error(t, err)
 
-	_, err = svc.List(ctx, &httpx.Identity{Permissions: []string{"products.view"}})
+	_, err = svc.List(ctx, &httpx.Identity{Permissions: []string{"products.view"}}, "", "")
 	require.NoError(t, err)
 }
 
@@ -370,4 +370,78 @@ func TestUpdate_OmittedSortOrderIsKept(t *testing.T) {
 	updated, err := svc.Update(ctx, id, created.ID, UpdateRequest{Name: str("B")})
 	require.NoError(t, err)
 	require.Equal(t, 5, updated.SortOrder)
+}
+
+// --- Status ---
+
+func TestCreate_DefaultsToPublished(t *testing.T) {
+	svc, _ := newSvc(t)
+	res, err := svc.Create(context.Background(), manager(), CreateRequest{Name: "Phần mềm"})
+	require.NoError(t, err)
+	// Omitting status must not park a new category in draft: every row that
+	// predates the column is published, and a create has to mean the same.
+	require.Equal(t, StatusPublished, res.Status)
+}
+
+func TestCreate_HonoursExplicitStatus(t *testing.T) {
+	svc, _ := newSvc(t)
+	res, err := svc.Create(context.Background(), manager(), CreateRequest{Name: "Nháp", Status: str(StatusDraft)})
+	require.NoError(t, err)
+	require.Equal(t, StatusDraft, res.Status)
+}
+
+func TestUpdate_ChangesAndKeepsStatus(t *testing.T) {
+	ctx, id := context.Background(), manager()
+	svc, _ := newSvc(t)
+	created, err := svc.Create(ctx, id, CreateRequest{Name: "Phần cứng"})
+	require.NoError(t, err)
+
+	archived, err := svc.Update(ctx, id, created.ID, UpdateRequest{Status: str(StatusArchived)})
+	require.NoError(t, err)
+	require.Equal(t, StatusArchived, archived.Status)
+
+	// A patch that says nothing about status leaves it alone.
+	renamed, err := svc.Update(ctx, id, created.ID, UpdateRequest{Name: str("Thiết bị")})
+	require.NoError(t, err)
+	require.Equal(t, StatusArchived, renamed.Status)
+}
+
+func TestList_FiltersByStatus(t *testing.T) {
+	ctx, id := context.Background(), manager()
+	svc, _ := newSvc(t)
+	live, err := svc.Create(ctx, id, CreateRequest{Name: "Đang dùng"})
+	require.NoError(t, err)
+	hidden, err := svc.Create(ctx, id, CreateRequest{Name: "Ẩn", Status: str(StatusDraft)})
+	require.NoError(t, err)
+
+	published, err := svc.List(ctx, id, "", StatusPublished)
+	require.NoError(t, err)
+	require.Len(t, published.Items, 1)
+	require.Equal(t, live.ID, published.Items[0].ID)
+
+	drafts, err := svc.List(ctx, id, "", StatusDraft)
+	require.NoError(t, err)
+	require.Len(t, drafts.Items, 1)
+	require.Equal(t, hidden.ID, drafts.Items[0].ID)
+
+	// No filter still answers with everything, so an existing caller that never
+	// learned about status is unaffected.
+	all, err := svc.List(ctx, id, "", "")
+	require.NoError(t, err)
+	require.Len(t, all.Items, 2)
+}
+
+func TestList_UnknownStatusIsUnprocessable(t *testing.T) {
+	svc, _ := newSvc(t)
+	_, err := svc.List(context.Background(), manager(), "", "retired")
+	require.Equal(t, 422, status(t, err))
+}
+
+func TestRequests_RejectUnknownStatusWithUnprocessable(t *testing.T) {
+	require.Equal(t, 422, status(t, httpx.Validate(&CreateRequest{Name: "X", Status: str("retired")})))
+	require.Equal(t, 422, status(t, httpx.Validate(&UpdateRequest{Status: str("retired")})))
+	// The three real values pass the same gate.
+	for _, s := range []string{StatusDraft, StatusPublished, StatusArchived} {
+		require.NoError(t, httpx.Validate(&CreateRequest{Name: "X", Status: &s}))
+	}
 }

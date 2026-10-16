@@ -1,16 +1,54 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import {
   pagesService,
   type CreatePageBody,
+  type PageListParams,
   type UpdatePageBody,
 } from "../services/pages.service";
 import { cmsKeys } from "./cmsKeys";
 
-export function usePages() {
+export function usePages(params: PageListParams = {}) {
   return useQuery({
-    queryKey: cmsKeys.pageList(),
-    queryFn: () => pagesService.list(),
+    queryKey: cmsKeys.pageList(params),
+    queryFn: () => pagesService.list(params),
+  });
+}
+
+/**
+ * The counts behind the overview cards, one cheap query each: the list is
+ * paginated now, so a count can no longer be taken from the rows on screen.
+ * `landing` is not a status, so it rides its own query.
+ */
+export function usePageOverview(enabled: boolean) {
+  const queries: PageListParams[] = [
+    {},
+    { status: "draft" },
+    { status: "published" },
+    { landing: "1" },
+  ];
+  return useQueries({
+    queries: queries.map((params) => {
+      const withSize = { ...params, page: 1, page_size: 1 };
+      return {
+        queryKey: cmsKeys.pageList(withSize),
+        queryFn: () => pagesService.list(withSize),
+        enabled,
+      };
+    }),
+  });
+}
+
+/** Every page, for a selector. Never paginated — see PageOption. */
+export function usePageOptions() {
+  return useQuery({
+    queryKey: cmsKeys.pageOptions(),
+    queryFn: () => pagesService.options(),
   });
 }
 

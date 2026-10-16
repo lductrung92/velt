@@ -83,7 +83,7 @@ export default function ChangePassword() {
   }
 
   return (
-    <Card className="max-w-xl">
+    <Card>
       <CardContent className="space-y-4 pt-5">
         {topError && <Alert variant="danger" message={topError} />}
         <Form {...form}>

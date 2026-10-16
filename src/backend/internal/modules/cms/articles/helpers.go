@@ -164,10 +164,10 @@ func applyArticleUpdate(w *articleWrite, req UpdateArticleRequest) {
 		w.BodyJSON = req.BodyJSON
 	}
 	if req.FeaturedPath != nil {
-		w.FeaturedPath = req.FeaturedPath
+		w.FeaturedPath = mediaPathOrNil(*req.FeaturedPath)
 	}
 	if req.OGPath != nil {
-		w.OGPath = req.OGPath
+		w.OGPath = mediaPathOrNil(*req.OGPath)
 	}
 	if req.SEO != nil {
 		applyArticleSEO(w, req.SEO)
@@ -175,6 +175,19 @@ func applyArticleUpdate(w *articleWrite, req UpdateArticleRequest) {
 	if req.CategoryID.Set {
 		w.CategoryID = req.CategoryID.Value
 	}
+}
+
+// mediaPathOrNil reads what a client sent for an image path. An empty string is
+// how it says "there is no image any more": the column is cleared, and
+// UpdateArticle's DeleteOldMedia then reclaims the file it pointed at. Leaving
+// "" in the column instead would keep a path that owns nothing and would make
+// the ownership check below reject the very save that removes the image.
+func mediaPathOrNil(path string) *string {
+	p := strings.TrimSpace(path)
+	if p == "" {
+		return nil
+	}
+	return &p
 }
 
 func applyArticleSEO(w *articleWrite, seo *shared.PageSEO) {

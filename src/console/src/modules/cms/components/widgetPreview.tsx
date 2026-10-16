@@ -4,11 +4,12 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 import { useWidgetPreview } from "../hooks/useWidgetPreview";
+import { fileUrl } from "@/utils/fileUrl";
 import type {
   PreviewArticleItem,
   PreviewCategoryItem,
-  PreviewGameItem,
   PreviewItem,
+  PreviewProductItem,
 } from "../services/widgets.service";
 
 import type { WidgetConfig } from "./widgetCatalog";
@@ -55,24 +56,24 @@ function ItemCard({ type, item }: { type: string; item: PreviewItem }) {
       </div>
     );
   }
-  const g = item as PreviewGameItem;
+  const p = item as PreviewProductItem;
   return (
     <div className="overflow-hidden rounded-md border bg-background">
-      {g.cover_url ? (
+      {p.cover_url ? (
         <img
-          src={g.cover_url}
+          src={fileUrl(p.cover_url)}
           alt=""
           className="aspect-video w-full object-cover"
         />
       ) : (
         <div className="aspect-video w-full bg-muted" />
       )}
-      <p className="truncate p-2 text-sm font-medium">{g.title}</p>
+      <p className="truncate p-2 text-sm font-medium">{p.name}</p>
     </div>
   );
 }
 
-// List-type preview (games/articles/categories): resolves live data via the hook
+// List-type preview (products/articles/categories): resolves live data via the hook
 // and renders the real items in a columns grid, with loading/error/empty states.
 function ListPreview({ type, config }: { type: string; config: WidgetConfig }) {
   const { t } = useTranslation();

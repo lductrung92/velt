@@ -320,6 +320,26 @@ func (s *Service) planChange(def SettingDef, snap snapshot, raw json.RawMessage)
 
 // TestEmail sends a probe email using the STORED SMTP config. Requires
 // settings.manage and is rate-limited per user.
+// PurgeCache drops everything this system is allowed to serve stale.
+//
+// Two things go stale after a write: the snapshot this service caches, and the
+// pages the public site has already rendered. The first is dropped here; the
+// second cannot be reached from the backend — the site holds it — so this moves
+// the token the site polls instead, which is what it watches to decide its
+// cache is finished. Both are cheap, and neither changes a single setting's
+// value.
+func (s *Service) PurgeCache(ctx context.Context, id *httpx.Identity) error {
+	if id == nil || !id.Has(permManage) {
+		return apperr.AccessDenied("access_denied")
+	}
+	if err := s.repo.MarkPurge(ctx, id.UserID); err != nil {
+		s.sec(ctx).Error("purge cache marker", "err", err)
+		return apperr.Internal()
+	}
+	s.cache.Invalidate(ctx)
+	return nil
+}
+
 func (s *Service) TestEmail(ctx context.Context, id *httpx.Identity, to string) error {
 	if id == nil || !id.Has(permManage) {
 		return apperr.AccessDenied("access_denied")
