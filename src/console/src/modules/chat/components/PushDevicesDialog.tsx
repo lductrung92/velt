@@ -36,14 +36,14 @@ export function PushDevicesDialog({
         toast.error(
           error instanceof Error && error.message === "denied"
             ? t("chat.push.blocked")
-            : parseApiError(error),
+            : parseApiError(error, t).message,
         ),
     });
 
   const drop = (id: string, label: string) =>
     remove.mutate(id, {
       onSuccess: () => toast.success(t("chat.push.removed", { label })),
-      onError: (error) => toast.error(parseApiError(error)),
+      onError: (error) => toast.error(parseApiError(error, t).message),
     });
 
   return (

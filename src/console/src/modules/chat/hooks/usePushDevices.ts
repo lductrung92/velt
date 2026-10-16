@@ -21,14 +21,18 @@ export function pushSupported(): boolean {
   );
 }
 
-/** The VAPID key arrives base64url; subscribe() wants bytes. */
-function decodeKey(base64url: string): Uint8Array {
+/** The VAPID key arrives base64url; subscribe() wants bytes.
+ *
+ *  Built over an explicit ArrayBuffer so the result is Uint8Array<ArrayBuffer>
+ *  rather than Uint8Array<ArrayBufferLike>: applicationServerKey is typed as
+ *  BufferSource, which a SharedArrayBuffer-backed view does not satisfy. */
+function decodeKey(base64url: string): Uint8Array<ArrayBuffer> {
   const padded = base64url.padEnd(
     base64url.length + ((4 - (base64url.length % 4)) % 4),
     "=",
   );
   const raw = atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
-  const out = new Uint8Array(raw.length);
+  const out = new Uint8Array(new ArrayBuffer(raw.length));
   for (let i = 0; i < raw.length; i += 1) out[i] = raw.charCodeAt(i);
   return out;
 }
