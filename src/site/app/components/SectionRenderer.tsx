@@ -90,8 +90,6 @@ function ProductGrid({ config, data }: { config?: unknown; data?: unknown }) {
 
 export function SectionRenderer({ sections }: { sections: PublicSection[] }) {
   const { href } = useSite();
-  // The contact form stores the audience as a code, not as the word it shows.
-  const [audience, setAudience] = useState("individual");
   const ordered = (Array.isArray(sections) ? [...sections] : []).sort(
     (a, b) => (Number(a?.sort_order) || 0) - (Number(b?.sort_order) || 0),
   );
@@ -101,14 +99,7 @@ export function SectionRenderer({ sections }: { sections: PublicSection[] }) {
         const key = `${section?.type}-${index}`;
         switch (section?.type) {
           case "audience_picker":
-            return (
-              <Audience
-                key={key}
-                href={href}
-                onAudience={setAudience}
-                config={section.config}
-              />
-            );
+            return <Audience key={key} href={href} config={section.config} />;
           case "product_grid":
             return (
               <ProductGrid
@@ -137,14 +128,7 @@ export function SectionRenderer({ sections }: { sections: PublicSection[] }) {
           case "faq":
             return <FAQ key={key} config={section.config} />;
           case "contact_form":
-            return (
-              <Contact
-                key={key}
-                audience={audience}
-                onAudience={setAudience}
-                config={section.config}
-              />
-            );
+            return <Contact key={key} config={section.config} />;
           // A later console release will add types this build never heard of.
           default:
             return null;

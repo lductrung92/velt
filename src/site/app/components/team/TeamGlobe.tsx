@@ -46,7 +46,6 @@ export function TeamGlobe(props: GlobeProps) {
           <TeamGlobeArtwork {...props} />
         )}
       </div>
-      <p className="team-globe-caption">{props.t("team.globe_caption")}</p>
     </div>
   );
 }

@@ -26,10 +26,20 @@ const (
 
 // Setting groups.
 const (
-	GroupGeneral = "general"
-	GroupCache   = "cache"
-	GroupEmail   = "email"
-	GroupStorage = "storage"
+	GroupGeneral  = "general"
+	GroupCache    = "cache"
+	GroupEmail    = "email"
+	GroupStorage  = "storage"
+	GroupSecurity = "security"
+)
+
+// reCAPTCHA keys. Declared here rather than in a feature module because more
+// than one surface needs protecting (the contact form today, the public chat
+// next) and none of them owns the credential.
+const (
+	RecaptchaEnabled = "security.recaptcha_enabled"
+	RecaptchaSiteKey = "security.recaptcha_site_key"
+	RecaptchaSecret  = "security.recaptcha_secret"
 )
 
 // SettingDef is the registry metadata for one key. The DB never stores any of
@@ -120,6 +130,15 @@ func foundationDefs() []SettingDef {
 		{Key: "storage.max_upload_mb", Group: GroupStorage, Type: TypeInt, Default: 10, Min: intp(1), Max: intp(100), Description: "Max upload size (MB)"},
 		{Key: "files_storage_quota_mb", Group: GroupStorage, Type: TypeInt, Default: 100, Min: intp(1), Max: intp(10000), Description: "Per-customer private storage quota (My Drive), in MB"},
 		{Key: "files_max_upload_mb", Group: GroupStorage, Type: TypeInt, Default: 50, Min: intp(1), Max: intp(2000), Description: "Max size of a single My Drive file (upload/import), in MB"},
+
+		// The site key is PUBLIC on purpose: the browser cannot render the
+		// widget without it, so it is served with the rest of the public
+		// settings. The secret is what must never leave the server — it is the
+		// half that proves a token is genuine, and anyone holding it can mint
+		// their own verdicts.
+		{Key: RecaptchaEnabled, Group: GroupSecurity, Type: TypeBool, Default: false, IsPublic: true, Description: "Require reCAPTCHA on the public contact form"},
+		{Key: RecaptchaSiteKey, Group: GroupSecurity, Type: TypeString, Default: "", IsPublic: true, Description: "reCAPTCHA v2 site key (public; the browser needs it)"},
+		{Key: RecaptchaSecret, Group: GroupSecurity, Type: TypeSecret, IsSecret: true, Description: "reCAPTCHA v2 secret key (server-side verification only)"},
 	}
 }
 

@@ -33,6 +33,7 @@ import (
 	cmstaxonomy "github.com/velt/backend/internal/modules/cms/taxonomy"
 	"github.com/velt/backend/internal/modules/cms/widgets"
 	"github.com/velt/backend/internal/modules/crm"
+	"github.com/velt/backend/internal/modules/crm/leads"
 	"github.com/velt/backend/internal/modules/files"
 	"github.com/velt/backend/internal/modules/members"
 	"github.com/velt/backend/internal/modules/products"
@@ -46,6 +47,7 @@ import (
 	"github.com/velt/backend/internal/platform/media"
 	"github.com/velt/backend/internal/platform/pubdocs"
 	"github.com/velt/backend/internal/platform/ratelimit"
+	"github.com/velt/backend/internal/platform/recaptcha"
 	"github.com/velt/backend/internal/platform/revalidate"
 	"github.com/velt/backend/internal/platform/storage"
 	"github.com/velt/backend/internal/platform/token"
@@ -232,6 +234,24 @@ func run() error {
 	// AI assistant will use to record a lead in-process, so it never needs an
 	// unauthenticated HTTP write.
 	crmLeads := crm.Register(r, pool, logger, authMW)
+
+	// The site's contact form: the second unauthenticated way a lead is
+	// created, after the assistant. reCAPTCHA is configured in the console and
+	// off by default, so the per-IP ceiling in the handler is what holds until
+	// somebody turns it on.
+	leads.RegisterPublic(r, leads.NewPublicHandler(
+		crmLeads,
+		recaptcha.NewVerifier(settingsSvc),
+		limiter,
+		cfg.TrustProxyHeaders,
+		func(ctx context.Context, slug string) (*uuid.UUID, error) {
+			m, err := membersSvc.GetPublicBySlug(ctx, "", slug)
+			if err != nil {
+				return nil, err
+			}
+			return &m.ID, nil
+		},
+	))
 	// The public read model: one row per published URL, shared by every content
 	// type. It replaces the per-table published_snapshot column and is what makes
 	// a second language a row rather than a schema change.

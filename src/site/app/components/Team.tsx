@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Member, Product } from "../types";
 import { useSite } from "../context";
-import { demoLink, safeUrl, withReferral } from "../lib/links";
+import { demoLink, safeUrl } from "../lib/links";
 import { teamConfig } from "../lib/sections";
 import { Icon } from "./Icon";
 import { Img } from "./Img";
@@ -78,21 +78,13 @@ export function Team({
   const { data, url, referrer, t } = useSite();
   const { title, subtitle, limit } = teamConfig(config, t);
   const members = sectionMembers ?? data.members;
-  const [skill, setSkill] = useState(""),
-    [member, setMember] = useState<Member | null>(null),
-    [product, setProduct] = useState<Product | null>(null),
-    [copyStatus, setCopyStatus] = useState("");
-  const allSkills = [...new Set(members.flatMap((person) => person.skills))];
-  const filtered = members.filter(
-    (person) => !skill || person.skills.includes(skill),
-  );
-  const visible = limit ? filtered.slice(0, limit) : filtered;
-  const missingPortrait = members.some((person) => !safeUrl(person.image));
+  const [member, setMember] = useState<Member | null>(null),
+    [product, setProduct] = useState<Product | null>(null);
+  const visible = limit ? members.slice(0, limit) : members;
   const [activeId, setActiveId] = useState(members[0]?.id);
   const openMember = (person: Member) => {
     setActiveId(person.id);
     setMember(person);
-    setCopyStatus("");
   };
   useEffect(() => {
     setMember(
@@ -103,18 +95,7 @@ export function Team({
   const close = () => {
     setMember(null);
     setProduct(null);
-    setCopyStatus("");
   };
-  async function copyLink() {
-    if (!member) return;
-    const link = new URL(withReferral("/", member), location.origin).href;
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopyStatus(t("team.copy_done"));
-    } catch {
-      setCopyStatus(t("team.copy_manual", { link }));
-    }
-  }
   return (
     <>
       <section
@@ -123,155 +104,69 @@ export function Team({
         aria-labelledby="team-title"
       >
         <div className="container">
-          <header className="team-heading">
-            <div>
-              <span className="eyebrow">
-                <i aria-hidden="true" />
-                {t("team.eyebrow")}
-              </span>
-              <h2 id="team-title">{title}</h2>
-            </div>
-            <div className="team-intro">
-              <p>{subtitle}</p>
-              <div className="team-count">
-                <span className="team-count-line" aria-hidden="true" />
-                <span>
-                  <strong id="team-member-count">{members.length}</strong>
-                  {t("team.member_count")}
-                </span>
-              </div>
-            </div>
-          </header>
           <div className="team-world-layout">
+            <header className="team-heading">
+              <h2 id="team-title">{title}</h2>
+              {subtitle && <p className="team-summary">{subtitle}</p>}
+            </header>
             <TeamGlobe
-              members={members}
+              members={visible}
               activeId={activeId}
               onSelect={openMember}
               t={t}
             />
-            <div className="team-profiles">
-              <header className="team-profile-heading">
-                <h3>{t("team.profiles_title")}</h3>
-                <p>{t("team.profiles_subtitle")}</p>
-              </header>
-              <div className="team-tools" hidden={!allSkills.length}>
-                <div
-                  className="skill-filter"
-                  id="skill-filter"
-                  aria-label={t("team.filter_label")}
-                >
-                  {["", ...allSkills].map((value) => (
-                    <button
-                      className="filter-button"
-                      type="button"
-                      key={value}
-                      data-skill={value}
-                      aria-pressed={value === skill}
-                      onClick={() => setSkill(value)}
-                    >
-                      {value || t("team.filter_all")}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div
-                className="team-grid"
-                id="team-list"
-                role="region"
-                aria-label={t("team.list_label")}
-              >
-                {visible.map((person) => {
-                  const count = data.products.filter((item) =>
-                    item.memberIds?.includes(person.id),
-                  ).length;
-                  return (
-                    <article
-                      className="member-card"
-                      key={person.id}
-                      data-active={activeId === person.id}
-                      onMouseEnter={() => setActiveId(person.id)}
-                      onFocus={() => setActiveId(person.id)}
-                    >
-                      <span className="member-order" aria-hidden="true">
-                        {safeUrl(person.image) ? (
-                          <Img
-                            src={safeUrl(person.image)}
-                            width={person.imageWidth}
-                            height={person.imageHeight}
-                            alt=""
-                            sizes="44px"
-                          />
-                        ) : (
-                          <span>
-                            {String(members.indexOf(person) + 1).padStart(
-                              2,
-                              "0",
-                            )}
-                          </span>
-                        )}
-                      </span>
-                      <div className="member-card-info">
-                        <div className="member-title-row">
-                          <h3>{person.name}</h3>
-                        </div>
-                        <p className="member-role">
-                          {person.role || t("team.role_pending")}
-                        </p>
-                        {person.bio && (
-                          <p className="member-bio">{person.bio}</p>
-                        )}
-                        {!!person.skills.length && (
-                          <div className="member-skills">
-                            <Skills skills={person.skills.slice(0, 3)} />
-                            {person.skills.length > 3 && (
-                              <span className="skill-chip">
-                                +{person.skills.length - 3}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {!!count && (
-                          <span className="member-project-count">
-                            {count}
-                            {t("team.product_count")}
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        className="profile-button"
-                        type="button"
-                        data-member={person.id}
-                        aria-label={t("team.view_profile_of", {
-                          name: person.name,
-                        })}
-                        onClick={() => openMember(person)}
-                      >
-                        <span>{t("team.view_profile")}</span>
-                        <Icon name="arrow" />
-                      </button>
-                    </article>
-                  );
-                })}
-                {!visible.length && (
-                  <p className="empty-filter">{t("team.empty_filter")}</p>
-                )}
-              </div>
-            </div>
+            <ul
+              className="team-roster"
+              id="team-list"
+              aria-label={t("team.list_label")}
+            >
+              {visible.map((person) => (
+                <li key={person.id}>
+                  <button
+                    className="team-member"
+                    type="button"
+                    data-member={person.id}
+                    data-active={activeId === person.id}
+                    data-color={person.color}
+                    aria-label={t("team.view_profile_of", {
+                      name: person.name,
+                    })}
+                    aria-haspopup="dialog"
+                    onMouseEnter={() => setActiveId(person.id)}
+                    onFocus={() => setActiveId(person.id)}
+                    onClick={() => openMember(person)}
+                  >
+                    <span className="team-member-avatar" aria-hidden="true">
+                      {safeUrl(person.image) ? (
+                        <Img
+                          src={safeUrl(person.image)}
+                          width={person.imageWidth}
+                          height={person.imageHeight}
+                          alt=""
+                          sizes="48px"
+                        />
+                      ) : (
+                        person.name
+                          .trim()
+                          .split(/\s+/)
+                          .slice(-2)
+                          .map((part) => Array.from(part)[0])
+                          .join("")
+                          .toLocaleUpperCase()
+                      )}
+                    </span>
+                    <span className="team-member-info">
+                      <span className="team-member-name">{person.name}</span>
+                      {person.role && (
+                        <span className="team-member-role">{person.role}</span>
+                      )}
+                    </span>
+                    <Icon name="arrow" />
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
-          <p
-            className="team-footnote"
-            hidden={
-              !missingPortrait &&
-              members.every((person) => person.bio && person.skills.length)
-            }
-          >
-            <Icon name="user" />
-            <span>
-              {missingPortrait
-                ? t("team.footnote_portraits")
-                : t("team.footnote_profiles")}
-            </span>
-          </p>
         </div>
       </section>
       {(member || product) && (
@@ -284,14 +179,20 @@ export function Team({
           <div id="detail-body">
             {member ? (
               <>
-                <Portrait member={member} detail />
-                <h2 id="detail-title" tabIndex={-1}>
-                  {member.name}
-                </h2>
-                <p className="member-role">
-                  {member.role || t("team.role_soon")}
+                <div className="member-detail-head">
+                  <Portrait member={member} detail />
+                  <div>
+                    <h2 id="detail-title" tabIndex={-1}>
+                      {member.name}
+                    </h2>
+                    <p className="member-role">
+                      {member.role || t("team.role_soon")}
+                    </p>
+                  </div>
+                </div>
+                <p className="member-detail-bio">
+                  {member.bio || t("team.bio_soon")}
                 </p>
-                <p>{member.bio || t("team.bio_soon")}</p>
                 <h3 className="detail-heading">{t("team.skills_title")}</h3>
                 <div className="detail-skills">
                   {member.skills.length ? (
@@ -336,20 +237,6 @@ export function Team({
                         {link.label} ↗
                       </a>
                     ))}
-                </div>
-                <div className="member-share">
-                  <button
-                    type="button"
-                    className="button button-soft"
-                    data-share-member={member.id}
-                    onClick={copyLink}
-                  >
-                    {t("team.copy_link")}
-                    {member.name}
-                  </button>
-                  <p role="status" aria-live="polite">
-                    {copyStatus}
-                  </p>
                 </div>
               </>
             ) : (

@@ -62,6 +62,10 @@ export interface SiteHead {
   /** How many cards a listing page shows. */
   blogPageSize: number;
   productsPageSize: number;
+  /** reCAPTCHA for the contact form. The site key is public by design — the
+   *  browser cannot render the widget without it. The secret never comes near
+   *  here; only the API ever sees it. */
+  recaptchaSiteKey: string;
 }
 
 export interface SiteLayout {
@@ -146,6 +150,10 @@ export const DEFAULT_HEAD: SiteHead = {
   analyticsId: "",
   blogPageSize: 9,
   productsPageSize: 9,
+  // Nothing configured means no protection to render. The API still decides
+  // whether a token was required, so an absent key here cannot wave a
+  // submission through.
+  recaptchaSiteKey: "",
 };
 
 export const defaultLayout = (t: T): SiteLayout => ({
@@ -275,6 +283,14 @@ export function resolveLayout(
       // the setting look broken rather than invalid.
       blogPageSize: count(values["site.blog_page_size"], 1, 24, 9),
       productsPageSize: count(values["site.products_page_size"], 1, 48, 9),
+      // Empty whenever protection is off OR no key is stored, and the form
+      // treats both the same: no widget, submit straight away. The API decides
+      // whether a token was actually required — a browser cannot be trusted to
+      // report that it skipped one.
+      recaptchaSiteKey:
+        values["security.recaptcha_enabled"] === true
+          ? str(values["security.recaptcha_site_key"]).trim()
+          : "",
     },
     regions: resolveRegions(regions),
   };
@@ -299,7 +315,12 @@ function color(value: unknown): string {
 }
 
 /** A page size, clamped to something a page can actually render. */
-function count(value: unknown, min: number, max: number, fallback: number): number {
+function count(
+  value: unknown,
+  min: number,
+  max: number,
+  fallback: number,
+): number {
   const parsed = typeof value === "string" ? Number(value) : value;
   return typeof parsed === "number" &&
     Number.isInteger(parsed) &&

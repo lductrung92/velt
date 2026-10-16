@@ -95,7 +95,10 @@ const defaults: Record<string, string[]> = {
     "<p>Nhận tư vấn về tính năng, giá và cách triển khai<br/>từ người giới thiệu hoặc đội ngũ ZUKATEK.</p>",
     // The sample content has no contact channel, so the note keeps the wording
     // the page already shows when there is nothing to email.
-    '<p class="form-note" id="form-note">Lời nhắn được tạo trên thiết bị để bạn sao chép hoặc tải về; chưa được gửi đến ZUKATEK.</p>',
+    // The form posts to /api/public/leads now, so the note says what actually
+    // happens. role/aria-live are part of the shipped markup: the outcome of a
+    // submit is announced here and nowhere else.
+    '<p class="form-note" id="form-note" role="status" aria-live="polite">Gửi trực tiếp đến ZUKATEK. Chúng tôi phản hồi qua email bạn điền ở trên.</p>',
   ],
 };
 

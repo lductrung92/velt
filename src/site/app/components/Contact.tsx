@@ -1,39 +1,25 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 import { useSite } from "../context";
-import type { MessageKey } from "../lib/i18n";
 import { contactFor, safeExternalUrl } from "../lib/links";
+import { recaptchaToken } from "../lib/recaptcha";
+import { submitLead } from "../lib/chatApi";
 import { contactConfig } from "../lib/sections";
 import { Lines } from "./Lines";
 import { Icon } from "./Icon";
 import { Modal } from "./Modal";
 import { Select } from "./Select";
 
-// The radio group carries a code, not a word: the value travels into the
-// e-mail body and is compared across renders, so it must not change with the
-// language. The words come from the catalogue table, which already names these
-// three audiences.
-const AUDIENCES: { code: string; label: MessageKey }[] = [
-  { code: "individual", label: "catalog.audience.individual" },
-  { code: "team", label: "catalog.audience.team" },
-  { code: "business", label: "catalog.audience.business" },
-];
-
-export function Contact({
-  audience,
-  onAudience,
-  config,
-}: {
-  audience: string;
-  onAudience: (value: string) => void;
-  config?: unknown;
-}) {
+export function Contact({ config }: { config?: unknown }) {
   const { data, products, referrer, url, t, layout } = useSite();
   const section = contactConfig(config, t);
-  const [person, setPerson] = useState(referrer?.id || ""),
-    [brief, setBrief] = useState(""),
-    [copyStatus, setCopyStatus] = useState("");
-  const target = contactFor(data, person);
+  const [brief, setBrief] = useState(""),
+    [copyStatus, setCopyStatus] = useState(""),
+    [sending, setSending] = useState(false),
+    [sent, setSent] = useState(false),
+    [sendError, setSendError] = useState("");
+  const siteKey = layout.head.recaptchaSiteKey;
+  const target = contactFor(data, referrer?.id);
   // Three sources, narrowest first: what this section was configured with, the
   // member the visitor is talking to, and the company's own address. Before the
   // last one existed this block could only say the channel was coming soon.
@@ -44,20 +30,56 @@ export function Contact({
   const [product, setProduct] = useState(
     products.some((item) => item.id === selectedId) ? selectedId : "",
   );
-  function prepare(event: FormEvent<HTMLFormElement>) {
+  /**
+   * Sends the request, and falls back to the old copy-or-download brief when
+   * it cannot. The fallback is the point: a visitor who typed three paragraphs
+   * should never lose them to a network fault, and before there was an
+   * endpoint this brief was the whole feature.
+   */
+  async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
+    if (!validate(form)) return;
+    const fields = new FormData(form);
+    setSending(true);
+    setSendError("");
+    try {
+      const token = siteKey ? await recaptchaToken(siteKey) : "";
+      await submitLead({
+        name: String(fields.get("name")).trim(),
+        email: String(fields.get("email")).trim(),
+        message: String(fields.get("message")).trim(),
+        product_id: product || undefined,
+        ref: referrer?.id || undefined,
+        recaptcha_token: token || undefined,
+      });
+      setSent(true);
+      form.reset();
+      setProduct("");
+    } catch {
+      // One message for every failure. Telling a visitor which guard refused
+      // them is telling a bot which one to work around, and none of the
+      // distinctions are actionable for a person anyway.
+      setSendError(t("contact.send_failed"));
+      buildBrief(form);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function validate(form: HTMLFormElement) {
     for (const id of ["contact-name", "contact-message"]) {
       const field = form.querySelector<HTMLInputElement | HTMLTextAreaElement>(
         `#${id}`,
       )!;
       field.setCustomValidity(field.value.trim() ? "" : t("contact.required"));
     }
-    if (!form.reportValidity()) return;
+    return form.reportValidity();
+  }
+
+  function buildBrief(form: HTMLFormElement) {
     const fields = new FormData(form),
       product = products.find((item) => item.id === fields.get("product"));
-    const consultant = data.members.find((member) => member.id === person);
-    const chosen = AUDIENCES.find((item) => item.code === audience);
     // One key per line, joined here: the blank lines are the layout, and a
     // translator keeps it by translating the lines rather than the message.
     setBrief(
@@ -66,17 +88,11 @@ export function Contact({
         "",
         t("contact.brief.name", { name: String(fields.get("name")).trim() }),
         t("contact.brief.email", { email: String(fields.get("email")).trim() }),
-        t("contact.brief.audience", {
-          audience: chosen ? t(chosen.label) : audience,
-        }),
         t("contact.brief.product", {
           product: product
             ? product.name +
               (product.example ? t("contact.brief.product_example") : "")
             : t("contact.brief.product_any"),
-        }),
-        t("contact.brief.consultant", {
-          name: consultant?.name || t("contact.person_team"),
         }),
         ...(referrer
           ? [t("contact.brief.referrer", { name: referrer.name })]
@@ -155,13 +171,24 @@ export function Contact({
               <span>ZUKATEK</span>
             </div>
           </div>
-          <form className="contact-form" id="contact-form" onSubmit={prepare}>
-            <h3>{t("contact.form_title")}</h3>
-            <p className="form-intro" id="form-intro">
-              {email || zalo
-                ? t("contact.form_intro")
-                : t("contact.form_intro_offline")}
-            </p>
+          <form
+            className="contact-form"
+            id="contact-form"
+            aria-labelledby="contact-form-title"
+            aria-describedby="form-intro form-note"
+            onSubmit={(event) => void send(event)}
+          >
+            <header className="contact-form-heading">
+              <span className="contact-form-icon" aria-hidden="true">
+                <Icon name="support" />
+              </span>
+              <div>
+                <h3 id="contact-form-title">{t("contact.form_title")}</h3>
+                <p className="form-intro" id="form-intro">
+                  {t("contact.form_intro")}
+                </p>
+              </div>
+            </header>
             <div className="form-row">
               <div className="field">
                 <label htmlFor="contact-name">
@@ -195,24 +222,6 @@ export function Contact({
               </div>
             </div>
             <div className="field">
-              <label htmlFor="contact-person">
-                {t("contact.person_label")}
-              </label>
-              <Select
-                id="contact-person"
-                name="person"
-                value={person}
-                onChange={setPerson}
-                options={[
-                  { value: "", label: t("contact.person_team") },
-                  ...data.members.map((member) => ({
-                    value: member.id,
-                    label: member.name,
-                  })),
-                ]}
-              />
-            </div>
-            <div className="field">
               <label htmlFor="contact-product">
                 {t("contact.product_label")}
               </label>
@@ -232,23 +241,6 @@ export function Contact({
                 ]}
               />
             </div>
-            <fieldset className="audience-field">
-              <legend>{t("contact.audience_legend")}</legend>
-              <div className="audience-options">
-                {AUDIENCES.map(({ code, label }) => (
-                  <label key={code}>
-                    <input
-                      type="radio"
-                      name="audience"
-                      value={code}
-                      checked={audience === code}
-                      onChange={() => onAudience(code)}
-                    />
-                    <span>{t(label)}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
             <div className="field">
               <label htmlFor="contact-message">
                 {t("contact.message_label")}
@@ -264,14 +256,54 @@ export function Contact({
                 onInput={(event) => event.currentTarget.setCustomValidity("")}
               />
             </div>
-            <button className="button form-submit" type="submit">
-              <span id="submit-label">{t("contact.submit")}</span>
-              <Icon name="arrow" />
-            </button>
-            <p className="form-note" id="form-note">
-              {section.note ||
-                (email ? t("contact.note_email") : t("contact.note_offline"))}
-            </p>
+            <div className="contact-form-footer">
+              <button
+                className="button form-submit"
+                type="submit"
+                disabled={sending}
+              >
+                <span id="submit-label">
+                  {sending ? t("contact.sending") : t("contact.submit")}
+                </span>
+                <Icon name="send" />
+              </button>
+              {/* aria-live so a screen reader hears the outcome: the only
+                  change on screen is this line, and a visitor who cannot see
+                  it has no other way to know the request went. */}
+              <p
+                className={`form-note${sent ? " form-note-sent" : ""}`}
+                id="form-note"
+                role="status"
+                aria-live="polite"
+              >
+                {sent
+                  ? t("contact.sent")
+                  : sendError || section.note || t("contact.note_send")}
+              </p>
+              {/* Google's terms allow hiding the badge only if this notice is
+                  shown instead. It is hidden here because the floating badge
+                  lands exactly where the chat bubble already is. */}
+              {siteKey && (
+                <p className="form-note recaptcha-note">
+                  {t("contact.recaptcha_notice")}{" "}
+                  <a
+                    href="https://policies.google.com/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t("contact.recaptcha_privacy")}
+                  </a>
+                  {" · "}
+                  <a
+                    href="https://policies.google.com/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t("contact.recaptcha_terms")}
+                  </a>
+                </p>
+              )}
+            </div>
           </form>
         </div>
       </section>

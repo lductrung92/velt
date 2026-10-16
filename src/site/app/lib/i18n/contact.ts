@@ -18,13 +18,13 @@ export const vi = {
     "Kênh liên hệ sẽ sớm được cập nhật. Bạn có thể gửi lời nhắn cho người đã giới thiệu ZUKATEK.",
 
   "contact.form_title": "Nhận tư vấn sản phẩm",
-  "contact.form_intro": "Cho biết sản phẩm bạn quan tâm và câu hỏi cần tư vấn.",
+  "contact.form_intro": "Chọn sản phẩm và chia sẻ nhu cầu của bạn.",
   "contact.form_intro_offline":
     "Chuẩn bị nội dung hỏi mua sản phẩm để gửi cho người đã giới thiệu ZUKATEK.",
 
   // The trailing space in each label separates it from the required marker.
   "contact.name_label": "Tên của bạn ",
-  "contact.name_placeholder": "Bạn tên là gì?",
+  "contact.name_placeholder": "Nhập họ và tên",
   "contact.email_label": "Email ",
   "contact.person_label": "Người tư vấn",
   "contact.person_team": "Đội ngũ ZUKATEK",
@@ -35,15 +35,25 @@ export const vi = {
   "contact.message_label": "Bạn cần tư vấn điều gì? ",
   "contact.message_placeholder":
     "Tên sản phẩm, tính năng cần dùng, số người sử dụng hoặc câu hỏi về giá…",
-  "contact.submit": "Chuẩn bị lời nhắn",
+  "contact.submit": "Gửi yêu cầu",
   "contact.note_email":
     "Xem lại lời nhắn rồi gửi qua ứng dụng email. Biểu mẫu không tự gửi.",
   "contact.note_offline":
     "Lời nhắn được tạo trên thiết bị để bạn sao chép hoặc tải về; chưa được gửi đến ZUKATEK.",
+  "contact.sending": "Đang gửi...",
+  "contact.sent":
+    "Đã gửi. Chúng tôi sẽ liên hệ lại với bạn trong thời gian sớm nhất.",
+  "contact.send_failed":
+    "Chưa gửi được. Bạn có thể sao chép hoặc tải lời nhắn bên dưới rồi gửi qua email.",
+  "contact.note_send":
+    "Gửi trực tiếp đến ZUKATEK. Chúng tôi phản hồi qua email bạn điền ở trên.",
+  "contact.recaptcha_notice": "Trang này được bảo vệ bởi reCAPTCHA; áp dụng",
+  "contact.recaptcha_privacy": "Chính sách bảo mật",
+  "contact.recaptcha_terms": "Điều khoản dịch vụ của Google",
   "contact.required": "Vui lòng nhập nội dung trước khi tiếp tục.",
 
   "contact.brief_eyebrow": "TƯ VẤN SẢN PHẨM ZUKATEK",
-  "contact.brief_title": "Lời nhắn của bạn đã sẵn sàng",
+  "contact.brief_title": "Yêu cầu tư vấn của bạn",
   "contact.brief_intro_email":
     "Xem lại nội dung, sau đó chọn gửi qua email. Ứng dụng email sẽ mở để bạn hoàn tất việc gửi.",
   "contact.brief_intro_offline":
@@ -105,8 +115,7 @@ export const vi = {
   "chat.send": "Gửi tin nhắn",
   "chat.footer": "Hỗ trợ sản phẩm từ ZUKATEK",
 
-  "chat.error_connect":
-    "Chưa kết nối được trợ lý. Bạn thử lại sau nhé.",
+  "chat.error_connect": "Chưa kết nối được trợ lý. Bạn thử lại sau nhé.",
   "chat.error_turn_limit":
     "Cuộc trò chuyện đã dài. Bạn để lại liên hệ để bên mình chủ động gọi lại nhé.",
   "chat.error_send": "Chưa gửi được tin nhắn. Bạn thử lại giúp mình.",
@@ -125,13 +134,12 @@ export const en: Record<keyof typeof vi, string> = {
     "A contact channel will be added soon. In the meantime you can send your message to the person who introduced you to ZUKATEK.",
 
   "contact.form_title": "Ask for product advice",
-  "contact.form_intro":
-    "Tell us which product you are interested in and what you would like to know.",
+  "contact.form_intro": "Choose a product and tell us what you need.",
   "contact.form_intro_offline":
     "Write your enquiry here, then send it to the person who introduced you to ZUKATEK.",
 
   "contact.name_label": "Your name ",
-  "contact.name_placeholder": "What is your name?",
+  "contact.name_placeholder": "Enter your full name",
   "contact.email_label": "Email ",
   "contact.person_label": "Advisor",
   "contact.person_team": "The ZUKATEK team",
@@ -142,15 +150,24 @@ export const en: Record<keyof typeof vi, string> = {
   "contact.message_label": "What would you like to know? ",
   "contact.message_placeholder":
     "The product, the features you need, how many people will use it, or a question about pricing…",
-  "contact.submit": "Prepare the message",
+  "contact.submit": "Send enquiry",
   "contact.note_email":
     "Review the message, then send it from your e-mail app. The form does not send anything itself.",
   "contact.note_offline":
     "The message is prepared on your device for you to copy or download; nothing is sent to ZUKATEK.",
+  "contact.sending": "Sending...",
+  "contact.sent": "Sent. We will get back to you as soon as we can.",
+  "contact.send_failed":
+    "That did not send. You can copy or download the message below and e-mail it instead.",
+  "contact.note_send":
+    "Sent straight to ZUKATEK. We reply to the e-mail address above.",
+  "contact.recaptcha_notice": "This site is protected by reCAPTCHA; the Google",
+  "contact.recaptcha_privacy": "Privacy Policy",
+  "contact.recaptcha_terms": "Terms of Service apply",
   "contact.required": "Please fill this in before continuing.",
 
   "contact.brief_eyebrow": "ZUKATEK PRODUCT ADVICE",
-  "contact.brief_title": "Your message is ready",
+  "contact.brief_title": "Your product enquiry",
   "contact.brief_intro_email":
     "Review the message, then choose to send it by e-mail. Your e-mail app will open so you can finish sending it.",
   "contact.brief_intro_offline":

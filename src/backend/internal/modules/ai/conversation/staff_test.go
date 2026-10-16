@@ -343,3 +343,29 @@ func TestStaffActionsReachTheQueue(t *testing.T) {
 		t.Fatal("claiming a conversation never reached the queue")
 	}
 }
+
+func TestHandoffOnAnAlreadyWaitingConversationWritesNothing(t *testing.T) {
+	// The endpoint is unauthenticated, so "asking twice" is both a visitor
+	// double-clicking and an outsider appending rows at will. Either way the
+	// second call must be a no-op, not another system line.
+	e := newEnv(t)
+	e.notify.recipient = true
+	res, _ := e.svc.Start(ctx(), key, StartRequest{})
+
+	state, err := e.svc.RequestHuman(ctx(), key, res.ID)
+	require.NoError(t, err)
+	require.Equal(t, StateWaiting, state)
+	first, err := e.repo.History(ctx(), res.ID, 100)
+	require.NoError(t, err)
+
+	for i := 0; i < 5; i++ {
+		state, err = e.svc.RequestHuman(ctx(), key, res.ID)
+		require.NoError(t, err)
+		require.Equal(t, StateWaiting, state)
+	}
+
+	after, err := e.repo.History(ctx(), res.ID, 100)
+	require.NoError(t, err)
+	require.Len(t, after, len(first), "repeating the request must add no messages")
+	require.Len(t, e.notify.rung, 1, "and must not ring again")
+}

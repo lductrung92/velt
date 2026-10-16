@@ -1834,7 +1834,23 @@
     "empty_description": "Khi khách để lại thông tin qua trò chuyện hoặc biểu mẫu, hồ sơ sẽ xuất hiện tại đây để bạn tiếp tục chăm sóc.",
     "no_results": "Chưa có khách phù hợp",
     "no_results_hint": "Thử từ khóa khác hoặc bỏ bớt bộ lọc để xem thêm khách hàng.",
-    "reset_filters": "Xóa bộ lọc"
+    "reset_filters": "Xóa bộ lọc",
+    "detail": {
+      "open": "Xem chi tiết",
+      "title": "Toàn bộ thông tin khách",
+      "subtitle": "Thông tin liên hệ, nhu cầu và quá trình chăm sóc.",
+      "customer_profile": "Hồ sơ khách hàng",
+      "contact": "Thông tin liên hệ",
+      "follow_up": "Thông tin chăm sóc",
+      "updated": "Cập nhật gần nhất",
+      "no_name": "Khách chưa để lại tên",
+      "email": "Email",
+      "phone": "Điện thoại",
+      "message": "Nội dung khách gửi",
+      "no_message": "Khách không để lại lời nhắn.",
+      "reply": "Trả lời qua email",
+      "call": "Gọi"
+    }
   },
   "activity": {
     "title": "Nhật ký hoạt động",
@@ -2023,7 +2039,8 @@
       "email": "Email",
       "storage": "Lưu trữ",
       "ai": "AI",
-      "cache": "Cache"
+      "cache": "Cache",
+      "security": "Bảo mật"
     },
     "secret": {
       "set": "Đã đặt",
@@ -2099,7 +2116,10 @@
       "app_page_size": "Số dòng mỗi trang",
       "app_pagination_template": "Kiểu phân trang",
       "cache_public_max_age_seconds": "Cache phản hồi công khai",
-      "cache_console_refresh_seconds": "Console tự đọc lại cấu hình"
+      "cache_console_refresh_seconds": "Console tự đọc lại cấu hình",
+      "security_recaptcha_enabled": "Bật reCAPTCHA",
+      "security_recaptcha_site_key": "Site key",
+      "security_recaptcha_secret": "Secret key"
     },
     "help": {
       "app_name": "Hiện ở console và làm tên thương hiệu trên site.",
@@ -2259,6 +2279,10 @@
       "ai_routing": {
         "title": "Định tuyến theo công việc",
         "help": "Mỗi công việc chạy theo danh sách từ trên xuống. Bước dưới chỉ được dùng khi bước trên báo hết hạn mức."
+      },
+      "security_recaptcha": {
+        "title": "reCAPTCHA",
+        "help": "Chống bot cho form liên hệ công khai. Lấy cặp khoá tại google.com/recaptcha (loại v2 — ẩn). Site key hiện trong trang web nên công khai được; secret key chỉ server dùng để xác minh."
       }
     },
     "cache_purge": {

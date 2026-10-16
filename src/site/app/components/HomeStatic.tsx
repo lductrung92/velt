@@ -233,10 +233,8 @@ function AudienceArt({ kind }: { kind: string }) {
 
 export function Audience({
   href,
-  onAudience,
   config,
 }: LinksProps & {
-  onAudience: (audience: string) => void;
   config?: unknown;
 }) {
   const { t } = useSite();
@@ -262,7 +260,6 @@ export function Audience({
                 <a
                   className="text-link"
                   href={sectionHref(href, item.cta_href)}
-                  onClick={() => onAudience(item.key)}
                   data-audience={item.key}
                 >
                   {item.cta_label}

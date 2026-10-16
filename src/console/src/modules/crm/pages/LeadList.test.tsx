@@ -213,8 +213,17 @@ describe("CRM lead workspace", () => {
     const table = await screen.findByTestId("leads-table");
     expect(within(table).getByText(t("leads.status.qualified"))).toBeVisible();
     expect(within(table).queryByRole("combobox")).not.toBeInTheDocument();
-    expect(within(table).queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByText(t("leads.open_chat"))).not.toBeInTheDocument();
+    expect(
+      within(table).queryByRole("button", { name: t("common.delete") }),
+    ).not.toBeInTheDocument();
+    // Viewing is the one control a read-only account keeps: it changes
+    // nothing, and the customer's message has no column in the table. Asserted
+    // as "the only button" so a mutating action cannot be added here unnoticed.
+    const buttons = within(table).getAllByRole("button");
+    expect(buttons).toHaveLength(1); // the fixture serves one lead
+    for (const button of buttons)
+      expect(button).toHaveAccessibleName(t("leads.detail.open"));
   });
 
   it("opens the inbox on the lead's own conversation", async () => {

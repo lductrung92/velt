@@ -122,8 +122,87 @@ const mime = {
   ".webp": "image/webp",
   ".txt": "text/plain",
 };
+// Where the browser may load things from. Derived from what the site
+// actually uses: its own bundle, and images/fonts off the media origin, which
+// is a different host in production (MEDIA_IMAGE_BASE_URL) and the API in dev.
+//
+// `style-src 'unsafe-inline'` is not laziness: the SSR output carries inline
+// <style> blocks, and removing that would mean hashing every one of them on
+// every render. Inline STYLE cannot execute; inline SCRIPT is the dangerous
+// one, and that is what 'self' here forbids.
+function originOf(...candidates) {
+  for (const base of candidates) {
+    if (!base) continue;
+    try {
+      return new URL(base).origin;
+    } catch {
+      // not a URL we can parse; try the next candidate
+    }
+  }
+  return "";
+}
+
+// The same precedence the data layer uses (lib/cache.server.ts), or the policy
+// names an origin the page never calls and misses the one it does.
+const apiOrigin = originOf(
+  process.env.SITE_API_BASE_URL,
+  process.env.VITE_API_BASE_URL,
+  "http://127.0.0.1:8081/api",
+);
+// In production this is its own host (cdn.*); in dev the images come off the
+// API, so it falls through to the same origin.
+const mediaOrigin = originOf(process.env.MEDIA_IMAGE_BASE_URL) || apiOrigin;
+
+const csp = [
+  "default-src 'self'",
+  `img-src 'self' data: ${mediaOrigin}`.trim(),
+  `connect-src 'self' ${apiOrigin} https://www.google.com`.trim(),
+  // reCAPTCHA loads api.js from google.com and its payload from gstatic,
+  // and puts the challenge in an iframe on google.com. Naming them here is
+  // what lets the widget work once CSP is enforced; leaving them out would
+  // mean the form silently stops protecting anything.
+  "script-src 'self' https://www.google.com https://www.gstatic.com",
+  "frame-src https://www.google.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self' data:",
+  "frame-ancestors 'none'",
+  "base-uri 'none'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join("; ");
+
+// CSP ships in report-only until somebody has watched a production build run
+// under it for a few days — a policy that blocks a real asset breaks the page
+// far more visibly than the attack it prevents. Flip CSP_ENFORCE=1 once the
+// browser console is quiet. The other three carry no such risk and are on now;
+// frame-ancestors only bites when enforced, so X-Frame-Options is what stops
+// clickjacking today.
+const cspHeader =
+  process.env.CSP_ENFORCE === "1"
+    ? "Content-Security-Policy"
+    : "Content-Security-Policy-Report-Only";
+
+// Useful while developing, free reconnaissance in production: they name the
+// stack and say whether a request was served from cache.
+function debugHeaders(state) {
+  return production
+    ? {}
+    : { "X-ZUKATEK-Render": "react-ssr", "X-ZUKATEK-Cache": state };
+}
+
+function secureHeaders(res) {
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader(cspHeader, csp);
+}
+
 async function serve(req, res) {
   try {
+    // Set once, before any branch: every response leaves through one of a
+    // dozen writeHead calls below (304, 404, 405, 500, assets), and a header
+    // added per-branch is a header somebody forgets on the thirteenth.
+    secureHeaders(res);
     const url = new URL(req.url, `http://${host}:${port}`);
     if (production && url.pathname.startsWith("/assets/")) {
       let name;
@@ -193,8 +272,7 @@ async function serve(req, res) {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": control(ttlNow),
         ETag: hit.etag,
-        "X-ZUKATEK-Render": "react-ssr",
-        "X-ZUKATEK-Cache": "hit",
+        ...debugHeaders("hit"),
       });
       res.end(req.method === "HEAD" ? "" : hit.html);
       return;
@@ -234,7 +312,9 @@ async function serve(req, res) {
           `<link rel="alternate" hreflang="${escape(alternate.locale)}" href="${href}">`,
         ];
         if (alternate.xDefault)
-          tags.push(`<link rel="alternate" hreflang="x-default" href="${href}">`);
+          tags.push(
+            `<link rel="alternate" hreflang="x-default" href="${href}">`,
+          );
         return tags;
       }),
     ].join("");
@@ -275,8 +355,7 @@ async function serve(req, res) {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": control(ttl),
       ...(etag ? { ETag: etag } : {}),
-      "X-ZUKATEK-Render": "react-ssr",
-      "X-ZUKATEK-Cache": ttl > 0 ? "miss" : "bypass",
+      ...debugHeaders(ttl > 0 ? "miss" : "bypass"),
     });
     res.end(req.method === "HEAD" ? "" : html);
   } catch (error) {

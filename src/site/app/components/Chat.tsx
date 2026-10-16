@@ -11,6 +11,7 @@ import {
 } from "../lib/chatApi";
 import type { MessageKey, T } from "../lib/i18n";
 import { Icon } from "./Icon";
+import { RichText } from "./RichText";
 
 // The assistant, wired to the real backend.
 //
@@ -70,7 +71,7 @@ export function Chat() {
     void (async () => {
       try {
         const started = await startConversation({
-          ref: referrer?.id ? url.searchParams.get("ref") ?? "" : "",
+          ref: referrer?.id ? (url.searchParams.get("ref") ?? "") : "",
           page: url.pathname,
         });
         if (cancelled) return;
@@ -226,14 +227,25 @@ export function Chat() {
               >
                 {message.role !== "visitor" && (
                   <span className="chat-message-avatar">
-                    <Icon name={message.role === "staff" ? "support" : "spark"} />
+                    <Icon
+                      name={message.role === "staff" ? "support" : "spark"}
+                    />
                   </span>
                 )}
                 <div className="chat-message-body">
                   <span className="chat-message-label">
                     {speaker(t, message.role, degraded)}
                   </span>
-                  <div className="chat-bubble">{message.content}</div>
+                  <div className="chat-bubble">
+                    {message.role === "visitor" ? (
+                      message.content
+                    ) : (
+                      // Only the assistant writes Markdown. A visitor's own
+                      // words are shown exactly as typed — nobody expects
+                      // their asterisks to vanish.
+                      <RichText text={message.content} />
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

@@ -294,3 +294,38 @@ func trimPtr(in *string) *string {
 	}
 	return &v
 }
+
+// FormCapture is what the public contact form may set. The server decides the
+// rest: source is always `form`, status always `new`.
+type FormCapture struct {
+	Name             string
+	Email            string
+	Note             string
+	AssignedMemberID *uuid.UUID
+	ProductIDs       []uuid.UUID
+}
+
+// CaptureFromForm records a lead the site's contact form collected.
+//
+// The second unauthenticated write in this module, alongside CaptureFromChat,
+// and held to the same rule: the caller supplies contact details and nothing
+// that decides how the lead is handled. Source and status are set here, not
+// taken from the request, so no submission can arrive pre-assigned a state the
+// pipeline reads as progress.
+func (s *Service) CaptureFromForm(ctx context.Context, in FormCapture) error {
+	w := write{
+		Name:             trimPtr(&in.Name),
+		Email:            trimPtr(&in.Email),
+		Source:           SourceForm,
+		AssignedMemberID: in.AssignedMemberID,
+		Status:           StatusNew,
+		Note:             trimPtr(&in.Note),
+	}
+	if err := validateContact(w); err != nil {
+		return err
+	}
+	if _, err := s.repo.Create(ctx, w, in.ProductIDs); err != nil {
+		return s.MapRepoErr(ctx, "capture form lead", err)
+	}
+	return nil
+}

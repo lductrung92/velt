@@ -181,6 +181,14 @@ func (s *Service) RequestHuman(ctx context.Context, visitorKey string, convID uu
 	if conv.State == StateHuman {
 		return StateHuman, nil // already with a person
 	}
+	// Already queued. Saying so again changes nothing and writes another
+	// system line into the transcript — which is both clutter for whoever
+	// picks the conversation up and, on an unauthenticated endpoint, a row an
+	// outsider can add at will. A visitor hitting the button twice is the
+	// ordinary case this covers.
+	if conv.State == StateWaiting {
+		return StateWaiting, nil
+	}
 
 	// Nobody at the desk. The visitor can still be parked for a person, but
 	// only if a person can actually be told — otherwise this would be a queue

@@ -242,6 +242,17 @@ func publicise(items []Response) {
 			items[i].DisplayName = items[i].FullName
 		}
 		items[i].FullName = ""
+		// Email goes the same way as the real name, and for a sharper reason:
+		// every address in `members` today is also a console login, so the
+		// public roster was handing an attacker the exact list of usernames to
+		// try. The two are separate tables precisely because they are separate
+		// facts; nothing should make them agree.
+		//
+		// A visitor arriving on a referral link now reaches the site's general
+		// contact address instead of the member's (site.Contact falls back on
+		// its own). To put per-member contact back, give members an address
+		// that is NOT a login and re-expose it here deliberately.
+		items[i].Email = nil
 	}
 }
 

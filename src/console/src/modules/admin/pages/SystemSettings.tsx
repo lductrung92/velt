@@ -12,6 +12,7 @@ import {
   Save,
   Search,
   Settings2,
+  ShieldCheck,
   SlidersHorizontal,
   Timer,
   Trash2,
@@ -84,6 +85,7 @@ const GROUPS: { key: string; icon: LucideIcon }[] = [
   { key: "email", icon: Mail },
   { key: "storage", icon: HardDrive },
   { key: "ai", icon: Bot },
+  { key: "security", icon: ShieldCheck },
 ];
 const groupIcon = (group: string) =>
   GROUPS.find((g) => g.key === group)?.icon ?? Settings2;
@@ -240,6 +242,17 @@ const SECTIONS: Record<
         "storage.max_upload_mb",
         "files_max_upload_mb",
         "files_storage_quota_mb",
+      ],
+    },
+  ],
+  security: [
+    {
+      id: "recaptcha",
+      icon: ShieldCheck,
+      keys: [
+        "security.recaptcha_enabled",
+        "security.recaptcha_site_key",
+        "security.recaptcha_secret",
       ],
     },
   ],

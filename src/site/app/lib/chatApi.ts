@@ -9,8 +9,10 @@ const DEFAULT_BASE = "http://localhost:8081/api";
 
 /** Base URL of the API. Build-time, so a deployment points it at its own host. */
 export const apiBase: string =
-  (import.meta.env?.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ??
-  DEFAULT_BASE;
+  (import.meta.env?.VITE_API_BASE_URL as string | undefined)?.replace(
+    /\/$/,
+    "",
+  ) ?? DEFAULT_BASE;
 
 export type ConversationState = "bot" | "waiting" | "human" | "closed";
 export type MessageRole = "visitor" | "assistant" | "staff" | "system";
@@ -63,6 +65,10 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new ChatError(res.status, key);
   }
+  // 204 means "done, nothing to say", and res.json() on an empty body throws.
+  // Treating that as a failure would report a successful write as a failed
+  // one — which is exactly what it did for the contact form.
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
@@ -86,7 +92,9 @@ export function sendMessage(
   });
 }
 
-export function requestHuman(id: string): Promise<{ state: ConversationState }> {
+export function requestHuman(
+  id: string,
+): Promise<{ state: ConversationState }> {
   return call(`/public/chat/conversations/${id}/handoff`, { method: "POST" });
 }
 
@@ -113,7 +121,7 @@ export function openStream(id: string, handlers: StreamHandlers): () => void {
     { withCredentials: true },
   );
 
-  const parse = <T,>(raw: string): T | null => {
+  const parse = <T>(raw: string): T | null => {
     try {
       return JSON.parse(raw) as T;
     } catch {
@@ -140,9 +148,31 @@ export function openStream(id: string, handlers: StreamHandlers): () => void {
 /** Newsletter opt-in from the footer. The server rate-limits by IP and by
  *  address and answers 202 whether or not the address was already on the list,
  *  so the form cannot be used to find out who is subscribed. */
-export function subscribeNewsletter(email: string): Promise<{ status: string }> {
+export function subscribeNewsletter(
+  email: string,
+): Promise<{ status: string }> {
   return call("/public/cms/newsletter/subscribe", {
     method: "POST",
     body: JSON.stringify({ email, source: "footer" }),
+  });
+}
+
+/** What the public contact form sends. The server decides source, status and
+ *  everything else about how the lead is handled. */
+export interface LeadSubmission {
+  name: string;
+  email: string;
+  message: string;
+  product_id?: string;
+  ref?: string;
+  recaptcha_token?: string;
+}
+
+/** Files a contact request. Throws on any refusal — the caller shows one
+ *  message either way, so the distinctions stay on the server. */
+export async function submitLead(body: LeadSubmission): Promise<void> {
+  await call<void>("/public/leads", {
+    method: "POST",
+    body: JSON.stringify(body),
   });
 }

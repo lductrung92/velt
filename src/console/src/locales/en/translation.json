@@ -1786,7 +1786,23 @@
     "empty_description": "When a customer leaves contact information through chat or a form, their record will appear here for you to follow up.",
     "no_results": "No matching customers",
     "no_results_hint": "Try another search or remove filters to find more customers.",
-    "reset_filters": "Clear filters"
+    "reset_filters": "Clear filters",
+    "detail": {
+      "open": "View details",
+      "title": "Full customer details",
+      "subtitle": "Contact details, interests and follow-up information.",
+      "customer_profile": "Customer profile",
+      "contact": "Contact details",
+      "follow_up": "Follow-up information",
+      "updated": "Last updated",
+      "no_name": "No name given",
+      "email": "E-mail",
+      "phone": "Phone",
+      "message": "What the customer wrote",
+      "no_message": "No message was left.",
+      "reply": "Reply by e-mail",
+      "call": "Call"
+    }
   },
   "activity": {
     "title": "Activity log",
@@ -1975,7 +1991,8 @@
       "email": "Email",
       "storage": "Storage",
       "ai": "AI",
-      "cache": "Cache"
+      "cache": "Cache",
+      "security": "Security"
     },
     "secret": {
       "set": "Set",
@@ -2051,7 +2068,10 @@
       "app_page_size": "Rows per page",
       "app_pagination_template": "Pagination style",
       "cache_public_max_age_seconds": "Public response cache",
-      "cache_console_refresh_seconds": "Console config refresh"
+      "cache_console_refresh_seconds": "Console config refresh",
+      "security_recaptcha_enabled": "Require reCAPTCHA",
+      "security_recaptcha_site_key": "Site key",
+      "security_recaptcha_secret": "Secret key"
     },
     "help": {
       "app_name": "Shown in the console and used as the site's brand name.",
@@ -2211,6 +2231,10 @@
       "ai_routing": {
         "title": "Routing per job",
         "help": "Each job runs the list top down. A lower step is only used when the one above reports a rate limit."
+      },
+      "security_recaptcha": {
+        "title": "reCAPTCHA",
+        "help": "Bot protection for the public contact form. Get a key pair at google.com/recaptcha (v2 — invisible). The site key appears in the page and may be public; the secret key is only ever used by the server to verify."
       }
     },
     "cache_purge": {

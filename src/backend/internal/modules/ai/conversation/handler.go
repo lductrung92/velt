@@ -49,6 +49,18 @@ const (
 	// reconnect churn of an EventSource that keeps dropping.
 	rlStreamPerIP  = 60
 	rlStreamWindow = time.Minute
+
+	// Asking for a person is not a read: it moves the conversation and writes
+	// a system line, and once somebody has a device registered it rings their
+	// phone. Ten in ten minutes is far more than a visitor who means it.
+	rlHandoffPerIP  = 10
+	rlHandoffWindow = 10 * time.Minute
+
+	// Reading your own transcript is cheap, but "cheap" is not "free" and this
+	// endpoint had no ceiling at all. Set high enough that polling a live
+	// conversation never trips it.
+	rlReadPerIP  = 120
+	rlReadWindow = time.Minute
 )
 
 // Handler is the visitor-facing HTTP layer.
@@ -173,6 +185,9 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 
 // Transcript handles GET /api/public/chat/conversations/{id}.
 func (h *Handler) Transcript(w http.ResponseWriter, r *http.Request) {
+	if h.throttle(w, r, "read", rlReadPerIP, rlReadWindow) {
+		return
+	}
 	key, ok := existingKey(r)
 	if !ok {
 		httpx.WriteError(w, apperr.NotFound("not_found"))
@@ -261,6 +276,9 @@ func (h *Handler) Stream(w http.ResponseWriter, r *http.Request) {
 
 // Handoff handles POST /api/public/chat/conversations/{id}/handoff.
 func (h *Handler) Handoff(w http.ResponseWriter, r *http.Request) {
+	if h.throttle(w, r, "handoff", rlHandoffPerIP, rlHandoffWindow) {
+		return
+	}
 	key, ok := existingKey(r)
 	if !ok {
 		httpx.WriteError(w, apperr.NotFound("not_found"))

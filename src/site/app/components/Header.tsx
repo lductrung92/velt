@@ -43,6 +43,72 @@ export function Header() {
     // The toggle that opened the current dropdown, so Escape returns focus to
     // the button the visitor actually pressed.
     dropdownToggle = useRef<HTMLButtonElement | null>(null);
+  const [scrollState, setScrollState] = useState({
+    hidden: false,
+    scrolled: false,
+  });
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    // Clamp browser overscroll so reaching a page edge cannot reverse direction.
+    const scrollPosition = () =>
+      Math.max(
+        0,
+        Math.min(
+          window.scrollY,
+          document.documentElement.scrollHeight - window.innerHeight,
+        ),
+      );
+    let previousY = scrollPosition();
+    let direction = 0;
+    let distance = 0;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const y = scrollPosition();
+      const delta = y - previousY;
+      previousY = y;
+      const pinned =
+        menuOpen ||
+        openDropdown !== null ||
+        reducedMotion.matches ||
+        header.current?.contains(document.activeElement);
+      let hidden: boolean | undefined;
+      if (y <= 120 || pinned) {
+        hidden = false;
+        direction = 0;
+        distance = 0;
+      } else if (delta !== 0) {
+        const nextDirection = Math.sign(delta);
+        distance =
+          nextDirection === direction
+            ? distance + Math.abs(delta)
+            : Math.abs(delta);
+        direction = nextDirection;
+        if (direction > 0 && distance >= 20) hidden = true;
+        if (direction < 0 && distance >= 10) hidden = false;
+      }
+      setScrollState((previous) => {
+        const next = { hidden: hidden ?? previous.hidden, scrolled: y > 12 };
+        return next.hidden === previous.hidden &&
+          next.scrolled === previous.scrolled
+          ? previous
+          : next;
+      });
+    };
+    const schedule = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    reducedMotion.addEventListener("change", schedule);
+    return () => {
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      reducedMotion.removeEventListener("change", schedule);
+      window.cancelAnimationFrame(frame);
+    };
+  }, [menuOpen, openDropdown]);
   // On the home page the catalogue link stays an in-page anchor, exactly as the
   // markup did: "/products" scrolls to the section instead of reloading it.
   const to = (item: NavItem) =>
@@ -104,6 +170,7 @@ export function Header() {
     const desktop = matchMedia("(min-width:1024px)");
     const resize = () => {
       if (desktop.matches) setMenuOpen(false);
+      setOpenDropdown(null);
     };
     document.addEventListener("click", outside);
     document.addEventListener("keydown", keyboard);
@@ -115,7 +182,17 @@ export function Header() {
     };
   }, [menuOpen, openDropdown]);
   return (
-    <header className="site-header" ref={header}>
+    <header
+      className="site-header"
+      ref={header}
+      data-hidden={scrollState.hidden}
+      data-scrolled={scrollState.scrolled}
+      onFocusCapture={() =>
+        setScrollState((previous) =>
+          previous.hidden ? { ...previous, hidden: false } : previous,
+        )
+      }
+    >
       <div className="nav-container">
         <a
           className="brand"

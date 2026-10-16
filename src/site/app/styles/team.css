@@ -447,21 +447,50 @@
   }
 }
 
-/* Globe and stable profile list: decorative anchors never represent real locations. */
+/* Compact team introduction; full expertise and projects stay in the profile. */
 .team-world-section {
-  padding: 80px 0 64px;
+  padding: 4rem 0;
+  background: linear-gradient(180deg, #f8faff, #fff);
 }
-.team-world-section .team-heading {
-  margin-bottom: 24px;
+.team-world-section::before {
+  display: none;
 }
 .team-world-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr);
-  gap: 54px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  grid-template-areas: "visual heading" "visual roster";
+  column-gap: clamp(1.5rem, 4vw, 3rem);
+  row-gap: 1.5rem;
   align-items: center;
 }
+.team-world-section .team-heading {
+  grid-area: heading;
+  align-self: end;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  text-align: left;
+}
+.team-world-section .team-heading h2 {
+  margin: 0;
+  font-size: clamp(1.75rem, 2.6vw, 2.25rem);
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+.team-summary {
+  max-width: 29rem;
+  margin: 0.75rem 0 0;
+  color: #61748b;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+}
 .team-globe {
+  grid-area: visual;
+  width: 100%;
+  max-width: 38rem;
   min-width: 0;
+  justify-self: center;
 }
 .team-globe-canvas {
   width: 100%;
@@ -475,13 +504,6 @@
   overflow: visible;
   font-family: var(--font);
 }
-.team-globe-caption {
-  margin: 0;
-  text-align: center;
-  color: #70839b;
-  font-size: 0.6875rem;
-  line-height: 1.6;
-}
 .globe-person {
   cursor: pointer;
   outline: none;
@@ -494,198 +516,154 @@
   stroke: #0061fd;
   fill: #0061fd06;
 }
-.team-profiles {
+.team-roster {
+  grid-area: roster;
+  align-self: start;
   min-width: 0;
-}
-.team-profile-heading {
-  margin-bottom: 24px;
-}
-.team-profile-heading h3 {
-  margin: 0 0 10px;
-  color: #00234b;
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-}
-.team-profile-heading p {
   margin: 0;
-  color: #61748b;
-  font-size: 0.9375rem;
-  line-height: 1.7;
-  max-width: 380px;
+  padding: 0;
+  list-style: none;
 }
-.team-world-section .team-grid {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-  max-width: none;
-  margin: 0;
+.team-roster > li + li {
+  border-top: 1px solid #e6ecf4;
 }
-.team-world-section .member-card {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
-  gap: 14px;
+.team-member {
+  display: flex;
   align-items: center;
-  padding: 17px;
-  border-radius: 14px;
-  box-shadow: 0 5px 18px #00234b03;
+  gap: 1rem;
+  width: 100%;
+  min-height: 5rem;
+  margin: 0;
+  padding: 1rem 0.25rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #00234b;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s;
 }
-.team-world-section .member-card[data-active="true"] {
-  border-color: #a7c6f9;
-  background: linear-gradient(100deg, #f8fbff, white);
-  box-shadow: 0 6px 20px #0061fd06;
+.team-member:hover {
+  background: #0061fd04;
 }
-.team-world-section .member-card:hover {
-  transform: translateY(-2px);
+.team-member:focus-visible {
+  outline: 2px solid #0061fd;
+  outline-offset: 0.25rem;
 }
-.member-order {
-  width: 44px;
-  height: 44px;
+.team-member-avatar {
   display: grid;
   place-items: center;
-  align-self: start;
-  border: 1px solid #e0e9f6;
-  border-radius: 12px;
-  color: #5275a8;
-  background: #f2f6fc;
-  font-size: 0.8125rem;
-  font-weight: 600;
+  flex: 0 0 3rem;
+  width: 3rem;
+  height: 3rem;
   overflow: hidden;
+  border-radius: 50%;
+  background: #eaf2ff;
+  color: #225caa;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: box-shadow 0.2s;
 }
-.member-order img {
+.team-member[data-color="purple"] .team-member-avatar {
+  background: #f0ebfb;
+  color: #7951ae;
+}
+.team-member[data-color="orange"] .team-member-avatar {
+  background: #fff1e5;
+  color: #b96a20;
+}
+.team-member[data-color="green"] .team-member-avatar {
+  background: #e9f5ef;
+  color: #267861;
+}
+.team-member[data-color="pink"] .team-member-avatar {
+  background: #fcebf3;
+  color: #ad4b7d;
+}
+.team-member[data-active="true"] .team-member-avatar {
+  box-shadow:
+    0 0 0 0.1875rem #fff,
+    0 0 0 0.25rem #c8d9f5;
+}
+.team-member-avatar > picture,
+.team-member-avatar img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.team-world-section .member-card[data-active="true"] .member-order {
-  color: #0061fd;
-  background: #eaf2ff;
-  border-color: #cde0ff;
+.team-member-info {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.25rem;
 }
-.team-world-section .member-card-info {
-  padding: 0;
-}
-.team-world-section .member-title-row {
-  margin-bottom: 3px;
-}
-.team-world-section .member-card h3 {
+.team-member-name {
   font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
-.team-world-section .member-role {
-  font-size: 0.8125rem;
+.team-member-role {
+  color: #61748b;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
-.team-world-section .profile-button {
-  width: auto;
-  min-height: 44px;
-  border: 0;
-  background: transparent;
-  color: #426184;
-  padding: 9px 0 9px 8px;
-  font-size: 0.8125rem;
+.team-member > .icon {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  color: #8a9bb1;
+  transition:
+    color 0.2s,
+    transform 0.2s;
 }
-.team-world-section .profile-button:hover {
+.team-member:hover > .icon,
+.team-member:focus-visible > .icon {
   color: #0061fd;
-  background: transparent;
-}
-.team-world-section .profile-button .icon {
-  width: 16px;
-  height: 16px;
-}
-.team-world-section .team-footnote {
-  margin-top: 36px;
-}
-.team-world-section .skill-filter {
-  justify-content: flex-start;
-}
-@media (max-width: 1099px) {
-  .team-world-layout {
-    gap: 28px;
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  }
-  .team-world-section .member-card {
-    grid-template-columns: 36px minmax(0, 1fr) auto;
-    gap: 10px;
-    padding: 14px;
-  }
-  .member-order {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-  }
-  .team-world-section .profile-button span {
-    display: none;
-  }
-  .team-world-section .profile-button {
-    width: 36px;
-    justify-content: center;
-    padding: 0;
-  }
+  transform: translateX(0.1875rem);
 }
 @media (max-width: 767px) {
   .team-world-section {
-    padding: 56px 0 44px;
+    padding: 3rem 0;
   }
   .team-world-layout {
     grid-template-columns: minmax(0, 1fr);
-    gap: 32px;
-  }
-  .team-globe {
-    max-width: 560px;
-    width: 100%;
-    margin-inline: auto;
+    grid-template-areas: "heading" "visual" "roster";
+    gap: 1rem;
   }
   .team-world-section .team-heading {
-    margin-bottom: 0;
-  }
-  .team-globe-caption {
-    font-size: 0.6875rem;
-  }
-  .team-profile-heading {
     text-align: center;
   }
-  .team-profile-heading p {
+  .team-summary {
     margin-inline: auto;
   }
-  .team-world-section .member-card {
-    padding: 16px;
-    gap: 12px;
-    grid-template-columns: 40px minmax(0, 1fr) auto;
+  .team-globe {
+    max-width: 24rem;
   }
-  .member-order {
-    width: 40px;
-    height: 40px;
+  .team-roster {
+    width: 100%;
+    max-width: 32rem;
+    justify-self: center;
   }
-  .team-world-section .profile-button {
-    width: auto;
-    padding: 0 2px;
-    gap: 8px;
-  }
-  .team-world-section .profile-button span {
-    display: inline;
-  }
-  .team-world-section .member-role {
-    font-size: 0.875rem;
-  }
-  .team-world-section .team-footnote {
-    margin-top: 24px;
-  }
-}
-@media (max-width: 359px) {
-  .team-world-section .profile-button span {
-    display: none;
-  }
-  .team-world-section .profile-button {
-    width: 36px;
-  }
-  .team-world-section .member-card {
-    padding: 14px;
-    gap: 10px;
-  }
-  .team-profile-heading h3 {
-    font-size: 1.375rem;
+  .team-member {
+    padding-block: 0.875rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .team-world-section .member-card:hover {
+  .team-member,
+  .team-member-avatar,
+  .team-member > .icon {
+    transition: none;
+  }
+  .team-member:hover > .icon,
+  .team-member:focus-visible > .icon {
     transform: none;
   }
 }

@@ -4,6 +4,7 @@ import {
   CalendarDays,
   CheckCheck,
   CircleHelp,
+  Eye,
   FileText,
   Mail,
   MessageSquare,
@@ -54,6 +55,7 @@ import {
   type Lead,
   type LeadStatus,
 } from "../services/leads.service";
+import { LeadDetailDialog } from "../components/LeadDetailDialog";
 import "@/styles/list-page.css";
 import "./leads.css";
 
@@ -160,6 +162,7 @@ export default function LeadList() {
   const [source, setSource] = useState("");
   const [assignee, setAssignee] = useState("");
   const [pending, setPending] = useState<Lead | null>(null);
+  const [viewing, setViewing] = useState<Lead | null>(null);
   const list = useLeads({
     q,
     status,
@@ -304,26 +307,33 @@ export default function LeadList() {
       </div>
     );
   };
-  const actions = (lead: Lead) =>
-    (canManage || (lead.conversation_id && canChat)) && (
-      <RowActions>
-        {lead.conversation_id && canChat && (
-          <RowAction
-            icon={MessageSquare}
-            label={t("leads.open_chat")}
-            onClick={() => navigate(inboxLink(lead.conversation_id as string))}
-          />
-        )}
-        {canManage && (
-          <RowAction
-            destructive
-            icon={Trash2}
-            label={t("common.delete")}
-            onClick={() => setPending(lead)}
-          />
-        )}
-      </RowActions>
-    );
+  // Viewing is always offered: anyone who can see the row can see what the
+  // customer wrote, and the message is the one field the table has no column
+  // for. The other two actions stay permission-gated.
+  const actions = (lead: Lead) => (
+    <RowActions>
+      <RowAction
+        icon={Eye}
+        label={t("leads.detail.open")}
+        onClick={() => setViewing(lead)}
+      />
+      {lead.conversation_id && canChat && (
+        <RowAction
+          icon={MessageSquare}
+          label={t("leads.open_chat")}
+          onClick={() => navigate(inboxLink(lead.conversation_id as string))}
+        />
+      )}
+      {canManage && (
+        <RowAction
+          destructive
+          icon={Trash2}
+          label={t("common.delete")}
+          onClick={() => setPending(lead)}
+        />
+      )}
+    </RowActions>
+  );
 
   return (
     <div className="list-page" data-list="leads">
@@ -662,6 +672,13 @@ export default function LeadList() {
           loading={list.isFetching}
         />
       </div>
+      <LeadDetailDialog
+        lead={viewing}
+        onClose={() => setViewing(null)}
+        status={viewing ? stageControl(viewing) : null}
+        source={viewing ? sourceBadge(viewing) : null}
+        canChat={canChat}
+      />
       <ConfirmDialog
         open={!!pending}
         onOpenChange={(open) => !open && setPending(null)}

@@ -249,14 +249,19 @@ func TestListPublic_ShowsTheDisplayNameInsteadOfTheRealOne(t *testing.T) {
 	// a weaker test and leak anyway.
 	svc, _, _ := newSvc(t)
 	ctx, id := context.Background(), manager()
-	alias := "Trung"
-	_, err := svc.Create(ctx, id, CreateRequest{FullName: "Le Duc Trung", DisplayName: &alias})
+	alias, mail := "Trung", "trungld@zakutek.com"
+	_, err := svc.Create(ctx, id, CreateRequest{
+		FullName: "Le Duc Trung", DisplayName: &alias, Email: &mail,
+	})
 	require.NoError(t, err)
 
 	res, err := svc.ListPublic(ctx, ListParams{})
 	require.NoError(t, err)
 	require.Equal(t, "Trung", res.Items[0].DisplayName)
 	require.Empty(t, res.Items[0].FullName)
+	require.Nil(t, res.Items[0].Email,
+		"every address in members is also a console login; publishing one hands "+
+			"out a valid username")
 
 	// The console keeps both: an operator has to know who this is.
 	list, err := svc.List(ctx, id, ListParams{})
