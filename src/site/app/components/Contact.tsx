@@ -7,6 +7,7 @@ import { contactConfig } from "../lib/sections";
 import { Lines } from "./Lines";
 import { Icon } from "./Icon";
 import { Modal } from "./Modal";
+import { Select } from "./Select";
 
 // The radio group carries a code, not a word: the value travels into the
 // e-mail body and is compared across renders, so it must not change with the
@@ -40,6 +41,9 @@ export function Contact({
   const zalo =
     safeExternalUrl(section.zalo) || target.zalo || layout.chrome.contactZalo;
   const selectedId = url.searchParams.get("product") || "";
+  const [product, setProduct] = useState(
+    products.some((item) => item.id === selectedId) ? selectedId : "",
+  );
   function prepare(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -194,41 +198,39 @@ export function Contact({
               <label htmlFor="contact-person">
                 {t("contact.person_label")}
               </label>
-              <select
+              <Select
                 id="contact-person"
                 name="person"
                 value={person}
-                onChange={(event) => setPerson(event.target.value)}
-              >
-                <option value="">{t("contact.person_team")}</option>
-                {data.members.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setPerson}
+                options={[
+                  { value: "", label: t("contact.person_team") },
+                  ...data.members.map((member) => ({
+                    value: member.id,
+                    label: member.name,
+                  })),
+                ]}
+              />
             </div>
             <div className="field">
               <label htmlFor="contact-product">
                 {t("contact.product_label")}
               </label>
-              <select
+              <Select
                 id="contact-product"
                 name="product"
-                defaultValue={
-                  products.some((item) => item.id === selectedId)
-                    ? selectedId
-                    : ""
-                }
-              >
-                <option value="">{t("contact.product_any")}</option>
-                {products.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                    {item.example ? t("contact.product_example") : ""}
-                  </option>
-                ))}
-              </select>
+                value={product}
+                onChange={setProduct}
+                options={[
+                  { value: "", label: t("contact.product_any") },
+                  ...products.map((item) => ({
+                    value: item.id,
+                    label:
+                      item.name +
+                      (item.example ? t("contact.product_example") : ""),
+                  })),
+                ]}
+              />
             </div>
             <fieldset className="audience-field">
               <legend>{t("contact.audience_legend")}</legend>

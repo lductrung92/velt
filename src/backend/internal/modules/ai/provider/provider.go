@@ -12,7 +12,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Provider kinds.
@@ -125,6 +128,28 @@ var ErrNotConfigured = fmt.Errorf("ai provider: not configured")
 type APIError struct {
 	Status int
 	Body   string
+	// RetryAfter is what the endpoint said in its Retry-After header, zero
+	// when it said nothing. Only a 429 carries one; a caller rotating between
+	// endpoints parks this one for exactly that long instead of guessing.
+	RetryAfter time.Duration
+}
+
+// RateLimited reports whether this is the endpoint saying "not now".
+func (e *APIError) RateLimited() bool { return e != nil && e.Status == http.StatusTooManyRequests }
+
+// retryAfter reads the header both adapters receive. Seconds per RFC 9110; a
+// date form is ignored rather than guessed at, which leaves RetryAfter zero
+// and lets the caller use its own default.
+func retryAfter(h http.Header) time.Duration {
+	v := strings.TrimSpace(h.Get("Retry-After"))
+	if v == "" {
+		return 0
+	}
+	secs, err := strconv.Atoi(v)
+	if err != nil || secs < 0 {
+		return 0
+	}
+	return time.Duration(secs) * time.Second
 }
 
 // Error deliberately omits Body. The endpoint is operator-configurable and may

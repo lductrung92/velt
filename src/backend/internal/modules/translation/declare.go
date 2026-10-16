@@ -93,17 +93,13 @@ var declarations = []Declaration{
 	// The words around that navigation — the footer blurb, the last column, the
 	// copyright line, the header button. They are settings rather than a record,
 	// so they translate as ONE singleton whose id is fixed (see SiteChromeID):
-	// six keys that always travel together, edited on one screen, read on every
-	// page.
+	// the two keys that always travel together, edited on one screen, read on
+	// every page.
 	{
 		Entity: EntitySiteChrome,
 		Fields: []string{
 			"brand_tagline",
-			"footer_note_title",
-			"footer_note_text",
 			"footer_copyright",
-			"header_cta_label",
-			"header_cta_url",
 		},
 	},
 }

@@ -16,6 +16,8 @@ import {
   type TestResult,
 } from "@/modules/ai";
 
+import { AiProviders } from "./AiProviders";
+import { AiRouting } from "./AiRouting";
 import { SettingsSection } from "./SettingsSection";
 
 /**
@@ -38,6 +40,10 @@ export function AiExtras() {
 
   return (
     <>
+      {/* Endpoints first, then what each job routes through, then the probe
+          that exercises them — the order an operator sets them up in. */}
+      <AiProviders canManage={canManage} />
+      <AiRouting canManage={canManage} />
       <SettingsSection
         icon={PlugZap}
         title={t("settings.section.ai_check.title")}

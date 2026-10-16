@@ -14,9 +14,12 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import {
+  Archive,
   ArrowRight,
+  Eye,
   Package,
   Pencil,
+  PenLine,
   Plus,
   RotateCcw,
   Search,
@@ -65,23 +68,15 @@ import {
 import "@/styles/list-page.css";
 import "./product-categories.css";
 
-// The overview cards. There is no status here, so each card carries its own
-// predicate.
+// The overview cards and the status each one filters to, same as the articles
+// list: "" is the unfiltered total and comes first, the rest follow the tabs
+// below so the two rows read in the same order.
 const OVERVIEW = [
-  { key: "total", Icon: Shapes, match: null },
-  {
-    key: "used",
-    Icon: Package,
-    match: (c: ProductCategory) => c.product_count > 0,
-  },
-  {
-    key: "unused",
-    Icon: Package,
-    match: (c: ProductCategory) => c.product_count === 0,
-  },
+  { status: "", key: "total", Icon: Shapes },
+  { status: "published", key: "published", Icon: Eye },
+  { status: "draft", key: "draft", Icon: PenLine },
+  { status: "archived", key: "archived", Icon: Archive },
 ] as const;
-
-type Scope = (typeof OVERVIEW)[number]["key"];
 
 // The status tabs, in the order somebody looking for a category thinks of
 // them: what is in use, what is being set up, what has been put away. Same row
@@ -108,7 +103,6 @@ export default function ProductCategoryList() {
   );
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<string | null>(null);
-  const [scope, setScope] = useState<Scope>("total");
   const [status, setStatus] = useState<ProductCategoryStatus | "">("");
 
   // Local mirror so a drag renders instantly; the server call follows.
@@ -127,8 +121,7 @@ export default function ProductCategoryList() {
   // Anything that narrows or resequences the list means the rows no longer
   // reflect sort_order, so dragging them would write an order the user cannot
   // see. The overview cards and the status tabs count as narrowing.
-  const reorderable =
-    q === "" && sort === null && scope === "total" && status === "";
+  const reorderable = q === "" && sort === null && status === "";
   const hasFilters = !reorderable;
 
   // Changing a filter puts you back on the first page — otherwise a narrower
@@ -138,14 +131,12 @@ export default function ProductCategoryList() {
     setPage(1);
   }
 
-  const counts = OVERVIEW.map(({ match }) =>
-    match ? order.filter(match).length : order.length,
+  const counts = OVERVIEW.map(({ status: value }) =>
+    value ? order.filter((c) => c.status === value).length : order.length,
   );
 
   const rows = useMemo(() => {
     let list = order;
-    const card = OVERVIEW.find((o) => o.key === scope);
-    if (card?.match) list = list.filter(card.match);
     if (status) list = list.filter((c) => c.status === status);
     if (q) {
       const needle = q.toLowerCase();
@@ -163,7 +154,7 @@ export default function ProductCategoryList() {
       list = [...list].sort((a, b) => a[key].localeCompare(b[key], "vi") * dir);
     }
     return list;
-  }, [order, q, sort, scope, status]);
+  }, [order, q, sort, status]);
 
   // The whole taxonomy arrives in one response, so the pager slices it here
   // rather than asking the server for a page it does not serve.
@@ -220,16 +211,16 @@ export default function ProductCategoryList() {
         className="list-overview"
         aria-label={t("products.categories.overview.label")}
       >
-        {OVERVIEW.map(({ key, Icon }, index) => (
+        {OVERVIEW.map(({ status: value, key, Icon }, index) => (
           <button
             type="button"
             key={key}
             className="list-metric"
             data-kind={key}
-            aria-pressed={scope === key}
+            aria-pressed={value ? status === value : status === ""}
             onClick={() =>
               applyFilter(() =>
-                setScope((cur) => (cur === key ? "total" : key)),
+                setStatus((cur) => (cur === value ? "" : value)),
               )
             }
           >

@@ -30,12 +30,8 @@ export interface NavItem {
 /** The words around the navigation; each one falls back to the copy below. */
 export interface SiteChrome {
   tagline: string;
-  noteTitle: string;
-  noteText: string;
   /** {year} is replaced at render time. */
   copyright: string;
-  ctaLabel: string;
-  ctaHref: string;
   /** Empty = the logo the site ships with. */
   logoUrl: string;
   /** How to reach the company when no member is in play. */
@@ -70,7 +66,6 @@ export interface SiteHead {
 
 export interface SiteLayout {
   header: NavItem[];
-  headerMobile: NavItem[];
   footer: NavItem[];
   chrome: SiteChrome;
   head: SiteHead;
@@ -109,16 +104,6 @@ export const defaultHeader = (t: T): NavItem[] => [
   nav(t("layout.nav.blog"), "/blog"),
 ];
 
-// The phone menu is its own list on purpose: it is flat, and it carries one
-// entry ("Cách mua sản phẩm") the desktop bar has no room for. A site that
-// configures only the desktop menu gets this list derived from that one.
-export const defaultHeaderMobile = (t: T): NavItem[] => [
-  nav(t("layout.nav.products"), "/products"),
-  nav(t("layout.nav.team"), "/#team"),
-  nav(t("layout.nav.how_to_buy"), "/#collaboration"),
-  nav(t("layout.nav.blog"), "/blog"),
-];
-
 // A root is a column heading (its own href is never rendered); its children are
 // the links inside that column.
 export const defaultFooter = (t: T): NavItem[] => [
@@ -139,15 +124,10 @@ export const defaultFooter = (t: T): NavItem[] => [
 ];
 
 /** Where the header's button points when nothing else says otherwise. */
-const DEFAULT_CTA_HREF = "/#contact";
 
 export const defaultChrome = (t: T): SiteChrome => ({
   tagline: t("layout.chrome.tagline"),
-  noteTitle: t("layout.chrome.note_title"),
-  noteText: t("layout.chrome.note_text"),
   copyright: t("layout.chrome.copyright"),
-  ctaLabel: t("layout.chrome.cta_label"),
-  ctaHref: DEFAULT_CTA_HREF,
   logoUrl: "",
   contactEmail: "",
   contactZalo: "",
@@ -170,7 +150,6 @@ export const DEFAULT_HEAD: SiteHead = {
 
 export const defaultLayout = (t: T): SiteLayout => ({
   header: defaultHeader(t),
-  headerMobile: defaultHeaderMobile(t),
   footer: defaultFooter(t),
   chrome: defaultChrome(t),
   head: DEFAULT_HEAD,
@@ -238,41 +217,10 @@ function toNav(items: unknown, homeSlug: string): NavItem[] {
   return out;
 }
 
-/**
- * Derives a flat phone menu from the desktop one: every entry that actually
- * leads somewhere, in order, without the duplicates a dropdown creates (the
- * desktop bar repeats its dropdown's entries as top-level links).
- */
-export function flatten(items: NavItem[]): NavItem[] {
-  const seen = new Set<string>();
-  const out: NavItem[] = [];
-  const walk = (list: NavItem[]) => {
-    for (const item of list) {
-      if (item.children.length > 0) {
-        walk(item.children);
-        continue;
-      }
-      if (!item.href || seen.has(item.href)) continue;
-      seen.add(item.href);
-      out.push({ ...item, description: "" });
-    }
-  };
-  walk(items);
-  return out;
-}
-
 /** One slot of the published navigation, tolerant of a missing or odd payload. */
 function slot(menus: unknown, location: string): unknown {
   if (!menus || typeof menus !== "object") return null;
   return (menus as Record<string, unknown>)[location];
-}
-
-// The header button's target is typed into a settings box, so it is checked
-// like any other link before it reaches the document.
-function ctaHref(value: unknown): string {
-  const raw = str(value).trim();
-  if (raw.startsWith("/") || /^https?:\/\//i.test(raw)) return raw;
-  return DEFAULT_CTA_HREF;
 }
 
 /**
@@ -293,25 +241,15 @@ export function resolveLayout(
   const homeSlug = str(values["cms.home_page_slug"]).trim();
 
   const header = toNav(slot(menus, "header"), homeSlug);
-  const mobile = toNav(slot(menus, "header_mobile"), homeSlug);
   const footer = toNav(slot(menus, "footer"), homeSlug);
 
   const shipped = defaultChrome(t);
   return {
     header: header.length ? header : defaultHeader(t),
-    headerMobile: mobile.length
-      ? mobile
-      : header.length
-        ? flatten(header)
-        : defaultHeaderMobile(t),
     footer: footer.length ? footer : defaultFooter(t),
     chrome: {
       tagline: str(values["site.brand_tagline"]) || shipped.tagline,
-      noteTitle: str(values["site.footer_note_title"]) || shipped.noteTitle,
-      noteText: str(values["site.footer_note_text"]) || shipped.noteText,
       copyright: str(values["site.footer_copyright"]) || shipped.copyright,
-      ctaLabel: str(values["site.header_cta_label"]) || shipped.ctaLabel,
-      ctaHref: ctaHref(values["site.header_cta_url"]),
       logoUrl: safeUrl(values["app.logo_url"]),
       contactEmail: str(values["site.contact_email"]).trim(),
       contactZalo: safeUrl(values["site.contact_zalo"]),
@@ -330,8 +268,13 @@ export function resolveLayout(
       noindexAll: values["seo.noindex_all"] === true,
       verification: str(values["seo.google_site_verification"]).trim(),
       analyticsId: str(values["seo.analytics_id"]).trim(),
-      blogPageSize: count(values["site.blog_page_size"], 3, 24, 9),
-      productsPageSize: count(values["site.products_page_size"], 3, 48, 9),
+      // The floor is 1, matching the registry: a site with three posts is
+      // allowed to show one per page. Keep these bounds in step with
+      // internal/modules/cms/shared/settings.go — a value this clamp rejects
+      // is silently replaced by the fallback, so a stricter floor here makes
+      // the setting look broken rather than invalid.
+      blogPageSize: count(values["site.blog_page_size"], 1, 24, 9),
+      productsPageSize: count(values["site.products_page_size"], 1, 48, 9),
     },
     regions: resolveRegions(regions),
   };

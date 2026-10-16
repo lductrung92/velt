@@ -89,11 +89,16 @@ export const vi = {
   "layout.footer.contact": "Liên hệ",
   "layout.chrome.tagline":
     "Đội ngũ phát triển sản phẩm số\ncho cá nhân, nhóm và doanh nghiệp.",
-  "layout.chrome.note_title": "Con người đứng sau sản phẩm",
-  "layout.chrome.note_text":
-    "Xem đội ngũ phát triển, kỹ năng\nvà thành viên phụ trách từng sản phẩm.",
-  "layout.chrome.copyright": "© {year} ZUKATEK. Cùng tiến về phía trước.",
-  "layout.chrome.cta_label": "Liên hệ",
+  "layout.chrome.copyright": "© {year} ZUKATEK",
+  "layout.newsletter.title": "Đăng ký nhận tin",
+  "layout.newsletter.text":
+    "Nhận thông tin sản phẩm mới và bài viết từ ZUKATEK.",
+  "layout.newsletter.placeholder": "Email của bạn",
+  "layout.newsletter.submit": "Đăng ký",
+  "layout.newsletter.sending": "Đang gửi…",
+  "layout.newsletter.done": "Cảm ơn bạn, chúng tôi sẽ gửi tin sớm thôi.",
+  "layout.newsletter.error":
+    "Chưa gửi được. Kiểm tra lại email rồi thử lần nữa.",
   "layout.back_to_top": "Về đầu trang ",
 } as const;
 
@@ -175,10 +180,14 @@ export const en: Record<keyof typeof vi, string> = {
   "layout.footer.contact": "Contact",
   "layout.chrome.tagline":
     "A team building digital products\nfor individuals, teams and companies.",
-  "layout.chrome.note_title": "The people behind the products",
-  "layout.chrome.note_text":
-    "Meet the team, see their skills\nand who looks after each product.",
-  "layout.chrome.copyright": "© {year} ZUKATEK. Moving forward together.",
-  "layout.chrome.cta_label": "Contact",
+  "layout.chrome.copyright": "© {year} ZUKATEK",
+  "layout.newsletter.title": "Subscribe to our newsletter",
+  "layout.newsletter.text": "News about new products and writing from ZUKATEK.",
+  "layout.newsletter.placeholder": "Your email",
+  "layout.newsletter.submit": "Subscribe",
+  "layout.newsletter.sending": "Sending…",
+  "layout.newsletter.done": "Thank you — you will hear from us soon.",
+  "layout.newsletter.error":
+    "That did not go through. Check the address and try again.",
   "layout.back_to_top": "Back to top ",
 };

@@ -1,16 +1,38 @@
+import { useEffect, useRef, useState } from "react";
 import { useSite } from "../context";
 import { PostCard } from "../components/blog/BlogCard";
 import { Icon } from "../components/Icon";
+import { Select } from "../components/Select";
+import { PageHeroVisual } from "../components/hero/PageHeroVisual";
+import { ListingViewToggle } from "../components/ListingViewToggle";
+import { ListingFilterToggle } from "../components/ListingFilterToggle";
+import { applyListingView, useListingView } from "../lib/listingView";
 
 export function Blog() {
   const { blog, url, referrer, href, t } = useSite();
+  const [view, changeView] = useListingView(url);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const closeFilters = () => {
+    setFiltersOpen(false);
+    document.getElementById("blog-extra-filters-toggle")?.focus();
+  };
+  const resetHref = href(view === "list" ? "/blog?view=list" : "/blog");
+  // The sort box drives a GET form, so the chosen value has to live somewhere
+  // the control can read back; the URL is what it ends up in either way.
+  const [sort, setSort] = useState(blog.sort);
+  const sortForm = useRef<HTMLFormElement>(null);
+  // Submit only once the hidden input has been re-rendered with the new value.
+  // Calling requestSubmit() straight from the change handler sends the value
+  // the input still held, so picking "oldest" used to reload "newest".
+  useEffect(() => {
+    if (sort !== blog.sort) sortForm.current?.requestSubmit();
+  }, [sort, blog.sort]);
   const filtered = !!blog.query || blog.sort !== "newest" || blog.page > 1;
-  const featured = !filtered ? blog.items[0] : undefined;
-  const items = featured ? blog.items.slice(1) : blog.items;
   const pages = Math.ceil(blog.total / blog.pageSize);
   const pageHref = (page: number) => {
     const params = new URLSearchParams(url.search);
     params.set("page", String(page));
+    applyListingView(params, view);
     return href(`/blog?${params}`);
   };
   const numbered = [
@@ -20,7 +42,7 @@ export function Blog() {
     .sort((a, b) => a - b);
   return (
     <div className="blog-page">
-      <header className="blog-masthead">
+      <header className="blog-masthead page-hero page-hero--blog">
         <div className="container">
           <nav
             className="blog-breadcrumb"
@@ -30,7 +52,7 @@ export function Blog() {
             <Icon name="chevron" />
             <span aria-current="page">Blog</span>
           </nav>
-          <div className="blog-masthead-copy">
+          <div className="blog-masthead-copy page-hero-copy">
             <span className="blog-eyebrow">ZUKATEK JOURNAL</span>
             <h1>
               {t("blog.masthead_title")}
@@ -42,86 +64,121 @@ export function Blog() {
               {t("blog.masthead_lead_2")}
             </p>
           </div>
-          <div className="blog-masthead-decoration" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
+          <PageHeroVisual kind="blog" />
         </div>
       </header>
       <section
-        className="blog-list-section container"
+        className="blog-list-section container listing-blog"
         aria-labelledby="blog-list-title"
       >
-        <div className="blog-toolbar">
+        <form
+          action={href("/blog")}
+          method="get"
+          className="listing-filters blog-listing-filters"
+          data-expanded={filtersOpen}
+          onKeyDown={(event) => {
+            if (
+              event.key === "Escape" &&
+              filtersOpen &&
+              !event.defaultPrevented
+            ) {
+              event.stopPropagation();
+              closeFilters();
+            }
+          }}
+          ref={sortForm}
+        >
+          {referrer && <input type="hidden" name="ref" value={referrer.id} />}
+          {view === "list" && <input type="hidden" name="view" value="list" />}
+          <div className="listing-field listing-query-field">
+            <label htmlFor="blog-query">{t("blog.search_label")}</label>
+            <div className="listing-search-control">
+              <svg viewBox="0 0 24 24" className="icon" aria-hidden="true">
+                <circle cx="10.5" cy="10.5" r="6.5" />
+                <path d="m16 16 5 5" />
+              </svg>
+              <input
+                type="search"
+                id="blog-query"
+                name="q"
+                defaultValue={blog.query}
+                placeholder={t("blog.search_placeholder")}
+                maxLength={200}
+              />
+              <button
+                className="listing-search-submit"
+                type="submit"
+                aria-label={t("blog.a11y.search_submit")}
+              >
+                <Icon name="arrow" />
+              </button>
+            </div>
+          </div>
+          <ListingFilterToggle
+            controls="blog-extra-filters"
+            expanded={filtersOpen}
+            activeCount={Number(sort !== "newest")}
+            onToggle={() => setFiltersOpen(!filtersOpen)}
+          />
+          <div className="listing-extra-filters" id="blog-extra-filters">
+            <div className="listing-field">
+              <label htmlFor="blog-sort">{t("blog.sort_label")}</label>
+              <Select
+                id="blog-sort"
+                name="sort"
+                value={sort}
+                ariaLabel={t("blog.sort_label")}
+                onChange={setSort}
+                options={[
+                  { value: "newest", label: t("blog.sort.newest") },
+                  { value: "oldest", label: t("blog.sort.oldest") },
+                  { value: "title", label: t("blog.sort.title") },
+                ]}
+              />
+            </div>
+            <div className="listing-filter-footer">
+              {filtered && (
+                <a className="listing-reset" href={resetHref}>
+                  {t("blog.clear_filters")}
+                </a>
+              )}
+              <button
+                className="listing-filter-done"
+                type="button"
+                onClick={closeFilters}
+              >
+                {t("listing.filters_done")}
+                <Icon name="check" />
+              </button>
+            </div>
+          </div>
+        </form>
+        <div className="listing-results blog-listing-results">
           <h2 id="blog-list-title">
             {blog.query ? t("blog.search_results_title") : t("blog.list_title")}
             {blog.status === "ready" && <span>{blog.total}</span>}
           </h2>
-          <form action="/blog" method="get" className="blog-search">
-            {referrer && <input type="hidden" name="ref" value={referrer.id} />}
-            <label className="blog-visually-hidden" htmlFor="blog-query">
-              {t("blog.search_label")}
-            </label>
-            <input
-              type="search"
-              id="blog-query"
-              name="q"
-              defaultValue={blog.query}
-              placeholder={t("blog.search_placeholder")}
-              maxLength={200}
-            />
-            <button type="submit" aria-label={t("blog.a11y.search_submit")}>
-              <Icon name="arrow" />
-            </button>
-            <label className="blog-visually-hidden" htmlFor="blog-sort">
-              {t("blog.sort_label")}
-            </label>
-            <select
-              name="sort"
-              id="blog-sort"
-              defaultValue={blog.sort}
-              aria-label={t("blog.sort_label")}
-              onChange={(event) => event.currentTarget.form?.requestSubmit()}
-            >
-              <option value="newest">{t("blog.sort.newest")}</option>
-              <option value="oldest">{t("blog.sort.oldest")}</option>
-              <option value="title">{t("blog.sort.title")}</option>
-            </select>
-          </form>
-        </div>
-        {filtered && (
-          <div className="blog-filter-summary">
-            <span>
-              {blog.query
-                ? t("blog.results_for", { query: blog.query })
-                : t("blog.all_articles_summary")}
-            </span>
-            <a href={href("/blog")}>{t("blog.clear_filters")}</a>
+          <div className="listing-results-actions">
+            {filtered && (
+              <a className="listing-reset" href={resetHref}>
+                {t("blog.clear_filters")}
+                <Icon name="close" />
+              </a>
+            )}
+            <ListingViewToggle value={view} onChange={changeView} />
           </div>
-        )}
+        </div>
         {blog.status === "unavailable" ? (
           <BlogEmpty error />
         ) : blog.items.length === 0 ? (
-          <BlogEmpty filtered={!!blog.query} />
+          <BlogEmpty filtered={!!blog.query} resetHref={resetHref} />
         ) : (
           <>
-            {featured && <PostCard post={featured} featured />}
-            {items.length > 0 && (
-              <>
-                <div className="blog-grid-heading">
-                  <h2>
-                    {featured ? t("blog.more_title") : t("blog.all_title")}
-                  </h2>
-                  <span>{t("blog.grid_subtitle")}</span>
-                </div>
-                <div className="blog-grid">
-                  {items.map((post) => (
-                    <PostCard post={post} key={post.slug} />
-                  ))}
-                </div>
-              </>
-            )}
+            <div className="blog-grid" data-view={view}>
+              {blog.items.map((post) => (
+                <PostCard post={post} key={post.slug} listing />
+              ))}
+            </div>
             {pages > 1 && (
               <nav
                 className="blog-pagination"
@@ -178,9 +235,11 @@ export function Blog() {
 export function BlogEmpty({
   error = false,
   filtered = false,
+  resetHref,
 }: {
   error?: boolean;
   filtered?: boolean;
+  resetHref?: string;
 }) {
   const { href, url, t } = useSite();
   return (
@@ -205,7 +264,11 @@ export function BlogEmpty({
       {(error || filtered) && (
         <a
           className="button button-soft"
-          href={error ? href(url.pathname + url.search) : href("/blog")}
+          href={
+            error
+              ? href(url.pathname + url.search)
+              : (resetHref ?? href("/blog"))
+          }
         >
           {error ? t("blog.empty.retry") : t("blog.empty.view_all")}
           <Icon name="arrow" />

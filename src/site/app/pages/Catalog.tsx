@@ -1,12 +1,29 @@
 import { Fragment, useEffect, useState } from "react";
 import { useSite } from "../context";
-import { lifecycleLabel, readFilters, selectProducts } from "../lib/catalog";
+import {
+  categoryLabel,
+  categoryOf,
+  lifecycleLabel,
+  readFilters,
+  selectProducts,
+} from "../lib/catalog";
 import type { Filters } from "../lib/catalog";
-import { Categories, ProductCard } from "../components/Products";
+import { ProductCard } from "../components/Products";
 import { Icon } from "../components/Icon";
+import { Select } from "../components/Select";
+import { PageHeroVisual } from "../components/hero/PageHeroVisual";
+import { ListingViewToggle } from "../components/ListingViewToggle";
+import { ListingFilterToggle } from "../components/ListingFilterToggle";
+import { applyListingView, useListingView } from "../lib/listingView";
 
 export function Catalog() {
   const { products, isExample, url, href, referrer, t, layout } = useSite();
+  const [view, changeView] = useListingView(url);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const closeFilters = () => {
+    setFiltersOpen(false);
+    document.getElementById("catalog-extra-filters-toggle")?.focus();
+  };
   const [filters, setFilters] = useState(() => readFilters(url, products));
   const results = selectProducts(products, filters),
     totalPages = Math.max(
@@ -17,7 +34,11 @@ export function Catalog() {
   const page = Math.min(filters.page, totalPages),
     start = (page - 1) * perPage;
   const statuses = [
-    ...new Set(products.map((product) => product.status).filter(Boolean)),
+    ...new Set(
+      products
+        .map((product) => product.status)
+        .filter((status): status is string => !!status),
+    ),
   ];
   useEffect(() => {
     const params = new URLSearchParams();
@@ -27,12 +48,13 @@ export function Catalog() {
     if (filters.status) params.set("status", filters.status);
     if (filters.sort !== "featured") params.set("sort", filters.sort);
     if (page > 1) params.set("page", String(page));
+    applyListingView(params, view);
     history.replaceState(
       null,
       "",
       `/products${params.size ? `?${params}` : ""}`,
     );
-  }, [filters, page, referrer]);
+  }, [filters, page, referrer, view]);
   useEffect(() => {
     const back = () =>
       setFilters(readFilters(new URL(location.href), products));
@@ -41,15 +63,23 @@ export function Catalog() {
   }, [products]);
   const change = (next: Partial<Filters>) =>
     setFilters((current) => ({ ...current, ...next, page: 1 }));
+  const categories = [...new Set(products.map(categoryOf))];
+  const filtered =
+    !!filters.query ||
+    !!filters.category ||
+    !!filters.status ||
+    filters.sort !== "featured";
+  const resetFilters = () => {
+    setFilters(readFilters(new URL("http://site.local/products"), products));
+    document.querySelector<HTMLInputElement>("#product-search")?.focus();
+  };
   const navigatePage = (value: number) => {
     setFilters((current) => ({ ...current, page: value }));
-    document
-      .querySelector("#catalog-results-top")
-      ?.scrollIntoView({
-        behavior: matchMedia("(prefers-reduced-motion:reduce)").matches
-          ? "instant"
-          : "smooth",
-      });
+    document.querySelector("#catalog-results-top")?.scrollIntoView({
+      behavior: matchMedia("(prefers-reduced-motion:reduce)").matches
+        ? "instant"
+        : "smooth",
+    });
     document
       .querySelector<HTMLElement>("#catalog-count")
       ?.focus({ preventScroll: true });
@@ -59,49 +89,22 @@ export function Catalog() {
     .sort((a, b) => a - b);
   return (
     <>
-      <section className="catalog-hero">
+      <section className="catalog-hero page-hero page-hero--products">
         <div className="container">
           <nav className="breadcrumbs" aria-label={t("catalog.breadcrumb")}>
             <a href={href("/")}>{t("catalog.breadcrumb_home")}</a>
             <span aria-hidden="true">/</span>
             <span>{t("catalog.breadcrumb_products")}</span>
           </nav>
-          <span className="tag">{t("catalog.hero_eyebrow")}</span>
-          <h1>{t("catalog.hero_title")}</h1>
-          <p>{t("catalog.hero_body")}</p>
-          <label className="catalog-search">
-            <svg viewBox="0 0 24 24" className="icon" aria-hidden="true">
-              <circle cx="10.5" cy="10.5" r="6.5" />
-              <path d="m16 16 5 5" />
-            </svg>
-            <span className="sr-only">{t("catalog.search_label")}</span>
-            <input
-              id="product-search"
-              type="search"
-              placeholder={t("catalog.search_placeholder")}
-              autoComplete="off"
-              maxLength={200}
-              value={filters.query}
-              onChange={(event) => change({ query: event.target.value })}
-            />
-            <button
-              type="button"
-              id="clear-search"
-              aria-label={t("catalog.search_clear")}
-              hidden={!filters.query}
-              onClick={() => {
-                change({ query: "" });
-                document
-                  .querySelector<HTMLInputElement>("#product-search")
-                  ?.focus();
-              }}
-            >
-              ×
-            </button>
-          </label>
+          <div className="page-hero-copy catalog-hero-copy">
+            <span className="tag">{t("catalog.hero_eyebrow")}</span>
+            <h1>{t("catalog.hero_title")}</h1>
+            <p>{t("catalog.hero_body")}</p>
+          </div>
+          <PageHeroVisual kind="products" />
         </div>
       </section>
-      <section className="catalog-section">
+      <section className="catalog-section catalog-listing">
         <div className="container">
           {isExample && (
             <div className="catalog-example-note" id="catalog-example-note">
@@ -110,17 +113,139 @@ export function Catalog() {
             </div>
           )}
           <div
-            className="category-list"
+            className="listing-filters catalog-filters"
             id="catalog-categories"
+            data-expanded={filtersOpen}
+            onKeyDown={(event) => {
+              if (
+                event.key === "Escape" &&
+                filtersOpen &&
+                !event.defaultPrevented
+              ) {
+                event.stopPropagation();
+                closeFilters();
+              }
+            }}
+            role="group"
             aria-label={t("catalog.categories_label")}
           >
-            <Categories
-              products={products}
-              selected={filters.category}
-              onChange={(category) => change({ category })}
+            <div className="listing-field listing-query-field">
+              <label htmlFor="product-search">
+                {t("catalog.search_label")}
+              </label>
+              <div className="listing-search-control">
+                <svg viewBox="0 0 24 24" className="icon" aria-hidden="true">
+                  <circle cx="10.5" cy="10.5" r="6.5" />
+                  <path d="m16 16 5 5" />
+                </svg>
+                <input
+                  id="product-search"
+                  type="search"
+                  placeholder={t("catalog.search_placeholder")}
+                  autoComplete="off"
+                  maxLength={200}
+                  value={filters.query}
+                  onChange={(event) => change({ query: event.target.value })}
+                />
+                <button
+                  type="button"
+                  id="clear-search"
+                  aria-label={t("catalog.search_clear")}
+                  hidden={!filters.query}
+                  onClick={() => {
+                    change({ query: "" });
+                    document
+                      .querySelector<HTMLInputElement>("#product-search")
+                      ?.focus();
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <ListingFilterToggle
+              controls="catalog-extra-filters"
+              expanded={filtersOpen}
+              activeCount={
+                Number(!!filters.category) +
+                Number(!!filters.status) +
+                Number(filters.sort !== "featured")
+              }
+              onToggle={() => setFiltersOpen(!filtersOpen)}
             />
+            <div className="listing-extra-filters" id="catalog-extra-filters">
+              <div className="listing-field">
+                <label htmlFor="product-category">
+                  {t("catalog.category_label")}
+                </label>
+                <Select
+                  id="product-category"
+                  value={filters.category}
+                  onChange={(category) => change({ category })}
+                  options={[
+                    { value: "", label: t("catalog.categories_all") },
+                    ...categories.map((value) => ({
+                      value,
+                      label: categoryLabel(t, value),
+                    })),
+                  ]}
+                />
+              </div>
+              <div className="listing-field">
+                <label htmlFor="product-status">
+                  {t("catalog.status_label")}
+                </label>
+                <Select
+                  id="product-status"
+                  value={filters.status}
+                  onChange={(status) => change({ status })}
+                  options={[
+                    { value: "", label: t("catalog.status_all") },
+                    ...statuses.map((value) => ({
+                      value,
+                      label: lifecycleLabel(t, value),
+                    })),
+                  ]}
+                />
+              </div>
+              <div className="listing-field">
+                <label htmlFor="product-sort">{t("catalog.sort_label")}</label>
+                <Select
+                  id="product-sort"
+                  value={filters.sort}
+                  onChange={(sort) => change({ sort })}
+                  options={[
+                    { value: "featured", label: t("catalog.sort_featured") },
+                    { value: "newest", label: t("catalog.sort_newest") },
+                    { value: "name", label: t("catalog.sort_name") },
+                  ]}
+                />
+              </div>
+              <div className="listing-filter-footer">
+                {filtered && (
+                  <button
+                    className="listing-reset"
+                    type="button"
+                    onClick={resetFilters}
+                  >
+                    {t("catalog.empty_reset")}
+                  </button>
+                )}
+                <button
+                  className="listing-filter-done"
+                  type="button"
+                  onClick={closeFilters}
+                >
+                  {t("listing.filters_done")}
+                  <Icon name="check" />
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="catalog-toolbar" id="catalog-results-top">
+          <div
+            className="listing-results catalog-listing-results"
+            id="catalog-results-top"
+          >
             <p
               id="catalog-count"
               role="status"
@@ -140,39 +265,23 @@ export function Catalog() {
                   )
                 : t("catalog.no_matches")}
             </p>
-            <div className="catalog-selects">
-              <label>
-                <span>{t("catalog.status_label")}</span>
-                <select
-                  id="product-status"
-                  value={filters.status}
-                  onChange={(event) => change({ status: event.target.value })}
+            <div className="listing-results-actions">
+              {filtered && (
+                <button
+                  className="listing-reset"
+                  type="button"
+                  onClick={resetFilters}
                 >
-                  <option value="">{t("catalog.status_all")}</option>
-                  {statuses.map((status) => (
-                    <option key={status} value={status}>
-                      {lifecycleLabel(t, status)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>{t("catalog.sort_label")}</span>
-                <select
-                  id="product-sort"
-                  value={filters.sort}
-                  onChange={(event) => change({ sort: event.target.value })}
-                >
-                  <option value="featured">{t("catalog.sort_featured")}</option>
-                  <option value="newest">{t("catalog.sort_newest")}</option>
-                  <option value="name">{t("catalog.sort_name")}</option>
-                </select>
-              </label>
+                  {t("catalog.empty_reset")}
+                  <Icon name="close" />
+                </button>
+              )}
+              <ListingViewToggle value={view} onChange={changeView} />
             </div>
           </div>
-          <div className="catalog-grid" id="catalog-list">
+          <div className="catalog-grid" id="catalog-list" data-view={view}>
             {results.slice(start, start + perPage).map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} listing />
             ))}
           </div>
           {!results.length && (
@@ -183,17 +292,7 @@ export function Catalog() {
               <button
                 className="button button-soft"
                 id="reset-filters"
-                onClick={() => {
-                  setFilters(
-                    readFilters(
-                      new URL("http://site.local/products"),
-                      products,
-                    ),
-                  );
-                  document
-                    .querySelector<HTMLInputElement>("#product-search")
-                    ?.focus();
-                }}
+                onClick={resetFilters}
               >
                 {t("catalog.empty_reset")}
               </button>

@@ -221,20 +221,56 @@ describe("SystemSettings", () => {
     await waitFor(() => expect(to).toBe("me@example.com"));
   });
 
-  it("the AI tab is the same screen, with the two things that are not settings", async () => {
+  it("the AI tab is the same screen, with the parts that are not settings", async () => {
     // AI used to be a screen of its own with its own layout. It is a tab now,
-    // built from the same sections as every other tab, plus the connection
-    // test and the usage chart — which are not values anybody types.
+    // built from the same sections as every other tab, plus the things that
+    // are not values anybody types: the endpoints, the routing, the
+    // connection test and the usage chart.
     signIn(["settings.manage"]);
     server.use(
       http.get(`${API}/settings`, () =>
         HttpResponse.json({
-          ai: [
-            { key: "ai.enabled", type: "bool", value: true },
-            { key: "ai.api_key", type: "secret", is_set: false },
-            { key: "ai.model", type: "string", value: "claude-sonnet-5-5" },
+          ai: [{ key: "ai.enabled", type: "bool", value: true }],
+        }),
+      ),
+      http.get(`${API}/ai/providers`, () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "p1",
+              label: "Groq",
+              kind: "openai",
+              base_url: "https://api.groq.com/openai/v1",
+              has_key: true,
+              enabled: true,
+              sort_order: 0,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
           ],
         }),
+      ),
+      http.get(`${API}/ai/chains/:purpose`, ({ params }) =>
+        HttpResponse.json({
+          purpose: params.purpose,
+          steps:
+            params.purpose === "chat"
+              ? [
+                  {
+                    id: "s1",
+                    purpose: "chat",
+                    provider_id: "p1",
+                    provider_label: "Groq",
+                    provider_enabled: true,
+                    model: "qwen/qwen3.8-27b",
+                    sort_order: 0,
+                  },
+                ]
+              : [],
+        }),
+      ),
+      http.get(`${API}/ai/providers/:id/models`, () =>
+        HttpResponse.json({ items: ["qwen/qwen3.8-27b"] }),
       ),
       http.get(`${API}/ai/status`, () =>
         HttpResponse.json({
@@ -250,16 +286,21 @@ describe("SystemSettings", () => {
     );
     renderPage();
 
-    // The fields render through the standard rows…
+    // The endpoint is a record now, listed by name rather than typed into a
+    // Base URL box.
+    expect(await screen.findByText("Groq")).toBeInTheDocument();
     expect(
-      await screen.findByLabelText(i18n.t("settings.label.ai_model")),
-    ).toHaveValue("claude-sonnet-5-5");
-    // …under the standard section headings. They are queried as headings
-    // because the connection section and its button share a name.
+      screen.getByText("https://api.groq.com/openai/v1"),
+    ).toBeInTheDocument();
+    // Each job shows the chain it runs.
+    expect(
+      screen.getByRole("heading", { name: i18n.t("ai.purpose.chat") }),
+    ).toBeInTheDocument();
+    // Headings, because the connection section and its button share a name.
     const heading = (key: string) =>
       screen.getByRole("heading", { name: i18n.t(key) });
-    expect(heading("settings.section.ai_connection.title")).toBeInTheDocument();
-    // …and the two extras are there, in sections of their own.
+    expect(heading("settings.section.ai_providers.title")).toBeInTheDocument();
+    expect(heading("settings.section.ai_routing.title")).toBeInTheDocument();
     expect(heading("settings.section.ai_check.title")).toBeInTheDocument();
     expect(heading("settings.section.ai_usage.title")).toBeInTheDocument();
     expect(

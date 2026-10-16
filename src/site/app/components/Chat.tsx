@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSite } from "../context";
-import { contactFor } from "../lib/links";
 import {
   ChatError,
   loadTranscript,
   openStream,
-  requestHuman,
   sendMessage,
   startConversation,
   type ChatMessage,
@@ -46,7 +44,7 @@ function speaker(t: T, role: ChatMessage["role"], degraded: boolean): string {
 }
 
 export function Chat() {
-  const { data, referrer, url, t } = useSite();
+  const { referrer, url, t } = useSite();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -62,10 +60,6 @@ export function Chat() {
   const log = useRef<HTMLDivElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
-
-  const target = contactFor(data, referrer?.id);
-  const contactLink =
-    target.zalo || (target.email ? `mailto:${target.email}` : "#contact");
 
   // Opening the widget is what starts a conversation — not page load. A visitor
   // who never opens the chat costs nothing and leaves no row behind.
@@ -157,26 +151,6 @@ export function Chat() {
     } finally {
       setSending(false);
       input.current?.focus({ preventScroll: true });
-    }
-  }
-
-  async function askForHuman() {
-    const id = conversationId.current;
-    if (!id) return;
-    setNotice("");
-    try {
-      const res = await requestHuman(id);
-      setState(res.state);
-    } catch (err) {
-      // Nobody on duty is the expected case outside office hours, and saying so
-      // beats parking the visitor in a queue that will not move.
-      setNotice(
-        t(
-          err instanceof ChatError && err.key === "no_staff_online"
-            ? "chat.error_no_staff"
-            : "chat.error_handoff",
-        ),
-      );
     }
   }
 
@@ -298,36 +272,11 @@ export function Chat() {
           </div>
         </div>
 
-        <div className="chat-handoff">
-          {notice && <p>{notice}</p>}
-          <div>
-            <button
-              type="button"
-              className="chat-copy"
-              disabled={!conversationId.current || waiting || withHuman}
-              onClick={() => void askForHuman()}
-            >
-              <Icon name="support" />
-              {t(
-                withHuman
-                  ? "chat.handoff_joined"
-                  : waiting
-                    ? "chat.handoff_waiting"
-                    : "chat.handoff_ask",
-              )}
-            </button>
-            <a
-              className="chat-contact-link"
-              href={contactLink}
-              target={target.zalo ? "_blank" : undefined}
-              rel={target.zalo ? "noopener noreferrer" : undefined}
-              onClick={() => toggle(false)}
-            >
-              {t("chat.contact_direct")}
-              <Icon name="arrow" />
-            </a>
+        {notice && (
+          <div className="chat-handoff" role="status">
+            <p>{notice}</p>
           </div>
-        </div>
+        )}
 
         <form
           className="chat-composer"

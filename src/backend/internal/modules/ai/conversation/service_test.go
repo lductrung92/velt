@@ -84,9 +84,11 @@ func TestDegradedFallsBackToTheScriptedBot(t *testing.T) {
 	require.Contains(t, last.Content, "liên hệ", "the scripted reply should still route the visitor somewhere")
 }
 
+// The key now belongs to the endpoint, not to a setting: an endpoint with no
+// credential is still a degraded assistant rather than an outage.
 func TestNoAPIKeyIsDegradedNotAnError(t *testing.T) {
 	e := newEnv(t)
-	e.settings.secrets[shared.KeyAPIKey] = "   "
+	e.chain.apiKey = ""
 	res, _ := e.svc.Start(ctx(), key, StartRequest{})
 	out, err := e.svc.Send(ctx(), key, res.ID, SendRequest{Content: "xin chào"})
 	require.NoError(t, err)

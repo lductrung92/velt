@@ -412,7 +412,7 @@ INSERT INTO public.system_settings (key, value) VALUES
   ('site.brand_tagline', '"Đội ngũ phát triển sản phẩm số\ncho cá nhân, nhóm và doanh nghiệp."'::jsonb),
   ('site.footer_note_title', '"Con người đứng sau sản phẩm"'::jsonb),
   ('site.footer_note_text', '"Xem đội ngũ phát triển, kỹ năng\nvà thành viên phụ trách từng sản phẩm."'::jsonb),
-  ('site.footer_copyright', '"© {year} ZUKATEK. Cùng tiến về phía trước."'::jsonb),
+  ('site.footer_copyright', '"© {year} ZUKATEK"'::jsonb),
   ('site.header_cta_label', '"Liên hệ"'::jsonb),
   ('site.header_cta_url', '"/#contact"'::jsonb)
 ON CONFLICT (key) DO NOTHING;
@@ -455,7 +455,7 @@ INSERT INTO public.translations (entity, entity_id, locale, values) VALUES
   ('menu_item', '25f8e38c-293a-4fe9-914b-bda04de40262', 'en', '{"label": "About ZUKATEK"}'::jsonb),
   ('menu_item', '515d8f42-b654-4d8f-a69a-80fd0a51808c', 'en', '{"label": "Buying & using products"}'::jsonb),
   ('menu_item', '82fb6df5-e4b0-4c28-8cd8-ee60c610d7ee', 'en', '{"label": "Contact"}'::jsonb),
-  ('site_chrome', '00000000-0000-0000-0000-00005174e000', 'en', '{"brand_tagline": "A team building digital products\nfor individuals, teams and companies.", "footer_note_title": "The people behind the products", "footer_note_text": "Meet the team, see their skills\nand who looks after each product.", "footer_copyright": "© {year} ZUKATEK. Moving forward together.", "header_cta_label": "Contact", "header_cta_url": "/#contact"}'::jsonb),
+  ('site_chrome', '00000000-0000-0000-0000-00005174e000', 'en', '{"brand_tagline": "A team building digital products\nfor individuals, teams and companies.", "footer_note_title": "The people behind the products", "footer_note_text": "Meet the team, see their skills\nand who looks after each product.", "footer_copyright": "© {year} ZUKATEK", "header_cta_label": "Contact", "header_cta_url": "/#contact"}'::jsonb),
 ('landing_section', '4c1dd11a-dd98-411a-a4ff-db711648a8c9', 'en', '{"config": {"eyebrow": "THE ZUKATEK PRODUCT ECOSYSTEM", "heading": "Digital products\nfor the work you do.", "subheading": "ZUKATEK builds and delivers digital products for individuals, teams, small businesses and companies. Explore the features, try a product and get advice on the right fit."}}'::jsonb),
   ('landing_section', 'd87c6149-d803-4589-a738-31f22c7a5e46', 'en', '{"config": {"title": "Products that match the way you work", "subtitle": "Digital products for personal work, for working together in a team, and for running a company.", "items": [{"label": "Individuals", "headline": "For individuals", "body": "Tools for everyday work: taking notes, keeping information in order and staying on top of your own tasks.", "cta_label": "Advice for individuals "}, {"label": "Teams", "headline": "For teams", "body": "Products that help a team organise its work, share documents and follow progress in one place.", "cta_label": "Advice for teams "}, {"label": "Companies", "headline": "For companies", "body": "Products for managing and running a business. Check the features, the scope and the cost before you buy.", "cta_label": "Advice for companies "}]}}'::jsonb),
   ('landing_section', 'eff1940f-2e77-45d2-9588-61c890ef01ee', 'en', '{"config": {"title": "ZUKATEK products", "subtitle": "Explore the features, open a demo and ask for advice about the product you have in mind.", "show_all_label": "See every product "}}'::jsonb),

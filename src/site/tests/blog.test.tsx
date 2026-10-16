@@ -64,6 +64,16 @@ test("blog list renders published cards and preserves referral/search pagination
   assert.equal(result.noindex, true);
 });
 
+// The sort control is a react-select now, so what the GET form submits is the
+// hidden input it renders. Lose that and the form posts no sort at all.
+test("the sort control is submitted as a form field carrying the current sort", () => {
+  const result = render("/blog?sort=oldest", { ...emptyBlog(), sort: "oldest" });
+  assert.equal(result.status, 200);
+  assert.match(result.html, /<input[^>]*name="sort"[^>]*value="oldest"/);
+  // No native <select> is left to submit a competing value.
+  assert.ok(!/<select/.test(result.html));
+});
+
 test("article SSR renders readable CMS HTML, stable heading links and article SEO", () => {
   const result = render("/blog/bai-viet-thu", {
     ...emptyBlog(),

@@ -191,6 +191,33 @@ describe("ProductCategoryEditor", () => {
     expect(posted.mock.calls[0][0]).not.toHaveProperty("slug");
   });
 
+  // Saving a new category carries on editing it: the SEO and the translations
+  // live on the edit screen. Only a delete goes back to the list.
+  it("create: carries on to the edit screen, not back to the list", async () => {
+    signIn(MANAGER);
+    server.use(
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({ items: [category()] }),
+      ),
+      http.post(`${API}/product-categories`, () =>
+        HttpResponse.json(category(), { status: 201 }),
+      ),
+    );
+    renderAt("/product-categories/new");
+
+    await userEvent.type(
+      await screen.findByLabelText(/Tên danh mục/),
+      "Giáo dục",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("common.save") }),
+    );
+
+    // The editor re-reads the created row: its stored name, not what was typed
+    // into the create form, is what the field shows afterwards.
+    expect(await screen.findByDisplayValue("Cộng tác")).toBeVisible();
+  });
+
   // The list can show and filter a status; this is the only screen that can
   // set one.
   it("shows the stored status and PATCHes the one that was picked", async () => {

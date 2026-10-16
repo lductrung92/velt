@@ -272,6 +272,46 @@ describe("ProductCategoryList", () => {
     ).toBeInTheDocument();
   });
 
+  // Four cards, the same shape as the articles list: a total and one per
+  // status, each filtering to what it counts.
+  it("overview: four status cards, and one of them filters the list", async () => {
+    signIn(VIEWER);
+    server.use(
+      http.get(`${API}/product-categories`, () =>
+        HttpResponse.json({
+          items: [TWO[0], { ...TWO[1], status: "archived" }],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByTestId("product-categories-table");
+
+    const overview = screen.getByLabelText(
+      i18n.t("products.categories.overview.label"),
+    );
+    const cards = within(overview).getAllByRole("button");
+    expect(cards).toHaveLength(4);
+    expect(cards.map((c) => c.getAttribute("data-kind"))).toEqual([
+      "total",
+      "published",
+      "draft",
+      "archived",
+    ]);
+    // The old scope cards counted products, not statuses.
+    expect(overview).not.toHaveTextContent(
+      i18n.t("products.categories.col.product_count"),
+    );
+
+    await user.click(cards[3]);
+    const rows = screen.getAllByTestId("product-category-row");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("AI & tự động hoá");
+    // Clicking the same card again clears the filter.
+    await user.click(cards[3]);
+    expect(screen.getAllByTestId("product-category-row")).toHaveLength(2);
+  });
+
   it("status tabs: picking one filters the list", async () => {
     signIn(VIEWER);
     server.use(

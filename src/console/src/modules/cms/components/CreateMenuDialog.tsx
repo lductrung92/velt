@@ -33,12 +33,7 @@ import type { MenuSlot } from "../services/menus.service";
 // Common navigation slots offered in the location picker. `location` is
 // free-form on the backend, so edit mode keeps a legacy/custom value
 // selectable (see locationOptions) rather than dropping it.
-const MENU_LOCATIONS = [
-  "header",
-  "header_mobile",
-  "footer",
-  "sidebar",
-] as const;
+const MENU_LOCATIONS = ["header", "footer", "sidebar"] as const;
 
 // Create/edit dialog for a menu slot. `slot` present = edit, absent = create.
 // Several menus may share a location, so saving one cannot conflict with another.

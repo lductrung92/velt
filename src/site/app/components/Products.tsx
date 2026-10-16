@@ -76,7 +76,13 @@ export function ProductVisual({
     </div>
   );
 }
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({
+  product,
+  listing = false,
+}: {
+  product: Product;
+  listing?: boolean;
+}) {
   const { data, referrer, href, t } = useSite();
   const people = data.members.filter((member) =>
     product.memberIds?.includes(member.id),
@@ -84,6 +90,72 @@ export function ProductCard({ product }: { product: Product }) {
   const status = lifecycleTone(product.status);
   const detail = href(productPath(product)),
     demo = demoLink(product, referrer);
+  if (listing)
+    return (
+      <article className="catalog-listing-card">
+        <a
+          className="listing-product-cover"
+          href={detail}
+          aria-label={t("catalog.card_view_aria", { name: product.name })}
+        >
+          <ProductVisual product={product} />
+          {product.example && (
+            <span className="listing-example-label">
+              {t("catalog.card_example")}
+            </span>
+          )}
+        </a>
+        <div className="listing-product-copy">
+          <div className="listing-product-meta">
+            {product.category?.trim() && (
+              <span>{categoryLabel(t, categoryOf(product))}</span>
+            )}
+            {product.status && (
+              <span className={`listing-product-status ${status}`}>
+                <i />
+                {lifecycleLabel(t, product.status)}
+              </span>
+            )}
+          </div>
+          <h3>
+            <a href={detail}>{product.name}</a>
+          </h3>
+          {product.summary && (
+            <p className="listing-product-summary">{product.summary}</p>
+          )}
+          <div className="listing-product-actions">
+            <a
+              href={detail}
+              aria-label={t("catalog.card_view_aria", { name: product.name })}
+            >
+              {t("catalog.card_detail")}
+              <Icon name="arrow" />
+            </a>
+            {demo && (
+              <a
+                className="listing-product-demo"
+                href={demo}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t(
+                  product.demoPlaceholder
+                    ? "catalog.card_demo_placeholder_aria"
+                    : "catalog.card_demo_aria",
+                  { name: product.name },
+                )}
+              >
+                {t(
+                  product.demoPlaceholder
+                    ? "catalog.card_demo_placeholder"
+                    : "catalog.card_demo",
+                )}
+                <span aria-hidden="true">↗</span>
+              </a>
+            )}
+          </div>
+        </div>
+      </article>
+    );
   return (
     <article className="catalog-card">
       <ProductVisual product={product} />

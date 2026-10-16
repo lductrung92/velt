@@ -69,12 +69,18 @@ func (s *Service) Status(ctx context.Context, id *httpx.Identity) (Status, error
 	if err := s.Require(ctx, id, permSettings); err != nil {
 		return Status{}, err
 	}
-	cl := s.client(ctx)
+	// Everything here describes the link that would answer the NEXT visitor
+	// message: the first runnable step of the chat chain. Reading it from the
+	// chain rather than from settings is what keeps the screen honest now
+	// that an endpoint is a record, not four settings.
+	cl := s.client(ctx, shared.PurposeChat)
 	st := Status{
 		Provider: cl.Kind(), Model: cl.Model(),
-		BaseURL:     s.settings.GetString(ctx, shared.KeyBaseURL),
-		HasKey:      strings.TrimSpace(s.settings.GetSecret(ctx, shared.KeyAPIKey)) != "",
 		StaffOnline: s.presence.Count(),
+	}
+	if links, err := s.endpoints.Available(ctx, string(shared.PurposeChat)); err == nil && len(links) > 0 {
+		st.BaseURL = links[0].BaseURL
+		st.HasKey = strings.TrimSpace(links[0].APIKey) != ""
 	}
 	switch {
 	case !s.settings.GetBool(ctx, shared.KeyEnabled):
@@ -120,7 +126,9 @@ func (s *Service) Models(ctx context.Context, id *httpx.Identity) ([]string, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
-	names, err := s.client(ctx).Models(ctx)
+	// Endpoint-level: the list is what the account offers, the same for
+	// every purpose.
+	names, err := s.client(ctx, shared.PurposeChat).Models(ctx)
 	if err != nil {
 		// As in Test: the body is log-only, because this endpoint can be
 		// pointed at an internal host and the screen renders whatever comes
@@ -155,7 +163,10 @@ func (s *Service) Test(ctx context.Context, id *httpx.Identity) (TestResult, err
 	if err := s.Require(ctx, id, permSettings); err != nil {
 		return TestResult{}, err
 	}
-	cl := s.client(ctx)
+	// The chat model on purpose: this probe's whole point is whether the model
+	// calls tools, and that only matters for the chatbot. The content model
+	// shares the endpoint, so the same probe proves its connectivity too.
+	cl := s.client(ctx, shared.PurposeChat)
 	res := TestResult{Provider: cl.Kind(), Model: cl.Model()}
 	if !cl.Ready() {
 		res.Error = "chưa cấu hình đủ để gọi"

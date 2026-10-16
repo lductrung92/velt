@@ -70,7 +70,7 @@ func (c *anthropicClient) Models(ctx context.Context) ([]string, error) {
 	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode != http.StatusOK {
 		slurp, _ := io.ReadAll(io.LimitReader(res.Body, 4<<10))
-		return nil, &APIError{Status: res.StatusCode, Body: string(slurp)}
+		return nil, &APIError{Status: res.StatusCode, Body: string(slurp), RetryAfter: retryAfter(res.Header)}
 	}
 	var body struct {
 		Data []struct {
@@ -220,7 +220,7 @@ func (c *anthropicClient) once(ctx context.Context, body wireRequest, onDelta fu
 
 	if res.StatusCode != http.StatusOK {
 		slurp, _ := io.ReadAll(io.LimitReader(res.Body, 4<<10))
-		return "", nil, Usage{}, &APIError{Status: res.StatusCode, Body: string(slurp)}
+		return "", nil, Usage{}, &APIError{Status: res.StatusCode, Body: string(slurp), RetryAfter: retryAfter(res.Header)}
 	}
 
 	var (

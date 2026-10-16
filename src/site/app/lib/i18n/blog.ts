@@ -70,6 +70,9 @@ export const vi = {
   "blog.article.toc_title": "Trong bài viết này",
   "blog.a11y.toc": "Mục lục bài viết",
   "blog.article.share": "Chia sẻ bài viết",
+  "blog.article.share_on": "Chia sẻ qua {network}",
+  "blog.article.zalo_paste":
+    "Liên kết đã được sao chép. Dán vào Zalo để chia sẻ.",
   "blog.article.copy_link": "Sao chép liên kết",
   "blog.article.copied": "Đã sao chép",
   "blog.article.copy_ok": "Liên kết đã được sao chép.",
@@ -143,6 +146,8 @@ export const en: Record<keyof typeof vi, string> = {
   "blog.article.toc_title": "In this article",
   "blog.a11y.toc": "Article contents",
   "blog.article.share": "Share this article",
+  "blog.article.share_on": "Share via {network}",
+  "blog.article.zalo_paste": "Link copied. Paste it into Zalo to share.",
   "blog.article.copy_link": "Copy link",
   "blog.article.copied": "Copied",
   "blog.article.copy_ok": "The link has been copied.",

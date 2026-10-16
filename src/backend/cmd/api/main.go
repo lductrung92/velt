@@ -248,6 +248,9 @@ func run() error {
 	ai.Register(r, pool, settingsSvc, logger, authMW, ai.Deps{
 		Catalog: productsWiring.PublicCatalog,
 		Leads:   crmLeads,
+		// Push services want somebody to contact if a sender misbehaves; the
+		// address we already send mail from is that somebody.
+		NotifySubject: "mailto:" + cfg.MailFrom,
 		Roster: func(ctx context.Context) ([]aitools.Person, error) {
 			res, err := membersSvc.ListPublic(ctx, members.ListParams{PageSize: 100})
 			if err != nil {
@@ -265,7 +268,7 @@ func run() error {
 			}
 			return out, nil
 		},
-	}, cfg.CookieSecure, limiter, cfg.TrustProxyHeaders)
+	}, cfg.CookieSecure, limiter, cfg.TrustProxyHeaders, aead)
 	// cms bounded context (taxonomy + feature-flag settings + articles/pages/menus/
 	// landing/comments/newsletter); settingsSvc is the scoped reader/writer for the
 	// cms.* registry keys (CMS gates cms.settings.* itself).

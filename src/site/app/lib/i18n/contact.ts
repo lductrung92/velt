@@ -106,7 +106,7 @@ export const vi = {
   "chat.footer": "Hỗ trợ sản phẩm từ ZUKATEK",
 
   "chat.error_connect":
-    "Chưa kết nối được trợ lý. Bạn có thể liên hệ trực tiếp bên dưới.",
+    "Chưa kết nối được trợ lý. Bạn thử lại sau nhé.",
   "chat.error_turn_limit":
     "Cuộc trò chuyện đã dài. Bạn để lại liên hệ để bên mình chủ động gọi lại nhé.",
   "chat.error_send": "Chưa gửi được tin nhắn. Bạn thử lại giúp mình.",
@@ -211,7 +211,7 @@ export const en: Record<keyof typeof vi, string> = {
   "chat.footer": "Product support from ZUKATEK",
 
   "chat.error_connect":
-    "We could not reach the assistant. You can contact us directly below.",
+    "Could not connect to the assistant. Please try again later.",
   "chat.error_turn_limit":
     "This conversation has run long. Leave your details and we will get back to you.",
   "chat.error_send": "The message did not go through. Please try again.",

@@ -16,6 +16,7 @@
     "@remotion/player": "4.0.534",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-select": "^5.10.2",
     "remotion": "4.0.534"
   },
   "devDependencies": {

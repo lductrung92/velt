@@ -137,14 +137,7 @@ const SECTIONS: Record<
     {
       id: "chrome",
       icon: FileText,
-      keys: [
-        "site.brand_tagline",
-        "site.footer_note_title",
-        "site.footer_note_text",
-        "site.footer_copyright",
-        "site.header_cta_label",
-        "site.header_cta_url",
-      ],
+      keys: ["site.brand_tagline", "site.footer_copyright"],
     },
     {
       id: "contact",
@@ -251,17 +244,10 @@ const SECTIONS: Record<
     },
   ],
   ai: [
-    {
-      id: "connection",
-      icon: Bot,
-      keys: [
-        "ai.enabled",
-        "ai.provider",
-        "ai.base_url",
-        "ai.api_key",
-        "ai.model",
-      ],
-    },
+    // The endpoint itself is not a setting any more: it is a record in
+    // ai_providers, edited by <AiEndpoints/> below. What is left here is the
+    // on/off switch.
+    { id: "connection", icon: Bot, keys: ["ai.enabled"] },
     {
       id: "behaviour",
       icon: Settings2,
@@ -280,11 +266,7 @@ const CHROME_KEYS = SECTIONS.site[1].keys;
 const CHROME_ID = "00000000-0000-0000-0000-00005174e000";
 
 /** Keys that deserve more than one line. */
-const LONG_KEYS = new Set([
-  "site.brand_tagline",
-  "site.footer_note_text",
-  "ai.system_persona",
-]);
+const LONG_KEYS = new Set(["site.brand_tagline", "ai.system_persona"]);
 
 const HOME_SLUG_KEY = "cms.home_page_slug";
 

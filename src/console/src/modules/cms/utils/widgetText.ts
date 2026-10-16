@@ -18,8 +18,7 @@ const TRANSLATABLE: Record<WidgetType, Field[]> = {
   articles_list: [{ pattern: "title", label: "heading" }],
   categories_showcase: [{ pattern: "title", label: "heading" }],
   rich_text: [{ pattern: "html", label: "html", long: true }],
-  // A button's href is here on purpose: the site's chrome already declares
-  // header_cta_url translatable, because the page a reader should land on can
+  // A button's href is here on purpose: the page a reader should land on can
   // differ by language.
   cta_banner: [
     { pattern: "heading", label: "heading" },

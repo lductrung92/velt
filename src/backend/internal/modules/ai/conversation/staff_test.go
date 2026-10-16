@@ -224,3 +224,55 @@ func TestPresenceLeaveIsImmediate(t *testing.T) {
 	p.Leave(id)
 	require.False(t, p.AnyOnline())
 }
+
+func TestHandoffParksTheVisitorWhenADeviceCanBeRung(t *testing.T) {
+	// The office being empty is only a dead end when nobody can be told. With
+	// a notification device registered the visitor is parked for a person —
+	// that is the whole point of desktop notifications.
+	e := newEnv(t)
+	e.notify.recipient = true
+	res, _ := e.svc.Start(ctx(), key, StartRequest{})
+
+	state, err := e.svc.RequestHuman(ctx(), key, res.ID)
+	require.NoError(t, err)
+	require.Equal(t, StateWaiting, state)
+	require.Equal(t, []uuid.UUID{res.ID}, e.notify.rung)
+
+	conv, _ := e.repo.Get(ctx(), res.ID)
+	require.Equal(t, StateWaiting, conv.State)
+}
+
+func TestHandoffStillRefusesWhenNoDeviceIsRegistered(t *testing.T) {
+	// Guards the other half: a deployment with nobody subscribed must keep the
+	// honest refusal rather than queue for a person who will never hear.
+	e := newEnv(t)
+	e.notify.recipient = false
+	res, _ := e.svc.Start(ctx(), key, StartRequest{})
+
+	_, err := e.svc.RequestHuman(ctx(), key, res.ID)
+	require.Error(t, err)
+	require.Empty(t, e.notify.rung)
+}
+
+func TestVisitorMessageRingsOnlyWhenAPersonOwnsTheConversation(t *testing.T) {
+	// While the assistant is answering there is nothing for a person to do, so
+	// a notification would be noise. Once a person owns the thread, every
+	// visitor line is something somebody has to see.
+	e := newEnv(t)
+	e.notify.recipient = true
+	res, _ := e.svc.Start(ctx(), key, StartRequest{})
+	e.settings.bools["ai.enabled"] = false
+
+	_, err := e.svc.Send(ctx(), key, res.ID, SendRequest{Content: "cho hỏi giá"})
+	require.NoError(t, err)
+	require.Empty(t, e.notify.rung, "the assistant is handling it")
+
+	_, _ = e.svc.Beat(ctx(), staff())
+	_, err = e.svc.RequestHuman(ctx(), key, res.ID)
+	require.NoError(t, err)
+	e.presence.Leave(staff().UserID)
+
+	_, err = e.svc.Send(ctx(), key, res.ID, SendRequest{Content: "còn ai không ạ"})
+	require.NoError(t, err)
+	require.Equal(t, []uuid.UUID{res.ID}, e.notify.rung)
+}

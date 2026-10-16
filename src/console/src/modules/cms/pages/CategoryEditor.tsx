@@ -201,10 +201,14 @@ export default function CategoryEditor() {
           seo,
         };
         if (parentId) body.parent_id = parentId;
-        await create.mutateAsync(body);
+        const created = await create.mutateAsync(body);
         toast.success(t("cms.categories.toast.create_success"));
+        // Saving a new record carries on editing it: the next thing somebody
+        // does is add the description, the SEO or a translation, none of which
+        // the create form could reach. An update stays where it is for the
+        // same reason — only a delete goes back to the list.
+        navigate(`/cms/categories/${created.id}`, { replace: true });
       }
-      navigate(BACK);
     } catch (err) {
       const { message, key, fieldErrors } = parseApiError(err, t);
       if (fieldErrors.name)

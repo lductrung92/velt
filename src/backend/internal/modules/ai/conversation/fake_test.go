@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/velt/backend/internal/modules/ai/endpoints"
 	"github.com/velt/backend/internal/modules/ai/shared"
 	"github.com/velt/backend/internal/modules/ai/tools"
 )
@@ -209,7 +210,7 @@ func newFakeSettings() *fakeSettings {
 		bools:   map[string]bool{shared.KeyEnabled: true},
 		ints:    map[string]int{},
 		strings: map[string]string{},
-		secrets: map[string]string{shared.KeyAPIKey: "test-key"},
+		secrets: map[string]string{},
 	}
 }
 
@@ -243,21 +244,63 @@ type env struct {
 	catalog  *fakeCatalog
 	hub      *Hub
 	presence *Presence
+	chain    *fakeChain
+	notify   *fakeNotify
 }
 
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	repo := newFakeRepo()
 	set := newFakeSettings()
+	chain := newFakeChain()
 	cat := &fakeCatalog{}
 	hub := NewHub()
 	pres := NewPresence()
 	reg := tools.NewRegistry()
 	tools.RegisterCatalog(reg, cat, stubRoster{})
+	notifier := &fakeNotify{}
 	return &env{
-		repo: repo, settings: set, catalog: cat, hub: hub, presence: pres,
-		svc: NewService(shared.NewBase(nil), repo, hub, pres, reg, cat, set),
+		repo: repo, settings: set, catalog: cat, hub: hub, presence: pres, chain: chain,
+		notify: notifier,
+		svc: NewService(shared.NewBase(nil), repo, hub, pres, reg, cat, set,
+			endpoints.NewServiceWithChain(chain), notifier),
 	}
+}
+
+// fakeNotify records who would have been rung, without a push service.
+type fakeNotify struct {
+	recipient bool
+	rung      []uuid.UUID
+	online    []int
+}
+
+func (f *fakeNotify) VisitorWaiting(_ context.Context, convID uuid.UUID, staffOnline int) {
+	f.rung = append(f.rung, convID)
+	f.online = append(f.online, staffOnline)
+}
+
+func (f *fakeNotify) HasRecipients(context.Context) bool { return f.recipient }
+
+// fakeChain is the endpoint chain the tests run against: one link, with a key
+// unless a test clears it. No network is reached — every test here exercises a
+// path that stops before the model is called.
+type fakeChain struct {
+	kind, baseURL, apiKey, model string
+	empty                        bool
+}
+
+func newFakeChain() *fakeChain {
+	return &fakeChain{kind: "anthropic", apiKey: "test-key", model: "test-model"}
+}
+
+func (f *fakeChain) ResolveChain(context.Context, string) ([]endpoints.Resolved, [][]byte, error) {
+	if f.empty {
+		return nil, nil, nil
+	}
+	return []endpoints.Resolved{{
+		ProviderID: uuid.New(), ProviderLabel: "test", Kind: f.kind,
+		BaseURL: f.baseURL, APIKey: f.apiKey, Model: f.model,
+	}}, [][]byte{nil}, nil
 }
 
 type stubRoster struct{}

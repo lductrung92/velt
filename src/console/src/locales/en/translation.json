@@ -853,7 +853,6 @@
         "location_ph": "Select a location",
         "location_opt": {
           "header": "Header",
-          "header_mobile": "Header (mobile)",
           "footer": "Footer",
           "sidebar": "Sidebar"
         }
@@ -1450,10 +1449,12 @@
         "label": "Category overview",
         "total": "Total categories",
         "total_hint": "Every category",
-        "used": "In use",
-        "used_hint": "Has products",
-        "unused": "Empty",
-        "unused_hint": "Could be merged or removed"
+        "published": "In use",
+        "published_hint": "Live on the site",
+        "draft": "Drafts",
+        "draft_hint": "Still being set up",
+        "archived": "Archived",
+        "archived_hint": "Put away"
       },
       "filter_status": "Filter by status",
       "all_statuses": "All"
@@ -1588,6 +1589,56 @@
       "expired": "Expired",
       "expires_at": "Expires {{at}}",
       "expired_at": "Expired {{at}}"
+    },
+    "providers": {
+      "add": "Add provider",
+      "empty": "No providers yet. Add one so the assistant has somewhere to call.",
+      "disabled": "Disabled",
+      "default_url": "Provider's default endpoint",
+      "key_set": "Key stored",
+      "key_missing": "No key",
+      "new_title": "Add provider",
+      "edit_title": "Edit provider",
+      "saved": "Provider saved",
+      "deleted": "Provider deleted",
+      "delete": {
+        "title": "Delete provider?",
+        "body": "Deleting \"{{label}}\" removes it from every routing list that uses it."
+      },
+      "kind": {
+        "openai": "OpenAI / OpenAI-compatible",
+        "anthropic": "Anthropic"
+      },
+      "field": {
+        "label": "Name",
+        "label_ph": "e.g. Groq",
+        "kind": "Protocol",
+        "kind_help": "Choose OpenAI-compatible for Groq, OpenRouter, Ollama, LM Studio.",
+        "base_url": "Base URL",
+        "base_url_help": "Leave empty to use the provider's default endpoint.",
+        "api_key": "API key",
+        "api_key_help": "Stored encrypted. Leave empty if the endpoint needs no key.",
+        "api_key_set": "A key is stored. Leave empty to keep it.",
+        "enabled": "Available for use",
+        "enabled_help": "Switched off, every step pointing at it is skipped."
+      }
+    },
+    "purpose": {
+      "chat": "Visitor chatbot",
+      "chat_help": "The model must call tools, or the assistant invents products.",
+      "content": "Translation & drafting",
+      "content_help": "No tool calling needed; a person reviews it before it ships."
+    },
+    "routing": {
+      "empty": "No steps yet. Add the first one so this job can run.",
+      "add_step": "Add step",
+      "provider": "Provider",
+      "model": "Model",
+      "model_ph": "Pick a model",
+      "move_up": "Move up",
+      "move_down": "Move down",
+      "remove": "Remove this step",
+      "saved": "Routing saved"
     }
   },
   "chat": {
@@ -1650,7 +1701,24 @@
     "message_history": "Message history",
     "new_messages": "New messages",
     "closed_notice": "This conversation has ended. Its history is still available.",
-    "keyboard_hint": "Enter to send · Shift + Enter for a new line"
+    "keyboard_hint": "Enter to send · Shift + Enter for a new line",
+    "push": {
+      "title": "Desktop notifications",
+      "subtitle": "Tells you when a visitor is waiting, even with the console closed.",
+      "enable": "Turn on for this browser",
+      "enabled": "Notifications are on for this browser.",
+      "removed": "Removed {{label}}.",
+      "remove_aria": "Remove {{label}}",
+      "on_here": "Notifications are on for this browser",
+      "off_here": "This browser is not set up for notifications yet.",
+      "this_device": "(this device)",
+      "unnamed": "Unnamed browser",
+      "none": "No browser is signed up for notifications yet.",
+      "last_used": "Last received {{at}}",
+      "never_used": "Nothing received yet",
+      "unsupported": "This browser does not support push notifications.",
+      "blocked": "This browser is blocking notifications. Allow them in the site settings and try again."
+    }
   },
   "leads": {
     "title": "Customers",
@@ -1956,11 +2024,7 @@
       "site_cache_ttl_seconds": "Website page cache",
       "site_og_image_url": "Sharing image",
       "site_brand_tagline": "Footer line under the logo",
-      "site_footer_note_title": "Last footer column — heading",
-      "site_footer_note_text": "Last footer column — text",
       "site_footer_copyright": "Copyright line",
-      "site_header_cta_label": "Header button — label",
-      "site_header_cta_url": "Header button — link",
       "site_contact_email": "Company contact email",
       "site_contact_zalo": "Company Zalo link",
       "site_contact_phone": "Phone number",
@@ -1977,10 +2041,6 @@
       "translation_enabled": "Multilingual site",
       "translation_locales": "Languages besides Vietnamese",
       "ai_enabled": "AI assistant",
-      "ai_provider": "Provider",
-      "ai_base_url": "Base URL",
-      "ai_api_key": "API key",
-      "ai_model": "Model",
       "ai_max_turns": "Max turns per conversation",
       "ai_daily_token_cap": "Daily token cap",
       "ai_max_message_len": "Max message length",
@@ -2012,9 +2072,7 @@
       "site_cache_ttl_seconds": "Seconds the website may serve a page it has already rendered. Set 0 while editing to see changes at once.",
       "site_og_image_url": "Used when a link is shared. An article with its own cover wins.",
       "site_brand_tagline": "Line breaks are kept. Empty = the built-in copy.",
-      "site_footer_note_text": "Line breaks are kept.",
       "site_footer_copyright": "Write {year} where the current year should appear.",
-      "site_header_cta_url": "Starts with / or https://.",
       "site_contact_email": "Used when no member is in play. Empty leaves the contact block without an address.",
       "site_contact_phone": "Shown in the footer; empty = not shown.",
       "site_address": "Shown in the footer; empty = not shown.",
@@ -2027,12 +2085,13 @@
       "seo_analytics_id": "G-XXXXXXX for GA4, or a domain for Plausible. Empty = no tracking script at all.",
       "translation_enabled": "On, the site gains a /<code> address per language and a switcher. Off, Vietnamese only; translations are kept.",
       "translation_locales": "Comma-separated codes, e.g. en or en,ja.",
-      "ai_base_url": "Empty = the provider's default endpoint.",
       "ai_system_persona": "Added to the built-in brief; it does not override the safety rules.",
       "app_page_size": "Applies to every list table in the console. Between 2 and 100 rows.",
       "app_pagination_template": "How a table offers the rows it is not showing yet.",
       "cache_public_max_age_seconds": "Seconds a browser or CDN may hold the public configuration. Keep it at or below the refresh below, or an open console tab will re-read and still be handed its cached copy.",
-      "cache_console_refresh_seconds": "Seconds between an open console tab re-reading the configuration. 0 means only on reload."
+      "cache_console_refresh_seconds": "Seconds between an open console tab re-reading the configuration. 0 means only on reload.",
+      "site_blog_page_size": "Posts shown per blog page. From 1 to 24.",
+      "site_products_page_size": "Products shown per catalogue page. From 1 to 48."
     },
     "value": {
       "local": "Server disk",
@@ -2112,8 +2171,8 @@
         "help": "How large an upload may be, and how much each customer may keep."
       },
       "ai_connection": {
-        "title": "Connection",
-        "help": "The assistant's provider, model and API key."
+        "title": "AI assistant",
+        "help": "Turn the assistant on or off. Off, the site uses its scripted bot."
       },
       "ai_behaviour": {
         "title": "Behaviour",
@@ -2141,6 +2200,14 @@
       "cache_ttl": {
         "title": "How long things may be stale",
         "help": "Each one is the delay between saving a change and that place noticing it. 0 means no caching."
+      },
+      "ai_providers": {
+        "title": "Providers",
+        "help": "The LLM endpoints the assistant may call. API keys are stored encrypted and never shown again."
+      },
+      "ai_routing": {
+        "title": "Routing per job",
+        "help": "Each job runs the list top down. A lower step is only used when the one above reports a rate limit."
       }
     },
     "cache_purge": {

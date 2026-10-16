@@ -8,6 +8,12 @@
  * page that was already there.
  */
 export const vi = {
+  "listing.filters": "Bộ lọc",
+  "listing.filters_active": "Bộ lọc, {count} lựa chọn đang áp dụng",
+  "listing.filters_done": "Xong",
+  "listing.view_label": "Kiểu hiển thị",
+  "listing.view_grid": "Dạng lưới",
+  "listing.view_list": "Dạng danh sách",
   "a11y.skip": "Đến nội dung chính",
   "a11y.brand_home": "ZUKATEK — về đầu trang",
   "a11y.nav_main": "Điều hướng chính",
@@ -50,6 +56,12 @@ export const vi = {
 } as const;
 
 export const en: Record<keyof typeof vi, string> = {
+  "listing.filters": "Filters",
+  "listing.filters_active": "Filters, {count} options applied",
+  "listing.filters_done": "Done",
+  "listing.view_label": "Display layout",
+  "listing.view_grid": "Grid view",
+  "listing.view_list": "List view",
   "a11y.skip": "Skip to main content",
   "a11y.brand_home": "ZUKATEK — back to top",
   "a11y.nav_main": "Main navigation",

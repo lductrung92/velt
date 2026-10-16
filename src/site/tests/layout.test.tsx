@@ -77,25 +77,40 @@ const SHIPPED = [
   "<strong>Đội ngũ &amp; kỹ năng</strong><small>Con người đứng sau ZUKATEK</small>",
   '<a class="nav-link" href="/#team">Đội ngũ &amp; kỹ năng</a>',
   '<a class="nav-link" href="/blog"',
-  // header, phone — its own list, with the entry the desktop bar has no room for
-  'Cách mua sản phẩm <svg class="icon " aria-hidden="true"><use href="#i-arrow">',
-  // header button
-  'class="button button-small contact-nav" href="/#contact"',
+  // header, phone — the SAME menu as the bar, so the drawer repeats its links
+  'Đội ngũ &amp; kỹ năng <svg class="icon " aria-hidden="true"><use href="#i-arrow">',
   // footer
   "Đội ngũ phát triển sản phẩm số<br/>cho cá nhân, nhóm và doanh nghiệp.",
   "<h3>Khám phá ZUKATEK</h3>",
   '<a href="/#about">Về ZUKATEK</a>',
   "<h3>Mua &amp; sử dụng sản phẩm</h3>",
   '<a href="/#collaboration">Cách mua sản phẩm</a>',
-  '<div class="footer-message"><h3>Con người đứng sau sản phẩm</h3>',
-  "Xem đội ngũ phát triển, kỹ năng<br/>và thành viên phụ trách từng sản phẩm.",
-  '© <span id="year">2026</span> ZUKATEK. Cùng tiến về phía trước.',
+  // Behaviour, not shape: the opt-in may be laid out any way, but the footer
+  // must offer one and it must be a real email field the form can submit.
+  'class="footer-newsletter"',
+  "Đăng ký nhận tin",
+  'type="email"',
+  'name="email"',
+  '© <span id="year">2026</span> ZUKATEK',
+];
+
+// Markup the chrome must NOT carry any more: the contact button the menu's own
+// "Liên hệ" link replaced, and the block of prose about the team the newsletter
+// opt-in took over from.
+const RETIRED = [
+  "contact-nav",
+  "footer-message",
+  "Con người đứng sau sản phẩm",
+  "Cùng tiến về phía trước",
 ];
 
 test("with nothing published, the chrome is the markup the site shipped", () => {
   const html = render(defaultLayout(t));
   for (const expected of SHIPPED) {
     assert.ok(html.includes(expected), `lost shipped markup: ${expected}`);
+  }
+  for (const gone of RETIRED) {
+    assert.ok(!html.includes(gone), `markup that should be gone: ${gone}`);
   }
   // An API that answered nothing at all must reach exactly the same place.
   assert.deepEqual(resolveLayout(null, null, null, t), defaultLayout(t));
@@ -147,14 +162,14 @@ test("a published menu replaces the links, keeping the markup around them", () =
   );
   assert.ok(html.includes("<h3>Về chúng tôi</h3>"));
   assert.ok(html.includes('<a href="/ho-so">Hồ sơ</a>'));
-  // Nothing published for the phone menu → it is derived from the desktop one,
-  // without the duplicates a dropdown creates.
-  assert.deepEqual(
-    layout.headerMobile.map((i) => i.href),
-    ["/tu-van", "https://partner.example.com/"],
+  // The drawer renders the header menu itself, parents and children alike, so
+  // every published link reaches the phone without a second menu to maintain.
+  assert.ok(
+    html.includes('<a class="mobile-sub" href="/tu-van">Tư vấn <svg'),
+    "the drawer lost a child link",
   );
   // What was not published keeps its shipped copy.
-  assert.ok(html.includes("Con người đứng sau sản phẩm"));
+  assert.ok(html.includes("Đăng ký nhận tin"));
 });
 
 test("entity links become the site's own addresses", () => {
@@ -232,7 +247,7 @@ test("a malformed payload falls back instead of blanking or throwing", () => {
     for (const settings of junk) {
       const layout = resolveLayout(menus, settings, null, t);
       assert.deepEqual(layout, defaultLayout(t), JSON.stringify({ menus }));
-      assert.ok(render(layout).includes("Cùng tiến về phía trước."));
+      assert.ok(render(layout).includes("ZUKATEK"));
     }
   }
 });
@@ -242,6 +257,7 @@ test("the settings replace the words around the navigation", () => {
     {},
     {
       "site.brand_tagline": "Một dòng\nHai dòng",
+      // Keys an older database may still hold; nothing reads them now.
       "site.footer_note_title": "Tiêu đề mới",
       "site.footer_note_text": "Nội dung mới",
       "site.footer_copyright": "Bản quyền {year} của chúng tôi",
@@ -253,23 +269,16 @@ test("the settings replace the words around the navigation", () => {
   );
   const html = render(layout);
   assert.ok(html.includes("Một dòng<br/>Hai dòng"));
-  assert.ok(html.includes("<h3>Tiêu đề mới</h3>"));
-  assert.ok(html.includes("Nội dung mới"));
   assert.ok(
     html.includes('Bản quyền <span id="year">2026</span> của chúng tôi'),
   );
-  assert.ok(html.includes('href="/#goi"'));
-  assert.ok(html.includes("Gọi ngay"));
-
-  // A button target typed as something else never reaches the document.
-  const bad = resolveLayout(
-    {},
-    { "site.header_cta_url": "javascript:alert(1)" },
-    null,
-    t,
-  );
-  assert.equal(bad.chrome.ctaHref, "/#contact");
-  assert.ok(!render(bad).includes("javascript:"));
+  // The footer note and the header CTA settings are gone: the newsletter
+  // opt-in and the menu's own "Liên hệ" link replaced what they fed. A
+  // database still holding the old keys must not resurrect either.
+  assert.ok(!("noteTitle" in layout.chrome));
+  assert.ok(!("ctaLabel" in layout.chrome));
+  assert.ok(!html.includes("Tiêu đề mới"));
+  assert.ok(!html.includes("Gọi ngay"));
 
   // A copyright line without the placeholder simply shows no year.
   const noYear = resolveLayout({}, { "site.footer_copyright": "ZUKATEK" }, null, t);
@@ -352,6 +361,17 @@ test("a value that is not a usable setting is ignored, not rendered", () => {
   assert.equal(layout.head.primaryColor, "", "only a hex colour reaches the CSS");
   assert.equal(layout.head.blogPageSize, 9, "a page of zero is not a page");
   assert.equal(layout.head.productsPageSize, 9);
+  // One per page IS allowed — a site with three posts may want exactly that.
+  // The floor here has to match the settings registry, or a value the console
+  // accepted would be thrown away without saying so.
+  const single = resolveLayout(
+    {},
+    { "site.blog_page_size": 1, "site.products_page_size": 1 },
+    null,
+    t,
+  );
+  assert.equal(single.head.blogPageSize, 1);
+  assert.equal(single.head.productsPageSize, 1);
   assert.equal(layout.head.noindexAll, false, "only a real boolean closes a site");
   const html = render(layout);
   assert.ok(html.includes('src="/assets/logo.png"'));

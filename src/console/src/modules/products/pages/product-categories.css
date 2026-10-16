@@ -10,11 +10,19 @@
  * Every rule that touches a shared `list-*` class is scoped to this screen —
  * stylesheets are bundled globally. */
 
-[data-list="product-categories"] .list-metric[data-kind="used"] {
+/* The cards are one per status, so they borrow the articles list's palette:
+ * the same three colours the status dots and badges use below them. */
+[data-list="product-categories"] .list-metric[data-kind="published"] {
   --list-metric-accent: var(--success-ink);
 }
-[data-list="product-categories"] .list-metric[data-kind="unused"] {
-  --list-metric-accent: var(--warning-ink);
+[data-list="product-categories"] .list-metric[data-kind="draft"] {
+  --list-metric-accent: 220 9% 46%;
+}
+[data-list="product-categories"] .list-metric[data-kind="archived"] {
+  --list-metric-accent: var(--earth-ink);
+}
+.dark [data-list="product-categories"] .list-metric[data-kind="draft"] {
+  --list-metric-accent: 220 13% 69%;
 }
 
 /* --- Status tab dots, same palette as the articles/pages lists --- */

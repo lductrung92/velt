@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { useSite } from "../context";
 import { articleOutline, blogDate, blogPath } from "../lib/blog";
 import { BlogCover, PostCard } from "../components/blog/BlogCard";
+import { ArticleShare } from "../components/blog/ArticleShare";
 import { Icon } from "../components/Icon";
 import { RegionSlot } from "../components/RegionSlot";
 import { BlogEmpty } from "./Blog";
@@ -9,7 +9,6 @@ import { BlogEmpty } from "./Blog";
 export function BlogArticle() {
   const { blog, href, regions, locale, t } = useSite();
   const post = blog.article;
-  const [share, setShare] = useState<"idle" | "copied" | "failed">("idle");
   if (blog.status === "unavailable")
     return (
       <section className="container blog-article-error">
@@ -30,16 +29,6 @@ export function BlogArticle() {
     );
   const { body, headings, minutes } = articleOutline(post.body_html || "");
   const date = blogDate(post.published_at, locale);
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(
-        location.origin + href(blogPath(post.slug)),
-      );
-      setShare("copied");
-    } catch {
-      setShare("failed");
-    }
-  };
   return (
     <article className="blog-article">
       <div className="container">
@@ -72,7 +61,7 @@ export function BlogArticle() {
         <div className="blog-article-cover">
           <BlogCover
             post={post}
-            sizes="(min-width: 1088px) 1024px, calc(100vw - 48px)"
+            sizes="(min-width: 1264px) 1200px, (min-width: 768px) calc(100vw - 64px), (max-width: 359px) calc(100vw - 40px), calc(100vw - 48px)"
             priority
           />
         </div>
@@ -97,22 +86,7 @@ export function BlogArticle() {
                 </nav>
               </details>
             )}
-            <div className="blog-share">
-              <span>{t("blog.article.share")}</span>
-              <button onClick={copyLink}>
-                <Icon name="arrow" />
-                {share === "copied"
-                  ? t("blog.article.copied")
-                  : t("blog.article.copy_link")}
-              </button>
-              <p role="status">
-                {share === "copied"
-                  ? t("blog.article.copy_ok")
-                  : share === "failed"
-                    ? t("blog.article.copy_fail")
-                    : ""}
-              </p>
-            </div>
+            <ArticleShare path={href(blogPath(post.slug))} title={post.title} />
           </aside>
           <div className="blog-reading-main">
             {body ? (
@@ -128,10 +102,7 @@ export function BlogArticle() {
               <p>{t("blog.article.signoff")}</p>
               <a href={href("/blog")}>{t("blog.article.back_link")}</a>
             </div>
-            <RegionSlot
-              name="after_article"
-              blocks={regions.after_article}
-            />
+            <RegionSlot name="after_article" blocks={regions.after_article} />
           </div>
         </div>
         {blog.items.length > 0 && (

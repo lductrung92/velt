@@ -128,12 +128,36 @@ export function BlogCover({
 export function PostCard({
   post,
   featured = false,
+  listing = false,
 }: {
   post: Post;
   featured?: boolean;
+  listing?: boolean;
 }) {
   const { href, locale, t } = useSite();
   const date = blogDate(post.published_at, locale);
+  if (listing)
+    return (
+      <article className="listing-post-card">
+        <a className="listing-post-link" href={href(blogPath(post.slug))}>
+          <BlogCover
+            post={post}
+            sizes="(min-width: 1264px) 384px, (min-width: 1024px) 32vw, (min-width: 640px) 48vw, calc(100vw - 48px)"
+          />
+          <div className="listing-post-copy">
+            <h3>{post.title}</h3>
+            {post.excerpt && <p>{post.excerpt}</p>}
+            <div className="listing-post-footer">
+              {date && <time dateTime={post.published_at!}>{date}</time>}
+              <span className="listing-post-read">
+                {t("blog.card.read")}
+                <Icon name="arrow" />
+              </span>
+            </div>
+          </div>
+        </a>
+      </article>
+    );
   return (
     <article className={`blog-card${featured ? " blog-card-featured" : ""}`}>
       <a className="blog-card-link" href={href(blogPath(post.slug))}>

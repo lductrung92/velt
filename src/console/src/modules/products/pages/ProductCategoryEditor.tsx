@@ -161,10 +161,12 @@ export default function ProductCategoryEditor() {
         form.reset({ ...values, slug: saved.slug });
         return;
       }
-      await create.mutateAsync(body);
+      const created = await create.mutateAsync(body);
       toast.success(t("products.categories.saved"));
       form.reset(values);
-      navigate(BACK);
+      // Carry on editing what was just created, the way every other editor
+      // does; the list is where a delete goes, not a save.
+      navigate(`${BACK}/${created.id}`, { replace: true });
     } catch (err) {
       toast.error(parseApiError(err, t).message);
     }

@@ -65,11 +65,7 @@ const (
 	// one home (the site's own components) instead of two that can disagree.
 	SiteOGImageURL      = "site.og_image_url"
 	SiteBrandTagline    = "site.brand_tagline"
-	SiteFooterNoteTitle = "site.footer_note_title"
-	SiteFooterNoteText  = "site.footer_note_text"
 	SiteFooterCopyright = "site.footer_copyright"
-	SiteHeaderCTALabel  = "site.header_cta_label"
-	SiteHeaderCTAURL    = "site.header_cta_url"
 
 	// How to reach the company. Until these existed the public contact block
 	// had no address of its own: it could only offer the member a visitor
@@ -126,11 +122,7 @@ func SettingDefs() []settings.SettingDef {
 		{Key: SiteCacheTTL, Group: settings.GroupCache, Type: settings.TypeInt, Default: 60, Min: ptr(0), Max: ptr(86400), IsPublic: true, Description: "Seconds the public site may serve a cached page; 0 disables caching"},
 		{Key: SiteOGImageURL, Group: GroupSite, Type: settings.TypeString, Format: "url_or_path", Default: "", IsPublic: true, Description: "Image shown when a page is shared; empty → no image unless the content has one"},
 		{Key: SiteBrandTagline, Group: GroupSite, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Footer line under the logo (newlines kept); empty → the site's built-in copy"},
-		{Key: SiteFooterNoteTitle, Group: GroupSite, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Heading of the footer's last column; empty → the site's built-in copy"},
-		{Key: SiteFooterNoteText, Group: GroupSite, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Body of the footer's last column (newlines kept); empty → the site's built-in copy"},
 		{Key: SiteFooterCopyright, Group: GroupSite, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Copyright line; {year} is replaced by the current year. Empty → the site's built-in copy"},
-		{Key: SiteHeaderCTALabel, Group: GroupSite, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Label of the header's contact button; empty → the site's built-in copy"},
-		{Key: SiteHeaderCTAURL, Group: GroupSite, Type: settings.TypeString, Default: "", IsPublic: true, Description: "Target of the header's contact button (a path or URL); empty → the site's built-in target"},
 
 		{Key: SiteContactEmail, Group: GroupSite, Type: settings.TypeString, Format: "email", Default: "", IsPublic: true, Description: "The company's own contact address, shown when no member is in play"},
 		{Key: SiteContactZalo, Group: GroupSite, Type: settings.TypeString, Format: "url", Default: "", IsPublic: true, Description: "Zalo link for the same block"},
@@ -142,8 +134,8 @@ func SettingDefs() []settings.SettingDef {
 		{Key: SiteSocialYouTube, Group: GroupSite, Type: settings.TypeString, Format: "url", Default: "", IsPublic: true, Description: "YouTube channel; empty → no icon"},
 		{Key: SiteSocialGitHub, Group: GroupSite, Type: settings.TypeString, Format: "url", Default: "", IsPublic: true, Description: "GitHub profile; empty → no icon"},
 
-		{Key: SiteBlogPageSize, Group: GroupSite, Type: settings.TypeInt, Default: 9, Min: ptr(3), Max: ptr(24), IsPublic: true, Description: "Articles per page on the blog"},
-		{Key: SiteProductsPageSize, Group: GroupSite, Type: settings.TypeInt, Default: 9, Min: ptr(3), Max: ptr(48), IsPublic: true, Description: "Products per page in the catalogue"},
+		{Key: SiteBlogPageSize, Group: GroupSite, Type: settings.TypeInt, Default: 9, Min: ptr(1), Max: ptr(24), IsPublic: true, Description: "Articles per page on the blog; 1 is allowed, for a site with few posts"},
+		{Key: SiteProductsPageSize, Group: GroupSite, Type: settings.TypeInt, Default: 9, Min: ptr(1), Max: ptr(48), IsPublic: true, Description: "Products per page in the catalogue; 1 is allowed, for a catalogue of a few items"},
 
 		{Key: SEONoindexAll, Group: GroupSEO, Type: settings.TypeBool, Default: false, IsPublic: true, Description: "Ask search engines to index nothing — for a site that is not launched yet"},
 		{Key: SEOVerification, Group: GroupSEO, Type: settings.TypeString, Default: "", IsPublic: true, Description: "google-site-verification content value"},

@@ -1,6 +1,8 @@
 import {
   ArrowDown,
   ArrowLeft,
+  Bell,
+  BellOff,
   Bot,
   CheckCheck,
   ChevronRight,
@@ -33,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { parseApiError } from "@/utils/apiError";
 import { formatDateTime } from "@/utils/format";
 
+import { PushDevicesDialog } from "../components/PushDevicesDialog";
 import {
   useClaim,
   useCloseConversation,
@@ -42,6 +45,7 @@ import {
   useReply,
   useTranscript,
 } from "../hooks/useChat";
+import { usePushDevices } from "../hooks/usePushDevices";
 import type { ConversationState, InboxItem } from "../services/chat.service";
 import "./chat-inbox.css";
 
@@ -94,6 +98,17 @@ export default function ChatInbox() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [params, setParams] = useSearchParams();
   const [newMessages, setNewMessages] = useState(false);
+  const [pushOpen, setPushOpen] = useState(false);
+  const push = usePushDevices();
+  // Notifications are on "here" only when this browser's own subscription is
+  // one of the rows the server lists: the browser can hold a subscription the
+  // server has since pruned, and the server can list a browser that cleared
+  // its data.
+  const pushOnHere =
+    !!push.thisEndpoint &&
+    !!push.devices.data?.some(
+      (device) => device.endpoint === push.thisEndpoint,
+    );
   const selected = selection?.id ?? null;
   const inbox = useInbox(filter === "all" ? undefined : filter);
   const transcript = useTranscript(selected);
@@ -203,6 +218,7 @@ export default function ChatInbox() {
 
   return (
     <div className="console-chat">
+      <PushDevicesDialog open={pushOpen} onOpenChange={setPushOpen} />
       <PageHeader
         title={t("chat.title")}
         subtitle={t("chat.subtitle")}
@@ -222,6 +238,23 @@ export default function ChatInbox() {
                 {inbox.isPending ? "—" : conversations.length}
               </span>
             </h2>
+            {push.supported && (
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label={t("chat.push.title")}
+                title={
+                  pushOnHere ? t("chat.push.on_here") : t("chat.push.off_here")
+                }
+                onClick={() => setPushOpen(true)}
+              >
+                {pushOnHere ? (
+                  <Bell className="text-primary-ink size-3.5" aria-hidden />
+                ) : (
+                  <BellOff className="size-3.5" aria-hidden />
+                )}
+              </Button>
+            )}
             <Button
               size="icon"
               variant="ghost"

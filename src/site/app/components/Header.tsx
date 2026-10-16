@@ -5,6 +5,33 @@ import { allLocales, localeLabel } from "../lib/locales";
 import { Icon } from "./Icon";
 import { RegionSlot } from "./RegionSlot";
 
+function LanguageFlag({ code }: { code: string }) {
+  const language = code.toLowerCase().split("-")[0];
+  return (
+    <span className="language-flag" aria-hidden="true">
+      {language === "vi" ? (
+        <svg viewBox="0 0 24 18" fill="none">
+          <path fill="#DA251D" d="M0 0h24v18H0z" />
+          <path
+            fill="#FFDF00"
+            d="m12 3 1.35 4.15h4.35l-3.52 2.56 1.35 4.14L12 11.29l-3.53 2.56 1.35-4.14L6.3 7.15h4.35Z"
+          />
+        </svg>
+      ) : language === "en" ? (
+        <svg viewBox="0 0 24 18" fill="none">
+          <path fill="#173C79" d="M0 0h24v18H0z" />
+          <path stroke="#FFF" strokeWidth="4" d="m0 0 24 18M24 0 0 18" />
+          <path stroke="#D62839" strokeWidth="1.5" d="m0 0 24 18M24 0 0 18" />
+          <path stroke="#FFF" strokeWidth="6" d="M12 0v18M0 9h24" />
+          <path stroke="#D62839" strokeWidth="3.5" d="M12 0v18M0 9h24" />
+        </svg>
+      ) : (
+        <Icon name="globe" />
+      )}
+    </span>
+  );
+}
+
 export function Header() {
   const { href, url, layout, regions, locale, locales, localeHref, t } =
     useSite();
@@ -24,9 +51,6 @@ export function Header() {
       : navHref(item, href);
   const linkProps = (item: NavItem) =>
     item.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {};
-  const ctaHref = /^https?:\/\//i.test(layout.chrome.ctaHref)
-    ? layout.chrome.ctaHref
-    : href(layout.chrome.ctaHref);
   useEffect(() => {
     document.body.classList.toggle("menu-open", menuOpen);
     const surfaces = document.querySelectorAll<HTMLElement>(
@@ -178,7 +202,11 @@ export function Header() {
                   setOpenDropdown(openDropdown === "lang" ? null : "lang");
                 }}
               >
-                {locale.toUpperCase()} <Icon name="down" />
+                <LanguageFlag code={locale} />
+                <span className="lang-current-code">
+                  {locale.toUpperCase()}
+                </span>
+                <Icon name="down" />
               </button>
               <div
                 className="dropdown-panel lang-panel"
@@ -194,16 +222,18 @@ export function Header() {
                     aria-current={code === locale ? "true" : undefined}
                     onClick={() => setOpenDropdown(null)}
                   >
-                    {localeLabel(code)}
+                    <LanguageFlag code={code} />
+                    <span className="lang-option-label">
+                      {localeLabel(code)}
+                    </span>
+                    <span className="lang-option-check" aria-hidden="true">
+                      {code === locale && <Icon name="check" />}
+                    </span>
                   </a>
                 ))}
               </div>
             </div>
           )}
-          <a className="button button-small contact-nav" href={ctaHref}>
-            <Icon name="support" />
-            {layout.chrome.ctaLabel}
-          </a>
         </div>
         <button
           ref={menuToggle}
@@ -228,11 +258,25 @@ export function Header() {
         hidden={!menuOpen}
         onClick={() => setMenuOpen(false)}
       >
-        {layout.headerMobile.map((item, index) => (
+        {/* One menu for both widths: the drawer shows the header menu itself,
+            so a link added in the console appears on the phone too instead of
+            needing a second menu kept in step by hand. A parent with children
+            lists them under it — nothing is silently dropped. */}
+        {layout.header.flatMap((item, index) => [
           <a key={index} href={to(item)} {...linkProps(item)}>
             {item.label} <Icon name="arrow" />
-          </a>
-        ))}
+          </a>,
+          ...item.children.map((child, childIndex) => (
+            <a
+              key={`${index}-${childIndex}`}
+              className="mobile-sub"
+              href={to(child)}
+              {...linkProps(child)}
+            >
+              {child.label} <Icon name="arrow" />
+            </a>
+          )),
+        ])}
         {locales.length > 0 && (
           <div className="mobile-lang">
             {allLocales(locales).map((code) => (
@@ -243,15 +287,17 @@ export function Header() {
                 lang={code}
                 aria-current={code === locale ? "true" : undefined}
               >
-                {localeLabel(code)}
+                <LanguageFlag code={code} />
+                <span>{localeLabel(code)}</span>
+                {code === locale && (
+                  <span className="mobile-lang-check" aria-hidden="true">
+                    <Icon name="check" />
+                  </span>
+                )}
               </a>
             ))}
           </div>
         )}
-        <a className="button contact-nav" href={ctaHref}>
-          <Icon name="support" />
-          {layout.chrome.ctaLabel}
-        </a>
       </nav>
     </header>
   );

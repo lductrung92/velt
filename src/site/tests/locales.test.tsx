@@ -138,6 +138,15 @@ test("the switcher appears only when a second language is configured", () => {
   );
   assert.ok(bilingual.html.includes("lang-switch"));
   assert.ok(bilingual.html.includes("mobile-lang"));
+  // The toggle carries an icon beside the code — a flag where there is one,
+  // a globe otherwise. Two letters alone read as an abbreviation of
+  // something, not as a language control. Which glyph is a design choice;
+  // that there IS one is the contract.
+  const toggle = bilingual.html.slice(bilingual.html.indexOf("lang-toggle"));
+  assert.ok(
+    /<svg[^>]*>/.test(toggle.slice(0, 400)),
+    "the language toggle lost its icon",
+  );
   assert.ok(bilingual.html.includes("Tiếng Việt"));
   assert.ok(bilingual.html.includes("English"));
   // Each entry says which language it leads to, and the current one says so.

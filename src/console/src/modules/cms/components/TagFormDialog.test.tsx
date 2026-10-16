@@ -129,6 +129,19 @@ describe("TagFormDialog translations", () => {
     ).not.toBeInTheDocument();
   });
 
+  // The header icon is the subject of the dialog — a tag — in both modes; the
+  // title is what says whether it is being added or edited.
+  it("the header wears the tag icon, adding or editing", async () => {
+    for (const subject of [null, tag()]) {
+      server.use(translationOn(true), settingsHandler());
+      const view = renderDialog(subject);
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog.querySelector("svg.lucide-tag")).toBeInTheDocument();
+      expect(dialog.querySelector("svg.lucide-pencil")).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
   it("translation off: the dialog keeps its two fields", async () => {
     server.use(translationOn(false), settingsHandler());
     renderDialog(tag());

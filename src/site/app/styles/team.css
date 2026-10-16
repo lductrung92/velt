@@ -19,9 +19,6 @@
   pointer-events: none;
   z-index: -1;
 }
-.team-section > .container {
-  max-width: 1280px;
-}
 .team-heading {
   text-align: center;
   max-width: 680px;

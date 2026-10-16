@@ -7,6 +7,7 @@ migration hoặc code.
 - Lead và vòng đời khách: [docs/domains/crm/README.md](../crm/README.md)
 - Nguồn dữ liệu sản phẩm: [docs/domains/products/README.md](../products/README.md)
 - Bối cảnh kinh doanh: [OVERVIEW.md](../../../OVERVIEW.md)
+- Model miễn phí & xoay vòng hạn mức: [free-models.md](free-models.md)
 
 ---
 
@@ -269,6 +270,55 @@ chứ không phải một nút.
 
 **Trực tuyến/vắng mặt**: cần biết thành viên nào đang mở console, để bot nói đúng
 sự thật về việc có người hay không.
+
+### 10.1 Thông báo khi không ai trực
+
+Hộp thư chỉ biết có tin mới khi còn một tab đang mở, vì nó poll. Khách hỏi lúc
+21:00 vì thế không gặp được ai. Lời giải là **Web Push** — trình duyệt giữ
+đăng ký sống kể cả khi đã đóng tab, và server đẩy vào đó.
+
+**Vì sao không dùng FCM/Firebase.** Web Push là chuẩn W3C, xác thực bằng VAPID.
+Endpoint của Chrome tình cờ nằm trên `fcm.googleapis.com`, Firefox dùng của
+Mozilla, Safari dùng của Apple — cả ba đều tới được bằng **một cặp khoá VAPID tự
+ký**, không cần project, không cần SDK, không cần tài khoản ở ai cả. Thêm
+Firebase vào đây chỉ đổi lấy một nhà cung cấp nữa phải nuôi.
+
+**Cặp khoá** nằm ở bảng `push_keys`, sinh ra ở lần gọi đầu tiên. Một dòng duy
+nhất, và **không bao giờ được đổi**: xoay khoá là lặng lẽ huỷ mọi đăng ký trình
+duyệt đã có. Nửa private được mã hoá bằng cùng AEAD với các secret khác.
+
+**Một dòng cho mỗi lần cài trình duyệt**, không phải mỗi người: cùng một người
+trên desktop và laptop là hai đăng ký, mỗi cái chết theo lịch riêng. Push service
+trả 404/410 cho đăng ký đã chết; chúng bị xoá ngay tại chỗ, nếu không bảng sẽ đầy
+những endpoint chỉ có thể thất bại.
+
+**Nội dung gửi đi cố tình mỏng** — một `kind` và một `conversation_id`, không bao
+giờ có lời của khách. Payload đi qua hạ tầng của bên thứ ba và hiện lên màn hình
+khoá; console tự lấy nội dung sau, có xác thực.
+
+**Luật khi nào push**:
+
+| Tình huống | Hành vi |
+|---|---|
+| Có người đang mở console | Không push. Hộp thư đã hiện hàng chờ rồi; báo về thứ đang nhìn là nhiễu. |
+| Bot đang trả lời | Không push. Chưa có việc gì cho người thật. |
+| Người thật đang giữ hội thoại, khách nhắn tiếp | Push. |
+| Khách xin gặp người, không ai trực | Push — **và hội thoại được đưa vào `waiting`** thay vì bị từ chối. |
+| Khách xin gặp người, không ai trực, **chưa ai đăng ký thiết bị** | Giữ nguyên từ chối `no_staff_online`. Xếp khách vào hàng chờ không bao giờ nhúc nhích thì tệ hơn là nói thẳng. |
+
+Dòng cuối là chỗ dễ bỏ sót: `RequestHuman` chỉ nới lỏng khi **thật sự có thiết bị
+để gọi**. Không có thì hành vi cũ giữ nguyên.
+
+**Chống báo trùng**: cột `ai_conversations.last_notified_at` cộng một cửa sổ 5
+phút. Quyết định và ghi nhận nằm trong **cùng một câu UPDATE**, nên hai instance
+cùng xử lý một tin không thể cùng nói "có". Khách gõ năm dòng là một sự kiện với
+người ở đầu kia, không phải năm.
+
+**Giới hạn khi kiểm thử**: Chrome từ chối `pushManager.subscribe()` trong trình
+duyệt chạy tự động (`AbortError: Registration failed - permission denied`), kể cả
+Chrome/Edge thật qua Playwright. Nửa trình duyệt chỉ nghiệm thu được bằng tay;
+nửa server nghiệm thu được bằng cách trỏ `endpoint` vào một HTTP server cục bộ và
+đọc request đi ra.
 
 ---
 

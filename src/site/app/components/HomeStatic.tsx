@@ -10,6 +10,7 @@ import {
 } from "../lib/sections";
 import { navHref, type SiteLayout } from "../lib/layout";
 import { Lines } from "./Lines";
+import { Newsletter } from "./Newsletter";
 import { RegionSlot } from "./RegionSlot";
 type LinksProps = { href: (path: string) => string };
 
@@ -33,6 +34,11 @@ export function Icons() {
         </symbol>
         <symbol id="i-down" viewBox="0 0 24 24">
           <path d="m6 9 6 6 6-6"></path>
+        </symbol>
+        <symbol id="i-globe" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M3 12h18"></path>
+          <path d="M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18Z"></path>
         </symbol>
         <symbol id="i-spark" viewBox="0 0 24 24">
           <path d="m12 3 2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3L12 3Z"></path>
@@ -397,6 +403,7 @@ export function Footer({
   return (
     <footer className="site-footer">
       <div className="container">
+        <Newsletter />
         <div className="footer-grid">
           <div className="footer-brand">
             <a
@@ -460,15 +467,8 @@ export function Footer({
               ))}
             </div>
           ))}
-          <div className="footer-message">
-            <h3>{layout.chrome.noteTitle}</h3>
-            <p>
-              <Lines text={layout.chrome.noteText} />
-            </p>
-          </div>
         </div>
-        {/* Its own row, not a fifth column: .footer-grid is a FIXED four-track
-            template, so a block added here used to push the note below it. */}
+        {/* CMS footer blocks keep their own row below the navigation. */}
         <RegionSlot name="footer" blocks={regions.footer} />
         <div className="footer-bottom">
           <span>
@@ -476,11 +476,13 @@ export function Footer({
             {afterYear !== undefined && <span id="year">{year}</span>}
             {afterYear ?? ""}
           </span>
-          <a href={href("/#top")}>
-            {t("layout.back_to_top")}
-            <svg className="icon up">
-              <use href="#i-arrow"></use>
-            </svg>
+          <a className="footer-back-top" href={href("/#top")}>
+            <span>{t("layout.back_to_top")}</span>
+            <span className="footer-back-top-icon" aria-hidden="true">
+              <svg className="icon up">
+                <use href="#i-arrow"></use>
+              </svg>
+            </span>
           </a>
         </div>
       </div>

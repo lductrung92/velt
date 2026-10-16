@@ -16,12 +16,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/velt/backend/internal/modules/ai/conversation"
+	"github.com/velt/backend/internal/modules/ai/endpoints"
 	"github.com/velt/backend/internal/modules/ai/mcp"
 	"github.com/velt/backend/internal/modules/ai/shared"
 	"github.com/velt/backend/internal/modules/ai/tools"
 	"github.com/velt/backend/internal/modules/crm/leads"
+	"github.com/velt/backend/internal/modules/notify"
 	"github.com/velt/backend/internal/modules/products/catalog"
 	settingssvc "github.com/velt/backend/internal/modules/settings"
+	"github.com/velt/backend/internal/platform/crypto"
 	"github.com/velt/backend/internal/platform/ratelimit"
 )
 
@@ -41,6 +44,9 @@ type Deps struct {
 	// Leads is the CRM service. The assistant reaches it through
 	// CaptureFromChat only, which forces source=chat and status=new.
 	Leads *leads.Service
+	// NotifySubject is the contact a push service may use to reach us about a
+	// misbehaving sender — a "mailto:" or URL. VAPID requires one.
+	NotifySubject string
 }
 
 // Register builds the assistant and mounts the visitor-facing chat.
@@ -51,7 +57,7 @@ type Deps struct {
 // spends money, so it must never be mounted without one.
 func Register(r chi.Router, pool *pgxpool.Pool, settings conversation.SettingsPort,
 	logger *slog.Logger, authMW func(http.Handler) http.Handler, deps Deps, secureCookies bool,
-	limiter ratelimit.Limiter, trustProxy bool,
+	limiter ratelimit.Limiter, trustProxy bool, aead *crypto.AEAD,
 ) {
 	base := shared.NewBase(logger)
 
@@ -74,8 +80,17 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings conversation.SettingsPo
 		log:    logger,
 	})
 
+	// The endpoints and the chain each job runs through. One service: the
+	// console edits it and the conversation reads it.
+	eps := endpoints.NewService(endpoints.NewRepository(pool), aead)
+
+	// Desktop notifications for the duty roster. The conversation only ever
+	// asks it to ring; when to stay quiet is the notify service's own rule.
+	notifySvc := notify.NewService(notify.NewRepository(pool), aead, logger, deps.NotifySubject)
+
 	svc := conversation.NewService(base, repo,
-		conversation.NewHub(), conversation.NewPresence(), reg, cat, settings)
+		conversation.NewHub(), conversation.NewPresence(), reg, cat, settings, eps,
+		notifySvc)
 
 	// Agent-facing reads. Registered on the SAME registry: one implementation,
 	// two edges, with visibility decided per edge. See docs/diagrams/ai-mcp.svg.
@@ -88,6 +103,13 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings conversation.SettingsPo
 	staffH := conversation.NewStaffHandler(svc)
 	conversation.RegisterStaff(r, staffH, authMW)
 	conversation.RegisterAdmin(r, staffH, authMW)
+
+	endpoints.Register(r, endpoints.NewHandler(eps, base), authMW)
+
+	r.Route("/api/notify", func(nr chi.Router) {
+		nr.Use(authMW)
+		notify.NewHandler(notifySvc, logger).Routes(nr)
+	})
 
 	tokens := mcp.NewTokenStore(pool)
 	ident := identityPort{pool: pool}

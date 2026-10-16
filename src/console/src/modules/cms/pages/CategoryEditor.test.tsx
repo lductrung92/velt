@@ -132,14 +132,17 @@ beforeEach(() => useAuthStore.getState().clear());
 afterEach(() => useAuthStore.getState().clear());
 
 describe("CategoryEditor", () => {
-  it("create: POST with name + sort_order, then back to the list", async () => {
+  // Saving a new category carries on editing it: the description, the SEO and
+  // the translations all live on the edit screen, so the list would be a
+  // detour. Only a delete goes back to the list.
+  it("create: POST with name + sort_order, then on to the edit screen", async () => {
     signIn(MANAGER);
     let postBody: Record<string, unknown> | undefined;
     server.use(
       ...baseHandlers(),
       http.post(`${API}/cms/categories`, async ({ request }) => {
         postBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ id: "c" }, { status: 201 });
+        return HttpResponse.json({ id: "a" }, { status: 201 });
       }),
     );
     const user = userEvent.setup();
@@ -153,7 +156,32 @@ describe("CategoryEditor", () => {
     await waitFor(() =>
       expect(postBody).toMatchObject({ name: "Thể thao", sort_order: 0 }),
     );
-    expect(await screen.findByText("CATEGORY LIST")).toBeInTheDocument();
+    // "a" is in the tree the handlers answer with, so the editor re-reads it.
+    expect(await screen.findByDisplayValue("Tin tức")).toBeVisible();
+    expect(screen.queryByText("CATEGORY LIST")).not.toBeInTheDocument();
+  });
+
+  // An update is not a way out of the screen.
+  it("edit: saving keeps you on the editor", async () => {
+    signIn(MANAGER);
+    server.use(
+      ...baseHandlers(),
+      http.patch(`${API}/cms/categories/a`, () =>
+        HttpResponse.json({ id: "a" }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderEditor("/cms/categories/a");
+
+    const name = await screen.findByDisplayValue("Tin tức");
+    await user.clear(name);
+    await user.type(name, "Tin mới");
+    await user.click(screen.getByRole("button", { name: SAVE() }));
+
+    expect(
+      await screen.findByText(i18n.t("cms.categories.toast.update_success")),
+    ).toBeVisible();
+    expect(screen.queryByText("CATEGORY LIST")).not.toBeInTheDocument();
   });
 
   // The list can show and filter a status; this is the only screen that can

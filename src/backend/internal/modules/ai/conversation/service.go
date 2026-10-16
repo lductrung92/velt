@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/velt/backend/internal/apperr"
+	"github.com/velt/backend/internal/modules/ai/endpoints"
 	"github.com/velt/backend/internal/modules/ai/provider"
 	"github.com/velt/backend/internal/modules/ai/shared"
 	"github.com/velt/backend/internal/modules/ai/tools"
@@ -30,23 +31,43 @@ type SettingsPort interface {
 	GetSecret(ctx context.Context, key string) string
 }
 
+// NotifyPort rings the browsers of the people on chat duty.
+//
+// An interface rather than the notify service itself so a conversation can be
+// tested without a push stack, and because the whole collaborator is optional:
+// a deployment with nobody subscribed leaves it nil and nothing changes.
+type NotifyPort interface {
+	VisitorWaiting(ctx context.Context, convID uuid.UUID, staffOnline int)
+	HasRecipients(ctx context.Context) bool
+}
+
 // Service drives a conversation: the guards, the model turn and the fan-out.
 type Service struct {
 	*shared.Base
-	repo     Repository
-	hub      *Hub
-	presence *Presence
-	reg      *tools.Registry
-	catalog  tools.CatalogPort
-	settings SettingsPort
+	repo      Repository
+	hub       *Hub
+	presence  *Presence
+	reg       *tools.Registry
+	catalog   tools.CatalogPort
+	settings  SettingsPort
+	endpoints *endpoints.Service
+	notify    NotifyPort
 }
 
 // NewService wires the conversation service.
 func NewService(base *shared.Base, repo Repository, hub *Hub, presence *Presence,
 	reg *tools.Registry, catalog tools.CatalogPort, settings SettingsPort,
+	eps *endpoints.Service, notifier NotifyPort,
 ) *Service {
 	return &Service{Base: base, repo: repo, hub: hub, presence: presence,
-		reg: reg, catalog: catalog, settings: settings}
+		reg: reg, catalog: catalog, settings: settings, endpoints: eps,
+		notify: notifier}
+}
+
+// canNotify reports whether a notification would reach anybody right now.
+// Nil-safe: no push stack wired is the same answer as nobody subscribed.
+func (s *Service) canNotify(ctx context.Context) bool {
+	return s.notify != nil && s.notify.HasRecipients(ctx)
 }
 
 // Hub exposes the fan-out so the handler can subscribe a stream to it.
@@ -81,7 +102,7 @@ func (s *Service) live(ctx context.Context) bool {
 	}
 	// Asking the adapter, not assuming a key is required: a local endpoint
 	// normally has no auth, so "no key" is only disqualifying for a hosted one.
-	if !s.client(ctx).Ready() {
+	if !s.client(ctx, shared.PurposeChat).Ready() {
 		return false
 	}
 	// Shared with Status so the screen can never claim something the runtime
@@ -91,12 +112,20 @@ func (s *Service) live(ctx context.Context) bool {
 
 // client builds the configured endpoint. Rebuilt per turn on purpose: a
 // settings change takes effect on the next message rather than on a restart.
-func (s *Service) client(ctx context.Context) provider.Client {
+// client is the FIRST runnable link of a purpose's chain: what a status
+// screen reports and what a connection probe exercises. Answering a turn goes
+// through endpoints.Stream instead, which walks the whole chain.
+//
+// A purpose with nothing runnable yields a client that is not Ready, which is
+// the same shape as "not configured" — the callers already handle that.
+func (s *Service) client(ctx context.Context, p shared.Purpose) provider.Client {
+	links, err := s.endpoints.Available(ctx, string(p))
+	if err != nil || len(links) == 0 {
+		return provider.New(provider.Config{})
+	}
+	l := links[0]
 	return provider.New(provider.Config{
-		Kind:    s.settings.GetString(ctx, shared.KeyProvider),
-		BaseURL: s.settings.GetString(ctx, shared.KeyBaseURL),
-		APIKey:  s.settings.GetSecret(ctx, shared.KeyAPIKey),
-		Model:   s.settings.GetString(ctx, shared.KeyModel),
+		Kind: l.Kind, BaseURL: l.BaseURL, APIKey: l.APIKey, Model: l.Model,
 	})
 }
 
@@ -188,6 +217,12 @@ func (s *Service) Send(ctx context.Context, visitorKey string, convID uuid.UUID,
 	// message is still recorded and fanned out — that is how the person who
 	// took over sees it.
 	if conv.State != StateBot {
+		// Nobody is coming unless somebody is told. The service decides
+		// whether to actually send: it stays quiet while an operator is at
+		// the desk, and rings at most once per conversation per window.
+		if s.notify != nil {
+			s.notify.VisitorWaiting(ctx, convID, s.presence.Count())
+		}
 		return SendResponse{Accepted: true, Degraded: degraded}, nil
 	}
 
@@ -254,17 +289,20 @@ func (s *Service) answer(ctx context.Context, convID uuid.UUID) {
 		})
 	}
 
-	text, usage, err := s.client(ctx).Stream(ctx, provider.StreamRequest{
-		System:   buildSystem(ctx, s.catalog, s.settings.GetString(ctx, shared.KeySystemPersona)),
-		Messages: msgs,
-		Tools:    specs,
-		OnDelta:  s.deltaGuard(ctx, convID),
-		Invoke: func(ctx context.Context, name string, input json.RawMessage) (any, error) {
-			// Checked against the allowlist again here, not just when the specs
-			// were built: a model can name a tool it was never offered.
-			return s.reg.Call(ctx, allow, name, input)
-		},
-	})
+	// The whole chain, not one endpoint: a link that answers 429 before it has
+	// written anything hands over to the next one. See endpoints.Stream.
+	text, usage, err := endpoints.Stream(ctx, s.endpoints, provider.New, s.Sec(ctx),
+		string(shared.PurposeChat), provider.StreamRequest{
+			System:   buildSystem(ctx, s.catalog, s.settings.GetString(ctx, shared.KeySystemPersona)),
+			Messages: msgs,
+			Tools:    specs,
+			OnDelta:  s.deltaGuard(ctx, convID),
+			Invoke: func(ctx context.Context, name string, input json.RawMessage) (any, error) {
+				// Checked against the allowlist again here, not just when the specs
+				// were built: a model can name a tool it was never offered.
+				return s.reg.Call(ctx, allow, name, input)
+			},
+		})
 
 	if usage.InputTokens > 0 || usage.OutputTokens > 0 {
 		if err := s.repo.AddUsage(ctx, usage.InputTokens, usage.OutputTokens); err != nil {

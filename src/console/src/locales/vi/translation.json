@@ -901,7 +901,6 @@
         "location_ph": "Chọn vị trí",
         "location_opt": {
           "header": "Header",
-          "header_mobile": "Header (điện thoại)",
           "footer": "Footer",
           "sidebar": "Sidebar"
         }
@@ -1498,10 +1497,12 @@
         "label": "Tổng quan danh mục",
         "total": "Tổng số danh mục",
         "total_hint": "Toàn bộ danh mục",
-        "used": "Có sản phẩm",
-        "used_hint": "Đang được dùng",
-        "unused": "Chưa có sản phẩm",
-        "unused_hint": "Có thể gộp hoặc bỏ"
+        "published": "Đang dùng",
+        "published_hint": "Hiển thị trên website",
+        "draft": "Nháp",
+        "draft_hint": "Đang thiết lập",
+        "archived": "Lưu trữ",
+        "archived_hint": "Đã cất đi"
       },
       "filter_status": "Lọc theo trạng thái",
       "all_statuses": "Tất cả"
@@ -1636,6 +1637,56 @@
       "expired": "Đã hết hạn",
       "expires_at": "Hết hạn {{at}}",
       "expired_at": "Đã hết hạn {{at}}"
+    },
+    "providers": {
+      "add": "Thêm nhà cung cấp",
+      "empty": "Chưa có nhà cung cấp nào. Thêm một cái để trợ lý có chỗ gọi.",
+      "disabled": "Đã tắt",
+      "default_url": "Dùng endpoint mặc định",
+      "key_set": "Có khoá",
+      "key_missing": "Chưa có khoá",
+      "new_title": "Thêm nhà cung cấp",
+      "edit_title": "Sửa nhà cung cấp",
+      "saved": "Đã lưu nhà cung cấp",
+      "deleted": "Đã xoá nhà cung cấp",
+      "delete": {
+        "title": "Xoá nhà cung cấp?",
+        "body": "Xoá \"{{label}}\" sẽ gỡ nó khỏi mọi danh sách định tuyến đang dùng nó."
+      },
+      "kind": {
+        "openai": "OpenAI / tương thích OpenAI",
+        "anthropic": "Anthropic"
+      },
+      "field": {
+        "label": "Tên gợi nhớ",
+        "label_ph": "Ví dụ: Groq",
+        "kind": "Kiểu giao thức",
+        "kind_help": "Chọn \"tương thích OpenAI\" cho Groq, OpenRouter, Ollama, LM Studio.",
+        "base_url": "Base URL",
+        "base_url_help": "Để trống nếu dùng endpoint mặc định của nhà cung cấp.",
+        "api_key": "Khoá API",
+        "api_key_help": "Lưu mã hoá. Để trống nếu endpoint không cần khoá.",
+        "api_key_set": "Đã có khoá. Để trống thì giữ nguyên khoá cũ.",
+        "enabled": "Cho phép sử dụng",
+        "enabled_help": "Tắt thì mọi bước trỏ tới nó đều bị bỏ qua."
+      }
+    },
+    "purpose": {
+      "chat": "Chatbot khách hàng",
+      "chat_help": "Model phải gọi được tool, nếu không trợ lý sẽ bịa sản phẩm.",
+      "content": "Dịch & viết bài",
+      "content_help": "Không cần gọi tool; luôn có người duyệt trước khi đăng."
+    },
+    "routing": {
+      "empty": "Chưa có bước nào. Thêm bước đầu tiên để công việc này chạy được.",
+      "add_step": "Thêm bước",
+      "provider": "Nhà cung cấp",
+      "model": "Model",
+      "model_ph": "Chọn model",
+      "move_up": "Lên trên",
+      "move_down": "Xuống dưới",
+      "remove": "Bỏ bước này",
+      "saved": "Đã lưu định tuyến"
     }
   },
   "chat": {
@@ -1698,7 +1749,24 @@
     "message_history": "Lịch sử tin nhắn",
     "new_messages": "Tin nhắn mới",
     "closed_notice": "Hội thoại đã kết thúc. Bạn vẫn có thể xem lại lịch sử.",
-    "keyboard_hint": "Enter để gửi · Shift + Enter để xuống dòng"
+    "keyboard_hint": "Enter để gửi · Shift + Enter để xuống dòng",
+    "push": {
+      "title": "Thông báo trên máy",
+      "subtitle": "Báo cho bạn khi có khách chờ tư vấn, kể cả khi đã đóng console.",
+      "enable": "Bật trên trình duyệt này",
+      "enabled": "Đã bật thông báo trên trình duyệt này.",
+      "removed": "Đã gỡ {{label}}.",
+      "remove_aria": "Gỡ {{label}}",
+      "on_here": "Thông báo đang bật trên trình duyệt này",
+      "off_here": "Trình duyệt này chưa bật thông báo.",
+      "this_device": "(máy này)",
+      "unnamed": "Trình duyệt không rõ tên",
+      "none": "Chưa có trình duyệt nào đăng ký nhận thông báo.",
+      "last_used": "Nhận gần nhất {{at}}",
+      "never_used": "Chưa nhận thông báo nào",
+      "unsupported": "Trình duyệt này không hỗ trợ thông báo đẩy.",
+      "blocked": "Trình duyệt đang chặn thông báo. Hãy mở cài đặt trang và cho phép, rồi thử lại."
+    }
   },
   "leads": {
     "title": "Khách hàng",
@@ -2004,11 +2072,7 @@
       "site_cache_ttl_seconds": "Cache trang của website",
       "site_og_image_url": "Ảnh khi chia sẻ link",
       "site_brand_tagline": "Giới thiệu dưới logo (footer)",
-      "site_footer_note_title": "Tiêu đề cột cuối (footer)",
-      "site_footer_note_text": "Nội dung cột cuối (footer)",
       "site_footer_copyright": "Dòng bản quyền",
-      "site_header_cta_label": "Nhãn nút liên hệ (header)",
-      "site_header_cta_url": "Liên kết nút liên hệ (header)",
       "site_contact_email": "Email liên hệ của công ty",
       "site_contact_zalo": "Link Zalo của công ty",
       "site_contact_phone": "Số điện thoại",
@@ -2025,10 +2089,6 @@
       "translation_enabled": "Site đa ngôn ngữ",
       "translation_locales": "Ngôn ngữ ngoài tiếng Việt",
       "ai_enabled": "Bật trợ lý AI",
-      "ai_provider": "Nhà cung cấp",
-      "ai_base_url": "Base URL",
-      "ai_api_key": "API key",
-      "ai_model": "Model",
       "ai_max_turns": "Số lượt tối đa mỗi hội thoại",
       "ai_daily_token_cap": "Hạn mức token mỗi ngày",
       "ai_max_message_len": "Độ dài tối đa một tin nhắn",
@@ -2060,9 +2120,7 @@
       "site_cache_ttl_seconds": "Số giây website được phục vụ lại một trang đã dựng sẵn. Đặt 0 khi đang sửa nội dung để thấy ngay.",
       "site_og_image_url": "Hiện khi dán link site lên mạng xã hội. Bài viết có ảnh bìa riêng thì dùng ảnh đó.",
       "site_brand_tagline": "Xuống dòng được giữ nguyên. Để trống thì dùng nội dung mặc định.",
-      "site_footer_note_text": "Xuống dòng được giữ nguyên.",
       "site_footer_copyright": "Viết {year} ở chỗ muốn hiện năm hiện tại.",
-      "site_header_cta_url": "Bắt đầu bằng / hoặc https://.",
       "site_contact_email": "Dùng khi khách không đến từ lời giới thiệu của một thành viên. Bỏ trống thì khối liên hệ không có địa chỉ nào.",
       "site_contact_phone": "Hiện ở footer. Để trống thì không hiện.",
       "site_address": "Hiện ở footer. Để trống thì không hiện.",
@@ -2075,12 +2133,13 @@
       "seo_analytics_id": "G-XXXXXXX cho Google Analytics 4, hoặc tên miền cho Plausible. Để trống thì site không nạp script theo dõi nào.",
       "translation_enabled": "Bật thì site có thêm địa chỉ /<mã ngôn ngữ> và nút đổi ngôn ngữ. Tắt thì chỉ còn tiếng Việt; bản dịch đã lưu vẫn giữ nguyên.",
       "translation_locales": "Danh sách mã ngôn ngữ, cách nhau bởi dấu phẩy. Ví dụ: en hoặc en,ja.",
-      "ai_base_url": "Để trống nếu dùng endpoint mặc định.",
       "ai_system_persona": "Thêm vào phần mô tả sẵn có; không ghi đè các quy tắc an toàn.",
       "app_page_size": "Áp dụng cho mọi bảng danh sách trong console. Từ 2 đến 100 dòng.",
       "app_pagination_template": "Cách bảng mời xem tiếp phần còn lại.",
       "cache_public_max_age_seconds": "Số giây trình duyệt và CDN được giữ bản cũ của cấu hình công khai. Nên đặt nhỏ hơn hoặc bằng chu kỳ tự đọc lại bên dưới, nếu không tab console sẽ đọc lại nhưng vẫn nhận bản trong cache trình duyệt.",
-      "cache_console_refresh_seconds": "Số giây giữa hai lần một tab console đang mở đọc lại cấu hình. Đặt 0 thì chỉ cập nhật khi tải lại trang."
+      "cache_console_refresh_seconds": "Số giây giữa hai lần một tab console đang mở đọc lại cấu hình. Đặt 0 thì chỉ cập nhật khi tải lại trang.",
+      "site_blog_page_size": "Số bài hiện trên mỗi trang blog. Từ 1 đến 24.",
+      "site_products_page_size": "Số sản phẩm hiện trên mỗi trang danh mục. Từ 1 đến 48."
     },
     "value": {
       "local": "Ổ đĩa máy chủ",
@@ -2160,8 +2219,8 @@
         "help": "Dung lượng tối đa cho tệp tải lên và cho mỗi khách."
       },
       "ai_connection": {
-        "title": "Kết nối",
-        "help": "Nhà cung cấp, model và khoá API của trợ lý."
+        "title": "Trợ lý AI",
+        "help": "Bật hoặc tắt trợ lý. Tắt thì site dùng bot kịch bản có sẵn."
       },
       "ai_behaviour": {
         "title": "Hành vi",
@@ -2189,6 +2248,14 @@
       "cache_ttl": {
         "title": "Thời gian cache",
         "help": "Mỗi mục là độ trễ giữa lúc bạn bấm Lưu và lúc nơi đó thấy thay đổi. Đặt 0 là không cho cache."
+      },
+      "ai_providers": {
+        "title": "Nhà cung cấp",
+        "help": "Các endpoint LLM mà trợ lý được phép gọi. Khoá API lưu mã hoá và không bao giờ hiện lại."
+      },
+      "ai_routing": {
+        "title": "Định tuyến theo công việc",
+        "help": "Mỗi công việc chạy theo danh sách từ trên xuống. Bước dưới chỉ được dùng khi bước trên báo hết hạn mức."
       }
     },
     "cache_purge": {

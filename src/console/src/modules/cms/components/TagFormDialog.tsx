@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Pencil, Plus, Save, X } from "lucide-react";
+import { Save, Tag as TagIcon, X } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -51,7 +51,7 @@ export function TagFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent closeLabel={t("common.close")}>
         <ModalHeader
-          icon={tag ? Pencil : Plus}
+          icon={TagIcon}
           title={
             tag
               ? t("cms.tags.dialog.edit_title")

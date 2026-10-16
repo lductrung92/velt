@@ -25,13 +25,14 @@ export const vi = {
   "catalog.hero_body":
     "Xem tính năng, mở bản trải nghiệm và liên hệ tư vấn trước khi mua.",
   "catalog.search_label": "Tìm sản phẩm",
-  "catalog.search_placeholder": "Tìm tên sản phẩm, nhu cầu, kỹ năng…",
+  "catalog.search_placeholder": "Tìm sản phẩm…",
   "catalog.search_clear": "Xóa tìm kiếm",
 
   "catalog.example_note_title": "Danh mục minh họa",
   "catalog.example_note_body":
     "Các mẫu dùng để giới thiệu bố cục, chưa phải sản phẩm được ZUKATEK công bố.",
 
+  "catalog.category_label": "Danh mục",
   "catalog.categories_label": "Lọc theo nhóm sản phẩm",
   "catalog.categories_all": "Tất cả",
 
@@ -118,13 +119,14 @@ export const en: Record<keyof typeof vi, string> = {
   "catalog.hero_body":
     "See what each one does, open a trial and ask for advice before you buy.",
   "catalog.search_label": "Search products",
-  "catalog.search_placeholder": "Search by product name, need or skill…",
+  "catalog.search_placeholder": "Search products…",
   "catalog.search_clear": "Clear search",
 
   "catalog.example_note_title": "Sample catalogue",
   "catalog.example_note_body":
     "These samples are here to show the layout; they are not products ZUKATEK has announced.",
 
+  "catalog.category_label": "Category",
   "catalog.categories_label": "Filter by product group",
   "catalog.categories_all": "All",
 

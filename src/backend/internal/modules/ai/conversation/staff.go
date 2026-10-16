@@ -182,14 +182,25 @@ func (s *Service) RequestHuman(ctx context.Context, visitorKey string, convID uu
 		return StateHuman, nil // already with a person
 	}
 
-	if !s.presence.AnyOnline() {
+	// Nobody at the desk. The visitor can still be parked for a person, but
+	// only if a person can actually be told — otherwise this would be a queue
+	// that never moves, which is the thing the refusal below exists to avoid.
+	offline := !s.presence.AnyOnline()
+	if offline && !s.canNotify(ctx) {
 		return "", s.MapRepoErr(ctx, "handoff", shared.ErrNoStaff)
 	}
+
 	if err := s.repo.SetState(ctx, convID, StateWaiting); err != nil {
 		return "", s.MapRepoErr(ctx, "handoff", err)
 	}
-	s.announce(ctx, convID, StateWaiting,
-		"Đang chuyển bạn cho người phụ trách, chờ một chút nhé.")
+	note := "Đang chuyển bạn cho người phụ trách, chờ một chút nhé."
+	if offline {
+		// Do not promise "a moment" at 21:00. Saying an answer comes later is
+		// what makes the wait acceptable instead of broken.
+		note = "Hiện chưa có ai trực. Chúng tôi đã báo cho người phụ trách và sẽ trả lời bạn sớm nhất có thể."
+		s.notify.VisitorWaiting(ctx, convID, 0)
+	}
+	s.announce(ctx, convID, StateWaiting, note)
 	return StateWaiting, nil
 }
 

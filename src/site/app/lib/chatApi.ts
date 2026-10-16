@@ -1,8 +1,9 @@
 // The site's only backend client.
 //
-// Everything else on this site is static content; the assistant is the one
-// thing that needs a live server. Keeping that in one file makes the boundary
-// obvious — and makes it obvious when something else starts reaching out.
+// Almost everything else on this site is static content; the assistant and the
+// newsletter opt-in are the two things that need a live server. Keeping them in
+// one file makes the boundary obvious — and makes it obvious when something
+// else starts reaching out.
 
 const DEFAULT_BASE = "http://localhost:8081/api";
 
@@ -134,4 +135,14 @@ export function openStream(id: string, handlers: StreamHandlers): () => void {
   });
 
   return () => source.close();
+}
+
+/** Newsletter opt-in from the footer. The server rate-limits by IP and by
+ *  address and answers 202 whether or not the address was already on the list,
+ *  so the form cannot be used to find out who is subscribed. */
+export function subscribeNewsletter(email: string): Promise<{ status: string }> {
+  return call("/public/cms/newsletter/subscribe", {
+    method: "POST",
+    body: JSON.stringify({ email, source: "footer" }),
+  });
 }
