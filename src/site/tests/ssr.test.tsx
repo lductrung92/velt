@@ -19,7 +19,12 @@ test("server renders real page content, filters and metadata without browser glo
   assert.match(home.html, /Mở hồ sơ Thành viên 04 trên địa cầu/);
   assert.equal((home.html.match(/class="catalog-card"/g) || []).length, 6);
   const catalog = render("/products?q=so%20ghi%20chu&ref=member-1");
-  assert.equal((catalog.html.match(/class="catalog-card"/g) || []).length, 1);
+  // The list page renders the `listing` card; the home page above still uses
+  // the plain one, which is why both classes are asserted in this test.
+  assert.equal(
+    (catalog.html.match(/class="catalog-listing-card"/g) || []).length,
+    1,
+  );
   assert.match(catalog.html, /Sổ ghi chú/);
   const detail = render("/products/example-1");
   assert.match(detail.title, /ZUKATEK.*Minh họa/);
@@ -63,7 +68,7 @@ test("100 real products replace examples and SSR pagination clamps malformed que
   const markup = renderToString(
     <App url="/products?page=999" year={2026} data={data} />,
   );
-  assert.equal((markup.match(/class="catalog-card"/g) || []).length, 1);
+  assert.equal((markup.match(/class="catalog-listing-card"/g) || []).length, 1);
   assert.match(markup, /Hiển thị 100–100 trong 100 sản phẩm/);
   assert.equal(
     readFilters(new URL("http://local/products?page=Infinity"), products).page,
