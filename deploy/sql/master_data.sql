@@ -26,7 +26,7 @@
 --     a) psql -f ddl.sql -f master_data.sql     schema and data, no app needed
 --     b) api migrate                            the app does both itself
 --   Running (a) and then (b) is safe — every statement here is ON CONFLICT DO
---   NOTHING and goose will see version 41 and skip — but (b) alone is simpler
+--   NOTHING and goose will see the current version and skip — but (b) alone is simpler
 --   unless you need the database to exist before the app does.
 --
 -- Every statement is idempotent: running this file twice changes nothing.
@@ -43,120 +43,122 @@ BEGIN;
 
 -- Roles, permissions and the grants between them.
 INSERT INTO public.roles (id, code, name, description, is_system, created_at, updated_at) VALUES
-	('ed5d8701-4bc1-47f5-a51d-26a3b5c3f6cf', 'super_admin', 'Super Admin', 'Full access (wildcard)', true, '2026-10-13 15:59:56.123828+07', '2026-10-13 15:59:56.123828+07'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'admin', 'Admin', 'Platform administration', true, '2026-10-13 15:59:56.123828+07', '2026-10-13 15:59:56.123828+07'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', 'editor', 'Editor', 'Self-service baseline', true, '2026-10-13 15:59:56.123828+07', '2026-10-13 15:59:56.123828+07')
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'admin', 'Admin', 'Platform administration', true, '2026-10-16 16:43:53.398399+07', '2026-10-16 16:43:53.398399+07'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', 'editor', 'Editor', 'Self-service baseline', true, '2026-10-16 16:43:53.398399+07', '2026-10-16 16:43:53.398399+07'),
+	('f323a5ba-2a23-46b2-9bd8-7fa8bb36a03b', 'super_admin', 'Super Admin', 'Full access (wildcard)', true, '2026-10-16 16:43:53.398399+07', '2026-10-16 16:43:53.398399+07')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.permissions (id, code, description, created_at) VALUES
-	('5bcf56d7-001f-4c94-95e6-d59eb020313b', '*', 'Wildcard — all permissions', '2026-10-13 15:59:56.123828+07'),
-	('97b0cdb9-be35-4c50-a2e0-280af3289b4e', 'users.read', 'View users', '2026-10-13 15:59:56.123828+07'),
-	('7b862e6a-0252-46bb-bee2-9ed175d0c69a', 'users.create', 'Create users', '2026-10-13 15:59:56.123828+07'),
-	('2b155955-6002-44f8-b565-71ad2ed7441a', 'users.update', 'Update users', '2026-10-13 15:59:56.123828+07'),
-	('f9d1c109-c296-4b01-94f4-39316fa3d383', 'users.delete', 'Delete/disable users', '2026-10-13 15:59:56.123828+07'),
-	('92b1fecd-4633-413b-a067-224497dac5e4', 'users.assign_role', 'Assign/remove roles', '2026-10-13 15:59:56.123828+07'),
-	('ee9ed43d-d7fa-4092-b484-76c1a4bc5053', 'roles.read', 'View roles and their permissions', '2026-10-13 15:59:56.123828+07'),
-	('55a99309-1abd-4dd3-959a-f86446cfecfe', 'roles.manage', 'Create/update/delete roles, assign permissions', '2026-10-13 15:59:56.123828+07'),
-	('51b5dded-bc08-4aff-8a62-9402125a85a4', 'permissions.read', 'View permission catalog', '2026-10-13 15:59:56.123828+07'),
-	('0a57cd83-9cad-43ef-99d4-fd121a910268', 'sessions.read', 'View other users'' sessions', '2026-10-13 15:59:56.123828+07'),
-	('97f19070-e893-4315-a8c5-be5889b931ae', 'sessions.revoke', 'Revoke other users'' sessions', '2026-10-13 15:59:56.123828+07'),
-	('29121c60-a322-4c99-b419-1b88c74bbcd0', 'settings.read', 'Read system settings', '2026-10-13 15:59:56.123828+07'),
-	('727d20bd-4dd6-460d-ba9b-189e58514b91', 'settings.manage', 'Update system settings', '2026-10-13 15:59:56.123828+07'),
-	('6f021fb0-c042-4504-b7d8-eaaec8fce987', 'impersonation.start', 'Impersonate another user', '2026-10-13 15:59:56.123828+07'),
-	('a326b5d1-c570-4da1-8ded-8173e01ebcdc', 'cms.article.view', 'View articles (editor: own only)', '2026-10-13 15:59:56.457109+07'),
-	('10780841-b62d-4f0c-97c5-2fcd673b2c0a', 'cms.article.create', 'Create articles', '2026-10-13 15:59:56.457109+07'),
-	('6ecbcca9-2a3a-4900-8a81-9ca9589ef081', 'cms.article.edit', 'Edit articles', '2026-10-13 15:59:56.457109+07'),
-	('7484ae94-a81f-45ec-a42a-cb867fc30c01', 'cms.article.delete', 'Delete articles', '2026-10-13 15:59:56.457109+07'),
-	('63f301bd-3d99-47bc-bfc9-cacc878f56b1', 'cms.article.submit', 'Submit articles for review', '2026-10-13 15:59:56.457109+07'),
-	('17326241-70e1-4863-93b5-3f4ee29ef0a3', 'cms.article.review', 'Approve/reject articles pending review', '2026-10-13 15:59:56.457109+07'),
-	('7c12b53b-6c0e-4c65-a7d1-3e83c9ce92d6', 'cms.article.publish', 'Publish / schedule / unpublish / re-publish articles', '2026-10-13 15:59:56.457109+07'),
-	('1143858a-4f7a-4aeb-afde-08981f4e4b46', 'cms.page.view', 'View static pages', '2026-10-13 15:59:56.457109+07'),
-	('9ad8a4ac-fe71-4f83-a527-de031be730f0', 'cms.page.create', 'Create static pages', '2026-10-13 15:59:56.457109+07'),
-	('9b697e28-7cb0-4713-a453-37bb8138a9ec', 'cms.page.edit', 'Edit static pages', '2026-10-13 15:59:56.457109+07'),
-	('50bf40b4-e641-49be-81fc-21287e80360a', 'cms.page.delete', 'Delete static pages', '2026-10-13 15:59:56.457109+07'),
-	('e28b233d-cccc-4f88-b8a1-f105d0f001e2', 'cms.page.publish', 'Publish/unpublish static pages', '2026-10-13 15:59:56.457109+07'),
-	('b4d08f37-eeeb-4834-9cd3-8c4c1c493197', 'cms.taxonomy.manage', 'Create/update/delete categories and tags', '2026-10-13 15:59:56.457109+07'),
-	('340d0a72-c41a-4966-845c-6cb19a83a08e', 'cms.menu.manage', 'Manage navigation menus', '2026-10-13 15:59:56.457109+07'),
-	('75f4407e-953b-4a08-81b0-4c8890e43175', 'cms.comment.moderate', 'Moderate comments', '2026-10-13 15:59:56.457109+07'),
-	('48338bb9-4216-4534-a8f1-2a7e3b8ba408', 'cms.landing.manage', 'Manage landing pages', '2026-10-13 15:59:56.457109+07'),
-	('59d7d58c-b96b-45ff-8d0c-c576ebe550ba', 'cms.settings.read', 'Read CMS feature flags', '2026-10-13 15:59:56.457109+07'),
-	('d128ec91-4126-471a-839f-0577af60f8d1', 'cms.settings.manage', 'Update CMS feature flags', '2026-10-13 15:59:56.457109+07'),
-	('7766ccff-ff6e-475a-a475-1718fd9e31d3', 'cms.newsletter.manage', 'Manage newsletter subscribers', '2026-10-13 15:59:56.615081+07'),
-	('31616395-1701-41be-960b-269d32eb9ad3', 'members.view', 'View team member profiles', '2026-10-13 15:59:56.618432+07'),
-	('ebcd91b4-a908-436f-9a7e-4fda12dbc71f', 'members.manage', 'Create/update/delete team member profiles', '2026-10-13 15:59:56.618432+07'),
-	('9854973a-1185-4d7f-80fd-a89401592715', 'products.view', 'View products and product categories', '2026-10-13 15:59:56.630187+07'),
-	('01bffe73-6026-4b60-9bb6-7c182e4ddb69', 'products.category.manage', 'Create/update/delete product categories', '2026-10-13 15:59:56.630187+07'),
-	('e3ba7647-7fe9-4f0b-818b-7dd9f599228b', 'products.create', 'Create products', '2026-10-13 15:59:56.64574+07'),
-	('e219fd2c-b6e2-41a7-8769-39a2cb14c0a2', 'products.edit', 'Edit products', '2026-10-13 15:59:56.64574+07'),
-	('ac401418-23f2-4067-bbff-2b3d131082d7', 'products.delete', 'Delete products', '2026-10-13 15:59:56.64574+07'),
-	('65eef7f4-43bd-4828-9933-b614e2b9a36f', 'products.publish', 'Publish / unpublish / archive products', '2026-10-13 15:59:56.64574+07'),
-	('c8833b7c-a983-4820-bc70-a987c31f8993', 'crm.leads.view', 'View leads assigned to you and the shared queue', '2026-10-13 15:59:56.692191+07'),
-	('bd73a29f-ef5d-4bd9-b6a0-c566b2138f4d', 'crm.leads.view_all', 'View every lead, including other people''s', '2026-10-13 15:59:56.692191+07'),
-	('855e8c13-7a1e-4138-a2c8-2d46f4bcd35a', 'crm.leads.manage', 'Create, edit, assign and move leads', '2026-10-13 15:59:56.692191+07'),
-	('f71d5cf1-26ec-4e50-a236-df26495c4612', 'ai.chat.handle', 'Read the assistant inbox and take over conversations', '2026-10-13 15:59:56.713479+07'),
-	('c7ceeb02-96db-4ea3-a03f-11e82c9f052f', 'ai.mcp.use', 'Issue and use MCP tokens for agent access', '2026-10-13 15:59:56.74717+07'),
-	('72933350-2e5b-4a1c-875d-c037ec8e1ee0', 'activity.read', 'Read the activity log', '2026-10-13 15:59:56.894851+07')
+	('f09403d2-2e2b-4909-8361-983f7e243876', '*', 'Wildcard — all permissions', '2026-10-16 16:43:53.398399+07'),
+	('135d04d0-d0ad-4abe-8afe-eeb6712f5d1c', 'impersonation.start', 'Impersonate another user', '2026-10-16 16:43:53.398399+07'),
+	('22b0687c-ba85-4be6-b7bc-369c05d75cf3', 'permissions.read', 'View permission catalog', '2026-10-16 16:43:53.398399+07'),
+	('9f871792-0309-4f83-96b0-daa1943502d3', 'roles.manage', 'Create/update/delete roles, assign permissions', '2026-10-16 16:43:53.398399+07'),
+	('5b09e5c0-f089-4722-b81d-ff7987ed30fa', 'roles.read', 'View roles and their permissions', '2026-10-16 16:43:53.398399+07'),
+	('2322ef0a-7aff-4acb-81c6-02c344320562', 'sessions.read', 'View other users'' sessions', '2026-10-16 16:43:53.398399+07'),
+	('211ec405-9dbd-4201-b515-e176fd6c14e6', 'sessions.revoke', 'Revoke other users'' sessions', '2026-10-16 16:43:53.398399+07'),
+	('e3b2fc2e-f92f-4784-8087-c26466539aad', 'settings.manage', 'Update system settings', '2026-10-16 16:43:53.398399+07'),
+	('160c8e81-eaea-4f27-adbc-84c4d024d21d', 'settings.read', 'Read system settings', '2026-10-16 16:43:53.398399+07'),
+	('84aba907-80d7-424b-be88-9bfbce30c121', 'users.assign_role', 'Assign/remove roles', '2026-10-16 16:43:53.398399+07'),
+	('379477c7-6209-4c30-b133-0a55fe449d1b', 'users.create', 'Create users', '2026-10-16 16:43:53.398399+07'),
+	('39a40902-e654-4239-b7f1-7f697f57bca1', 'users.delete', 'Delete/disable users', '2026-10-16 16:43:53.398399+07'),
+	('ba41cf88-7857-43d6-b788-ec6348d86319', 'users.read', 'View users', '2026-10-16 16:43:53.398399+07'),
+	('764f7d8e-29ea-44f5-b5e8-3037c00b776d', 'users.update', 'Update users', '2026-10-16 16:43:53.398399+07'),
+	('5a1d6a21-5e4b-468a-9f57-948d6f6a690a', 'cms.article.create', 'Create articles', '2026-10-16 16:43:53.536671+07'),
+	('2ccb0257-8f09-43fa-99c0-de7de8399265', 'cms.article.delete', 'Delete articles', '2026-10-16 16:43:53.536671+07'),
+	('2d114b71-afb6-45f8-bfdd-66ded9a428dd', 'cms.article.edit', 'Edit articles', '2026-10-16 16:43:53.536671+07'),
+	('e5494369-bd45-4d9e-b889-ffa292335517', 'cms.article.publish', 'Publish / schedule / unpublish / re-publish articles', '2026-10-16 16:43:53.536671+07'),
+	('a60f860e-b097-4a37-a9ec-6ad128d87ac7', 'cms.article.review', 'Approve/reject articles pending review', '2026-10-16 16:43:53.536671+07'),
+	('a8556a2f-af16-4ae9-bc48-8b84689d408c', 'cms.article.submit', 'Submit articles for review', '2026-10-16 16:43:53.536671+07'),
+	('aa2529bd-9962-4855-a935-43d2fb905781', 'cms.article.view', 'View articles (editor: own only)', '2026-10-16 16:43:53.536671+07'),
+	('182f199f-fc4b-4aa8-a5f4-a7f7e2d05515', 'cms.comment.moderate', 'Moderate comments', '2026-10-16 16:43:53.536671+07'),
+	('ee6d6ceb-9477-4175-9ac4-f1e0c7e1572a', 'cms.landing.manage', 'Manage landing pages', '2026-10-16 16:43:53.536671+07'),
+	('66a37875-b715-4c3d-a537-5c8341a5ee94', 'cms.menu.manage', 'Manage navigation menus', '2026-10-16 16:43:53.536671+07'),
+	('8f77f492-3f95-4b5d-9adc-a3f4c773201b', 'cms.page.create', 'Create static pages', '2026-10-16 16:43:53.536671+07'),
+	('5b01e8c4-ffe0-48f7-b25a-edc28a9fca52', 'cms.page.delete', 'Delete static pages', '2026-10-16 16:43:53.536671+07'),
+	('a361cb03-ecc3-4884-bd0f-02f660519d98', 'cms.page.edit', 'Edit static pages', '2026-10-16 16:43:53.536671+07'),
+	('8ac923f2-4c12-4fd0-b9be-a42f02ac6190', 'cms.page.publish', 'Publish/unpublish static pages', '2026-10-16 16:43:53.536671+07'),
+	('88a4587d-c28b-458c-9c96-080ed7589606', 'cms.page.view', 'View static pages', '2026-10-16 16:43:53.536671+07'),
+	('d28a933f-ab1a-4476-9920-22d96bfcf9c2', 'cms.settings.manage', 'Update CMS feature flags', '2026-10-16 16:43:53.536671+07'),
+	('ea54c070-6a3c-4eaa-a64b-29d6402f3136', 'cms.settings.read', 'Read CMS feature flags', '2026-10-16 16:43:53.536671+07'),
+	('9ed04580-cf7b-427c-9fd1-8efae95cde88', 'cms.taxonomy.manage', 'Create/update/delete categories and tags', '2026-10-16 16:43:53.536671+07'),
+	('23a8c0b7-7b9b-45c2-9c09-82663f310bbf', 'cms.newsletter.manage', 'Manage newsletter subscribers', '2026-10-16 16:43:53.680799+07'),
+	('073f6503-2db5-4350-8212-48134f697fed', 'members.manage', 'Create/update/delete team member profiles', '2026-10-16 16:43:53.684901+07'),
+	('2d0ec878-0568-4772-ac36-bee73e4c030d', 'members.view', 'View team member profiles', '2026-10-16 16:43:53.684901+07'),
+	('f2d88c12-07d8-45bb-b374-00098e513d67', 'products.category.manage', 'Create/update/delete product categories', '2026-10-16 16:43:53.699597+07'),
+	('8409fbac-6cae-4882-a4de-4961f8bc75ef', 'products.view', 'View products and product categories', '2026-10-16 16:43:53.699597+07'),
+	('ba697aaf-1190-493d-99bd-fa7fc073eb97', 'products.create', 'Create products', '2026-10-16 16:43:53.713021+07'),
+	('a2d8344e-3c32-44fa-a19e-4e204f523477', 'products.delete', 'Delete products', '2026-10-16 16:43:53.713021+07'),
+	('4b6ad4b3-5e1d-49b0-b89c-0e69546f795a', 'products.edit', 'Edit products', '2026-10-16 16:43:53.713021+07'),
+	('abe50035-ecb9-4040-b31d-0a34c595db39', 'products.publish', 'Publish / unpublish / archive products', '2026-10-16 16:43:53.713021+07'),
+	('9e9f10d6-f203-479b-a86e-161181bb4d8d', 'crm.leads.manage', 'Create, edit, assign and move leads', '2026-10-16 16:43:53.755802+07'),
+	('c0717a92-e8d6-4c3e-a32f-2e9d0fe63b96', 'crm.leads.view', 'View leads assigned to you and the shared queue', '2026-10-16 16:43:53.755802+07'),
+	('94e36ed3-8366-4c03-a14c-de88eeff0173', 'crm.leads.view_all', 'View every lead, including other people''s', '2026-10-16 16:43:53.755802+07'),
+	('e1ba8ebb-e58e-4a0c-8ec4-4557efedcfe8', 'ai.chat.handle', 'Read the assistant inbox and take over conversations', '2026-10-16 16:43:53.776351+07'),
+	('eafdf723-1fca-4ebe-9b26-fdfdd285228b', 'ai.mcp.use', 'Issue and use MCP tokens for agent access', '2026-10-16 16:43:53.805437+07'),
+	('f1a14d32-49bf-4fe7-8167-8100b9a3d9e9', 'activity.read', 'Read the activity log', '2026-10-16 16:43:53.871021+07'),
+	('e4a06bdb-5e0d-4f70-ba98-31bac393ba17', 'activity.purge', 'Permanently delete activity log entries older than a chosen date', '2026-10-16 16:43:53.921097+07')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.role_permissions (role_id, permission_id) VALUES
-	('ed5d8701-4bc1-47f5-a51d-26a3b5c3f6cf', '5bcf56d7-001f-4c94-95e6-d59eb020313b'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '97b0cdb9-be35-4c50-a2e0-280af3289b4e'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '7b862e6a-0252-46bb-bee2-9ed175d0c69a'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '2b155955-6002-44f8-b565-71ad2ed7441a'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'f9d1c109-c296-4b01-94f4-39316fa3d383'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '92b1fecd-4633-413b-a067-224497dac5e4'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'ee9ed43d-d7fa-4092-b484-76c1a4bc5053'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '55a99309-1abd-4dd3-959a-f86446cfecfe'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '51b5dded-bc08-4aff-8a62-9402125a85a4'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '0a57cd83-9cad-43ef-99d4-fd121a910268'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '97f19070-e893-4315-a8c5-be5889b931ae'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'a326b5d1-c570-4da1-8ded-8173e01ebcdc'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '10780841-b62d-4f0c-97c5-2fcd673b2c0a'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '6ecbcca9-2a3a-4900-8a81-9ca9589ef081'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '7484ae94-a81f-45ec-a42a-cb867fc30c01'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '63f301bd-3d99-47bc-bfc9-cacc878f56b1'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '17326241-70e1-4863-93b5-3f4ee29ef0a3'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '7c12b53b-6c0e-4c65-a7d1-3e83c9ce92d6'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '1143858a-4f7a-4aeb-afde-08981f4e4b46'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '9ad8a4ac-fe71-4f83-a527-de031be730f0'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '9b697e28-7cb0-4713-a453-37bb8138a9ec'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '50bf40b4-e641-49be-81fc-21287e80360a'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'e28b233d-cccc-4f88-b8a1-f105d0f001e2'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'b4d08f37-eeeb-4834-9cd3-8c4c1c493197'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '340d0a72-c41a-4966-845c-6cb19a83a08e'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '75f4407e-953b-4a08-81b0-4c8890e43175'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '48338bb9-4216-4534-a8f1-2a7e3b8ba408'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '59d7d58c-b96b-45ff-8d0c-c576ebe550ba'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'd128ec91-4126-471a-839f-0577af60f8d1'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', 'a326b5d1-c570-4da1-8ded-8173e01ebcdc'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '10780841-b62d-4f0c-97c5-2fcd673b2c0a'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '6ecbcca9-2a3a-4900-8a81-9ca9589ef081'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '7484ae94-a81f-45ec-a42a-cb867fc30c01'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '63f301bd-3d99-47bc-bfc9-cacc878f56b1'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '75f4407e-953b-4a08-81b0-4c8890e43175'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '59d7d58c-b96b-45ff-8d0c-c576ebe550ba'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '7766ccff-ff6e-475a-a475-1718fd9e31d3'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '31616395-1701-41be-960b-269d32eb9ad3'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'ebcd91b4-a908-436f-9a7e-4fda12dbc71f'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '31616395-1701-41be-960b-269d32eb9ad3'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '9854973a-1185-4d7f-80fd-a89401592715'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '01bffe73-6026-4b60-9bb6-7c182e4ddb69'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '9854973a-1185-4d7f-80fd-a89401592715'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'e3ba7647-7fe9-4f0b-818b-7dd9f599228b'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'e219fd2c-b6e2-41a7-8769-39a2cb14c0a2'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'ac401418-23f2-4067-bbff-2b3d131082d7'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '65eef7f4-43bd-4828-9933-b614e2b9a36f'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', 'e3ba7647-7fe9-4f0b-818b-7dd9f599228b'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', 'e219fd2c-b6e2-41a7-8769-39a2cb14c0a2'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'c8833b7c-a983-4820-bc70-a987c31f8993'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'bd73a29f-ef5d-4bd9-b6a0-c566b2138f4d'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '855e8c13-7a1e-4138-a2c8-2d46f4bcd35a'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', 'c8833b7c-a983-4820-bc70-a987c31f8993'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', '855e8c13-7a1e-4138-a2c8-2d46f4bcd35a'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'f71d5cf1-26ec-4e50-a236-df26495c4612'),
-	('05173f7e-e061-48f2-9fa5-b7ef4f92ea80', 'f71d5cf1-26ec-4e50-a236-df26495c4612'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', 'c7ceeb02-96db-4ea3-a03f-11e82c9f052f'),
-	('7c5d683b-eb16-4d19-9243-5dc58ba56926', '72933350-2e5b-4a1c-875d-c037ec8e1ee0')
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '073f6503-2db5-4350-8212-48134f697fed'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '182f199f-fc4b-4aa8-a5f4-a7f7e2d05515'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '211ec405-9dbd-4201-b515-e176fd6c14e6'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '22b0687c-ba85-4be6-b7bc-369c05d75cf3'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '2322ef0a-7aff-4acb-81c6-02c344320562'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '23a8c0b7-7b9b-45c2-9c09-82663f310bbf'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '2ccb0257-8f09-43fa-99c0-de7de8399265'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '2d0ec878-0568-4772-ac36-bee73e4c030d'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '2d114b71-afb6-45f8-bfdd-66ded9a428dd'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '379477c7-6209-4c30-b133-0a55fe449d1b'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '39a40902-e654-4239-b7f1-7f697f57bca1'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '4b6ad4b3-5e1d-49b0-b89c-0e69546f795a'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '5a1d6a21-5e4b-468a-9f57-948d6f6a690a'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '5b01e8c4-ffe0-48f7-b25a-edc28a9fca52'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '5b09e5c0-f089-4722-b81d-ff7987ed30fa'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '66a37875-b715-4c3d-a537-5c8341a5ee94'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '764f7d8e-29ea-44f5-b5e8-3037c00b776d'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '8409fbac-6cae-4882-a4de-4961f8bc75ef'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '84aba907-80d7-424b-be88-9bfbce30c121'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '88a4587d-c28b-458c-9c96-080ed7589606'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '8ac923f2-4c12-4fd0-b9be-a42f02ac6190'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '8f77f492-3f95-4b5d-9adc-a3f4c773201b'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '94e36ed3-8366-4c03-a14c-de88eeff0173'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '9e9f10d6-f203-479b-a86e-161181bb4d8d'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '9ed04580-cf7b-427c-9fd1-8efae95cde88'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', '9f871792-0309-4f83-96b0-daa1943502d3'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'a2d8344e-3c32-44fa-a19e-4e204f523477'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'a361cb03-ecc3-4884-bd0f-02f660519d98'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'a60f860e-b097-4a37-a9ec-6ad128d87ac7'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'a8556a2f-af16-4ae9-bc48-8b84689d408c'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'aa2529bd-9962-4855-a935-43d2fb905781'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'abe50035-ecb9-4040-b31d-0a34c595db39'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'ba41cf88-7857-43d6-b788-ec6348d86319'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'ba697aaf-1190-493d-99bd-fa7fc073eb97'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'c0717a92-e8d6-4c3e-a32f-2e9d0fe63b96'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'd28a933f-ab1a-4476-9920-22d96bfcf9c2'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'e1ba8ebb-e58e-4a0c-8ec4-4557efedcfe8'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'e4a06bdb-5e0d-4f70-ba98-31bac393ba17'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'e5494369-bd45-4d9e-b889-ffa292335517'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'ea54c070-6a3c-4eaa-a64b-29d6402f3136'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'eafdf723-1fca-4ebe-9b26-fdfdd285228b'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'ee6d6ceb-9477-4175-9ac4-f1e0c7e1572a'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'f1a14d32-49bf-4fe7-8167-8100b9a3d9e9'),
+	('051e5edd-b9a6-491a-9997-1812ad113fae', 'f2d88c12-07d8-45bb-b374-00098e513d67'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', '182f199f-fc4b-4aa8-a5f4-a7f7e2d05515'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', '2ccb0257-8f09-43fa-99c0-de7de8399265'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', '2d0ec878-0568-4772-ac36-bee73e4c030d'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', '2d114b71-afb6-45f8-bfdd-66ded9a428dd'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', '4b6ad4b3-5e1d-49b0-b89c-0e69546f795a'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', '5a1d6a21-5e4b-468a-9f57-948d6f6a690a'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', '8409fbac-6cae-4882-a4de-4961f8bc75ef'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', '9e9f10d6-f203-479b-a86e-161181bb4d8d'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', 'a8556a2f-af16-4ae9-bc48-8b84689d408c'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', 'aa2529bd-9962-4855-a935-43d2fb905781'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', 'ba697aaf-1190-493d-99bd-fa7fc073eb97'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', 'c0717a92-e8d6-4c3e-a32f-2e9d0fe63b96'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', 'e1ba8ebb-e58e-4a0c-8ec4-4557efedcfe8'),
+	('eb21c614-7a19-4296-83cc-0dd012e63a7d', 'ea54c070-6a3c-4eaa-a64b-29d6402f3136'),
+	('f323a5ba-2a23-46b2-9bd8-7fa8bb36a03b', 'f09403d2-2e2b-4909-8361-983f7e243876')
 ON CONFLICT DO NOTHING;
 
 --
@@ -192,7 +194,16 @@ SELECT v, true, now()
           (38),
           (39),
           (40),
-          (41)
+          (41),
+          (42),
+          (43),
+          (44),
+          (45),
+          (46),
+          (47),
+          (48),
+          (49),
+          (50)
        ) AS t(v)
  WHERE NOT EXISTS (SELECT 1 FROM public.goose_db_version g WHERE g.version_id = t.v)
  -- ORDER BY is not decoration: goose reports the CURRENT version by reading the
@@ -347,12 +358,14 @@ ON CONFLICT (entity, locale, slug) DO NOTHING;
 -- footer — the site falls back to the copy built into its components — but
 -- nothing in them can be changed without a deploy.
 --
--- Three slots, because the mockup has three lists:
---   header          the desktop bar; an item with children is a dropdown
---   header_mobile   the phone menu, flat, and carrying one entry the desktop
---                   bar has no room for ("Cách mua sản phẩm")
---   footer          one root per column; the root is the heading, its children
---                   are the links under it
+-- Two slots, because the site has two lists:
+--   header   the bar, shared by desktop and phone; an item with children is a
+--            dropdown on a wide screen and an indented entry on a narrow one
+--   footer   one root per column; the root is the heading, its children are
+--            the links under it
+--
+-- There was a third, `header_mobile`, until migration 0048 removed it: one
+-- menu both layouts read is one place to edit instead of two that drift.
 --
 -- The ids are fixed rather than generated, so a second run of this file changes
 -- nothing and a child always finds its parent. Rendered from these rows the two
@@ -361,11 +374,9 @@ ON CONFLICT (entity, locale, slug) DO NOTHING;
 --
 
 INSERT INTO public.cms_menus (id, name, location) VALUES ('015d00b2-c6b2-4dac-8627-860e4045038d', 'Footer', 'footer')
-ON CONFLICT (location) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.cms_menus (id, name, location) VALUES ('b1116a4e-5b94-4481-8b1e-02984c7752e0', 'Header', 'header')
-ON CONFLICT (location) DO NOTHING;
-INSERT INTO public.cms_menus (id, name, location) VALUES ('b8812d1b-e3e5-47bd-918f-e9a501a5aaf0', 'Header (điện thoại)', 'header_mobile')
-ON CONFLICT (location) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
 VALUES ('569513ef-f1fe-462c-92eb-69099edb0fec', '015d00b2-c6b2-4dac-8627-860e4045038d', NULL, 'Khám phá ZUKATEK', NULL, 'internal', '/', 'f', 0) ON CONFLICT (id) DO NOTHING;
@@ -395,14 +406,6 @@ INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, l
 VALUES ('74699bed-b2f4-429b-874e-bc5676a3bd50', 'b1116a4e-5b94-4481-8b1e-02984c7752e0', 'ea87508e-75d6-4471-aaf4-16fc37cb28b2', 'Sản phẩm', 'Danh mục, tính năng và bản trải nghiệm', 'internal', '/products', 'f', 0) ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
 VALUES ('8cf85720-6768-421d-a491-f8b66a328eba', 'b1116a4e-5b94-4481-8b1e-02984c7752e0', 'ea87508e-75d6-4471-aaf4-16fc37cb28b2', 'Đội ngũ & kỹ năng', 'Con người đứng sau ZUKATEK', 'internal', '/#team', 'f', 1) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
-VALUES ('e3dc524f-9a01-432a-a97e-4b79335d10b5', 'b8812d1b-e3e5-47bd-918f-e9a501a5aaf0', NULL, 'Sản phẩm', NULL, 'internal', '/products', 'f', 0) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
-VALUES ('e069ab0b-e734-4b0d-8e24-c0826f30ce8e', 'b8812d1b-e3e5-47bd-918f-e9a501a5aaf0', NULL, 'Đội ngũ & kỹ năng', NULL, 'internal', '/#team', 'f', 1) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
-VALUES ('dc039ce4-4246-45a3-9894-838d5fa0581e', 'b8812d1b-e3e5-47bd-918f-e9a501a5aaf0', NULL, 'Cách mua sản phẩm', NULL, 'internal', '/#collaboration', 'f', 2) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.cms_menu_items (id, menu_id, parent_id, label, description, link_type, url, open_new_tab, sort_order)
-VALUES ('2fb8d37e-e9ac-48b5-8ccb-12177fcb7441', 'b8812d1b-e3e5-47bd-918f-e9a501a5aaf0', NULL, 'Blog', NULL, 'internal', '/blog', 'f', 3) ON CONFLICT (id) DO NOTHING;
 
 
 -- The words beside those links. Empty would mean "use the site's built-in
@@ -410,11 +413,7 @@ VALUES ('2fb8d37e-e9ac-48b5-8ccb-12177fcb7441', 'b8812d1b-e3e5-47bd-918f-e9a501a
 -- console shows an editor what the page actually says instead of a blank box.
 INSERT INTO public.system_settings (key, value) VALUES
   ('site.brand_tagline', '"Đội ngũ phát triển sản phẩm số\ncho cá nhân, nhóm và doanh nghiệp."'::jsonb),
-  ('site.footer_note_title', '"Con người đứng sau sản phẩm"'::jsonb),
-  ('site.footer_note_text', '"Xem đội ngũ phát triển, kỹ năng\nvà thành viên phụ trách từng sản phẩm."'::jsonb),
-  ('site.footer_copyright', '"© {year} ZUKATEK"'::jsonb),
-  ('site.header_cta_label', '"Liên hệ"'::jsonb),
-  ('site.header_cta_url', '"/#contact"'::jsonb)
+  ('site.footer_copyright', '"© {year} ZUKATEK"'::jsonb)
 ON CONFLICT (key) DO NOTHING;
 
 
@@ -450,12 +449,11 @@ INSERT INTO public.translations (entity, entity_id, locale, values) VALUES
   ('menu_item', 'a824d7a3-70cc-454e-99d9-11d8b1829621', 'en', '{"label": "Blog"}'::jsonb),
   ('menu_item', '2fb8d37e-e9ac-48b5-8ccb-12177fcb7441', 'en', '{"label": "Blog"}'::jsonb),
   ('menu_item', '6ceed0ac-e5e5-4319-902a-44c8c6bbf100', 'en', '{"label": "How to buy"}'::jsonb),
-  ('menu_item', 'dc039ce4-4246-45a3-9894-838d5fa0581e', 'en', '{"label": "How to buy"}'::jsonb),
   ('menu_item', '569513ef-f1fe-462c-92eb-69099edb0fec', 'en', '{"label": "Explore ZUKATEK"}'::jsonb),
   ('menu_item', '25f8e38c-293a-4fe9-914b-bda04de40262', 'en', '{"label": "About ZUKATEK"}'::jsonb),
   ('menu_item', '515d8f42-b654-4d8f-a69a-80fd0a51808c', 'en', '{"label": "Buying & using products"}'::jsonb),
   ('menu_item', '82fb6df5-e4b0-4c28-8cd8-ee60c610d7ee', 'en', '{"label": "Contact"}'::jsonb),
-  ('site_chrome', '00000000-0000-0000-0000-00005174e000', 'en', '{"brand_tagline": "A team building digital products\nfor individuals, teams and companies.", "footer_note_title": "The people behind the products", "footer_note_text": "Meet the team, see their skills\nand who looks after each product.", "footer_copyright": "© {year} ZUKATEK", "header_cta_label": "Contact", "header_cta_url": "/#contact"}'::jsonb),
+  ('site_chrome', '00000000-0000-0000-0000-00005174e000', 'en', '{"brand_tagline": "A team building digital products\nfor individuals, teams and companies.", "footer_copyright": "© {year} ZUKATEK"}'::jsonb),
 ('landing_section', '4c1dd11a-dd98-411a-a4ff-db711648a8c9', 'en', '{"config": {"eyebrow": "THE ZUKATEK PRODUCT ECOSYSTEM", "heading": "Digital products\nfor the work you do.", "subheading": "ZUKATEK builds and delivers digital products for individuals, teams, small businesses and companies. Explore the features, try a product and get advice on the right fit."}}'::jsonb),
   ('landing_section', 'd87c6149-d803-4589-a738-31f22c7a5e46', 'en', '{"config": {"title": "Products that match the way you work", "subtitle": "Digital products for personal work, for working together in a team, and for running a company.", "items": [{"label": "Individuals", "headline": "For individuals", "body": "Tools for everyday work: taking notes, keeping information in order and staying on top of your own tasks.", "cta_label": "Advice for individuals "}, {"label": "Teams", "headline": "For teams", "body": "Products that help a team organise its work, share documents and follow progress in one place.", "cta_label": "Advice for teams "}, {"label": "Companies", "headline": "For companies", "body": "Products for managing and running a business. Check the features, the scope and the cost before you buy.", "cta_label": "Advice for companies "}]}}'::jsonb),
   ('landing_section', 'eff1940f-2e77-45d2-9588-61c890ef01ee', 'en', '{"config": {"title": "ZUKATEK products", "subtitle": "Explore the features, open a demo and ask for advice about the product you have in mind.", "show_all_label": "See every product "}}'::jsonb),

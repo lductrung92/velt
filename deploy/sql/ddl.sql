@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict xXAtS6d54z1ttJvNn1Y4Vz4z5kiDHbdZLfTY15jfh6Q7w6syWgjT17QK8khdJ1M
+\restrict NwqJaIuKSgjSucYDkMvmjIhA8UJnATvt4zCpnYbHe6gJ3eH0MzfyXFVTKBrI0CE
 
 -- Dumped from database version 18.6
 -- Dumped by pg_dump version 18.6
@@ -97,6 +97,7 @@ CREATE TABLE public.ai_conversations (
     turn_count integer DEFAULT 0 NOT NULL,
     last_activity_at timestamp with time zone DEFAULT now() NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_notified_at timestamp with time zone,
     CONSTRAINT ai_conversations_state_check CHECK ((state = ANY (ARRAY['bot'::text, 'waiting'::text, 'human'::text, 'closed'::text])))
 );
 
@@ -115,6 +116,41 @@ CREATE TABLE public.ai_messages (
     token_out integer DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT ai_messages_role_check CHECK ((role = ANY (ARRAY['visitor'::text, 'assistant'::text, 'staff'::text, 'system'::text])))
+);
+
+
+--
+-- Name: ai_providers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_providers (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    label text NOT NULL,
+    kind text NOT NULL,
+    base_url text DEFAULT ''::text NOT NULL,
+    api_key bytea,
+    enabled boolean DEFAULT true NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT ai_providers_kind_check CHECK ((kind = ANY (ARRAY['anthropic'::text, 'openai'::text]))),
+    CONSTRAINT ai_providers_label_check CHECK ((btrim(label) <> ''::text))
+);
+
+
+--
+-- Name: ai_purpose_models; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_purpose_models (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    purpose text NOT NULL,
+    provider_id uuid NOT NULL,
+    model text NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT ai_purpose_models_model_check CHECK ((btrim(model) <> ''::text)),
+    CONSTRAINT ai_purpose_models_purpose_check CHECK ((purpose = ANY (ARRAY['chat'::text, 'content'::text])))
 );
 
 
@@ -206,7 +242,9 @@ CREATE TABLE public.cms_categories (
     seo_description text,
     seo_keywords text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    status text DEFAULT 'published'::text NOT NULL,
+    CONSTRAINT cms_categories_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text])))
 );
 
 
@@ -352,6 +390,27 @@ CREATE TABLE public.cms_pages (
 
 
 --
+-- Name: cms_region_blocks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cms_region_blocks (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    region text NOT NULL,
+    kind text NOT NULL,
+    widget_type text,
+    menu_id uuid,
+    config jsonb DEFAULT '{}'::jsonb NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    is_visible boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    page_group text DEFAULT 'common'::text NOT NULL,
+    CONSTRAINT cms_region_blocks_kind_check CHECK ((kind = ANY (ARRAY['widget'::text, 'menu'::text]))),
+    CONSTRAINT cms_region_blocks_kind_target CHECK ((((kind = 'widget'::text) AND (widget_type IS NOT NULL) AND (menu_id IS NULL)) OR ((kind = 'menu'::text) AND (menu_id IS NOT NULL) AND (widget_type IS NULL))))
+);
+
+
+--
 -- Name: cms_tags; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -359,6 +418,25 @@ CREATE TABLE public.cms_tags (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name text NOT NULL,
     slug text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: files; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.files (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    slug text NOT NULL,
+    storage_key text NOT NULL,
+    mime text NOT NULL,
+    size_bytes bigint NOT NULL,
+    sha256 text NOT NULL,
+    width integer,
+    height integer,
+    owner_kind text NOT NULL,
+    owner_id uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
@@ -502,7 +580,9 @@ CREATE TABLE public.product_categories (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     seo_title text,
     seo_description text,
-    seo_keywords text
+    seo_keywords text,
+    status text DEFAULT 'published'::text NOT NULL,
+    CONSTRAINT product_categories_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text])))
 );
 
 
@@ -609,6 +689,19 @@ CREATE TABLE public.published_docs (
 
 
 --
+-- Name: push_keys; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.push_keys (
+    id boolean DEFAULT true NOT NULL,
+    public_key text NOT NULL,
+    private_key bytea NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT push_keys_single_row CHECK (id)
+);
+
+
+--
 -- Name: role_permissions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -630,6 +723,23 @@ CREATE TABLE public.roles (
     is_system boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: staff_push_subs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.staff_push_subs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    endpoint text NOT NULL,
+    p256dh text NOT NULL,
+    auth text NOT NULL,
+    label text DEFAULT ''::text NOT NULL,
+    last_used_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT staff_push_subs_endpoint_check CHECK ((btrim(endpoint) <> ''::text))
 );
 
 
@@ -740,6 +850,22 @@ ALTER TABLE ONLY public.ai_messages
 
 
 --
+-- Name: ai_providers ai_providers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_providers
+    ADD CONSTRAINT ai_providers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_purpose_models ai_purpose_models_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_purpose_models
+    ADD CONSTRAINT ai_purpose_models_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: ai_usage_daily ai_usage_daily_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -844,14 +970,6 @@ ALTER TABLE ONLY public.cms_menu_items
 
 
 --
--- Name: cms_menus cms_menus_location_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.cms_menus
-    ADD CONSTRAINT cms_menus_location_key UNIQUE (location);
-
-
---
 -- Name: cms_menus cms_menus_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -892,6 +1010,14 @@ ALTER TABLE ONLY public.cms_pages
 
 
 --
+-- Name: cms_region_blocks cms_region_blocks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cms_region_blocks
+    ADD CONSTRAINT cms_region_blocks_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: cms_tags cms_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -905,6 +1031,30 @@ ALTER TABLE ONLY public.cms_tags
 
 ALTER TABLE ONLY public.cms_tags
     ADD CONSTRAINT cms_tags_slug_key UNIQUE (slug);
+
+
+--
+-- Name: files files_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.files
+    ADD CONSTRAINT files_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: files files_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.files
+    ADD CONSTRAINT files_slug_key UNIQUE (slug);
+
+
+--
+-- Name: files files_storage_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.files
+    ADD CONSTRAINT files_storage_key_key UNIQUE (storage_key);
 
 
 --
@@ -1060,6 +1210,14 @@ ALTER TABLE ONLY public.published_docs
 
 
 --
+-- Name: push_keys push_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.push_keys
+    ADD CONSTRAINT push_keys_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: role_permissions role_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1081,6 +1239,22 @@ ALTER TABLE ONLY public.roles
 
 ALTER TABLE ONLY public.roles
     ADD CONSTRAINT roles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: staff_push_subs staff_push_subs_endpoint_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff_push_subs
+    ADD CONSTRAINT staff_push_subs_endpoint_key UNIQUE (endpoint);
+
+
+--
+-- Name: staff_push_subs staff_push_subs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff_push_subs
+    ADD CONSTRAINT staff_push_subs_pkey PRIMARY KEY (id);
 
 
 --
@@ -1129,6 +1303,13 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_purpose_models_purpose_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_purpose_models_purpose_idx ON public.ai_purpose_models USING btree (purpose, sort_order);
 
 
 --
@@ -1293,6 +1474,20 @@ CREATE INDEX idx_cms_pages_status_pub ON public.cms_pages USING btree (status, p
 
 
 --
+-- Name: idx_cms_region_blocks_slot; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cms_region_blocks_slot ON public.cms_region_blocks USING btree (page_group, region, sort_order);
+
+
+--
+-- Name: idx_files_owner; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_files_owner ON public.files USING btree (owner_kind, owner_id);
+
+
+--
 -- Name: idx_lead_products_product; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1454,6 +1649,13 @@ CREATE INDEX idx_users_status ON public.users USING btree (status);
 
 
 --
+-- Name: staff_push_subs_user_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX staff_push_subs_user_idx ON public.staff_push_subs USING btree (user_id);
+
+
+--
 -- Name: ai_conversations ai_conversations_claimed_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1491,6 +1693,14 @@ ALTER TABLE ONLY public.ai_messages
 
 ALTER TABLE ONLY public.ai_messages
     ADD CONSTRAINT ai_messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.ai_conversations(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_purpose_models ai_purpose_models_provider_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_purpose_models
+    ADD CONSTRAINT ai_purpose_models_provider_id_fkey FOREIGN KEY (provider_id) REFERENCES public.ai_providers(id) ON DELETE CASCADE;
 
 
 --
@@ -1606,6 +1816,14 @@ ALTER TABLE ONLY public.cms_pages
 
 
 --
+-- Name: cms_region_blocks cms_region_blocks_menu_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cms_region_blocks
+    ADD CONSTRAINT cms_region_blocks_menu_id_fkey FOREIGN KEY (menu_id) REFERENCES public.cms_menus(id) ON DELETE CASCADE;
+
+
+--
 -- Name: lead_products lead_products_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1718,6 +1936,14 @@ ALTER TABLE ONLY public.role_permissions
 
 
 --
+-- Name: staff_push_subs staff_push_subs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff_push_subs
+    ADD CONSTRAINT staff_push_subs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: system_settings system_settings_updated_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1761,5 +1987,5 @@ ALTER TABLE ONLY public.user_roles
 -- PostgreSQL database dump complete
 --
 
-\unrestrict xXAtS6d54z1ttJvNn1Y4Vz4z5kiDHbdZLfTY15jfh6Q7w6syWgjT17QK8khdJ1M
+\unrestrict NwqJaIuKSgjSucYDkMvmjIhA8UJnATvt4zCpnYbHe6gJ3eH0MzfyXFVTKBrI0CE
 
