@@ -276,3 +276,70 @@ func TestVisitorMessageRingsOnlyWhenAPersonOwnsTheConversation(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []uuid.UUID{res.ID}, e.notify.rung)
 }
+
+func TestTheQueueHearsAboutEveryConversationOnOneSubscription(t *testing.T) {
+	// One connection per operator instead of a five-second poll. The queue
+	// subscribes to nothing in particular, so a conversation it has never seen
+	// has to reach it too — that is the case a per-conversation topic misses.
+	e := newEnv(t)
+	events, stop := e.svc.Hub().SubscribeInbox()
+	defer stop()
+
+	res, err := e.svc.Start(ctx(), key, StartRequest{})
+	require.NoError(t, err)
+
+	select {
+	case ev := <-events:
+		require.Equal(t, EventInbox, ev.Type)
+		require.Equal(t, res.ID.String(), ev.ConversationID)
+	case <-time.After(time.Second):
+		t.Fatal("a new conversation never reached the queue")
+	}
+}
+
+func TestTheQueueIsNotWokenByEveryStreamedFragment(t *testing.T) {
+	// The queue shows a last line and a state, neither of which changes token
+	// by token. Refetching the inbox per fragment would cost more than the
+	// polling this replaces.
+	e := newEnv(t)
+	res, _ := e.svc.Start(ctx(), key, StartRequest{})
+	events, stop := e.svc.Hub().SubscribeInbox()
+	defer stop()
+
+	e.svc.fanOut(res.ID, Event{Type: EventDelta, Text: "đang gõ"})
+	select {
+	case ev := <-events:
+		t.Fatalf("a delta woke the queue: %+v", ev)
+	case <-time.After(150 * time.Millisecond):
+	}
+
+	// A finished line is a different matter: that is what the queue shows.
+	e.svc.fanOut(res.ID, Event{Type: EventMessage})
+	select {
+	case ev := <-events:
+		require.Equal(t, EventInbox, ev.Type)
+	case <-time.After(time.Second):
+		t.Fatal("a finished message never reached the queue")
+	}
+}
+
+func TestStaffActionsReachTheQueue(t *testing.T) {
+	// Claim/release/close all go through announce; this is the guard that they
+	// keep doing so, because the console stops polling once this ships.
+	e := newEnv(t)
+	res, _ := e.svc.Start(ctx(), key, StartRequest{})
+	member := staff()
+	_, _ = e.svc.Beat(ctx(), member)
+	_, _ = e.svc.RequestHuman(ctx(), key, res.ID)
+
+	events, stop := e.svc.Hub().SubscribeInbox()
+	defer stop()
+	require.NoError(t, e.svc.Claim(ctx(), member, res.ID))
+
+	select {
+	case ev := <-events:
+		require.Equal(t, res.ID.String(), ev.ConversationID)
+	case <-time.After(time.Second):
+		t.Fatal("claiming a conversation never reached the queue")
+	}
+}

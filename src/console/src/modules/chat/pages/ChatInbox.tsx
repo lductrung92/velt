@@ -40,6 +40,7 @@ import {
   useClaim,
   useCloseConversation,
   useInbox,
+  useInboxStream,
   usePresenceHeartbeat,
   useRelease,
   useReply,
@@ -119,6 +120,9 @@ export default function ChatInbox() {
   const log = useRef<HTMLDivElement>(null);
   const atBottom = useRef(true);
   usePresenceHeartbeat(true);
+  // Replaces the five-second poll: one stream per operator, refetching only
+  // what the event says moved.
+  useInboxStream(true, selected);
 
   const current = inbox.data?.find((c) => c.id === selected) ?? selection;
   const draft = selected ? (drafts[selected] ?? "") : "";

@@ -169,6 +169,40 @@ func (h *StaffHandler) Stream(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, err)
 		return
 	}
+	events, unsubscribe := h.svc.Hub().Subscribe(convID)
+	defer unsubscribe()
+	h.stream(w, r, events)
+}
+
+// InboxStream handles GET /api/chat/stream.
+//
+// One connection per operator for the whole queue, replacing a five-second
+// poll per open console. It carries no conversation content: each event names
+// a conversation that moved and the console refetches, so what an operator may
+// see stays decided by the authenticated read rather than by the fan-out.
+func (h *StaffHandler) InboxStream(w http.ResponseWriter, r *http.Request) {
+	id, ok := staffIdentity(w, r)
+	if !ok {
+		return
+	}
+	// The same permission the queue itself needs. Checked directly rather
+	// than by calling Inbox: watching needs no rows, and a query whose result
+	// is thrown away is a query nobody should pay for.
+	if err := h.svc.Require(r.Context(), id, permHandle); err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
+
+	events, unsubscribe := h.svc.Hub().SubscribeInbox()
+	defer unsubscribe()
+	h.stream(w, r, events)
+}
+
+// stream writes events until the client leaves. Shared by both staff streams:
+// the SSE preamble, the keep-alive and the write-deadline reset are the same
+// for a conversation and for the queue, and one of them getting them wrong is
+// the kind of bug nobody notices until a stream dies in production.
+func (h *StaffHandler) stream(w http.ResponseWriter, r *http.Request, events <-chan Event) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		httpx.WriteError(w, apperr.Internal())
@@ -178,13 +212,17 @@ func (h *StaffHandler) Stream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
+	// Proxies that buffer would defeat the whole point of streaming.
 	w.Header().Set("X-Accel-Buffering", "no")
+	// The server's WriteTimeout applies here too, and a stream is long-lived by
+	// definition: left alone it cuts the operator off. What ends this handler
+	// is r.Context() closing or the hub closing the channel.
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Time{})
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 
-	events, unsubscribe := h.svc.Hub().Subscribe(convID)
-	defer unsubscribe()
-
+	// Keeps intermediaries from closing an idle connection, and lets the client
+	// notice a dead one.
 	ping := time.NewTicker(25 * time.Second)
 	defer ping.Stop()
 
@@ -214,6 +252,7 @@ func RegisterStaff(r chi.Router, h *StaffHandler, authMW func(http.Handler) http
 	r.Group(func(r chi.Router) {
 		r.Use(authMW)
 		r.Get("/api/chat/conversations", h.Inbox)
+		r.Get("/api/chat/stream", h.InboxStream)
 		r.Post("/api/chat/presence", h.Presence)
 		r.Get("/api/chat/conversations/{id}", h.Transcript)
 		r.Get("/api/chat/conversations/{id}/stream", h.Stream)

@@ -135,7 +135,7 @@ func (s *Service) StaffReply(ctx context.Context, id *httpx.Identity, convID uui
 	if err != nil {
 		return MessageView{}, s.MapRepoErr(ctx, "staff reply", err)
 	}
-	s.hub.Publish(convID, Event{Type: EventMessage, Message: toView(*saved)})
+	s.fanOut(convID, Event{Type: EventMessage, Message: toView(*saved)})
 	return *toView(*saved), nil
 }
 
@@ -207,7 +207,7 @@ func (s *Service) RequestHuman(ctx context.Context, visitorKey string, convID uu
 // announce publishes a state change and, optionally, a system line explaining
 // it. The state event is what tells a client to stop waiting for the assistant.
 func (s *Service) announce(ctx context.Context, convID uuid.UUID, state, note string) {
-	s.hub.Publish(convID, Event{Type: EventState, State: state})
+	s.fanOut(convID, Event{Type: EventState, State: state})
 	if note == "" {
 		return
 	}
@@ -218,5 +218,5 @@ func (s *Service) announce(ctx context.Context, convID uuid.UUID, state, note st
 		s.Sec(ctx).Error("ai: announce", "err", err)
 		return
 	}
-	s.hub.Publish(convID, Event{Type: EventMessage, Message: toView(*saved)})
+	s.fanOut(convID, Event{Type: EventMessage, Message: toView(*saved)})
 }

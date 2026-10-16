@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { chatService, type ConversationState } from "../services/chat.service";
+import { openInboxStream } from "../services/chatStream";
 
 export const chatKeys = {
   all: ["chat"] as const,
@@ -10,14 +11,18 @@ export const chatKeys = {
   transcript: (id: string) => [...chatKeys.all, "transcript", id] as const,
 };
 
-/** The inbox is a live queue, so it polls. SSE would be tidier, but a list that
- *  refreshes every few seconds is enough and costs one endpoint instead of a
- *  second stream per operator. */
+/** The inbox is a live queue, kept current by the stream (useInboxStream).
+ *
+ *  The slow interval is a fallback, not the mechanism: a stream can die in a
+ *  way neither end notices — a proxy dropping an idle connection, a laptop
+ *  waking from sleep — and a queue that has silently stopped moving is the
+ *  failure this whole feature exists to avoid. A minute of staleness in that
+ *  case beats never refreshing again. */
 export function useInbox(state?: ConversationState) {
   return useQuery({
     queryKey: chatKeys.inbox(state),
     queryFn: () => chatService.inbox(state),
-    refetchInterval: 5_000,
+    refetchInterval: 60_000,
   });
 }
 
@@ -26,8 +31,35 @@ export function useTranscript(id: string | null) {
     queryKey: chatKeys.transcript(id ?? ""),
     queryFn: () => chatService.transcript(id as string),
     enabled: !!id,
-    refetchInterval: id ? 5_000 : false,
+    refetchInterval: id ? 60_000 : false,
   });
+}
+
+/**
+ * Keeps the queue current from one stream instead of a poll per open console.
+ *
+ * The event only names a conversation, so the refetch is what actually loads
+ * anything: the authenticated read stays the single place that decides what an
+ * operator may see. The open thread is refetched only when the event is about
+ * it — otherwise one busy conversation would reload every operator's screen.
+ */
+export function useInboxStream(enabled: boolean, openID: string | null) {
+  const qc = useQueryClient();
+  // Read through a ref so a change of open thread does not tear the stream
+  // down and reconnect it.
+  const open = useRef(openID);
+  open.current = openID;
+
+  useEffect(() => {
+    if (!enabled) return;
+    return openInboxStream((event) => {
+      void qc.invalidateQueries({ queryKey: [...chatKeys.all, "inbox"] });
+      if (event.conversation_id && event.conversation_id === open.current)
+        void qc.invalidateQueries({
+          queryKey: chatKeys.transcript(event.conversation_id),
+        });
+    });
+  }, [enabled, qc]);
 }
 
 function useConversationAction(fn: (id: string) => Promise<unknown>) {

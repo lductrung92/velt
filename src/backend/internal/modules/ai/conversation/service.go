@@ -73,6 +73,21 @@ func (s *Service) canNotify(ctx context.Context) bool {
 // Hub exposes the fan-out so the handler can subscribe a stream to it.
 func (s *Service) Hub() *Hub { return s.hub }
 
+// fanOut publishes an event to the conversation's own watchers and, unless it
+// is a streaming fragment, tells the console's queue that this conversation
+// moved.
+//
+// Deltas are deliberately left out: the queue shows a last line and a state,
+// neither of which changes token by token, and refetching the whole inbox for
+// every fragment of every answer would cost far more than the polling this
+// replaces.
+func (s *Service) fanOut(convID uuid.UUID, ev Event) {
+	s.hub.Publish(convID, ev)
+	if ev.Type != EventDelta {
+		s.hub.PublishInbox(convID)
+	}
+}
+
 // --- configuration helpers ---
 
 func (s *Service) maxTurns(ctx context.Context) int {
@@ -160,6 +175,10 @@ func (s *Service) Start(ctx context.Context, visitorKey string, req StartRequest
 		return StartResponse{}, s.MapRepoErr(ctx, "start conversation: greeting", err)
 	}
 
+	// A brand-new conversation has no watchers yet, so there is nobody to
+	// publish an event to — but the console's queue needs to learn it exists.
+	s.hub.PublishInbox(conv.ID)
+
 	res := StartResponse{
 		ID: conv.ID, State: conv.State, Degraded: !s.live(ctx), Greeting: hello,
 	}
@@ -209,7 +228,7 @@ func (s *Service) Send(ctx context.Context, visitorKey string, convID uuid.UUID,
 	if err != nil {
 		return SendResponse{}, s.MapRepoErr(ctx, "send: persist", err)
 	}
-	s.hub.Publish(convID, Event{Type: EventMessage, Message: toView(*saved)})
+	s.fanOut(convID, Event{Type: EventMessage, Message: toView(*saved)})
 
 	degraded := !s.live(ctx)
 
@@ -261,7 +280,7 @@ func (s *Service) answer(ctx context.Context, convID uuid.UUID) {
 	history, err := s.repo.History(ctx, convID, historyWindow)
 	if err != nil {
 		s.Sec(ctx).Error("ai: history", "err", err)
-		s.hub.Publish(convID, Event{Type: EventError, Code: "internal"})
+		s.fanOut(convID, Event{Type: EventError, Code: "internal"})
 		return
 	}
 
@@ -359,7 +378,7 @@ func (s *Service) persistAssistant(ctx context.Context, convID uuid.UUID, text s
 		s.Sec(ctx).Error("ai: persist assistant", "err", err)
 		return
 	}
-	s.hub.Publish(convID, Event{Type: EventMessage, Message: toView(*saved)})
+	s.fanOut(convID, Event{Type: EventMessage, Message: toView(*saved)})
 }
 
 // Transcript returns the conversation so far, for a visitor reopening the

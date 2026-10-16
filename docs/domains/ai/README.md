@@ -261,12 +261,36 @@ instance.
 
 > **Giới hạn phải biết**: hub nằm trong RAM của một process. Chạy từ hai instance
 > trở lên thì tin nhắn của người thật ở instance A không tới được khách đang cắm
-> SSE vào instance B. Lúc đó cần Redis pub/sub (Redis đã là tuỳ chọn sẵn có trong
-> `buildLimiter`). **Chưa làm bây giờ**, nhưng đừng để quên khi scale.
+> SSE vào instance B. Hàng chờ của console (§ ngay dưới) dùng chung hub nên dính
+> y hệt: người trực nối vào instance B sẽ không thấy hội thoại vừa mở ở instance
+> A — cho tới nhịp refetch 60 giây. Lúc đó cần Redis pub/sub (Redis đã là tuỳ
+> chọn sẵn có trong `buildLimiter`). **Chưa làm bây giờ**, nhưng đừng để quên khi
+> scale.
 
 **Phía console**: cần một màn hộp thư — danh sách hội thoại đang sống, nhận
 (claim), trả lời, xem transcript, thấy lead. Đây là một màn hình mới hoàn chỉnh
 chứ không phải một nút.
+
+**Hàng chờ cũng đi bằng SSE**, không poll. `GET /api/chat/stream` cho mỗi người
+trực một kết nối cho **toàn bộ** hàng chờ, thay cho một vòng poll 5 giây mỗi
+console đang mở. Hub có thêm một topic `inbox` (khoá là `uuid.Nil` — không hội
+thoại nào mang id đó), và mọi sự kiện trừ `delta` đều được phát kèm vào đó.
+
+Hai chỗ cố tình làm như vậy:
+
+- **Event không mang nội dung**, chỉ có `conversation_id`. Console nhận được thì
+  refetch. Nhờ thế "người này được xem gì" vẫn do **một chỗ** quyết định là lệnh
+  đọc có xác thực, chứ không phải do fan-out.
+- **`delta` không đánh thức hàng chờ.** Hàng chờ hiện dòng cuối và trạng thái,
+  cả hai đều không đổi theo từng token; refetch mỗi mảnh của mỗi câu trả lời sẽ
+  tốn hơn hẳn cái polling mà nó thay thế.
+
+Console đọc stream bằng **`fetch` + `ReadableStream`, không dùng `EventSource`**:
+console xác thực bằng header Bearer còn `EventSource` không gắn được header. Nhét
+access token vào query string thì nó sẽ nằm trong mọi access log và `Referer` dọc
+đường — không đáng để đổi lấy ít code hơn. Vẫn giữ một nhịp refetch chậm (60s) làm
+lưới an toàn: stream có thể chết âm thầm (proxy cắt kết nối rảnh, laptop vừa ngủ
+dậy), và một hàng chờ đứng im không ai biết đúng là thứ cần tránh nhất.
 
 **Trực tuyến/vắng mặt**: cần biết thành viên nào đang mở console, để bot nói đúng
 sự thật về việc có người hay không.

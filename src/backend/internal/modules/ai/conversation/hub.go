@@ -18,6 +18,9 @@ type Event struct {
 	State string `json:"state,omitempty"`
 	// Code names the failure for `error`.
 	Code string `json:"code,omitempty"`
+	// ConversationID says which conversation moved, for `inbox`. Only the
+	// inbox stream carries it: a per-conversation listener already knows.
+	ConversationID string `json:"conversation_id,omitempty"`
 }
 
 // Event type names.
@@ -26,7 +29,16 @@ const (
 	EventMessage = "message"
 	EventState   = "state"
 	EventError   = "error"
+	// EventInbox tells the console's queue that one conversation moved. It
+	// carries no content — the console refetches, so what an operator may see
+	// stays decided in one place, by the authenticated read.
+	EventInbox = "inbox"
 )
+
+// inboxTopic is the Hub key the console's queue listens on. uuid.Nil is free
+// for this: no conversation ever has it, so the queue is just another
+// subscriber rather than a second fan-out to keep in step.
+var inboxTopic = uuid.Nil
 
 // Hub fans events out to everyone watching a conversation: the visitor's own
 // stream, and (from step 4) the member who took it over.
@@ -85,6 +97,14 @@ func (h *Hub) Publish(id uuid.UUID, ev Event) {
 		default: // listener is behind; drop rather than block the stream
 		}
 	}
+}
+
+// SubscribeInbox registers a listener for every conversation at once.
+func (h *Hub) SubscribeInbox() (<-chan Event, func()) { return h.Subscribe(inboxTopic) }
+
+// PublishInbox tells the queue that a conversation moved.
+func (h *Hub) PublishInbox(id uuid.UUID) {
+	h.Publish(inboxTopic, Event{Type: EventInbox, ConversationID: id.String()})
 }
 
 // Watching reports how many listeners a conversation has. Used to decide
