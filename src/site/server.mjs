@@ -142,11 +142,14 @@ function originOf(...candidates) {
   return "";
 }
 
-// The same precedence the data layer uses (lib/cache.server.ts), or the policy
-// names an origin the page never calls and misses the one it does.
+// VITE_API_BASE_URL, NOT SITE_API_BASE_URL. The two differ on purpose: the SSR
+// process reaches the API over loopback, the browser over the public host. CSP
+// governs the BROWSER's requests, so using the server's value names an origin
+// no page ever calls and omits the one every chat message goes to. Caught in
+// production, where connect-src read `http://127.0.0.1:8080`.
 const apiOrigin = originOf(
-  process.env.SITE_API_BASE_URL,
   process.env.VITE_API_BASE_URL,
+  process.env.SITE_API_BASE_URL,
   "http://127.0.0.1:8081/api",
 );
 // In production this is its own host (cdn.*); in dev the images come off the
