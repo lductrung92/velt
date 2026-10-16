@@ -8,6 +8,7 @@ export interface MemberLinkValues {
 
 export interface MemberFormValues {
   full_name: string;
+  display_name: string;
   slug: string;
   role: string;
   bio: string;
@@ -20,6 +21,7 @@ export interface MemberFormValues {
 
 export const memberFormDefaults: MemberFormValues = {
   full_name: "",
+  display_name: "",
   slug: "",
   role: "",
   bio: "",
@@ -51,11 +53,16 @@ export function makeMemberSchema(t: TFunction) {
       .trim()
       .min(1, t("errors.validation.required"))
       .max(160, t("errors.validation.too_long")),
+    // Optional: left empty, the site falls back to full_name.
+    display_name: z.string().trim().max(160, t("errors.validation.too_long")),
     slug: z.string().trim().max(160, t("errors.validation.too_long")),
     role: z.string().trim().max(160, t("errors.validation.too_long")),
     bio: z.string().trim().max(4000, t("errors.validation.too_long")),
     email: z
-      .union([z.literal(""), z.string().trim().email(t("errors.validation.invalid_email"))])
+      .union([
+        z.literal(""),
+        z.string().trim().email(t("errors.validation.invalid_email")),
+      ])
       .refine((v) => v.length <= 255, t("errors.validation.too_long")),
     zalo: z.union([z.literal(""), httpUrl(t)]),
     skills: z.array(z.string().trim().max(60)).max(50),

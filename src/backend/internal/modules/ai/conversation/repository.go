@@ -173,11 +173,16 @@ func (r *pgxRepository) History(ctx context.Context, id uuid.UUID, limit int) ([
 }
 
 // MemberBySlug resolves a ?ref= slug to an active member.
+//
+// The name is the PUBLIC one: it goes straight into the greeting a visitor
+// reads ("Mot thanh vien cua Zukatek..."), so it must be display_name, with
+// the same fallback to full_name the roster uses. See migration 0051.
 func (r *pgxRepository) MemberBySlug(ctx context.Context, slug string) (*uuid.UUID, string, error) {
 	var id uuid.UUID
 	var name string
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, full_name FROM members WHERE slug = $1 AND is_active = true`, slug).
+		`SELECT id, COALESCE(display_name, full_name)
+		   FROM members WHERE slug = $1 AND is_active = true`, slug).
 		Scan(&id, &name)
 	if err != nil {
 		if err == pgx.ErrNoRows {

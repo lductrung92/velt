@@ -105,6 +105,7 @@ export default function MemberEditor() {
     if (!member) return;
     form.reset({
       full_name: member.full_name,
+      display_name: member.display_name,
       slug: member.slug,
       role: member.role ?? "",
       bio: member.bio ?? "",
@@ -126,6 +127,7 @@ export default function MemberEditor() {
     // way, so the wire shape is just the trimmed form state.
     const body = {
       full_name: values.full_name,
+      display_name: values.display_name,
       role: values.role,
       bio: values.bio,
       email: values.email,
@@ -305,6 +307,30 @@ export default function MemberEditor() {
                           {...field}
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {/* The name visitors see. Left empty the site shows the real
+                    one, so the help text says so rather than letting somebody
+                    assume an empty box means "hidden". */}
+                <FormField
+                  control={form.control}
+                  name="display_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("members.field.display_name")}</FormLabel>
+                      <FormControl>
+                        <TextField
+                          maxLength={160}
+                          disabled={!canManage}
+                          placeholder={t("members.field.display_name_ph")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        {t("members.field.display_name_help")}
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}

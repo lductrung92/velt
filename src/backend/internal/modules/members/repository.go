@@ -33,15 +33,15 @@ type pgxRepository struct {
 // NewRepository builds the pgx-backed members repository.
 func NewRepository(pool *pgxpool.Pool) Repository { return &pgxRepository{pool: pool} }
 
-const memberColumns = `id, slug, full_name, role, bio, avatar_path, email, zalo,
+const memberColumns = `id, slug, full_name, display_name, role, bio, avatar_path, email, zalo,
 	links, skills, sort_order, is_active, created_at, updated_at`
 
 func scanMember(row pgx.Row) (*Member, error) {
 	var m Member
 	var links, skills []byte
-	err := row.Scan(&m.ID, &m.Slug, &m.FullName, &m.Role, &m.Bio, &m.AvatarPath,
-		&m.Email, &m.Zalo, &links, &skills, &m.SortOrder, &m.IsActive,
-		&m.CreatedAt, &m.UpdatedAt)
+	err := row.Scan(&m.ID, &m.Slug, &m.FullName, &m.DisplayName, &m.Role, &m.Bio,
+		&m.AvatarPath, &m.Email, &m.Zalo, &links, &skills, &m.SortOrder,
+		&m.IsActive, &m.CreatedAt, &m.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -70,7 +70,9 @@ func (r *pgxRepository) List(ctx context.Context, p ListParams) ([]Member, int, 
 	var args []any
 	if p.Query != "" {
 		args = append(args, "%"+strings.ToLower(p.Query)+"%")
-		where = append(where, fmt.Sprintf("(lower(full_name) LIKE $%d OR lower(slug) LIKE $%d)", len(args), len(args)))
+		where = append(where, fmt.Sprintf(
+			"(lower(full_name) LIKE $%d OR lower(COALESCE(display_name, '')) LIKE $%d OR lower(slug) LIKE $%d)",
+			len(args), len(args), len(args)))
 	}
 	if p.ActiveOnly {
 		where = append(where, "is_active")
@@ -129,11 +131,11 @@ func (r *pgxRepository) Create(ctx context.Context, w write) (*Member, error) {
 		return nil, err
 	}
 	m, err := scanMember(r.pool.QueryRow(ctx,
-		`INSERT INTO members (slug, full_name, role, bio, email, zalo, links, skills, sort_order, is_active)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
-		         COALESCE($9, (SELECT COALESCE(max(sort_order), -1) + 1 FROM members)), $10)
+		`INSERT INTO members (slug, full_name, display_name, role, bio, email, zalo, links, skills, sort_order, is_active)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+		         COALESCE($10, (SELECT COALESCE(max(sort_order), -1) + 1 FROM members)), $11)
 		 RETURNING `+memberColumns,
-		w.Slug, w.FullName, w.Role, w.Bio, w.Email, w.Zalo, links, skills, w.SortOrder, w.IsActive))
+		w.Slug, w.FullName, w.DisplayName, w.Role, w.Bio, w.Email, w.Zalo, links, skills, w.SortOrder, w.IsActive))
 	if err != nil && isUniqueViolation(err) {
 		return nil, ErrConflict
 	}
@@ -146,11 +148,11 @@ func (r *pgxRepository) Update(ctx context.Context, id uuid.UUID, w write) (*Mem
 		return nil, err
 	}
 	m, err := scanMember(r.pool.QueryRow(ctx,
-		`UPDATE members SET slug = $2, full_name = $3, role = $4, bio = $5, email = $6,
-		        zalo = $7, links = $8, skills = $9, sort_order = $10, is_active = $11,
-		        updated_at = now()
+		`UPDATE members SET slug = $2, full_name = $3, display_name = $4, role = $5, bio = $6,
+		        email = $7, zalo = $8, links = $9, skills = $10, sort_order = $11,
+		        is_active = $12, updated_at = now()
 		 WHERE id = $1 RETURNING `+memberColumns,
-		id, w.Slug, w.FullName, w.Role, w.Bio, w.Email, w.Zalo, links, skills, w.SortOrder, w.IsActive))
+		id, w.Slug, w.FullName, w.DisplayName, w.Role, w.Bio, w.Email, w.Zalo, links, skills, w.SortOrder, w.IsActive))
 	if err != nil && isUniqueViolation(err) {
 		return nil, ErrConflict
 	}

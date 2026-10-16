@@ -92,7 +92,8 @@ func (r *pgxLinksRepository) SetCategories(ctx context.Context, productID uuid.U
 
 func (r *pgxLinksRepository) Members(ctx context.Context, productID uuid.UUID) ([]MemberRef, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT m.id, m.slug, m.full_name, pm.role, m.avatar_path, pm.sort_order
+		`SELECT m.id, m.slug, m.full_name, COALESCE(m.display_name, ''),
+		        pm.role, m.avatar_path, pm.sort_order
 		 FROM product_members pm
 		 JOIN members m ON m.id = pm.member_id
 		 WHERE pm.product_id = $1
@@ -105,7 +106,8 @@ func (r *pgxLinksRepository) Members(ctx context.Context, productID uuid.UUID) (
 	out := make([]MemberRef, 0, 4)
 	for rows.Next() {
 		var m MemberRef
-		if err := rows.Scan(&m.ID, &m.Slug, &m.FullName, &m.Role, &m.avatarPath, &m.SortOrder); err != nil {
+		if err := rows.Scan(&m.ID, &m.Slug, &m.FullName, &m.DisplayName,
+			&m.Role, &m.avatarPath, &m.SortOrder); err != nil {
 			return nil, shared.Wrap("scan product member", err)
 		}
 		out = append(out, m)

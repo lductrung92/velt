@@ -203,7 +203,8 @@ SELECT v, true, now()
           (47),
           (48),
           (49),
-          (50)
+          (50),
+          (51)
        ) AS t(v)
  WHERE NOT EXISTS (SELECT 1 FROM public.goose_db_version g WHERE g.version_id = t.v)
  -- ORDER BY is not decoration: goose reports the CURRENT version by reading the
@@ -282,6 +283,14 @@ ON CONFLICT DO NOTHING;
 -- the console to fill. is_active defaults to true, so all four appear on the
 -- site's team section as soon as it reads them.
 --
+-- `display_name` is deliberately left unset here.
+--
+-- It is the name the public site shows, and nobody but the team can decide
+-- what each person wants to be called in public — inventing one would be
+-- putting words in their mouth. Until it is filled in, the site falls back to
+-- full_name, which means A FRESH INSTALL SHOWS REAL NAMES. Set it from the
+-- console (Thành viên → Tên hiển thị trên site) before the site is reachable,
+-- or accept that. See migration 0051.
 INSERT INTO public.members (slug, full_name, email, sort_order)
 VALUES
   ('trungld', 'Lê Đức Trung', 'trungld@zakutek.com', 0),

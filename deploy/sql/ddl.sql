@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict NwqJaIuKSgjSucYDkMvmjIhA8UJnATvt4zCpnYbHe6gJ3eH0MzfyXFVTKBrI0CE
+\restrict LxOke4QUH6W5LeBfXdhjfT8X3nntDmzm0fnilO0LBZmZplsHtIQhuZIcQaVCiDh
 
 -- Dumped from database version 18.6
 -- Dumped by pg_dump version 18.6
@@ -535,7 +535,9 @@ CREATE TABLE public.members (
     sort_order integer DEFAULT 0 NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    display_name text,
+    CONSTRAINT members_display_name_check CHECK (((display_name IS NULL) OR (btrim(display_name) <> ''::text)))
 );
 
 
@@ -1987,5 +1989,5 @@ ALTER TABLE ONLY public.user_roles
 -- PostgreSQL database dump complete
 --
 
-\unrestrict NwqJaIuKSgjSucYDkMvmjIhA8UJnATvt4zCpnYbHe6gJ3eH0MzfyXFVTKBrI0CE
+\unrestrict LxOke4QUH6W5LeBfXdhjfT8X3nntDmzm0fnilO0LBZmZplsHtIQhuZIcQaVCiDh
 

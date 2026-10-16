@@ -93,6 +93,11 @@ type StartResponse struct {
 }
 
 // ReferrerRef identifies the introducing member to the site.
+//
+// FullName carries the member's PUBLIC name — display_name, or their real one
+// when they have not set an alias (MemberBySlug resolves it). The field keeps
+// its old name so the wire shape does not change; the value has never been a
+// legal name since migration 0051.
 type ReferrerRef struct {
 	Slug     string `json:"slug"`
 	FullName string `json:"full_name"`

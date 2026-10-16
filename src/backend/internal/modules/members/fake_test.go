@@ -106,7 +106,8 @@ func (r *fakeRepo) Create(_ context.Context, w write) (*Member, error) {
 	}
 	r.seq++
 	m := &Member{
-		ID: uuid.New(), Slug: w.Slug, FullName: w.FullName, Role: w.Role, Bio: w.Bio,
+		ID: uuid.New(), Slug: w.Slug, FullName: w.FullName,
+		DisplayName: w.DisplayName, Role: w.Role, Bio: w.Bio,
 		Email: w.Email, Zalo: w.Zalo, Links: w.Links, Skills: w.Skills,
 		SortOrder: order, IsActive: w.IsActive, CreatedAt: r.now, UpdatedAt: r.now,
 	}
@@ -134,7 +135,7 @@ func (r *fakeRepo) Update(_ context.Context, id uuid.UUID, w write) (*Member, er
 			return nil, ErrConflict
 		}
 	}
-	cur.Slug, cur.FullName = w.Slug, w.FullName
+	cur.Slug, cur.FullName, cur.DisplayName = w.Slug, w.FullName, w.DisplayName
 	cur.Role, cur.Bio, cur.Email, cur.Zalo = w.Role, w.Bio, w.Email, w.Zalo
 	cur.Links, cur.Skills, cur.IsActive = w.Links, w.Skills, w.IsActive
 	if w.SortOrder != nil {

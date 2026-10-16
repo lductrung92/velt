@@ -1279,6 +1279,9 @@
     },
     "field": {
       "full_name": "Full name",
+      "display_name": "Name shown on the site",
+      "display_name_ph": "For example: Trung",
+      "display_name_help": "What visitors see. Left empty, the site shows the real name.",
       "slug": "Slug",
       "slug_ph": "auto-generated-from-name",
       "slug_help": "Used in referral links /?ref=slug. Changing it breaks links already shared.",

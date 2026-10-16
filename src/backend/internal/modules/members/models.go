@@ -31,34 +31,39 @@ type Link struct {
 
 // Member is a team profile row.
 type Member struct {
-	ID         uuid.UUID
-	Slug       string
-	FullName   string
-	Role       *string
-	Bio        *string
-	AvatarPath *string
-	Email      *string
-	Zalo       *string
-	Links      []Link
-	Skills     []string
-	SortOrder  int
-	IsActive   bool
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID       uuid.UUID
+	Slug     string
+	FullName string
+	// DisplayName is the name the public site shows instead of FullName.
+	// Empty means nobody has set one, and the public roster falls back to the
+	// real name — see migration 0051 for why that trade was made.
+	DisplayName *string
+	Role        *string
+	Bio         *string
+	AvatarPath  *string
+	Email       *string
+	Zalo        *string
+	Links       []Link
+	Skills      []string
+	SortOrder   int
+	IsActive    bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // write is the full mutable state persisted on create/update. The service
 // resolves a PATCH onto the current row, so the repository only ever does a
 // plain full-row UPDATE (same approach as cms/taxonomy).
 type write struct {
-	Slug     string
-	FullName string
-	Role     *string
-	Bio      *string
-	Email    *string
-	Zalo     *string
-	Links    []Link
-	Skills   []string
+	Slug        string
+	FullName    string
+	DisplayName *string
+	Role        *string
+	Bio         *string
+	Email       *string
+	Zalo        *string
+	Links       []Link
+	Skills      []string
 	// SortOrder nil on create means "append to the end of the roster"; the
 	// repository resolves it in SQL. Update always carries a concrete value
 	// (the service copies the current row's order unless reordering).
@@ -76,29 +81,31 @@ type LinkInput struct {
 
 // CreateRequest is the POST /api/members body.
 type CreateRequest struct {
-	FullName string      `json:"full_name" validate:"required,max=160"`
-	Slug     *string     `json:"slug" validate:"omitempty,max=160"`
-	Role     *string     `json:"role" validate:"omitempty,max=160"`
-	Bio      *string     `json:"bio" validate:"omitempty,max=4000"`
-	Email    *string     `json:"email" validate:"omitempty,max=255"`
-	Zalo     *string     `json:"zalo" validate:"omitempty,max=500"`
-	Links    []LinkInput `json:"links" validate:"omitempty,max=20,dive"`
-	Skills   []string    `json:"skills" validate:"omitempty,max=50,dive,max=60"`
-	IsActive *bool       `json:"is_active"`
+	FullName    string      `json:"full_name" validate:"required,max=160"`
+	DisplayName *string     `json:"display_name" validate:"omitempty,max=160"`
+	Slug        *string     `json:"slug" validate:"omitempty,max=160"`
+	Role        *string     `json:"role" validate:"omitempty,max=160"`
+	Bio         *string     `json:"bio" validate:"omitempty,max=4000"`
+	Email       *string     `json:"email" validate:"omitempty,max=255"`
+	Zalo        *string     `json:"zalo" validate:"omitempty,max=500"`
+	Links       []LinkInput `json:"links" validate:"omitempty,max=20,dive"`
+	Skills      []string    `json:"skills" validate:"omitempty,max=50,dive,max=60"`
+	IsActive    *bool       `json:"is_active"`
 }
 
 // UpdateRequest is the PATCH /api/members/{id} body. Every field is a pointer so
 // "absent" (leave as-is) is distinguishable from an explicit new value.
 type UpdateRequest struct {
-	FullName *string      `json:"full_name" validate:"omitempty,max=160"`
-	Slug     *string      `json:"slug" validate:"omitempty,max=160"`
-	Role     *string      `json:"role" validate:"omitempty,max=160"`
-	Bio      *string      `json:"bio" validate:"omitempty,max=4000"`
-	Email    *string      `json:"email" validate:"omitempty,max=255"`
-	Zalo     *string      `json:"zalo" validate:"omitempty,max=500"`
-	Links    *[]LinkInput `json:"links" validate:"omitempty,max=20,dive"`
-	Skills   *[]string    `json:"skills" validate:"omitempty,max=50,dive,max=60"`
-	IsActive *bool        `json:"is_active"`
+	FullName    *string      `json:"full_name" validate:"omitempty,max=160"`
+	DisplayName *string      `json:"display_name" validate:"omitempty,max=160"`
+	Slug        *string      `json:"slug" validate:"omitempty,max=160"`
+	Role        *string      `json:"role" validate:"omitempty,max=160"`
+	Bio         *string      `json:"bio" validate:"omitempty,max=4000"`
+	Email       *string      `json:"email" validate:"omitempty,max=255"`
+	Zalo        *string      `json:"zalo" validate:"omitempty,max=500"`
+	Links       *[]LinkInput `json:"links" validate:"omitempty,max=20,dive"`
+	Skills      *[]string    `json:"skills" validate:"omitempty,max=50,dive,max=60"`
+	IsActive    *bool        `json:"is_active"`
 }
 
 // ReorderRequest is the PUT /api/members/order body: the full id list in the
@@ -135,9 +142,17 @@ type ListParams struct {
 // and reads the same struct, so its responses are left byte-identical. They are
 // omitted when the avatar has no `files` row.
 type Response struct {
-	ID           uuid.UUID `json:"id"`
-	Slug         string    `json:"slug"`
-	FullName     string    `json:"full_name"`
+	ID   uuid.UUID `json:"id"`
+	Slug string    `json:"slug"`
+	// FullName is the real name. It is omitted entirely on the PUBLIC roster
+	// — the whole point of display_name is that the legal name does not reach
+	// an unauthenticated caller, and leaving it in the JSON while hiding it in
+	// the markup would only hide it from people who do not look.
+	FullName string `json:"full_name,omitempty"`
+	// DisplayName is what the site shows. On the console it is the stored
+	// value, empty when unset; on the public roster it is already resolved,
+	// so a client never has to know about the fallback.
+	DisplayName  string    `json:"display_name"`
 	Role         *string   `json:"role"`
 	Bio          *string   `json:"bio"`
 	AvatarURL    *string   `json:"avatar_url"`

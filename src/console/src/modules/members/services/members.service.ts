@@ -12,6 +12,10 @@ export interface Member {
   id: string;
   slug: string;
   full_name: string;
+  /** The name the public site shows. Empty means nobody set one and the site
+   *  falls back to full_name. The public API omits full_name entirely, so this
+   *  is the only name an unauthenticated caller ever sees. */
+  display_name: string;
   role: string | null;
   bio: string | null;
   avatar_url: string | null;
@@ -45,6 +49,7 @@ export interface MemberListResult {
 
 export interface CreateMemberBody {
   full_name: string;
+  display_name?: string;
   slug?: string;
   role?: string;
   bio?: string;

@@ -236,7 +236,50 @@ func TestListPublic_HidesInactiveMembers(t *testing.T) {
 	res, err := svc.ListPublic(ctx, ListParams{})
 	require.NoError(t, err)
 	require.Equal(t, 1, res.Total)
-	require.Equal(t, "Visible", res.Items[0].FullName)
+	require.Equal(t, "Visible", res.Items[0].DisplayName,
+		"with no display name set, the public roster falls back to the real one")
+	require.Empty(t, res.Items[0].FullName,
+		"the real name must not reach an unauthenticated caller")
+}
+
+func TestListPublic_ShowsTheDisplayNameInsteadOfTheRealOne(t *testing.T) {
+	// The point of the column: the site shows a name the team chose, and the
+	// legal name does not leave the server. Asserting both halves, because
+	// showing the alias while still shipping full_name in the JSON would pass
+	// a weaker test and leak anyway.
+	svc, _, _ := newSvc(t)
+	ctx, id := context.Background(), manager()
+	alias := "Trung"
+	_, err := svc.Create(ctx, id, CreateRequest{FullName: "Le Duc Trung", DisplayName: &alias})
+	require.NoError(t, err)
+
+	res, err := svc.ListPublic(ctx, ListParams{})
+	require.NoError(t, err)
+	require.Equal(t, "Trung", res.Items[0].DisplayName)
+	require.Empty(t, res.Items[0].FullName)
+
+	// The console keeps both: an operator has to know who this is.
+	list, err := svc.List(ctx, id, ListParams{})
+	require.NoError(t, err)
+	require.Equal(t, "Le Duc Trung", list.Items[0].FullName)
+	require.Equal(t, "Trung", list.Items[0].DisplayName)
+}
+
+func TestUpdate_ClearsTheDisplayNameWithAnEmptyString(t *testing.T) {
+	// "" is how a form says "I emptied this box". It has to become NULL, not a
+	// blank alias: the column's CHECK rejects blanks, and a blank would make
+	// the public fallback ambiguous.
+	svc, repo, _ := newSvc(t)
+	ctx, id := context.Background(), manager()
+	alias := "Trung"
+	m, err := svc.Create(ctx, id, CreateRequest{FullName: "Le Duc Trung", DisplayName: &alias})
+	require.NoError(t, err)
+
+	empty := ""
+	updated, err := svc.Update(ctx, id, m.ID, UpdateRequest{DisplayName: &empty})
+	require.NoError(t, err)
+	require.Empty(t, updated.DisplayName)
+	require.Nil(t, repo.rows[m.ID].DisplayName, "stored as NULL, not as a blank string")
 }
 
 func TestListPublic_IgnoresClientActiveFlag(t *testing.T) {

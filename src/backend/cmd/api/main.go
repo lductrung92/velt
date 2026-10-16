@@ -262,8 +262,11 @@ func run() error {
 				if m.Role != nil {
 					role = *m.Role
 				}
+				// DisplayName, not FullName: ListPublic has already dropped
+				// the real name, and this roster is what the assistant reads
+				// out to a visitor.
 				out = append(out, aitools.Person{
-					Slug: m.Slug, FullName: m.FullName, Role: role, Skills: m.Skills,
+					Slug: m.Slug, FullName: m.DisplayName, Role: role, Skills: m.Skills,
 				})
 			}
 			return out, nil

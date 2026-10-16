@@ -16,9 +16,11 @@ const product = {
   platforms: ["web", "android"],
   categories: [{ slug: "van-hanh", name: "Vận hành" }],
 };
+// The public roster sends display_name only — the API resolves the fallback and
+// never ships full_name to an unauthenticated caller (backend migration 0051).
 const member = {
   slug: "an-nguyen",
-  full_name: "An Nguyễn",
+  display_name: "An Nguyễn",
   role: "Backend",
   bio: "",
   avatar_url: null,

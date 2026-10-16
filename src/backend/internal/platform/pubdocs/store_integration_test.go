@@ -183,3 +183,37 @@ func TestIT_VersionMovesWhenTheChromeChanges(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, edited, removed, "removing the last block must move it as well")
 }
+
+// Hiding a real name has to reach the site now, not after the cache TTL. The
+// roster is read live like the chrome is, so a member edit must move the token
+// — otherwise the alias somebody just set sits behind their real name for
+// however long the console configured the TTL to be.
+func TestIT_VersionMovesWhenAMemberChanges(t *testing.T) {
+	pool := requireDB(t)
+	store := New(pool)
+	ctx := context.Background()
+	slug := "pubdocsit-" + uuid.NewString()[:8]
+	t.Cleanup(func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM members WHERE slug LIKE 'pubdocsit-%'`)
+	})
+
+	before, err := store.Version(ctx)
+	require.NoError(t, err)
+
+	var memberID uuid.UUID
+	require.NoError(t, pool.QueryRow(ctx,
+		`INSERT INTO members (slug, full_name) VALUES ($1, 'Real Name') RETURNING id`,
+		slug).Scan(&memberID))
+
+	added, err := store.Version(ctx)
+	require.NoError(t, err)
+	require.NotEqual(t, before, added, "adding a member must move the token")
+
+	_, err = pool.Exec(ctx,
+		`UPDATE members SET display_name = 'Alias', updated_at = now() WHERE id = $1`, memberID)
+	require.NoError(t, err)
+
+	renamed, err := store.Version(ctx)
+	require.NoError(t, err)
+	require.NotEqual(t, added, renamed, "setting a display name must move it too")
+}

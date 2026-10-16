@@ -225,8 +225,16 @@ func (s *PublicService) toPublicDetail(ctx context.Context, f Response, locale s
 	}
 	members := make([]PublicMemberRef, 0, len(f.Members))
 	for _, m := range f.Members {
+		// The public credit is the display name, falling back to the real one
+		// exactly as the roster does. This is the product context's own copy
+		// of that rule because its contributor list is built here, not read
+		// from the members API.
+		name := m.DisplayName
+		if name == "" {
+			name = m.FullName
+		}
 		members = append(members, PublicMemberRef{
-			Slug: m.Slug, FullName: m.FullName, Role: m.Role, AvatarURL: m.AvatarURL,
+			Slug: m.Slug, FullName: name, Role: m.Role, AvatarURL: m.AvatarURL,
 		})
 	}
 	gallery := make([]PublicMediaItem, 0, len(f.Gallery))

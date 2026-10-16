@@ -33,12 +33,16 @@ type CategoryRef struct {
 // MemberRef is a member as seen from a product, carrying the role they played
 // on THIS product (empty → the site falls back to their general role).
 type MemberRef struct {
-	ID        uuid.UUID `json:"id"`
-	Slug      string    `json:"slug"`
-	FullName  string    `json:"full_name"`
-	Role      *string   `json:"role"`
-	AvatarURL *string   `json:"avatar_url"`
-	SortOrder int       `json:"sort_order"`
+	ID       uuid.UUID `json:"id"`
+	Slug     string    `json:"slug"`
+	FullName string    `json:"full_name"`
+	// DisplayName is the public name, empty when the member has not been
+	// given one. Both travel because the console credits people by their real
+	// name and the site must not — see migration 0051.
+	DisplayName string  `json:"display_name"`
+	Role        *string `json:"role"`
+	AvatarURL   *string `json:"avatar_url"`
+	SortOrder   int     `json:"sort_order"`
 	// avatarPath stays internal; the response exposes only the built URL.
 	avatarPath *string
 }

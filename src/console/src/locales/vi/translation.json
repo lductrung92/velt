@@ -1327,6 +1327,9 @@
     },
     "field": {
       "full_name": "Họ và tên",
+      "display_name": "Tên hiển thị trên site",
+      "display_name_ph": "Ví dụ: Trung",
+      "display_name_help": "Tên khách truy cập nhìn thấy. Để trống thì site hiện tên thật.",
       "slug": "Slug",
       "slug_ph": "tu-dong-tao-tu-ho-ten",
       "slug_help": "Dùng trong link giới thiệu /?ref=slug. Đổi slug sẽ làm hỏng các link đã phát ra.",

@@ -272,6 +272,12 @@ func (s *Store) Version(ctx context.Context) (string, error) {
 	// Their OTHER languages are read live as well — a menu label and the chrome
 	// copy are overlaid from `translations` at request time, never published —
 	// so writing a translation has to move this token too.
+	//
+	// members is here for the same reason: the team section and every product
+	// credit are read live from the roster, and nothing is published when one
+	// changes. It matters most for display_name — the point of that column is
+	// to take a real name off the site, and leaving it to the TTL would keep
+	// the name up for however long the console set that to.
 	var token string
 	err := s.pool.QueryRow(ctx, `
 		WITH marks AS (
@@ -288,6 +294,8 @@ func (s *Store) Version(ctx context.Context) (string, error) {
 		  SELECT MAX(updated_at), COUNT(*) FROM system_settings
 		  UNION ALL
 		  SELECT MAX(updated_at), COUNT(*) FROM translations
+		  UNION ALL
+		  SELECT MAX(updated_at), COUNT(*) FROM members
 		)
 		SELECT COALESCE(
 		         to_char(MAX(at) AT TIME ZONE 'UTC', 'YYYYMMDD"T"HH24MISS.US')

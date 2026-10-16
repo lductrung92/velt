@@ -39,7 +39,9 @@ interface ApiProduct {
 
 interface ApiMember {
   slug: string;
-  full_name: string;
+  /** The public name. The API resolves the fallback to the real name, and
+   *  never sends full_name on this endpoint — see backend migration 0051. */
+  display_name: string;
   role: string | null;
   bio: string | null;
   avatar_url: string | null;
@@ -105,7 +107,7 @@ function toProduct(p: ApiProduct, t: T): Product {
 function toMember(m: ApiMember, index: number): Member {
   return {
     id: m.slug,
-    name: m.full_name,
+    name: m.display_name,
     role: m.role ?? "",
     bio: m.bio ?? "",
     skills: m.skills ?? [],

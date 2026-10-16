@@ -164,6 +164,7 @@ func (s *Service) ListPublic(ctx context.Context, p ListParams) (ListResponse, e
 		return ListResponse{}, err
 	}
 	s.upgradeAvatars(ctx, res.Items)
+	publicise(res.Items)
 	locale := s.resolveLocale(ctx, p.Locale)
 	if locale == baseLocale {
 		return res, nil
@@ -217,11 +218,31 @@ func (s *Service) GetPublicBySlug(ctx context.Context, locale, slug string) (Res
 	}
 	one := []Response{s.toResponse(ctx, *m)}
 	s.upgradeAvatars(ctx, one)
+	publicise(one)
 	res := one[0]
 	if loc := s.resolveLocale(ctx, locale); loc != baseLocale {
 		overlayMember(&res, s.translations(ctx, loc, []uuid.UUID{m.ID})[m.ID])
 	}
 	return res, nil
+}
+
+// publicise makes a response safe to hand an unauthenticated caller.
+//
+// ONE place, deliberately. Every public read goes through here, so a new
+// endpoint cannot forget: it either calls this or it does not serve members.
+// Clearing FullName is what the json:"full_name,omitempty" tag needs to drop
+// the field altogether rather than send an empty one.
+//
+// The fallback is the documented trade (migration 0051): with no display name
+// set, the real name is still what a visitor sees — it just arrives in
+// display_name. Hiding the member instead would be a worse failure.
+func publicise(items []Response) {
+	for i := range items {
+		if items[i].DisplayName == "" {
+			items[i].DisplayName = items[i].FullName
+		}
+		items[i].FullName = ""
+	}
 }
 
 // --- Writes ---
@@ -252,15 +273,16 @@ func (s *Service) Create(ctx context.Context, id *httpx.Identity, req CreateRequ
 		return Response{}, err
 	}
 	w := write{
-		Slug:     slug,
-		FullName: name,
-		Role:     trimPtr(req.Role),
-		Bio:      trimPtr(req.Bio),
-		Email:    email,
-		Zalo:     zalo,
-		Links:    links,
-		Skills:   cleanStrings(req.Skills),
-		IsActive: req.IsActive == nil || *req.IsActive,
+		Slug:        slug,
+		FullName:    name,
+		DisplayName: trimPtr(req.DisplayName),
+		Role:        trimPtr(req.Role),
+		Bio:         trimPtr(req.Bio),
+		Email:       email,
+		Zalo:        zalo,
+		Links:       links,
+		Skills:      cleanStrings(req.Skills),
+		IsActive:    req.IsActive == nil || *req.IsActive,
 		// nil → repository appends to the end of the roster
 	}
 	m, err := s.repo.Create(ctx, w)
@@ -300,16 +322,17 @@ func (s *Service) Update(ctx context.Context, id *httpx.Identity, memberID uuid.
 
 	sortOrder := cur.SortOrder
 	w := write{
-		Slug:      slug,
-		FullName:  name,
-		Role:      pickPtr(req.Role, cur.Role),
-		Bio:       pickPtr(req.Bio, cur.Bio),
-		Email:     cur.Email,
-		Zalo:      cur.Zalo,
-		Links:     cur.Links,
-		Skills:    cur.Skills,
-		SortOrder: &sortOrder,
-		IsActive:  cur.IsActive,
+		Slug:        slug,
+		FullName:    name,
+		DisplayName: pickPtr(req.DisplayName, cur.DisplayName),
+		Role:        pickPtr(req.Role, cur.Role),
+		Bio:         pickPtr(req.Bio, cur.Bio),
+		Email:       cur.Email,
+		Zalo:        cur.Zalo,
+		Links:       cur.Links,
+		Skills:      cur.Skills,
+		SortOrder:   &sortOrder,
+		IsActive:    cur.IsActive,
 	}
 	if req.Email != nil {
 		em, ok := trimEmailPtr(req.Email)
@@ -509,8 +532,13 @@ func sniffImage(b []byte) (ext string, ok bool) {
 // --- Helpers ---
 
 func (s *Service) toResponse(ctx context.Context, m Member) Response {
+	display := ""
+	if m.DisplayName != nil {
+		display = *m.DisplayName
+	}
 	return Response{
-		ID: m.ID, Slug: m.Slug, FullName: m.FullName, Role: m.Role, Bio: m.Bio,
+		ID: m.ID, Slug: m.Slug, FullName: m.FullName, DisplayName: display,
+		Role: m.Role, Bio: m.Bio,
 		AvatarURL: s.avatarURL(ctx, m.AvatarPath),
 		Email:     m.Email, Zalo: m.Zalo, Links: m.Links, Skills: m.Skills,
 		SortOrder: m.SortOrder, IsActive: m.IsActive,
