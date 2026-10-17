@@ -17,6 +17,10 @@ const convColumns = `id, state, visitor_key, referrer_member_id, lead_id,
 type Repository interface {
 	Create(ctx context.Context, visitorKey string, referrerMemberID *uuid.UUID) (*Conversation, error)
 	Get(ctx context.Context, id uuid.UUID) (*Conversation, error)
+	// ActiveByVisitor finds the thread this visitor is still in, so reopening
+	// the widget or reloading the page lands back in it instead of starting a
+	// fresh one. Closed threads are not returned: those are finished.
+	ActiveByVisitor(ctx context.Context, visitorKey string) (*Conversation, error)
 	// BumpTurn increments the turn counter and touches last_activity_at in one
 	// statement, returning the new count so the caller can enforce the ceiling
 	// without a read-then-write race.
@@ -61,6 +65,21 @@ func scanConv(row pgx.Row) (*Conversation, error) {
 		return nil, err
 	}
 	return &c, nil
+}
+
+// A visitor can have several rows over time; the newest active one is theirs.
+// Ordering by last_activity_at rather than created_at means a thread they came
+// back to wins over a newer one they abandoned.
+func (r *pgxRepository) ActiveByVisitor(ctx context.Context, visitorKey string) (*Conversation, error) {
+	c, err := scanConv(r.pool.QueryRow(ctx,
+		`SELECT `+convColumns+` FROM ai_conversations
+		 WHERE visitor_key = $1 AND state <> $2
+		 ORDER BY last_activity_at DESC NULLS LAST, created_at DESC
+		 LIMIT 1`, visitorKey, StateClosed))
+	if err != nil {
+		return nil, shared.Wrap("active conversation by visitor", err)
+	}
+	return c, nil
 }
 
 func (r *pgxRepository) Create(ctx context.Context, visitorKey string, referrer *uuid.UUID) (*Conversation, error) {

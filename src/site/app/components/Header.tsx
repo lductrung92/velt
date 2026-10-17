@@ -109,12 +109,11 @@ export function Header() {
       window.cancelAnimationFrame(frame);
     };
   }, [menuOpen, openDropdown]);
-  // On the home page the catalogue link stays an in-page anchor, exactly as the
-  // markup did: "/products" scrolls to the section instead of reloading it.
-  const to = (item: NavItem) =>
-    url.pathname === "/" && item.href === "/products"
-      ? href("/#products")
-      : navHref(item, href);
+  // A menu link goes exactly where the console says it goes. Rewriting
+  // "/products" into "/#products" on the home page meant the catalogue item
+  // scrolled to a section instead of opening the catalogue, so the same menu
+  // entry behaved differently depending on which page you clicked it from.
+  const to = (item: NavItem) => navHref(item, href);
   const linkProps = (item: NavItem) =>
     item.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {};
   useEffect(() => {
@@ -194,11 +193,7 @@ export function Header() {
       }
     >
       <div className="nav-container">
-        <a
-          className="brand"
-          href={href("/#top")}
-          aria-label={t("a11y.brand_home")}
-        >
+        <a className="brand" href={href("/")} aria-label={t("a11y.brand_home")}>
           <img
             src={layout.chrome.logoUrl || "/assets/logo.png"}
             alt={t("a11y.brand_home")}

@@ -1850,6 +1850,32 @@
       "no_message": "Khách không để lại lời nhắn.",
       "reply": "Trả lời qua email",
       "call": "Gọi"
+    },
+    "tabs": {
+      "leads": "Khách hàng",
+      "newsletter": "Đăng ký nhận tin"
+    },
+    "newsletter": {
+      "list_title": "Đăng ký nhận tin",
+      "hint": "Địa chỉ email thu được từ form ở chân trang.",
+      "count_one": "{{count}} địa chỉ",
+      "count_other": "{{count}} địa chỉ",
+      "col": {
+        "email": "Email",
+        "source": "Nguồn",
+        "status": "Trạng thái",
+        "created": "Ngày đăng ký",
+        "actions": "Thao tác"
+      },
+      "status_active": "Đang nhận",
+      "status_unsubscribed": "Đã hủy",
+      "all_statuses": "Tất cả trạng thái",
+      "source_unknown": "Không rõ",
+      "empty_title": "Chưa có ai đăng ký",
+      "empty_description": "Địa chỉ đăng ký ở form chân trang sẽ hiện tại đây.",
+      "delete": "Xóa địa chỉ",
+      "delete_confirm": "Xóa {{email}} khỏi danh sách nhận tin?",
+      "deleted": "Đã xóa khỏi danh sách nhận tin"
     }
   },
   "activity": {

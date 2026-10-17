@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSite } from "../context";
 import {
   ChatError,
+  currentConversation,
   loadTranscript,
   openStream,
   sendMessage,
@@ -45,7 +46,7 @@ function speaker(t: T, role: ChatMessage["role"], degraded: boolean): string {
 }
 
 export function Chat() {
-  const { referrer, url, t } = useSite();
+  const { referrer, url, locale, t } = useSite();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -62,49 +63,62 @@ export function Chat() {
   const launcher = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
 
-  // Opening the widget is what starts a conversation — not page load. A visitor
-  // who never opens the chat costs nothing and leaves no row behind.
+  const attach = useCallback((id: string) => {
+    closeStream.current?.();
+    closeStream.current = openStream(id, {
+      onDelta: (text) => setStreaming((cur) => cur + text),
+      onMessage: (message) => {
+        // The finished message replaces whatever was streamed: the server's
+        // stored copy is the one that survives a reload.
+        setStreaming("");
+        setMessages((cur) =>
+          cur.some((m) => m.id === message.id) ? cur : [...cur, message],
+        );
+      },
+      onState: setState,
+    });
+  }, []);
+
+  // Opening the widget RESUMES a conversation; it never creates one.
+  //
+  // Creating on open meant a visitor who opened the chat and read the greeting
+  // left a row behind and showed up in the console queue without ever having
+  // said anything. Now nothing is written until they write — see submit().
+  //
+  // Resuming is a lookup by the server's own visitor cookie, so the thread
+  // survives a reload with nothing stored in the browser: no id in
+  // localStorage for a script to read, and nothing the visitor can edit to
+  // open somebody else's conversation.
+  const resumed = useRef(false);
   useEffect(() => {
-    if (!open || conversationId.current) return;
+    if (!open || conversationId.current || resumed.current) return;
+    resumed.current = true;
     let cancelled = false;
 
     void (async () => {
       try {
-        const started = await startConversation({
-          ref: referrer?.id ? (url.searchParams.get("ref") ?? "") : "",
-          page: url.pathname,
-        });
-        if (cancelled) return;
-        conversationId.current = started.id;
-        setState(started.state);
-        setDegraded(started.degraded);
-        const { items } = await loadTranscript(started.id);
+        const existing = await currentConversation();
+        // No thread yet is the ordinary first visit: the local greeting is
+        // already on screen and there is nothing else to do.
+        if (!existing || cancelled) return;
+        conversationId.current = existing.id;
+        setState(existing.state);
+        setDegraded(existing.degraded);
+        const { items } = await loadTranscript(existing.id);
         if (cancelled) return;
         setMessages(items);
-
-        closeStream.current = openStream(started.id, {
-          onDelta: (text) => setStreaming((cur) => cur + text),
-          onMessage: (message) => {
-            // The finished message replaces whatever was streamed: the server's
-            // stored copy is the one that survives a reload.
-            setStreaming("");
-            setMessages((cur) =>
-              cur.some((m) => m.id === message.id) ? cur : [...cur, message],
-            );
-          },
-          onState: setState,
-        });
+        attach(existing.id);
       } catch {
-        if (!cancelled) {
-          setNotice(t("chat.error_connect"));
-        }
+        // A failed resume must not block a new conversation, so this is not
+        // surfaced: the visitor can still type, and submit() will start one.
+        if (!cancelled) resumed.current = false;
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [open, referrer?.id, url]);
+  }, [open, attach]);
 
   // Close the stream when the widget is unmounted, not when it is minimised:
   // a visitor who reopens should still catch a reply that arrived meanwhile.
@@ -132,14 +146,34 @@ export function Chat() {
 
   async function submit(text: string) {
     const message = text.trim().slice(0, 2000);
-    const id = conversationId.current;
-    if (!message || !id || sending) return;
+    if (!message || sending) return;
 
     setDraft("");
     setSending(true);
     setNotice("");
     try {
-      const res = await sendMessage(id, message);
+      let id = conversationId.current;
+      // First message of the visit: this is where the conversation is born.
+      // Everything before now — opening the widget, reading the greeting —
+      // left no trace on the server.
+      if (!id) {
+        const started = await startConversation({
+          ref: referrer?.id ? (url.searchParams.get("ref") ?? "") : "",
+          page: url.pathname,
+          locale,
+        });
+        id = started.id;
+        conversationId.current = id;
+        setState(started.state);
+        setDegraded(started.degraded);
+        // The server persisted its own greeting as the first message. Loading
+        // it now swaps the local bubble for the stored one; the two carry the
+        // same wording, so nothing on screen appears to change.
+        const { items } = await loadTranscript(id);
+        setMessages(items);
+        attach(id);
+      }
+      const res = await sendMessage(id, message, locale);
       setDegraded(res.degraded);
     } catch (err) {
       setNotice(
@@ -218,6 +252,29 @@ export function Chat() {
             aria-live="polite"
             aria-relevant="additions"
           >
+            {/* The opening line, rendered locally. It is not a message from
+                the server and no request produced it, which is the point: a
+                visitor who opens the chat and reads this costs nothing and
+                leaves nothing behind. It is replaced by the stored transcript
+                the moment they write. */}
+            {messages.length === 0 && (
+              <div className="chat-message chat-message-assistant">
+                <span className="chat-message-avatar">
+                  <Icon name="spark" />
+                </span>
+                <div className="chat-message-body">
+                  <span className="chat-message-label">
+                    {speaker(t, "assistant", degraded)}
+                  </span>
+                  <div className="chat-bubble">
+                    {referrer?.name
+                      ? t("chat.greeting_referred", { name: referrer.name })
+                      : t("chat.greeting")}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {messages.map((message) => (
               <div
                 className={`chat-message chat-message-${
@@ -275,7 +332,7 @@ export function Chat() {
                 <button
                   key={key}
                   type="button"
-                  disabled={sending || !conversationId.current}
+                  disabled={sending}
                   onClick={() => void submit(t(key))}
                 >
                   {t(key)}
@@ -325,7 +382,9 @@ export function Chat() {
             className="chat-send"
             type="submit"
             aria-label={t("chat.send")}
-            disabled={!draft.trim() || sending || !conversationId.current}
+            // No longer gated on an existing conversation: the first message
+            // is what creates one.
+            disabled={!draft.trim() || sending}
           >
             <Icon name="send" />
           </button>

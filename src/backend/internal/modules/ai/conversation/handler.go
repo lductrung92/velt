@@ -154,6 +154,28 @@ func (h *Handler) Start(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, res)
 }
 
+// Current handles GET /api/public/chat/conversations/current.
+//
+// It reads the visitor cookie without minting one: a browser with no cookie
+// has no thread to resume, and answering 404 is the whole answer. Minting here
+// would hand a key to every crawler that loads the page.
+func (h *Handler) Current(w http.ResponseWriter, r *http.Request) {
+	if h.throttle(w, r, "read", rlReadPerIP, rlReadWindow) {
+		return
+	}
+	key, ok := existingKey(r)
+	if !ok {
+		httpx.WriteError(w, apperr.NotFound("not_found"))
+		return
+	}
+	res, err := h.svc.Current(r.Context(), key)
+	if err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, res)
+}
+
 // Send handles POST /api/public/chat/conversations/{id}/messages.
 func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	if h.throttle(w, r, "send", rlSendPerIP, rlSendWindow) {
@@ -301,6 +323,10 @@ func (h *Handler) Handoff(w http.ResponseWriter, r *http.Request) {
 // (see throttle). Nothing upstream throttles this surface.
 func RegisterPublic(r chi.Router, h *Handler) {
 	r.Post("/api/public/chat/conversations", h.Start)
+	// Registered before the {id} route it shadows. chi gives static segments
+	// priority anyway, but relying on that silently would make "current" a
+	// reserved word nobody declared.
+	r.Get("/api/public/chat/conversations/current", h.Current)
 	r.Get("/api/public/chat/conversations/{id}", h.Transcript)
 	r.Post("/api/public/chat/conversations/{id}/messages", h.Send)
 	r.Get("/api/public/chat/conversations/{id}/stream", h.Stream)

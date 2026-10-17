@@ -82,6 +82,14 @@ export const vi = {
     "Mong nhận được tư vấn về tính năng, giá và cách sử dụng.",
 
   "chat.title": "Trò chuyện với ZUKATEK",
+  // Shown before any conversation exists, so opening the widget costs no
+  // request. The server writes the SAME wording as the first message once the
+  // visitor actually writes — see greeting() in conversation/prompt.go. If one
+  // side changes, the bubble appears to rewrite itself on the first send.
+  "chat.greeting":
+    "Chào bạn! Bạn đang cần giải quyết việc gì để mình gợi ý cho đúng?",
+  "chat.greeting_referred":
+    "Chào bạn! Bạn đang xem Zukatek qua giới thiệu của {name}. Bạn đang cần giải quyết việc gì để mình gợi ý cho đúng?",
   "chat.status_human": "Bạn đang nói chuyện với người phụ trách",
   "chat.status_waiting": "Đang chờ người phụ trách…",
   "chat.status_bot": "Tìm sản phẩm phù hợp với bạn",
@@ -195,6 +203,10 @@ export const en: Record<keyof typeof vi, string> = {
     "I would like advice on the features, the price and how to use it.",
 
   "chat.title": "Chat with ZUKATEK",
+  "chat.greeting":
+    "Hello! What are you trying to solve, so I can point you to the right thing?",
+  "chat.greeting_referred":
+    "Hello! You arrived at Zukatek through {name}. What are you trying to solve, so I can point you to the right thing?",
   "chat.status_human": "You are talking to one of our team",
   "chat.status_waiting": "Waiting for someone from the team…",
   "chat.status_bot": "Find the product that fits you",

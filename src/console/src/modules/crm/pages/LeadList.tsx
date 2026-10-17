@@ -40,6 +40,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ListPager } from "@/components/ui/list-pager";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePaging } from "@/hooks/usePaging";
 import { usePermission } from "@/modules/auth";
 import { parseApiError } from "@/utils/apiError";
@@ -56,6 +57,7 @@ import {
   type LeadStatus,
 } from "../services/leads.service";
 import { LeadDetailDialog } from "../components/LeadDetailDialog";
+import { NewsletterPanel } from "../components/NewsletterPanel";
 import "@/styles/list-page.css";
 import "./leads.css";
 
@@ -152,6 +154,11 @@ export default function LeadList() {
   const { hasPermission } = usePermission();
   const canManage = hasPermission("crm.leads.manage");
   const canChat = hasPermission("ai.chat.handle");
+  // Sign-ups live under the CMS permission, not a crm.* one: the opt-in
+  // belongs to the site, and someone who manages leads is not automatically
+  // allowed to read a mailing list.
+  const canNewsletter = hasPermission("cms.newsletter.manage");
+  const [tab, setTab] = useState<"leads" | "newsletter">("leads");
   // Page, page size and pager style all come from the shared settings
   // (Settings → General → Pagination), so every list pages the same way.
   const paging = usePaging();
@@ -342,336 +349,362 @@ export default function LeadList() {
         subtitle={t("leads.subtitle")}
         breadcrumbs={[{ labelKey: "nav.leads" }]}
       />
-      <div className="list-overview" aria-label={t("leads.overview.label")}>
-        {OVERVIEW.map(({ status: value, key, Icon }, index) => (
-          <button
-            type="button"
-            key={key}
-            className="list-metric"
-            data-kind={key}
-            aria-pressed={value ? status === value : !hasFilters}
-            onClick={() => (value ? setStage(value) : reset())}
-          >
-            <span className="list-metric-top">
-              <span>{t(`leads.overview.${key}`)}</span>
-              <span className="list-metric-icon">
-                <Icon className="size-4" aria-hidden />
-              </span>
-            </span>
-            <strong>
-              {overview[index].isPending ? (
-                <Skeleton className="h-8 w-12" />
-              ) : overview[index].isError ? (
-                "—"
-              ) : (
-                new Intl.NumberFormat(i18n.language).format(
-                  overview[index].data?.total ?? 0,
-                )
-              )}
-            </strong>
-            <span className="list-metric-bottom">
-              {t(`leads.overview.${key}_hint`)}
-              <ArrowRight className="size-3.5" aria-hidden />
-            </span>
-          </button>
-        ))}
-      </div>
 
-      <section className="list-panel" aria-label={t("leads.list_title")}>
-        <div className="list-panel-heading">
-          <div>
-            <h2>{t("leads.list_title")}</h2>
-            <p>
-              {list.isPending || list.isError
-                ? t("leads.list_hint")
-                : t("leads.record_count", { count: list.data?.total ?? 0 })}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={list.isFetching}
-            onClick={() => {
-              void list.refetch();
-              overview.forEach((query) => void query.refetch());
-            }}
-          >
-            <RotateCcw
-              className={
-                list.isFetching
-                  ? "size-3.5 animate-spin motion-reduce:animate-none"
-                  : "size-3.5"
-              }
-              aria-hidden
-            />
-            {t("common.refresh")}
-          </Button>
-        </div>
-        <div className="list-toolbar">
-          <form
-            className="list-search"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setQ(draftQ.trim());
-              setPage(1);
-            }}
-          >
-            <Search className="size-4" aria-hidden />
-            <Input
-              type="search"
-              value={draftQ}
-              aria-label={t("leads.search_label")}
-              placeholder={t("leads.search_ph")}
-              onChange={(event) => {
-                const value = event.target.value;
-                setDraftQ(value);
-                if (!value && q) {
-                  setQ("");
-                  setPage(1);
-                }
-              }}
-            />
-            <Button
-              type="submit"
-              variant="ghost"
-              size="icon"
-              aria-label={t("leads.apply_search")}
-              title={t("leads.apply_search")}
-            >
-              <ArrowRight className="size-4" />
-            </Button>
-          </form>
-          <div className="list-filter-controls">
-            {/* "All" is the cleared state, not an option in the list: the theme
-                select already offers a ✕, and keeping both would give two ways
-                to say the same thing. */}
-            <div className="list-filter-select">
-              <Select
-                inputId="lead-filter-source"
-                aria-label={t("leads.col.source")}
-                isSearchable={false}
-                placeholder={t("leads.all_sources")}
-                value={
-                  source
-                    ? { value: source, label: t(`leads.source.${source}`) }
-                    : null
-                }
-                options={["chat", "form", "manual"].map((value) => ({
-                  value,
-                  label: t(`leads.source.${value}`),
-                }))}
-                onChange={(option) => {
-                  setSource(option?.value ?? "");
-                  setPage(1);
-                }}
-              />
-            </div>
-            <div className="list-filter-select">
-              <Select
-                inputId="lead-filter-assignee"
-                aria-label={t("leads.col.assignee")}
-                isSearchable={false}
-                placeholder={t("leads.all_owners")}
-                value={
-                  assignee
-                    ? { value: assignee, label: t("leads.unassigned") }
-                    : null
-                }
-                options={[
-                  { value: "unassigned", label: t("leads.unassigned") },
-                ]}
-                onChange={(option) => {
-                  setAssignee(option?.value ?? "");
-                  setPage(1);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-        <div
-          className="list-tabs"
-          role="group"
-          aria-label={t("leads.filter_status")}
+      {/* Two lists, one screen: people who asked to be contacted, and people
+          who only gave an address for the newsletter. They are kept apart so
+          nobody gets a sales call off a mailing-list sign-up. */}
+      {canNewsletter && (
+        <Tabs
+          value={tab}
+          onValueChange={(value) => setTab(value as "leads" | "newsletter")}
         >
-          <button
-            type="button"
-            aria-pressed={!status}
-            onClick={() => setStage("")}
-          >
-            {t("leads.all_statuses")}
-          </button>
-          {LEAD_STATUSES.map((value) => (
-            <button
-              type="button"
-              key={value}
-              data-status={value}
-              aria-pressed={status === value}
-              onClick={() => setStage(value)}
-            >
-              <i aria-hidden />
-              {t(`leads.status.${value}`)}
-            </button>
-          ))}
-        </div>
-        <FilterChips
-          className="list-filter-chips"
-          items={chips}
-          onClearAll={chips.length ? reset : undefined}
-        />
-        {list.isError ? (
-          <div className="list-error">
-            <Alert
-              variant="danger"
-              message={parseApiError(list.error, t).message}
-            />
-            <Button
-              className="mt-3"
-              variant="outline"
-              size="sm"
-              onClick={() => void list.refetch()}
-            >
-              {t("common.retry")}
-            </Button>
-          </div>
-        ) : list.isPending ? (
-          <div className="list-loading" aria-label={t("common.loading")}>
-            {Array.from({ length: 5 }, (_, i) => (
-              <Skeleton key={i} className="h-16 w-full" />
+          <TabsList>
+            <TabsTrigger value="leads">{t("leads.tabs.leads")}</TabsTrigger>
+            <TabsTrigger value="newsletter">
+              {t("leads.tabs.newsletter")}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+
+      {tab === "newsletter" && canNewsletter ? (
+        <NewsletterPanel canManage={canNewsletter} />
+      ) : (
+        <>
+          <div className="list-overview" aria-label={t("leads.overview.label")}>
+            {OVERVIEW.map(({ status: value, key, Icon }, index) => (
+              <button
+                type="button"
+                key={key}
+                className="list-metric"
+                data-kind={key}
+                aria-pressed={value ? status === value : !hasFilters}
+                onClick={() => (value ? setStage(value) : reset())}
+              >
+                <span className="list-metric-top">
+                  <span>{t(`leads.overview.${key}`)}</span>
+                  <span className="list-metric-icon">
+                    <Icon className="size-4" aria-hidden />
+                  </span>
+                </span>
+                <strong>
+                  {overview[index].isPending ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : overview[index].isError ? (
+                    "—"
+                  ) : (
+                    new Intl.NumberFormat(i18n.language).format(
+                      overview[index].data?.total ?? 0,
+                    )
+                  )}
+                </strong>
+                <span className="list-metric-bottom">
+                  {t(`leads.overview.${key}_hint`)}
+                  <ArrowRight className="size-3.5" aria-hidden />
+                </span>
+              </button>
             ))}
           </div>
-        ) : !rows.length ? (
-          <div className="list-empty">
-            <div className="list-empty-art" aria-hidden>
-              <span className="list-empty-ring" />
-              <div className="list-empty-card">
-                <span>
-                  <Users className="size-5" />
-                </span>
-                <div>
-                  <i />
-                  <i />
-                  <i />
+
+          <section className="list-panel" aria-label={t("leads.list_title")}>
+            <div className="list-panel-heading">
+              <div>
+                <h2>{t("leads.list_title")}</h2>
+                <p>
+                  {list.isPending || list.isError
+                    ? t("leads.list_hint")
+                    : t("leads.record_count", { count: list.data?.total ?? 0 })}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={list.isFetching}
+                onClick={() => {
+                  void list.refetch();
+                  overview.forEach((query) => void query.refetch());
+                }}
+              >
+                <RotateCcw
+                  className={
+                    list.isFetching
+                      ? "size-3.5 animate-spin motion-reduce:animate-none"
+                      : "size-3.5"
+                  }
+                  aria-hidden
+                />
+                {t("common.refresh")}
+              </Button>
+            </div>
+            <div className="list-toolbar">
+              <form
+                className="list-search"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setQ(draftQ.trim());
+                  setPage(1);
+                }}
+              >
+                <Search className="size-4" aria-hidden />
+                <Input
+                  type="search"
+                  value={draftQ}
+                  aria-label={t("leads.search_label")}
+                  placeholder={t("leads.search_ph")}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setDraftQ(value);
+                    if (!value && q) {
+                      setQ("");
+                      setPage(1);
+                    }
+                  }}
+                />
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("leads.apply_search")}
+                  title={t("leads.apply_search")}
+                >
+                  <ArrowRight className="size-4" />
+                </Button>
+              </form>
+              <div className="list-filter-controls">
+                {/* "All" is the cleared state, not an option in the list: the theme
+                select already offers a ✕, and keeping both would give two ways
+                to say the same thing. */}
+                <div className="list-filter-select">
+                  <Select
+                    inputId="lead-filter-source"
+                    aria-label={t("leads.col.source")}
+                    isSearchable={false}
+                    placeholder={t("leads.all_sources")}
+                    value={
+                      source
+                        ? { value: source, label: t(`leads.source.${source}`) }
+                        : null
+                    }
+                    options={["chat", "form", "manual"].map((value) => ({
+                      value,
+                      label: t(`leads.source.${value}`),
+                    }))}
+                    onChange={(option) => {
+                      setSource(option?.value ?? "");
+                      setPage(1);
+                    }}
+                  />
                 </div>
-                <UserPlus className="list-empty-plus" />
+                <div className="list-filter-select">
+                  <Select
+                    inputId="lead-filter-assignee"
+                    aria-label={t("leads.col.assignee")}
+                    isSearchable={false}
+                    placeholder={t("leads.all_owners")}
+                    value={
+                      assignee
+                        ? { value: assignee, label: t("leads.unassigned") }
+                        : null
+                    }
+                    options={[
+                      { value: "unassigned", label: t("leads.unassigned") },
+                    ]}
+                    onChange={(option) => {
+                      setAssignee(option?.value ?? "");
+                      setPage(1);
+                    }}
+                  />
+                </div>
               </div>
             </div>
-            <h3>{t(hasFilters ? "leads.no_results" : "leads.empty_title")}</h3>
-            <p>
-              {t(
-                hasFilters
-                  ? "leads.no_results_hint"
-                  : "leads.empty_description",
-              )}
-            </p>
-            {hasFilters ? (
-              <Button size="sm" variant="outline" onClick={reset}>
-                <X className="size-3.5" />
-                {t("leads.reset_filters")}
-              </Button>
-            ) : (
-              canChat && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => navigate("/chat")}
-                >
-                  <MessageSquare className="size-3.5" />
-                  {t("leads.open_chat")}
-                </Button>
-              )
-            )}
-          </div>
-        ) : (
-          <>
-            <div className="list-desktop">
-              <Table
-                scroll={false}
-                data-testid="leads-table"
-                wrapperClassName="list-table-wrap"
+            <div
+              className="list-tabs"
+              role="group"
+              aria-label={t("leads.filter_status")}
+            >
+              <button
+                type="button"
+                aria-pressed={!status}
+                onClick={() => setStage("")}
               >
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("leads.col.contact")}</TableHead>
-                    <TableHead>{t("leads.col.products")}</TableHead>
-                    <TableHead>{t("leads.col.assignee")}</TableHead>
-                    <TableHead>{t("leads.col.source")}</TableHead>
-                    <TableHead>{t("leads.col.status")}</TableHead>
-                    <TableHead>{t("leads.col.created")}</TableHead>
-                    <TableHead className="text-right">
-                      {t("leads.col.actions")}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.map((lead) => (
-                    <TableRow key={lead.id} data-testid="lead-row">
-                      <TableCell>
-                        <LeadContact lead={lead} />
-                      </TableCell>
-                      <TableCell>
-                        <LeadProducts lead={lead} />
-                      </TableCell>
-                      <TableCell>{owner(lead)}</TableCell>
-                      <TableCell>{sourceBadge(lead)}</TableCell>
-                      <TableCell>{stageControl(lead)}</TableCell>
-                      <TableCell>
-                        <span className="lead-created">
-                          <strong>{formatDate(lead.created_at)}</strong>
-                          <span>{formatTime(lead.created_at)}</span>
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {actions(lead)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <div className="list-mobile">
-              {rows.map((lead) => (
-                <article
-                  key={lead.id}
-                  className="lead-mobile-card"
-                  data-testid="lead-card"
+                {t("leads.all_statuses")}
+              </button>
+              {LEAD_STATUSES.map((value) => (
+                <button
+                  type="button"
+                  key={value}
+                  data-status={value}
+                  aria-pressed={status === value}
+                  onClick={() => setStage(value)}
                 >
-                  <div className="lead-mobile-heading">
-                    <LeadContact lead={lead} />
-                    {actions(lead)}
-                  </div>
-                  <div className="lead-mobile-stage">
-                    {stageControl(lead)}
-                    {sourceBadge(lead)}
-                  </div>
-                  <div className="lead-mobile-products">
-                    <span>{t("leads.col.products")}</span>
-                    <LeadProducts lead={lead} />
-                  </div>
-                  <div className="lead-mobile-footer">
-                    {owner(lead)}
-                    <span>
-                      <CalendarDays className="size-3.5" aria-hidden />
-                      {formatDate(lead.created_at)}
-                    </span>
-                  </div>
-                </article>
+                  <i aria-hidden />
+                  {t(`leads.status.${value}`)}
+                </button>
               ))}
             </div>
-          </>
-        )}
-      </section>
+            <FilterChips
+              className="list-filter-chips"
+              items={chips}
+              onClearAll={chips.length ? reset : undefined}
+            />
+            {list.isError ? (
+              <div className="list-error">
+                <Alert
+                  variant="danger"
+                  message={parseApiError(list.error, t).message}
+                />
+                <Button
+                  className="mt-3"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void list.refetch()}
+                >
+                  {t("common.retry")}
+                </Button>
+              </div>
+            ) : list.isPending ? (
+              <div className="list-loading" aria-label={t("common.loading")}>
+                {Array.from({ length: 5 }, (_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : !rows.length ? (
+              <div className="list-empty">
+                <div className="list-empty-art" aria-hidden>
+                  <span className="list-empty-ring" />
+                  <div className="list-empty-card">
+                    <span>
+                      <Users className="size-5" />
+                    </span>
+                    <div>
+                      <i />
+                      <i />
+                      <i />
+                    </div>
+                    <UserPlus className="list-empty-plus" />
+                  </div>
+                </div>
+                <h3>
+                  {t(hasFilters ? "leads.no_results" : "leads.empty_title")}
+                </h3>
+                <p>
+                  {t(
+                    hasFilters
+                      ? "leads.no_results_hint"
+                      : "leads.empty_description",
+                  )}
+                </p>
+                {hasFilters ? (
+                  <Button size="sm" variant="outline" onClick={reset}>
+                    <X className="size-3.5" />
+                    {t("leads.reset_filters")}
+                  </Button>
+                ) : (
+                  canChat && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate("/chat")}
+                    >
+                      <MessageSquare className="size-3.5" />
+                      {t("leads.open_chat")}
+                    </Button>
+                  )
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="list-desktop">
+                  <Table
+                    scroll={false}
+                    data-testid="leads-table"
+                    wrapperClassName="list-table-wrap"
+                  >
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("leads.col.contact")}</TableHead>
+                        <TableHead>{t("leads.col.products")}</TableHead>
+                        <TableHead>{t("leads.col.assignee")}</TableHead>
+                        <TableHead>{t("leads.col.source")}</TableHead>
+                        <TableHead>{t("leads.col.status")}</TableHead>
+                        <TableHead>{t("leads.col.created")}</TableHead>
+                        <TableHead className="text-right">
+                          {t("leads.col.actions")}
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rows.map((lead) => (
+                        <TableRow key={lead.id} data-testid="lead-row">
+                          <TableCell>
+                            <LeadContact lead={lead} />
+                          </TableCell>
+                          <TableCell>
+                            <LeadProducts lead={lead} />
+                          </TableCell>
+                          <TableCell>{owner(lead)}</TableCell>
+                          <TableCell>{sourceBadge(lead)}</TableCell>
+                          <TableCell>{stageControl(lead)}</TableCell>
+                          <TableCell>
+                            <span className="lead-created">
+                              <strong>{formatDate(lead.created_at)}</strong>
+                              <span>{formatTime(lead.created_at)}</span>
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {actions(lead)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="list-mobile">
+                  {rows.map((lead) => (
+                    <article
+                      key={lead.id}
+                      className="lead-mobile-card"
+                      data-testid="lead-card"
+                    >
+                      <div className="lead-mobile-heading">
+                        <LeadContact lead={lead} />
+                        {actions(lead)}
+                      </div>
+                      <div className="lead-mobile-stage">
+                        {stageControl(lead)}
+                        {sourceBadge(lead)}
+                      </div>
+                      <div className="lead-mobile-products">
+                        <span>{t("leads.col.products")}</span>
+                        <LeadProducts lead={lead} />
+                      </div>
+                      <div className="lead-mobile-footer">
+                        {owner(lead)}
+                        <span>
+                          <CalendarDays className="size-3.5" aria-hidden />
+                          {formatDate(lead.created_at)}
+                        </span>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
 
-      {/* Outside the card on purpose: the panel holds the records, the
+          {/* Outside the card on purpose: the panel holds the records, the
           pager is how you ask for the next ones. It hides itself when
           everything fits on one page, so it costs nothing while loading
           or on an empty list. */}
-      <div className="list-pagination">
-        <ListPager
-          paging={paging}
-          total={list.data?.total ?? 0}
-          loading={list.isFetching}
-        />
-      </div>
+          <div className="list-pagination">
+            <ListPager
+              paging={paging}
+              total={list.data?.total ?? 0}
+              loading={list.isFetching}
+            />
+          </div>
+        </>
+      )}
       <LeadDetailDialog
         lead={viewing}
         onClose={() => setViewing(null)}

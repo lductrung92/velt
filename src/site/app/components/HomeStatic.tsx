@@ -405,7 +405,7 @@ export function Footer({
           <div className="footer-brand">
             <a
               className="brand"
-              href={href("/#top")}
+              href={href("/")}
               aria-label={t("a11y.brand_home")}
             >
               <img

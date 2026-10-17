@@ -1802,6 +1802,32 @@
       "no_message": "No message was left.",
       "reply": "Reply by e-mail",
       "call": "Call"
+    },
+    "tabs": {
+      "leads": "Leads",
+      "newsletter": "Newsletter"
+    },
+    "newsletter": {
+      "list_title": "Newsletter sign-ups",
+      "hint": "Addresses collected by the footer form.",
+      "count_one": "{{count}} address",
+      "count_other": "{{count}} addresses",
+      "col": {
+        "email": "Email",
+        "source": "Source",
+        "status": "Status",
+        "created": "Signed up",
+        "actions": "Actions"
+      },
+      "status_active": "Subscribed",
+      "status_unsubscribed": "Unsubscribed",
+      "all_statuses": "All statuses",
+      "source_unknown": "Unknown",
+      "empty_title": "Nobody has signed up yet",
+      "empty_description": "Addresses from the footer form will appear here.",
+      "delete": "Delete address",
+      "delete_confirm": "Remove {{email}} from the newsletter list?",
+      "deleted": "Removed from the newsletter list"
     }
   },
   "activity": {

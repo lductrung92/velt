@@ -262,7 +262,12 @@ try {
     Write-Host '  console  ' -NoNewline -ForegroundColor Cyan
     Write-Host "http://localhost:$ConsolePort"
     Write-Host '  site     ' -NoNewline -ForegroundColor Cyan
-    Write-Host "http://127.0.0.1:$SitePort"
+    # localhost, not 127.0.0.1, even though the server binds to the address:
+    # the API sets the chat's visitor cookie with SameSite=Lax, and a page on
+    # 127.0.0.1 calling an API on localhost is cross-site, so the browser keeps
+    # the cookie and never sends it. The chat then cannot load a transcript or
+    # resume a thread, with nothing in the logs to say why.
+    Write-Host "http://localhost:$SitePort"
     Write-Host '  api      ' -NoNewline -ForegroundColor Cyan
     Write-Host "http://localhost:$ApiPort/api  (health: /healthz)"
     Write-Host '  stop     ' -NoNewline -ForegroundColor Cyan

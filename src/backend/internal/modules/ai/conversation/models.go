@@ -70,11 +70,18 @@ type StartRequest struct {
 	Ref string `json:"ref" validate:"omitempty,max=160"`
 	// Page is where the visitor is standing, so the greeting can be relevant.
 	Page string `json:"page" validate:"omitempty,max=300"`
+	// Locale is the language the visitor is reading the site in. Anything
+	// other than "en" is treated as Vietnamese, so a stale or junk value
+	// degrades to the default rather than failing the request.
+	Locale string `json:"locale" validate:"omitempty,max=10"`
 }
 
 // SendRequest posts one visitor message.
 type SendRequest struct {
 	Content string `json:"content" validate:"required"`
+	// Locale travels per message, not per conversation: switching the site to
+	// English mid-thread should change the next answer.
+	Locale string `json:"locale" validate:"omitempty,max=10"`
 }
 
 // --- Response DTOs ---

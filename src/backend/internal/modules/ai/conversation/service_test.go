@@ -236,7 +236,7 @@ func TestSystemPromptNamesOnlyPublishedProducts(t *testing.T) {
 	e.catalog.items = []tools.CatalogItem{
 		{Slug: "bang-cong-viec", Name: "Bảng công việc", Summary: "Sắp xếp công việc"},
 	}
-	got := buildSystem(ctx(), e.catalog, "")
+	got := buildSystem(ctx(), e.catalog, "", "vi")
 	require.Contains(t, got, "bang-cong-viec")
 	require.Contains(t, got, "KHÔNG nói về giá")
 }
@@ -244,13 +244,13 @@ func TestSystemPromptNamesOnlyPublishedProducts(t *testing.T) {
 func TestSystemPromptAdmitsAnEmptyCatalog(t *testing.T) {
 	// Saying "nothing is published yet" beats letting the model improvise.
 	e := newEnv(t)
-	got := buildSystem(ctx(), e.catalog, "")
+	got := buildSystem(ctx(), e.catalog, "", "vi")
 	require.Contains(t, got, "chưa có sản phẩm nào được công bố")
 }
 
 func TestPersonaIsAppendedNotSubstituted(t *testing.T) {
 	e := newEnv(t)
-	got := buildSystem(ctx(), e.catalog, "Xưng hô là 'bên mình'.")
+	got := buildSystem(ctx(), e.catalog, "Xưng hô là 'bên mình'.", "vi")
 	require.Contains(t, got, "Xưng hô là 'bên mình'.")
 	require.Contains(t, got, "KHÔNG nói về giá", "operator text must not be able to drop the constraints")
 }
@@ -260,7 +260,7 @@ func TestScriptedReplyNeverQuotesAPrice(t *testing.T) {
 		"giá bao nhiêu", "báo giá cho tôi", "chi phí thế nào",
 		"demo ở đâu", "cho gặp nhân viên", "có sản phẩm gì", "asdfgh",
 	} {
-		got := scriptedReply(q)
+		got := scriptedReply(q, "vi")
 		require.NotEmpty(t, got)
 		require.NotRegexp(t, `[0-9][0-9.,]*\s*(đ|vnd|k/|triệu)`, strings.ToLower(got))
 	}

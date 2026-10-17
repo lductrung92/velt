@@ -75,20 +75,45 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 export function startConversation(input: {
   ref?: string;
   page?: string;
+  locale?: string;
 }): Promise<StartedConversation> {
   return call<StartedConversation>("/public/chat/conversations", {
     method: "POST",
-    body: JSON.stringify({ ref: input.ref ?? "", page: input.page ?? "" }),
+    body: JSON.stringify({
+      ref: input.ref ?? "",
+      page: input.page ?? "",
+      locale: input.locale ?? "",
+    }),
   });
+}
+
+/**
+ * The thread this visitor is already in, or null when there is none.
+ *
+ * Resolved from the server's own visitor cookie, so nothing about the
+ * conversation is kept in the browser: no id in localStorage for a script to
+ * read, nothing a visitor can edit to open somebody else's thread. A 404 is
+ * the ordinary answer on a first visit, not a failure.
+ */
+export async function currentConversation(): Promise<StartedConversation | null> {
+  try {
+    return await call<StartedConversation>(
+      "/public/chat/conversations/current",
+    );
+  } catch (err) {
+    if (err instanceof ChatError && err.status === 404) return null;
+    throw err;
+  }
 }
 
 export function sendMessage(
   id: string,
   content: string,
+  locale?: string,
 ): Promise<{ accepted: boolean; degraded: boolean }> {
   return call(`/public/chat/conversations/${id}/messages`, {
     method: "POST",
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, locale: locale ?? "" }),
   });
 }
 

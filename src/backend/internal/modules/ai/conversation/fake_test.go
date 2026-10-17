@@ -60,6 +60,27 @@ func (r *fakeRepo) Get(_ context.Context, id uuid.UUID) (*Conversation, error) {
 	return &cp, nil
 }
 
+// Mirrors the real query: newest activity first, closed threads excluded. The
+// map has no order, so ties are broken on LastActivityAt the same way.
+func (r *fakeRepo) ActiveByVisitor(_ context.Context, key string) (*Conversation, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var best *Conversation
+	for _, c := range r.convs {
+		if c.VisitorKey != key || c.State == StateClosed {
+			continue
+		}
+		if best == nil || c.LastActivityAt.After(best.LastActivityAt) {
+			best = c
+		}
+	}
+	if best == nil {
+		return nil, shared.ErrNotFound
+	}
+	cp := *best
+	return &cp, nil
+}
+
 func (r *fakeRepo) BumpTurn(_ context.Context, id uuid.UUID) (int, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

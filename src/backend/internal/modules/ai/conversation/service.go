@@ -168,7 +168,7 @@ func (s *Service) Start(ctx context.Context, visitorKey string, req StartRequest
 		return StartResponse{}, s.MapRepoErr(ctx, "start conversation", err)
 	}
 
-	hello := greeting(referrerName)
+	hello := greeting(referrerName, req.Locale)
 	if _, err := s.repo.AddMessage(ctx, Message{
 		ConversationID: conv.ID, Role: RoleAssistant, Content: hello,
 	}); err != nil {
@@ -186,6 +186,28 @@ func (s *Service) Start(ctx context.Context, visitorKey string, req StartRequest
 		res.Referrer = &ReferrerRef{Slug: strings.TrimSpace(req.Ref), FullName: referrerName}
 	}
 	return res, nil
+}
+
+// Current returns the conversation this visitor is already in, if any.
+//
+// This is what makes a reload keep the thread. The lookup is by the visitor
+// cookie the server itself set, so the browser never has to hold a
+// conversation id: there is nothing for a script on the page to read, and
+// nothing a visitor can edit to claim somebody else's thread. Ownership is
+// decided by the same cookie every other endpoint here already checks.
+//
+// Returns ErrNotFound when the visitor has no open thread. That is the normal
+// case for a first visit, not an error worth logging loudly.
+func (s *Service) Current(ctx context.Context, visitorKey string) (StartResponse, error) {
+	visitorKey = strings.TrimSpace(visitorKey)
+	if visitorKey == "" {
+		return StartResponse{}, apperr.NotFound("not_found")
+	}
+	conv, err := s.repo.ActiveByVisitor(ctx, visitorKey)
+	if err != nil {
+		return StartResponse{}, s.MapRepoErr(ctx, "current conversation", err)
+	}
+	return StartResponse{ID: conv.ID, State: conv.State, Degraded: !s.live(ctx)}, nil
 }
 
 // Send accepts one visitor message and answers it.
@@ -246,7 +268,7 @@ func (s *Service) Send(ctx context.Context, visitorKey string, convID uuid.UUID,
 	}
 
 	if degraded {
-		reply := scriptedReply(text)
+		reply := scriptedReply(text, req.Locale)
 		s.persistAssistant(ctx, convID, reply, provider.Usage{})
 		return SendResponse{Accepted: true, Degraded: true}, nil
 	}
@@ -254,13 +276,16 @@ func (s *Service) Send(ctx context.Context, visitorKey string, convID uuid.UUID,
 	// Detached from the request: the browser gets its 202 now and reads the
 	// answer off the stream. A cancelled HTTP request must not kill a turn the
 	// visitor is still watching.
-	go s.answer(context.WithoutCancel(ctx), convID)
+	// The locale travels with the turn rather than living on the conversation
+	// row: a visitor who switches the site to English mid-thread expects the
+	// next answer in English, not the language they happened to open with.
+	go s.answer(context.WithoutCancel(ctx), convID, req.Locale)
 
 	return SendResponse{Accepted: true, Degraded: false}, nil
 }
 
 // answer runs one assistant turn and streams it to whoever is watching.
-func (s *Service) answer(ctx context.Context, convID uuid.UUID) {
+func (s *Service) answer(ctx context.Context, convID uuid.UUID, locale string) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
@@ -312,7 +337,7 @@ func (s *Service) answer(ctx context.Context, convID uuid.UUID) {
 	// written anything hands over to the next one. See endpoints.Stream.
 	text, usage, err := endpoints.Stream(ctx, s.endpoints, provider.New, s.Sec(ctx),
 		string(shared.PurposeChat), provider.StreamRequest{
-			System:   buildSystem(ctx, s.catalog, s.settings.GetString(ctx, shared.KeySystemPersona)),
+			System:   buildSystem(ctx, s.catalog, s.settings.GetString(ctx, shared.KeySystemPersona), locale),
 			Messages: msgs,
 			Tools:    specs,
 			OnDelta:  s.deltaGuard(ctx, convID),
@@ -340,7 +365,7 @@ func (s *Service) answer(ctx context.Context, convID uuid.UUID) {
 	if err != nil {
 		s.Sec(ctx).Error("ai: stream", "conversation_id", convID, "err", err)
 		// Fall back rather than leaving the visitor staring at nothing.
-		s.persistAssistant(ctx, convID, scriptedReply(""), provider.Usage{})
+		s.persistAssistant(ctx, convID, scriptedReply("", locale), provider.Usage{})
 		return
 	}
 	if strings.TrimSpace(text) == "" {
