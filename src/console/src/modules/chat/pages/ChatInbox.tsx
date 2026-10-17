@@ -36,6 +36,7 @@ import { parseApiError } from "@/utils/apiError";
 import { formatDateTime } from "@/utils/format";
 
 import { PushDevicesDialog } from "../components/PushDevicesDialog";
+import { RichText } from "../components/RichText";
 import {
   useClaim,
   useCloseConversation,
@@ -632,7 +633,17 @@ export default function ChatInbox() {
                                 </time>
                               </div>
                               <div className="chat-message-bubble">
-                                {m.content}
+                                {m.role === "assistant" ? (
+                                  // Only the assistant writes Markdown. A
+                                  // visitor's words and a colleague's reply
+                                  // are shown exactly as typed — nobody
+                                  // expects their asterisks to vanish, and an
+                                  // operator reading a transcript needs to
+                                  // see what was actually sent.
+                                  <RichText text={m.content} />
+                                ) : (
+                                  m.content
+                                )}
                               </div>
                             </div>
                           </div>
