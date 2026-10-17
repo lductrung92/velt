@@ -47,8 +47,19 @@ func Stream(
 		return "", provider.Usage{}, ErrNoEndpoint
 	}
 
+	// Two links are siblings when they are the same endpoint and model, and
+	// differ only in which key they carry. That distinction decides what a
+	// rejected credential means: the NEXT KEY fixes a revoked key, while a
+	// different model on a different endpoint does not, so an auth failure
+	// may walk to a sibling and must stop at the edge of the group.
+	sibling := func(i int) bool {
+		return i+1 < len(links) &&
+			links[i+1].ProviderID == links[i].ProviderID &&
+			links[i+1].Model == links[i].Model
+	}
+
 	var lastErr error
-	for _, link := range links {
+	for i, link := range links {
 		cl := newClient(provider.Config{
 			Kind: link.Kind, BaseURL: link.BaseURL, APIKey: link.APIKey, Model: link.Model,
 		})
@@ -87,7 +98,20 @@ func Stream(
 			if log != nil {
 				log.Info("ai: endpoint rate-limited, trying the next link",
 					"purpose", purpose, "provider", link.ProviderLabel,
-					"model", link.Model, "retry_after", apiErr.RetryAfter)
+					"model", link.Model, "key", link.KeyID,
+					"retry_after", apiErr.RetryAfter)
+			}
+			continue
+		case errors.As(err, &apiErr) && apiErr.CredentialRejected() && sibling(i):
+			// Only to a sibling key, and deliberately NOT cooled down: a
+			// rejected credential does not come back on its own, and parking
+			// it would hide a key the operator has to go and replace. It is
+			// logged at warn for the same reason — this is a repair job, not
+			// a hiccup.
+			if log != nil {
+				log.Warn("ai: key rejected, trying the next key for this endpoint",
+					"purpose", purpose, "provider", link.ProviderLabel,
+					"model", link.Model, "key", link.KeyID, "status", apiErr.Status)
 			}
 			continue
 		default:

@@ -8,10 +8,32 @@ export interface AiProvider {
   kind: "anthropic" | "openai";
   base_url: string;
   has_key: boolean;
+  /** How many keys are stored. An endpoint may hold several, one per line;
+   *  they are tried in order when one hits its quota. */
+  key_count: number;
   enabled: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Shows the stored keys in plaintext, after the operator re-enters their own
+ * password.
+ *
+ * POST although it reads: the password travels in the body, where a URL would
+ * put it in logs and history. The reply is marked no-store by the server, so
+ * nothing caches it.
+ */
+export async function revealProviderKeys(
+  id: string,
+  password: string,
+): Promise<string[]> {
+  const { data } = await api.post<{ keys: string[] }>(
+    `/ai/providers/${id}/reveal`,
+    { password },
+  );
+  return data.keys;
 }
 
 /** One link of a purpose's chain: an endpoint running a model. */

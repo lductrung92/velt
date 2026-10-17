@@ -11,6 +11,7 @@ import {
   type ConversationState,
 } from "../lib/chatApi";
 import type { MessageKey, T } from "../lib/i18n";
+import { recaptchaToken } from "../lib/recaptcha";
 import { Icon } from "./Icon";
 import { RichText } from "./RichText";
 
@@ -46,7 +47,7 @@ function speaker(t: T, role: ChatMessage["role"], degraded: boolean): string {
 }
 
 export function Chat() {
-  const { referrer, url, locale, t } = useSite();
+  const { referrer, url, locale, layout, t } = useSite();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -157,10 +158,19 @@ export function Chat() {
       // Everything before now — opening the widget, reading the greeting —
       // left no trace on the server.
       if (!id) {
+        // Only here, never on later messages: a challenge per message would
+        // make the chat unusable, and the cost of abuse is in opening threads.
+        // The API decides whether the token was required; an empty one simply
+        // gets refused rather than waved through.
+        const token =
+          layout.head.chatRequiresCaptcha && layout.head.recaptchaSiteKey
+            ? await recaptchaToken(layout.head.recaptchaSiteKey)
+            : "";
         const started = await startConversation({
           ref: referrer?.id ? (url.searchParams.get("ref") ?? "") : "",
           page: url.pathname,
           locale,
+          recaptchaToken: token || undefined,
         });
         id = started.id;
         conversationId.current = id;

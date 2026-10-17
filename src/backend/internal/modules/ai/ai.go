@@ -24,8 +24,10 @@ import (
 	"github.com/velt/backend/internal/modules/notify"
 	"github.com/velt/backend/internal/modules/products/catalog"
 	settingssvc "github.com/velt/backend/internal/modules/settings"
+	"github.com/velt/backend/internal/platform/activity"
 	"github.com/velt/backend/internal/platform/crypto"
 	"github.com/velt/backend/internal/platform/ratelimit"
+	"github.com/velt/backend/internal/platform/recaptcha"
 )
 
 // SettingDefs are the assistant's entries in the settings registry, exported
@@ -83,6 +85,12 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings conversation.SettingsPo
 	// The endpoints and the chain each job runs through. One service: the
 	// console edits it and the conversation reads it.
 	eps := endpoints.NewService(endpoints.NewRepository(pool), aead)
+	eps.SetPasswords(passwordPort{pool: pool})
+	// Its own store over the same pool and logger. activity.Store holds no
+	// state beyond those two, so a second one writes the same rows; passing
+	// the shared instance would mean threading it through Register's already
+	// long signature for one call site.
+	eps.SetActivity(activity.New(pool, logger))
 
 	// Desktop notifications for the duty roster. The conversation only ever
 	// asks it to ring; when to stay quiet is the notify service's own rule.
@@ -99,12 +107,13 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings conversation.SettingsPo
 		transcriptPort{read: svc.StaffTranscript},
 	)
 
-	conversation.RegisterPublic(r, conversation.NewHandler(svc, secureCookies, limiter, trustProxy))
+	conversation.RegisterPublic(r, conversation.NewHandler(svc, secureCookies, limiter, trustProxy,
+		recaptcha.NewVerifier(settings)))
 	staffH := conversation.NewStaffHandler(svc)
 	conversation.RegisterStaff(r, staffH, authMW)
 	conversation.RegisterAdmin(r, staffH, authMW)
 
-	endpoints.Register(r, endpoints.NewHandler(eps, base), authMW)
+	endpoints.Register(r, endpoints.NewHandler(eps, base, limiter), authMW)
 
 	r.Route("/api/notify", func(nr chi.Router) {
 		nr.Use(authMW)

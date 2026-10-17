@@ -2,11 +2,15 @@ package endpoints
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/velt/backend/internal/apperr"
 
 	"github.com/velt/backend/internal/modules/ai/provider"
 	"github.com/velt/backend/internal/platform/crypto"
@@ -26,8 +30,14 @@ type Service struct {
 	repo  *Repository
 	chain ChainSource
 	aead  *crypto.AEAD
+	// passwords re-checks the operator's own password before stored keys are
+	// shown. Optional at construction so a test can build a service without
+	// a users table; RevealKeys refuses when it is missing.
+	passwords PasswordPort
+	// activity records that a credential was read. Optional; see activity.go.
+	activity Recorder
 
-	// cooling remembers, per (provider, model), when a 429 says we may try
+	// cooling remembers, per (provider, model, key), when a 429 says we may try
 	// again. In memory on purpose: it is a hint, not a fact. Losing it on
 	// restart costs one rejected request, which the chain then walks past —
 	// cheaper than a shared store for a value that is stale within minutes.
@@ -52,7 +62,31 @@ func NewServiceWithChain(chain ChainSource) *Service {
 
 // Providers lists the configured endpoints.
 func (s *Service) Providers(ctx context.Context) ([]Provider, error) {
-	return s.repo.ListProviders(ctx)
+	list, err := s.repo.ListProviders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Keys are write-only on the wire, so without a count the operator has no
+	// way to tell whether three keys are stored or one. The count is the only
+	// thing about a key this list reveals.
+	sealed, err := s.repo.SealedKeys(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		blob, ok := sealed[list[i].ID]
+		if !ok {
+			continue
+		}
+		plain, err := s.aead.Decrypt(blob)
+		if err != nil {
+			// A key that will not open counts as none: saying "1 key" about
+			// something unusable would send the operator looking elsewhere.
+			continue
+		}
+		list[i].KeyCount = len(splitKeys(string(plain)))
+	}
+	return list, nil
 }
 
 // CreateProvider adds one, sealing the key if given.
@@ -128,6 +162,58 @@ func (s *Service) SetChain(ctx context.Context, purpose string, steps []ChainSte
 	return s.repo.SetChain(ctx, purpose, cleaned)
 }
 
+// PasswordPort re-checks the signed-in person's own password.
+//
+// An interface rather than a users repository: this module has no business
+// reading the users table, and the only question it ever asks is "is this the
+// password of the person already holding this session".
+type PasswordPort interface {
+	Verify(ctx context.Context, userID uuid.UUID, password string) (bool, error)
+}
+
+// SetPasswords supplies the re-authentication port. Absent, RevealKeys refuses
+// — a reveal that cannot verify must not fall back to showing the keys.
+func (s *Service) SetPasswords(p PasswordPort) { s.passwords = p }
+
+// RevealKeys returns one endpoint's stored keys in plaintext.
+//
+// Guarded three ways, and all three are needed: the caller must hold the
+// settings permission (so it is an administrator), must re-enter their own
+// password (so it is the administrator and not a borrowed screen), and the
+// handler rate-limits the attempt (so the password cannot be guessed through
+// this door). The caller is also responsible for recording it: reading a
+// credential is an event somebody may later need to account for.
+func (s *Service) RevealKeys(ctx context.Context, userID uuid.UUID, id uuid.UUID,
+	password string,
+) ([]string, error) {
+	if s.passwords == nil {
+		return nil, apperr.Internal()
+	}
+	ok, err := s.passwords.Verify(ctx, userID, password)
+	if err != nil {
+		return nil, apperr.Internal()
+	}
+	if !ok {
+		// Deliberately the same shape as a wrong password anywhere else: this
+		// endpoint must not become a way to probe which accounts exist or
+		// which endpoints hold keys.
+		return nil, apperr.Validation(map[string]string{"password": "invalid"})
+	}
+
+	_, _, blob, err := s.repo.ProviderConfig(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if len(blob) == 0 {
+		return []string{}, nil
+	}
+	plain, err := s.aead.Decrypt(blob)
+	if err != nil {
+		return nil, apperr.Internal()
+	}
+	return splitKeys(string(plain)), nil
+}
+
 // --- running a purpose ---
 
 // Available returns the chain for a purpose with the keys decrypted and the
@@ -136,6 +222,13 @@ func (s *Service) SetChain(ctx context.Context, purpose string, steps []ChainSte
 // An empty result means every link is either absent, disabled or rate-limited;
 // the caller treats that the way it treats an unconfigured assistant, which is
 // to fall back to its scripted answer rather than to fail.
+// An endpoint may hold SEVERAL keys, one per line, and each becomes its own
+// link. That is the whole of the multi-key feature: Stream already walks the
+// chain, already moves on when a link is rate-limited, and already refuses to
+// move on once the answer has started. Expanding keys into links reuses all of
+// that instead of growing a second, subtly different retry loop beside it.
+//
+// Order is preserved, so the keys run in the order they were typed.
 func (s *Service) Available(ctx context.Context, purpose string) ([]Resolved, error) {
 	resolved, keys, err := s.chain.ResolveChain(ctx, purpose)
 	if err != nil {
@@ -144,25 +237,70 @@ func (s *Service) Available(ctx context.Context, purpose string) ([]Resolved, er
 	now := time.Now()
 	out := make([]Resolved, 0, len(resolved))
 	for i, r := range resolved {
-		if s.isCooling(r, now) {
+		if len(keys[i]) == 0 {
+			// No key at all is legitimate: a local endpoint usually has none.
+			if !s.isCooling(r, now) {
+				out = append(out, r)
+			}
 			continue
 		}
-		if len(keys[i]) > 0 {
-			plain, err := s.aead.Decrypt(keys[i])
-			if err != nil {
-				// A key that will not open is a broken link, not a broken
-				// chain: skip it and let the next one answer.
+		plain, err := s.aead.Decrypt(keys[i])
+		if err != nil {
+			// A key that will not open is a broken link, not a broken chain:
+			// skip it and let the next one answer.
+			continue
+		}
+		for _, k := range splitKeys(string(plain)) {
+			link := r
+			link.APIKey = k
+			link.KeyID = keyFingerprint(k)
+			// Checked per key, not per endpoint: one key hitting its quota
+			// must not park the others sitting behind it.
+			if s.isCooling(link, now) {
 				continue
 			}
-			r.APIKey = string(plain)
+			out = append(out, link)
 		}
-		out = append(out, r)
 	}
 	return out, nil
 }
 
-// coolKey names one link of one chain.
-func coolKey(r Resolved) string { return r.ProviderID.String() + "|" + r.Model }
+// splitKeys reads the newline-separated list the console stores in one field.
+//
+// Blank lines and stray whitespace are the normal result of pasting keys in,
+// and duplicates would waste a retry on a quota that is already spent, so both
+// are dropped here rather than being somebody else's problem.
+func splitKeys(raw string) []string {
+	seen := make(map[string]bool)
+	out := []string{}
+	for _, line := range strings.Split(raw, "\n") {
+		k := strings.TrimSpace(line)
+		if k == "" || seen[k] {
+			continue
+		}
+		seen[k] = true
+		out = append(out, k)
+	}
+	return out
+}
+
+// keyFingerprint identifies a key without being one.
+//
+// It ends up in the cooldown map and in logs, so it must not be the key
+// itself; eight hex characters of a SHA-256 are enough to tell a handful of
+// keys apart and reveal nothing about any of them. It is also stable across
+// reordering, so moving a line in the textarea does not resurrect a key that
+// is still rate-limited.
+func keyFingerprint(key string) string {
+	sum := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(sum[:4])
+}
+
+// coolKey names one link of one chain: an endpoint, a model, and — when the
+// endpoint has several — which key.
+func coolKey(r Resolved) string {
+	return r.ProviderID.String() + "|" + r.Model + "|" + r.KeyID
+}
 
 func (s *Service) isCooling(r Resolved, now time.Time) bool {
 	s.mu.Lock()

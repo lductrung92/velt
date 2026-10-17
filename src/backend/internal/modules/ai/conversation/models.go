@@ -74,6 +74,12 @@ type StartRequest struct {
 	// other than "en" is treated as Vietnamese, so a stale or junk value
 	// degrades to the default rather than failing the request.
 	Locale string `json:"locale" validate:"omitempty,max=10"`
+	// RecaptchaToken is required only when ai.chat.require_captcha is on AND
+	// reCAPTCHA is configured. It is checked on the FIRST message of a
+	// conversation, not on every one: a challenge per message would make the
+	// chat unusable, while a script's cost is in opening threads, not in
+	// continuing one it already paid for.
+	RecaptchaToken string `json:"recaptcha_token" validate:"omitempty,max=4000"`
 }
 
 // SendRequest posts one visitor message.

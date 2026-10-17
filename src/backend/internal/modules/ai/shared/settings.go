@@ -16,6 +16,13 @@ const (
 	KeyDailyTokenCap = "ai.daily_token_cap"
 	KeyMaxMessageLen = "ai.max_message_len"
 	KeySystemPersona = "ai.system_persona"
+
+	// Abuse controls for the public chatbot. Separate from the endpoint and
+	// from the global reCAPTCHA switch: the contact form and the chat are
+	// attacked differently and an operator may want one guarded and not the
+	// other.
+	KeyChatRequireCaptcha = "ai.chat.require_captcha"
+	KeyChatMaxPerDay      = "ai.chat.max_per_day"
 )
 
 // SettingDefs are the assistant's entries in the settings registry.
@@ -31,6 +38,14 @@ func SettingDefs() []settings.SettingDef {
 			Description: "Maximum characters in one visitor message"},
 		{Key: KeySystemPersona, Group: GroupAI, Type: settings.TypeString, Default: "",
 			Description: "Extra persona text appended to the system prompt; empty → built-in only"},
+		// Public because the site has to know before it writes: it must fetch
+		// a token and send it with the very first message, and there is no
+		// second chance to ask. Publishing the flag reveals that the chat is
+		// guarded, which is not a secret — the challenge itself is visible.
+		{Key: KeyChatRequireCaptcha, Group: GroupAI, Type: settings.TypeBool, Default: false, IsPublic: true,
+			Description: "Require reCAPTCHA on the first message of a conversation. Needs the site key and secret under Security; without them it does nothing"},
+		{Key: KeyChatMaxPerDay, Group: GroupAI, Type: settings.TypeInt, Default: 20,
+			Description: "Maximum conversations one visitor may open per day; 0 → no limit"},
 	}
 }
 

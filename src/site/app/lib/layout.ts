@@ -66,6 +66,10 @@ export interface SiteHead {
    *  browser cannot render the widget without it. The secret never comes near
    *  here; only the API ever sees it. */
   recaptchaSiteKey: string;
+  /** The chat asks for a token on the FIRST message when this is on. Separate
+   *  from the contact form's protection: an operator may guard one and not the
+   *  other, and the chat's cost of being abused is an AI bill. */
+  chatRequiresCaptcha: boolean;
 }
 
 export interface SiteLayout {
@@ -154,6 +158,7 @@ export const DEFAULT_HEAD: SiteHead = {
   // whether a token was required, so an absent key here cannot wave a
   // submission through.
   recaptchaSiteKey: "",
+  chatRequiresCaptcha: false,
 };
 
 export const defaultLayout = (t: T): SiteLayout => ({
@@ -291,6 +296,11 @@ export function resolveLayout(
         values["security.recaptcha_enabled"] === true
           ? str(values["security.recaptcha_site_key"]).trim()
           : "",
+      // Both switches have to agree, exactly as the API decides it: asking
+      // for a token the site has no key to mint would block every visitor.
+      chatRequiresCaptcha:
+        values["security.recaptcha_enabled"] === true &&
+        values["ai.chat.require_captcha"] === true,
     },
     regions: resolveRegions(regions),
   };

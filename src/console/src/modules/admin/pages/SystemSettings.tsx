@@ -3,11 +3,13 @@ import {
   Building2,
   DatabaseZap,
   FileText,
+  Gauge,
   Globe,
   HardDrive,
   Languages,
   ListOrdered,
   Mail,
+  MessageSquare,
   RotateCw,
   Save,
   Search,
@@ -85,6 +87,7 @@ const GROUPS: { key: string; icon: LucideIcon }[] = [
   { key: "email", icon: Mail },
   { key: "storage", icon: HardDrive },
   { key: "ai", icon: Bot },
+  { key: "chatbot", icon: MessageSquare },
   { key: "security", icon: ShieldCheck },
 ];
 const groupIcon = (group: string) =>
@@ -261,15 +264,22 @@ const SECTIONS: Record<
     // ai_providers, edited by <AiEndpoints/> below. What is left here is the
     // on/off switch.
     { id: "connection", icon: Bot, keys: ["ai.enabled"] },
+    { id: "behaviour", icon: Settings2, keys: ["ai.system_persona"] },
+  ],
+  // Its own tab, not a section of "ai": everything here answers "how much may
+  // a stranger on the internet spend of ours", which is a different question
+  // from how the assistant is wired or what voice it uses. They were mixed in
+  // with the provider settings, where a ceiling is easy to miss.
+  chatbot: [
     {
-      id: "behaviour",
-      icon: Settings2,
-      keys: [
-        "ai.system_persona",
-        "ai.daily_token_cap",
-        "ai.max_turns",
-        "ai.max_message_len",
-      ],
+      id: "limits",
+      icon: Gauge,
+      keys: ["ai.max_turns", "ai.max_message_len", "ai.daily_token_cap"],
+    },
+    {
+      id: "abuse",
+      icon: ShieldCheck,
+      keys: ["ai.chat.require_captcha", "ai.chat.max_per_day"],
     },
   ],
 };

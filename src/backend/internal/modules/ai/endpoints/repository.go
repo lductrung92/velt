@@ -23,6 +23,43 @@ func NewRepository(pool *pgxpool.Pool) *Repository { return &Repository{pool: po
 
 const providerCols = `id, label, kind, base_url, api_key IS NOT NULL, enabled, sort_order, created_at, updated_at`
 
+// ProviderLabel returns the operator-facing name of one endpoint, for an
+// audit entry. The kind ("openai") would say nothing about WHICH endpoint was
+// read, which is the only question such an entry exists to answer.
+func (r *Repository) ProviderLabel(ctx context.Context, id uuid.UUID) (string, error) {
+	var label string
+	err := r.pool.QueryRow(ctx,
+		`SELECT label FROM ai_providers WHERE id = $1`, id).Scan(&label)
+	if err != nil {
+		return "", fmt.Errorf("provider label: %w", err)
+	}
+	return label, nil
+}
+
+// SealedKeys returns every endpoint's stored key, still encrypted.
+//
+// One query rather than one per endpoint: the console's list wants to say how
+// many keys each endpoint holds, and the only way to count them is to open the
+// blob — the keys live newline-separated inside a single sealed value.
+func (r *Repository) SealedKeys(ctx context.Context) (map[uuid.UUID][]byte, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, api_key FROM ai_providers WHERE api_key IS NOT NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("sealed keys: %w", err)
+	}
+	defer rows.Close()
+	out := map[uuid.UUID][]byte{}
+	for rows.Next() {
+		var id uuid.UUID
+		var key []byte
+		if err := rows.Scan(&id, &key); err != nil {
+			return nil, fmt.Errorf("scan sealed key: %w", err)
+		}
+		out[id] = key
+	}
+	return out, rows.Err()
+}
+
 // ListProviders returns every endpoint in display order.
 func (r *Repository) ListProviders(ctx context.Context) ([]Provider, error) {
 	rows, err := r.pool.Query(ctx,

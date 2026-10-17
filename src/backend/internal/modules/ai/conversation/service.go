@@ -153,6 +153,25 @@ func (s *Service) Start(ctx context.Context, visitorKey string, req StartRequest
 		return StartResponse{}, apperr.BadRequest("bad_request")
 	}
 
+	// Checked before anything is written. The ceiling exists because opening
+	// conversations is the cheapest thing a script can do here: every one
+	// costs a row and a line in the console's queue, and the operator cannot
+	// tell them apart from real visitors until they read them.
+	if cap := s.settings.GetInt(ctx, shared.KeyChatMaxPerDay); cap > 0 {
+		n, err := s.repo.CountTodayByVisitor(ctx, visitorKey)
+		if err != nil {
+			return StartResponse{}, s.MapRepoErr(ctx, "start: count today", err)
+		}
+		if n >= cap {
+			// Retry-After is the truth here: the counter is per calendar day,
+			// so the ceiling lifts at midnight and not a second earlier.
+			now := time.Now()
+			midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).
+				AddDate(0, 0, 1)
+			return StartResponse{}, apperr.RateLimited(int(time.Until(midnight).Seconds()))
+		}
+	}
+
 	var referrerID *uuid.UUID
 	var referrerName string
 	if ref := strings.TrimSpace(req.Ref); ref != "" {

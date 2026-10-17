@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -18,7 +19,10 @@ import {
   useDeleteProvider,
   useUpdateProvider,
 } from "@/modules/ai/hooks/useAiEndpoints";
-import type { AiProvider } from "@/modules/ai/services/aiEndpoints.service";
+import {
+  revealProviderKeys,
+  type AiProvider,
+} from "@/modules/ai/services/aiEndpoints.service";
 import { parseApiError } from "@/utils/apiError";
 
 import { SettingsSection } from "./SettingsSection";
@@ -27,9 +31,10 @@ import { SettingsSection } from "./SettingsSection";
  * The endpoints the assistant may talk to.
  *
  * One row per endpoint rather than one set of fields, because there can be
- * several and the chains below point at them by name. The key is write-only:
- * the server never sends it back, so the form shows "stored" and an empty box
- * means "leave it alone".
+ * several and the chains below point at them by name. Keys are hidden by
+ * default — the list only says how many are stored — and an operator who
+ * needs to read one unlocks it with their own password, which is recorded.
+ * Leaving the box empty keeps what is stored; typing replaces the whole list.
  */
 export function AiProviders({ canManage }: { canManage: boolean }) {
   const { t } = useTranslation();
@@ -103,9 +108,11 @@ export function AiProviders({ canManage }: { canManage: boolean }) {
                     className={`size-3.5 ${p.has_key ? "text-success-ink" : "text-muted-foreground"}`}
                     aria-hidden
                   />
-                  {p.has_key
-                    ? t("ai.providers.key_set")
-                    : t("ai.providers.key_missing")}
+                  {!p.has_key
+                    ? t("ai.providers.key_missing")
+                    : p.key_count > 1
+                      ? t("ai.providers.key_count", { count: p.key_count })
+                      : t("ai.providers.key_set")}
                 </span>
                 {canManage && (
                   <div className="flex items-center gap-1">
@@ -189,6 +196,35 @@ function ProviderDialog({
   const [baseURL, setBaseURL] = useState(provider?.base_url ?? "");
   const [apiKey, setApiKey] = useState("");
   const [enabled, setEnabled] = useState(provider?.enabled ?? true);
+  // Unlocking the stored keys. `revealed` latches so the password is asked
+  // once per dialog, not once per keystroke; closing the dialog drops it with
+  // the component, which is the whole lifetime the plaintext should have.
+  const [asking, setAsking] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const [pw, setPw] = useState("");
+  const [revealing, setRevealing] = useState(false);
+  const [revealError, setRevealError] = useState("");
+
+  async function reveal() {
+    if (!provider || !pw) return;
+    setRevealing(true);
+    setRevealError("");
+    try {
+      const keys = await revealProviderKeys(provider.id, pw);
+      // Straight into the editor: the operator asked to see them, and having
+      // them in the field they already edit means fixing one is a keystroke
+      // rather than a retype of the whole list.
+      setApiKey(keys.join("\n"));
+      setRevealed(true);
+      setAsking(false);
+    } catch (err) {
+      setRevealError(parseApiError(err, t).message);
+    } finally {
+      // Never kept, not even for a retry.
+      setPw("");
+      setRevealing(false);
+    }
+  }
 
   const kinds = [
     { value: "openai", label: t("ai.providers.kind.openai") },
@@ -280,13 +316,91 @@ function ProviderDialog({
                 : t("ai.providers.field.api_key_help")
             }
           >
-            <Input
-              type="password"
+            {/* A textarea, not a password field: an endpoint may hold several
+                keys, one per line, and they are tried in order when one hits
+                its quota. Masking them would make a list impossible to check
+                for a typo, and nothing here is readable without the session
+                that already has permission to change it. */}
+            <Textarea
+              rows={3}
               value={apiKey}
               autoComplete="off"
+              spellCheck={false}
+              className="font-mono text-xs"
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder={provider?.has_key ? "••••••••" : ""}
+              placeholder={
+                provider?.has_key
+                  ? "••••••••"
+                  : t("ai.providers.field.api_key_ph")
+              }
             />
+            {/* Reading a stored key is a separate act from changing one, so
+                it asks for the password again. A console left unlocked on a
+                desk is the ordinary way these keys walk out, and a session
+                cookie cannot tell whether the person is still sitting there. */}
+            {provider?.has_key && !revealed && (
+              <div className="mt-2 space-y-2">
+                {!asking ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setAsking(true)}
+                  >
+                    <KeyRound className="size-3.5" />
+                    {t("ai.providers.reveal.open")}
+                  </Button>
+                ) : (
+                  <div className="space-y-2 rounded-md border bg-muted/40 p-2.5">
+                    <p className="text-xs text-muted-foreground">
+                      {t("ai.providers.reveal.prompt")}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Input
+                        type="password"
+                        className="min-w-48 flex-1"
+                        value={pw}
+                        autoComplete="current-password"
+                        placeholder={t("ai.providers.reveal.password")}
+                        onChange={(e) => setPw(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void reveal();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={!pw || revealing}
+                        onClick={() => void reveal()}
+                      >
+                        {t("ai.providers.reveal.confirm")}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setAsking(false);
+                          setPw("");
+                          setRevealError("");
+                        }}
+                      >
+                        {t("common.cancel")}
+                      </Button>
+                    </div>
+                    {revealError && (
+                      <p className="text-xs text-danger-ink">{revealError}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {t("ai.providers.field.api_key_rotate")}
+            </p>
           </Field>
           <label className="flex items-center justify-between gap-4 rounded-md border px-3 py-2.5">
             <span className="text-sm">

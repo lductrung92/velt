@@ -79,20 +79,22 @@ export function McpTokensPanel({ canManage }: { canManage: boolean }) {
         </Alert>
       )}
 
+      {/* One row, like every other control on this screen. The label used to
+          sit above the field, which made this the only block on the page with
+          a second line. */}
       {canManage && (
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="min-w-56 flex-1 space-y-1.5">
-            <Label htmlFor="mcp-label" className="block">
-              {t("ai.mcp.label")}
-            </Label>
-            <Input
-              id="mcp-label"
-              value={label}
-              maxLength={120}
-              placeholder={t("ai.mcp.label_ph")}
-              onChange={(e) => setLabel(e.target.value)}
-            />
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Label htmlFor="mcp-label" className="shrink-0">
+            {t("ai.mcp.label")}
+          </Label>
+          <Input
+            id="mcp-label"
+            className="min-w-56 flex-1"
+            value={label}
+            maxLength={120}
+            placeholder={t("ai.mcp.label_ph")}
+            onChange={(e) => setLabel(e.target.value)}
+          />
           <Button
             type="button"
             disabled={!label.trim() || issue.isPending}
@@ -121,16 +123,23 @@ export function McpTokensPanel({ canManage }: { canManage: boolean }) {
                 <p className="font-mono text-xs text-muted-foreground">
                   {tk.hint}…{" "}
                   {tk.last_used_at
-                    ? t("ai.mcp.last_used", { at: formatDateTime(tk.last_used_at) })
+                    ? t("ai.mcp.last_used", {
+                        at: formatDateTime(tk.last_used_at),
+                      })
                     : t("ai.mcp.never_used")}
                 </p>
                 {/* A credential with an end date has to say so, or the day it
                     stops working looks like an outage. */}
                 {tk.expires_at && !tk.revoked_at && (
                   <p className="text-xs text-muted-foreground">
-                    {t(expired(tk.expires_at) ? "ai.mcp.expired_at" : "ai.mcp.expires_at", {
-                      at: formatDateTime(tk.expires_at),
-                    })}
+                    {t(
+                      expired(tk.expires_at)
+                        ? "ai.mcp.expired_at"
+                        : "ai.mcp.expires_at",
+                      {
+                        at: formatDateTime(tk.expires_at),
+                      },
+                    )}
                   </p>
                 )}
               </div>

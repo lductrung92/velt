@@ -1620,10 +1620,20 @@
         "base_url": "Base URL",
         "base_url_help": "Leave empty to use the provider's default endpoint.",
         "api_key": "API key",
-        "api_key_help": "Stored encrypted. Leave empty if the endpoint needs no key.",
-        "api_key_set": "A key is stored. Leave empty to keep it.",
+        "api_key_help": "One key per line. Stored encrypted. Leave empty if the endpoint needs no key.",
+        "api_key_set": "Keys are stored. Leave empty to keep them; anything you type replaces the whole list.",
         "enabled": "Available for use",
-        "enabled_help": "Switched off, every step pointing at it is skipped."
+        "enabled_help": "Switched off, every step pointing at it is skipped.",
+        "api_key_ph": "sk-xxxx\nsk-yyyy\nsk-zzzz",
+        "api_key_rotate": "When one key is rate-limited the next one is tried."
+      },
+      "key_count_one": "{{count}} key",
+      "key_count_other": "{{count}} keys",
+      "reveal": {
+        "open": "Show keys",
+        "prompt": "Enter your account password to read the keys. This is recorded in the activity log.",
+        "password": "Current password",
+        "confirm": "Unlock"
       }
     },
     "purpose": {
@@ -2018,7 +2028,8 @@
       "storage": "Storage",
       "ai": "AI",
       "cache": "Cache",
-      "security": "Security"
+      "security": "Security",
+      "chatbot": "AI chatbot"
     },
     "secret": {
       "set": "Set",
@@ -2097,7 +2108,9 @@
       "cache_console_refresh_seconds": "Console config refresh",
       "security_recaptcha_enabled": "Require reCAPTCHA",
       "security_recaptcha_site_key": "Site key",
-      "security_recaptcha_secret": "Secret key"
+      "security_recaptcha_secret": "Secret key",
+      "ai_chat_require_captcha": "Require reCAPTCHA on the first message",
+      "ai_chat_max_per_day": "Conversations per visitor per day"
     },
     "help": {
       "app_name": "Shown in the console and used as the site's brand name.",
@@ -2140,7 +2153,9 @@
       "cache_public_max_age_seconds": "Seconds a browser or CDN may hold the public configuration. Keep it at or below the refresh below, or an open console tab will re-read and still be handed its cached copy.",
       "cache_console_refresh_seconds": "Seconds between an open console tab re-reading the configuration. 0 means only on reload.",
       "site_blog_page_size": "Posts shown per blog page. From 1 to 24.",
-      "site_products_page_size": "Products shown per catalogue page. From 1 to 48."
+      "site_products_page_size": "Products shown per catalogue page. From 1 to 48.",
+      "ai_chat_require_captcha": "Asked once, when the conversation opens — not on every message. Needs the reCAPTCHA site key and secret under Security; without them this switch does nothing.",
+      "ai_chat_max_per_day": "Counted per visitor cookie, per calendar day. Set 0 for no limit."
     },
     "value": {
       "local": "Server disk",
@@ -2261,6 +2276,14 @@
       "security_recaptcha": {
         "title": "reCAPTCHA",
         "help": "Bot protection for the public contact form. Get a key pair at google.com/recaptcha (v2 — invisible). The site key appears in the page and may be public; the secret key is only ever used by the server to verify."
+      },
+      "chatbot_limits": {
+        "title": "Limits",
+        "help": "Cost and length ceilings per conversation. Past the daily token cap the assistant falls back to short scripted answers."
+      },
+      "chatbot_abuse": {
+        "title": "Abuse controls",
+        "help": "The chat is the only public surface that calls an AI provider directly, which makes it the most expensive one to leave open."
       }
     },
     "cache_purge": {

@@ -60,6 +60,19 @@ func (r *fakeRepo) Get(_ context.Context, id uuid.UUID) (*Conversation, error) {
 	return &cp, nil
 }
 
+func (r *fakeRepo) CountTodayByVisitor(_ context.Context, key string) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	today := time.Now().Truncate(24 * time.Hour)
+	n := 0
+	for _, c := range r.convs {
+		if c.VisitorKey == key && !c.CreatedAt.Before(today) {
+			n++
+		}
+	}
+	return n, nil
+}
+
 // Mirrors the real query: newest activity first, closed threads excluded. The
 // map has no order, so ties are broken on LastActivityAt the same way.
 func (r *fakeRepo) ActiveByVisitor(_ context.Context, key string) (*Conversation, error) {

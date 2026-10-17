@@ -46,7 +46,7 @@ func postStart(h *Handler) *httptest.ResponseRecorder {
 func TestStartIsCappedPerIP(t *testing.T) {
 	e := newEnv(t)
 	lim := &countingLimiter{budget: 2}
-	h := NewHandler(e.svc, false, lim, false)
+	h := NewHandler(e.svc, false, lim, false, nil)
 
 	require.Equal(t, http.StatusCreated, postStart(h).Code)
 	require.Equal(t, http.StatusCreated, postStart(h).Code)
@@ -63,7 +63,7 @@ func TestStartIsCappedPerIP(t *testing.T) {
 func TestEachChatActionHasItsOwnBucket(t *testing.T) {
 	e := newEnv(t)
 	lim := &countingLimiter{budget: 1}
-	h := NewHandler(e.svc, false, lim, false)
+	h := NewHandler(e.svc, false, lim, false, nil)
 
 	require.Equal(t, http.StatusCreated, postStart(h).Code)
 	require.Equal(t, http.StatusTooManyRequests, postStart(h).Code)
@@ -80,7 +80,7 @@ func TestEachChatActionHasItsOwnBucket(t *testing.T) {
 // watching it.
 func TestLimiterFailureClosesTheDoor(t *testing.T) {
 	e := newEnv(t)
-	h := NewHandler(e.svc, false, &countingLimiter{err: context.DeadlineExceeded}, false)
+	h := NewHandler(e.svc, false, &countingLimiter{err: context.DeadlineExceeded}, false, nil)
 	require.Equal(t, http.StatusTooManyRequests, postStart(h).Code)
 }
 
@@ -88,7 +88,7 @@ func TestLimiterFailureClosesTheDoor(t *testing.T) {
 // handler — but production wiring must pass one (see ai.Register).
 func TestNoLimiterMeansNoThrottle(t *testing.T) {
 	e := newEnv(t)
-	h := NewHandler(e.svc, false, nil, false)
+	h := NewHandler(e.svc, false, nil, false, nil)
 	for i := 0; i < 5; i++ {
 		require.Equal(t, http.StatusCreated, postStart(h).Code)
 	}

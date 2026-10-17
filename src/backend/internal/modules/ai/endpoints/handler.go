@@ -3,6 +3,7 @@ package endpoints
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -11,6 +12,7 @@ import (
 	"github.com/velt/backend/internal/httpx"
 	"github.com/velt/backend/internal/modules/ai/provider"
 	"github.com/velt/backend/internal/modules/ai/shared"
+	"github.com/velt/backend/internal/platform/ratelimit"
 )
 
 // permSettings is the permission that may read or change the assistant's
@@ -22,11 +24,72 @@ const permSettings = "settings.manage"
 type Handler struct {
 	svc  *Service
 	base *shared.Base
+	// limiter guards the one endpoint here that takes a password. Nil is
+	// allowed — a deployment without a limiter still works — but then the
+	// reveal has only the permission gate and the password itself.
+	limiter ratelimit.Limiter
 }
 
+// revealPerUser caps password attempts on the reveal endpoint. Keyed by user,
+// not by IP: the caller is already signed in, so the account is the thing
+// being attacked, and an office behind one address must not share a budget.
+const (
+	revealPerUser = 5
+	revealWindow  = 10 * time.Minute
+)
+
 // NewHandler wires the handler.
-func NewHandler(svc *Service, base *shared.Base) *Handler {
-	return &Handler{svc: svc, base: base}
+func NewHandler(svc *Service, base *shared.Base, limiter ratelimit.Limiter) *Handler {
+	return &Handler{svc: svc, base: base, limiter: limiter}
+}
+
+// RevealKeys handles POST /api/ai/providers/{id}/reveal.
+//
+// POST, not GET: the body carries a password, and a URL would end up in logs,
+// in history and in a proxy's cache. The response is marked no-store for the
+// same reason — nothing should keep a copy of this but the screen showing it.
+func (h *Handler) RevealKeys(w http.ResponseWriter, r *http.Request) {
+	if !h.gate(w, r) {
+		return
+	}
+	ident, _ := httpx.IdentityFromContext(r.Context())
+	if ident == nil {
+		httpx.WriteError(w, apperr.Unauthorized("unauthorized"))
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpx.WriteError(w, apperr.BadRequest("bad_request"))
+		return
+	}
+	var req RevealKeysRequest
+	if err := httpx.DecodeAndValidate(r, &req); err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
+	if h.limiter != nil {
+		ok, retryAfter, err := h.limiter.Allow(r.Context(),
+			"ai:reveal:user:"+ident.UserID.String(), revealPerUser, revealWindow)
+		// Fails CLOSED, like every other password surface: an unmeasurable
+		// run of guesses against a credential store is not worth the
+		// convenience of letting it through.
+		if err != nil || !ok {
+			httpx.WriteError(w, apperr.RateLimited(retryAfter))
+			return
+		}
+	}
+
+	keys, err := h.svc.RevealKeys(r.Context(), ident.UserID, id, req.Password)
+	if err != nil {
+		h.fail(w, r, "reveal keys", err)
+		return
+	}
+	// Recorded whether or not anyone ever reads it: a credential was shown,
+	// and that is the sort of thing somebody has to be able to account for.
+	h.svc.RecordReveal(r.Context(), ident, id)
+
+	w.Header().Set("Cache-Control", "no-store")
+	httpx.WriteJSON(w, http.StatusOK, RevealKeysResponse{Keys: keys})
 }
 
 func (h *Handler) gate(w http.ResponseWriter, r *http.Request) bool {
@@ -215,6 +278,15 @@ func (h *Handler) fail(w http.ResponseWriter, r *http.Request, op string, err er
 		httpx.WriteError(w, apperr.NotFound("not_found"))
 		return
 	}
+	// An error that already carries a status was chosen deliberately — a
+	// wrong password on the reveal endpoint is a 422, not a server fault.
+	// Masking it as 500 both lies to the caller and fills the error log with
+	// entries nobody can act on.
+	var appErr *apperr.AppError
+	if errors.As(err, &appErr) {
+		httpx.WriteError(w, appErr)
+		return
+	}
 	h.base.Sec(r.Context()).Error("ai endpoints: "+op, "err", err)
 	httpx.WriteError(w, apperr.Internal())
 }
@@ -228,6 +300,7 @@ func Register(r chi.Router, h *Handler, authMW func(http.Handler) http.Handler) 
 		r.Put("/api/ai/providers/order", h.ReorderProviders)
 		r.Patch("/api/ai/providers/{id}", h.UpdateProvider)
 		r.Delete("/api/ai/providers/{id}", h.DeleteProvider)
+		r.Post("/api/ai/providers/{id}/reveal", h.RevealKeys)
 		r.Get("/api/ai/providers/{id}/models", h.ProviderModels)
 		r.Get("/api/ai/chains/{purpose}", h.GetChain)
 		r.Put("/api/ai/chains/{purpose}", h.SetChain)

@@ -2,6 +2,7 @@ package conversation
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -11,7 +12,9 @@ import (
 
 	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
+	"github.com/velt/backend/internal/modules/ai/shared"
 	"github.com/velt/backend/internal/platform/ratelimit"
+	"github.com/velt/backend/internal/platform/recaptcha"
 )
 
 // visitorCookie carries the anonymous key that owns a conversation. It is not
@@ -69,12 +72,21 @@ type Handler struct {
 	secure     bool
 	limiter    ratelimit.Limiter
 	trustProxy bool
+	// captcha is optional. Nil, or reCAPTCHA left unconfigured, means the
+	// ai.chat.require_captcha switch does nothing — a switch that pretends to
+	// guard something it cannot is worse than one that is plainly off.
+	captcha *recaptcha.Verifier
 }
 
 // NewHandler builds the visitor-facing handler. `secure` marks the cookie for
 // HTTPS-only deployments; limiter/trustProxy drive the per-IP abuse guard.
-func NewHandler(svc *Service, secure bool, limiter ratelimit.Limiter, trustProxy bool) *Handler {
-	return &Handler{svc: svc, secure: secure, limiter: limiter, trustProxy: trustProxy}
+func NewHandler(svc *Service, secure bool, limiter ratelimit.Limiter, trustProxy bool,
+	captcha *recaptcha.Verifier,
+) *Handler {
+	return &Handler{
+		svc: svc, secure: secure, limiter: limiter,
+		trustProxy: trustProxy, captcha: captcha,
+	}
 }
 
 // throttle applies a per-IP ceiling. It writes the 429 itself and reports true
@@ -145,6 +157,10 @@ func (h *Handler) Start(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, err)
 		return
 	}
+	if err := h.checkCaptcha(r, req.RecaptchaToken); err != nil {
+		httpx.WriteError(w, err)
+		return
+	}
 	key := h.visitorKey(w, r)
 	res, err := h.svc.Start(r.Context(), key, req)
 	if err != nil {
@@ -152,6 +168,34 @@ func (h *Handler) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusCreated, res)
+}
+
+// checkCaptcha gates opening a conversation when the operator asked for it.
+//
+// Two switches have to agree: ai.chat.require_captcha says the chat wants a
+// challenge, and the shared reCAPTCHA settings say one can actually be made.
+// With keys missing the second is false and this returns nil, because the
+// alternative — refusing every visitor over a credential the operator forgot
+// to fill in — takes the chat down rather than protecting it.
+//
+// Where a challenge IS possible, it fails CLOSED: Google being unreachable
+// does not become a free pass.
+func (h *Handler) checkCaptcha(r *http.Request, token string) error {
+	if h.captcha == nil ||
+		!h.svc.settings.GetBool(r.Context(), shared.KeyChatRequireCaptcha) ||
+		!h.captcha.Enabled(r.Context()) {
+		return nil
+	}
+	err := h.captcha.Check(r.Context(), token, httpx.ClientIP(r, h.trustProxy))
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, recaptcha.ErrFailed):
+		return apperr.Validation(map[string]string{"recaptcha_token": "invalid"})
+	default:
+		h.svc.Sec(r.Context()).Error("chat: recaptcha", "err", err)
+		return apperr.BadGateway("recaptcha_unavailable", "")
+	}
 }
 
 // Current handles GET /api/public/chat/conversations/current.

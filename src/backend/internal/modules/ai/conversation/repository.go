@@ -17,6 +17,9 @@ const convColumns = `id, state, visitor_key, referrer_member_id, lead_id,
 type Repository interface {
 	Create(ctx context.Context, visitorKey string, referrerMemberID *uuid.UUID) (*Conversation, error)
 	Get(ctx context.Context, id uuid.UUID) (*Conversation, error)
+	// CountTodayByVisitor counts the conversations this visitor opened today,
+	// which is what the per-visitor daily ceiling is measured against.
+	CountTodayByVisitor(ctx context.Context, visitorKey string) (int, error)
 	// ActiveByVisitor finds the thread this visitor is still in, so reopening
 	// the widget or reloading the page lands back in it instead of starting a
 	// fresh one. Closed threads are not returned: those are finished.
@@ -65,6 +68,20 @@ func scanConv(row pgx.Row) (*Conversation, error) {
 		return nil, err
 	}
 	return &c, nil
+}
+
+// Counted on the server's own clock, not the browser's, and per calendar day
+// rather than a rolling window: the ceiling is there to stop a script, and a
+// number an operator can reason about ("20 a day") beats a sliding one.
+func (r *pgxRepository) CountTodayByVisitor(ctx context.Context, visitorKey string) (int, error) {
+	var n int
+	err := r.pool.QueryRow(ctx,
+		`SELECT count(*) FROM ai_conversations
+		  WHERE visitor_key = $1 AND created_at >= CURRENT_DATE`, visitorKey).Scan(&n)
+	if err != nil {
+		return 0, shared.Wrap("count conversations today", err)
+	}
+	return n, nil
 }
 
 // A visitor can have several rows over time; the newest active one is theirs.

@@ -1668,10 +1668,20 @@
         "base_url": "Base URL",
         "base_url_help": "Để trống nếu dùng endpoint mặc định của nhà cung cấp.",
         "api_key": "Khoá API",
-        "api_key_help": "Lưu mã hoá. Để trống nếu endpoint không cần khoá.",
-        "api_key_set": "Đã có khoá. Để trống thì giữ nguyên khoá cũ.",
+        "api_key_help": "Mỗi dòng một khoá. Lưu mã hoá. Để trống nếu endpoint không cần khoá.",
+        "api_key_set": "Đã có khoá. Để trống thì giữ nguyên; nhập mới sẽ thay toàn bộ danh sách.",
         "enabled": "Cho phép sử dụng",
-        "enabled_help": "Tắt thì mọi bước trỏ tới nó đều bị bỏ qua."
+        "enabled_help": "Tắt thì mọi bước trỏ tới nó đều bị bỏ qua.",
+        "api_key_ph": "sk-xxxx\nsk-yyyy\nsk-zzzz",
+        "api_key_rotate": "Khi một khoá bị giới hạn, hệ thống tự chuyển sang khoá kế tiếp."
+      },
+      "key_count_one": "{{count}} khoá",
+      "key_count_other": "{{count}} khoá",
+      "reveal": {
+        "open": "Hiện khoá",
+        "prompt": "Nhập mật khẩu tài khoản của bạn để xem khoá. Việc này được ghi vào nhật ký hoạt động.",
+        "password": "Mật khẩu hiện tại",
+        "confirm": "Mở khoá"
       }
     },
     "purpose": {
@@ -2066,7 +2076,8 @@
       "storage": "Lưu trữ",
       "ai": "AI",
       "cache": "Cache",
-      "security": "Bảo mật"
+      "security": "Bảo mật",
+      "chatbot": "Chatbot AI"
     },
     "secret": {
       "set": "Đã đặt",
@@ -2145,7 +2156,9 @@
       "cache_console_refresh_seconds": "Console tự đọc lại cấu hình",
       "security_recaptcha_enabled": "Bật reCAPTCHA",
       "security_recaptcha_site_key": "Site key",
-      "security_recaptcha_secret": "Secret key"
+      "security_recaptcha_secret": "Secret key",
+      "ai_chat_require_captcha": "Yêu cầu reCAPTCHA ở tin nhắn đầu",
+      "ai_chat_max_per_day": "Số hội thoại tối đa mỗi khách mỗi ngày"
     },
     "help": {
       "app_name": "Hiện ở console và làm tên thương hiệu trên site.",
@@ -2188,7 +2201,9 @@
       "cache_public_max_age_seconds": "Số giây trình duyệt và CDN được giữ bản cũ của cấu hình công khai. Nên đặt nhỏ hơn hoặc bằng chu kỳ tự đọc lại bên dưới, nếu không tab console sẽ đọc lại nhưng vẫn nhận bản trong cache trình duyệt.",
       "cache_console_refresh_seconds": "Số giây giữa hai lần một tab console đang mở đọc lại cấu hình. Đặt 0 thì chỉ cập nhật khi tải lại trang.",
       "site_blog_page_size": "Số bài hiện trên mỗi trang blog. Từ 1 đến 24.",
-      "site_products_page_size": "Số sản phẩm hiện trên mỗi trang danh mục. Từ 1 đến 48."
+      "site_products_page_size": "Số sản phẩm hiện trên mỗi trang danh mục. Từ 1 đến 48.",
+      "ai_chat_require_captcha": "Chỉ hỏi một lần khi khách mở hội thoại, không hỏi ở từng tin. Cần Khoá site và Khoá bí mật reCAPTCHA ở tab Bảo mật; thiếu thì công tắc này không có tác dụng.",
+      "ai_chat_max_per_day": "Đếm theo cookie khách và theo ngày. Đặt 0 để bỏ giới hạn."
     },
     "value": {
       "local": "Ổ đĩa máy chủ",
@@ -2309,6 +2324,14 @@
       "security_recaptcha": {
         "title": "reCAPTCHA",
         "help": "Chống bot cho form liên hệ công khai. Lấy cặp khoá tại google.com/recaptcha (loại v2 — ẩn). Site key hiện trong trang web nên công khai được; secret key chỉ server dùng để xác minh."
+      },
+      "chatbot_limits": {
+        "title": "Giới hạn",
+        "help": "Trần chi phí và độ dài cho mỗi hội thoại. Vượt hạn mức token ngày thì trợ lý tự lui về trả lời rút gọn."
+      },
+      "chatbot_abuse": {
+        "title": "Chống lạm dụng",
+        "help": "Khung chat là bề mặt công khai duy nhất gọi thẳng tới nhà cung cấp AI, nên cũng là chỗ tốn tiền nhất khi bị khai thác."
       }
     },
     "cache_purge": {

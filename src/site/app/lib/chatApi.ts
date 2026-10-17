@@ -76,6 +76,7 @@ export function startConversation(input: {
   ref?: string;
   page?: string;
   locale?: string;
+  recaptchaToken?: string;
 }): Promise<StartedConversation> {
   return call<StartedConversation>("/public/chat/conversations", {
     method: "POST",
@@ -83,6 +84,7 @@ export function startConversation(input: {
       ref: input.ref ?? "",
       page: input.page ?? "",
       locale: input.locale ?? "",
+      recaptcha_token: input.recaptchaToken ?? "",
     }),
   });
 }

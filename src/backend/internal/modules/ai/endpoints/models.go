@@ -16,11 +16,14 @@ import (
 // server: it is stored AEAD-encrypted and the responses below carry only
 // whether one is set.
 type Provider struct {
-	ID        uuid.UUID `json:"id"`
-	Label     string    `json:"label"`
-	Kind      string    `json:"kind"`
-	BaseURL   string    `json:"base_url"`
-	HasKey    bool      `json:"has_key"`
+	ID      uuid.UUID `json:"id"`
+	Label   string    `json:"label"`
+	Kind    string    `json:"kind"`
+	BaseURL string    `json:"base_url"`
+	HasKey  bool      `json:"has_key"`
+	// KeyCount is how many keys the endpoint holds. Several keys are tried in
+	// turn when one hits its quota, so "3" is a meaningful thing to see.
+	KeyCount  int       `json:"key_count"`
 	Enabled   bool      `json:"enabled"`
 	SortOrder int       `json:"sort_order"`
 	CreatedAt time.Time `json:"created_at"`
@@ -48,7 +51,11 @@ type Resolved struct {
 	Kind          string
 	BaseURL       string
 	APIKey        string
-	Model         string
+	// KeyID tells two links of the same endpoint apart when it holds several
+	// keys. It is a short hash, never the key: it goes into the cooldown map
+	// and into logs. Empty when the endpoint has no key.
+	KeyID string
+	Model string
 }
 
 // CreateProviderRequest is the POST body.
@@ -56,7 +63,7 @@ type CreateProviderRequest struct {
 	Label   string  `json:"label" validate:"required,max=80"`
 	Kind    string  `json:"kind" validate:"required,oneof=anthropic openai"`
 	BaseURL string  `json:"base_url" validate:"omitempty,max=300"`
-	APIKey  *string `json:"api_key" validate:"omitempty,max=400"`
+	APIKey  *string `json:"api_key" validate:"omitempty,max=8000"`
 	Enabled *bool   `json:"enabled"`
 }
 
@@ -66,8 +73,24 @@ type UpdateProviderRequest struct {
 	Label   *string `json:"label" validate:"omitempty,max=80"`
 	Kind    *string `json:"kind" validate:"omitempty,oneof=anthropic openai"`
 	BaseURL *string `json:"base_url" validate:"omitempty,max=300"`
-	APIKey  *string `json:"api_key" validate:"omitempty,max=400"`
+	APIKey  *string `json:"api_key" validate:"omitempty,max=8000"`
 	Enabled *bool   `json:"enabled"`
+}
+
+// RevealKeysRequest re-authenticates before stored keys are handed back.
+//
+// The password is asked for even though the caller is already signed in and
+// already holds the settings permission. A session left open on an unlocked
+// screen is the ordinary way these keys would walk out, and a session cookie
+// cannot be re-checked — only the person can.
+type RevealKeysRequest struct {
+	Password string `json:"password" validate:"required,max=200"`
+}
+
+// RevealKeysResponse carries the plaintext keys, one per entry, in the order
+// they are tried.
+type RevealKeysResponse struct {
+	Keys []string `json:"keys"`
 }
 
 // SetChainRequest replaces one purpose's chain wholesale. Replacing rather

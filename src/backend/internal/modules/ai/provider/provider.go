@@ -137,6 +137,16 @@ type APIError struct {
 // RateLimited reports whether this is the endpoint saying "not now".
 func (e *APIError) RateLimited() bool { return e != nil && e.Status == http.StatusTooManyRequests }
 
+// CredentialRejected reports whether the endpoint refused the key itself — it
+// was revoked, mistyped, or is out of credit. Distinct from RateLimited
+// because only one of the two is worth waiting out: a rate limit lifts on its
+// own, a rejected credential never does.
+func (e *APIError) CredentialRejected() bool {
+	return e != nil &&
+		(e.Status == http.StatusUnauthorized || e.Status == http.StatusForbidden ||
+			e.Status == http.StatusPaymentRequired)
+}
+
 // retryAfter reads the header both adapters receive. Seconds per RFC 9110; a
 // date form is ignored rather than guessed at, which leaves RetryAfter zero
 // and lets the caller use its own default.
