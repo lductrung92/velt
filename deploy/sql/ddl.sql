@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict LxOke4QUH6W5LeBfXdhjfT8X3nntDmzm0fnilO0LBZmZplsHtIQhuZIcQaVCiDh
+\restrict 9fF1C37NBblyczMgPeCaYqv0PHwIxQaGhF8nJjfausopx8TtXgk2Sr9ibT802lt
 
 -- Dumped from database version 18.6
 -- Dumped by pg_dump version 18.6
@@ -10,7 +10,7 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
+-- (pg_dump 17+ phát ra 'SET transaction_timeout' ở đây; server production chạy-- Postgres 16 và không biết tham số này, nên nó bị gỡ. Giá trị 0 là mặc định,-- bỏ đi không đổi hành vi. regenerate.sh gỡ lại sau mỗi lần dump.)
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -1989,5 +1989,5 @@ ALTER TABLE ONLY public.user_roles
 -- PostgreSQL database dump complete
 --
 
-\unrestrict LxOke4QUH6W5LeBfXdhjfT8X3nntDmzm0fnilO0LBZmZplsHtIQhuZIcQaVCiDh
+\unrestrict 9fF1C37NBblyczMgPeCaYqv0PHwIxQaGhF8nJjfausopx8TtXgk2Sr9ibT802lt
 
