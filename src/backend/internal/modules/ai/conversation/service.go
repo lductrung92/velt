@@ -38,6 +38,7 @@ type SettingsPort interface {
 // a deployment with nobody subscribed leaves it nil and nothing changes.
 type NotifyPort interface {
 	VisitorWaiting(ctx context.Context, convID uuid.UUID, staffOnline int)
+	ChatMessage(ctx context.Context, convID uuid.UUID)
 	HasRecipients(ctx context.Context) bool
 }
 
@@ -270,6 +271,18 @@ func (s *Service) Send(ctx context.Context, visitorKey string, convID uuid.UUID,
 		return SendResponse{}, s.MapRepoErr(ctx, "send: persist", err)
 	}
 	s.fanOut(convID, Event{Type: EventMessage, Message: toView(*saved)})
+
+	// A visitor has started talking. Only the first turn rings: after that
+	// the thread is known about, and a notification per line typed is how a
+	// team learns to mute the console. If nobody picks it up and the visitor
+	// asks for a person, VisitorWaiting below rings again.
+	//
+	// Unlike VisitorWaiting this does NOT check presence: an operator with
+	// the console open may still be looking at another tab, and a new
+	// conversation is worth knowing about either way.
+	if turns == 1 && s.notify != nil {
+		s.notify.ChatMessage(ctx, convID)
+	}
 
 	degraded := !s.live(ctx)
 

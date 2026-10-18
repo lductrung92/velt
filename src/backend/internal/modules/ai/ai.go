@@ -32,7 +32,9 @@ import (
 
 // SettingDefs are the assistant's entries in the settings registry, exported
 // for main.go to append the way it does for cms.
-func SettingDefs() []settingssvc.SettingDef { return shared.SettingDefs() }
+func SettingDefs() []settingssvc.SettingDef {
+	return append(shared.SettingDefs(), notify.SettingDefs()...)
+}
 
 // Deps are the other contexts the assistant reads from. Both are narrow by
 // design: the assistant gets published catalog data and the public roster,
@@ -57,10 +59,14 @@ type Deps struct {
 // deployment flag the rest of the app uses. `limiter`/`trustProxy` feed the
 // per-IP guard on the public chat — the only unauthenticated surface here that
 // spends money, so it must never be mounted without one.
+// It returns the notification service because other bounded contexts ring it
+// too — a lead and a newsletter sign-up are worth knowing about, and there is
+// one duty roster, one set of registered browsers and one VAPID key pair. It
+// is built here because this is where the chat already needed it.
 func Register(r chi.Router, pool *pgxpool.Pool, settings conversation.SettingsPort,
 	logger *slog.Logger, authMW func(http.Handler) http.Handler, deps Deps, secureCookies bool,
 	limiter ratelimit.Limiter, trustProxy bool, aead *crypto.AEAD,
-) {
+) *notify.Service {
 	base := shared.NewBase(logger)
 
 	cat := catalogPort{pub: deps.Catalog}
@@ -95,6 +101,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings conversation.SettingsPo
 	// Desktop notifications for the duty roster. The conversation only ever
 	// asks it to ring; when to stay quiet is the notify service's own rule.
 	notifySvc := notify.NewService(notify.NewRepository(pool), aead, logger, deps.NotifySubject)
+	notifySvc.SetSettings(settings)
 
 	svc := conversation.NewService(base, repo,
 		conversation.NewHub(), conversation.NewPresence(), reg, cat, settings, eps,
@@ -123,4 +130,6 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings conversation.SettingsPo
 	tokens := mcp.NewTokenStore(pool)
 	ident := identityPort{pool: pool}
 	mcp.Register(r, mcp.NewHandler(mcp.NewServer(reg, tokens, ident), tokens, ident), authMW)
+
+	return notifySvc
 }

@@ -64,7 +64,7 @@ func Register(r chi.Router, pool *pgxpool.Pool, settings shared.SettingsPort, st
 		})
 		w.PublicPages = pages.RegisterPublic(r, resolver, landingPublic, docs)
 		w.PublicArticles = articles.RegisterPublic(r, pool, store, docs)
-		newsletter.RegisterPublic(r, base, pool, limiter, trustProxy)
+		w.Newsletter = newsletter.RegisterPublic(r, base, pool, limiter, trustProxy)
 		menus.RegisterPublic(r, pool)
 		w.PublicRegions = regions.RegisterPublic(r, pool, resolver, menusPublic, log)
 	})
@@ -104,8 +104,11 @@ type Wiring struct {
 	Taxonomy       *taxonomy.Service
 	// Menus and Settings are handed back for one reason each: both gate a
 	// translation route (a menu item's label, the site chrome's copy).
-	Menus    *menus.Service
-	Settings *cmssettings.Service
+	// Newsletter is the PUBLIC opt-in service, handed back so the
+	// application can give it a notification sink.
+	Newsletter *newsletter.Service
+	Menus      *menus.Service
+	Settings   *cmssettings.Service
 	// LandingPagesPort is handed back only so the application can wire the media
 	// forgetter into it: it is created inside this function, after Base, and a
 	// page deleting its landing must reclaim that landing's `files` rows too.

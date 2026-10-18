@@ -102,6 +102,17 @@ export function usePushDevices() {
       if (granted !== "granted") throw new Error("denied");
 
       const reg = await navigator.serviceWorker.register(SW_PATH);
+      // register() on an EXISTING registration hands back the old worker and
+      // schedules an update check whenever the browser feels like it. Until
+      // that lands, pushes are handled by whatever version was installed the
+      // first time — a worker that does not know about a kind added since
+      // drops it in silence, which looks exactly like a server that never
+      // sent anything. Asking for the check here makes "turn it on again"
+      // the fix a person would reach for anyway.
+      await reg.update().catch(() => {
+        // Offline, or the browser declined to re-check. The existing worker
+        // still works for the kinds it knows; nothing is worse for trying.
+      });
       // register() resolves before the worker can receive anything; pushing to
       // a subscription whose worker is still installing drops the message.
       await navigator.serviceWorker.ready;

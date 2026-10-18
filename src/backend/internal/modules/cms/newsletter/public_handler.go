@@ -61,7 +61,12 @@ func (h *PublicHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 }
 
 // RegisterPublic mounts the public newsletter opt-in (IP rate-limited).
-func RegisterPublic(r chi.Router, base *shared.Base, pool *pgxpool.Pool, limiter ratelimit.Limiter, trustProxy bool) {
-	h := &PublicHandler{svc: NewService(base, NewRepository(pool)), limiter: limiter, trustProxy: trustProxy}
+// The service is handed back so the application can wire a notification sink
+// onto it: a sign-up is worth telling somebody about, and the notifier is
+// built elsewhere.
+func RegisterPublic(r chi.Router, base *shared.Base, pool *pgxpool.Pool, limiter ratelimit.Limiter, trustProxy bool) *Service {
+	svc := NewService(base, NewRepository(pool))
+	h := &PublicHandler{svc: svc, limiter: limiter, trustProxy: trustProxy}
 	r.Post("/newsletter/subscribe", h.Subscribe)
+	return svc
 }

@@ -60,11 +60,30 @@ type PublicKeyResponse struct {
 
 // payload is the notification body. Kept to identifiers on purpose — see the
 // package comment.
+//
+// EntityID is whatever the kind points at: a lead, a subscriber. The
+// conversation keeps its own field because the service worker has always sent
+// it and an older worker still installed in somebody's browser would stop
+// recognising its own notifications if it moved.
 type payload struct {
 	Kind           string `json:"kind"`
-	ConversationID string `json:"conversation_id"`
+	ConversationID string `json:"conversation_id,omitempty"`
+	EntityID       string `json:"entity_id,omitempty"`
 }
 
-// KindVisitorWaiting is the one notification there is: somebody is waiting for
-// a person and nobody is online.
-const KindVisitorWaiting = "visitor_waiting"
+// The kinds of thing worth interrupting somebody for.
+//
+// Each goes to the people who can act on it, which is not the same set: the
+// person answering chats is not necessarily the person chasing leads. See
+// recipientPerm.
+const (
+	// KindVisitorWaiting: somebody asked for a human and nobody is online.
+	KindVisitorWaiting = "visitor_waiting"
+	// KindChatMessage: a visitor opened a conversation. Only the first
+	// message of each one — see Service.ChatMessage.
+	KindChatMessage = "chat_message"
+	// KindLeadNew: the contact form was submitted.
+	KindLeadNew = "lead_new"
+	// KindNewsletterNew: somebody subscribed to the newsletter.
+	KindNewsletterNew = "newsletter_new"
+)

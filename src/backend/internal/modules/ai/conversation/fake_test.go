@@ -306,6 +306,14 @@ type fakeNotify struct {
 	recipient bool
 	rung      []uuid.UUID
 	online    []int
+	// opened records ChatMessage calls separately from VisitorWaiting: the
+	// two fire on different conditions and a test that conflated them would
+	// pass while the wrong one rang.
+	opened []uuid.UUID
+}
+
+func (f *fakeNotify) ChatMessage(_ context.Context, convID uuid.UUID) {
+	f.opened = append(f.opened, convID)
 }
 
 func (f *fakeNotify) VisitorWaiting(_ context.Context, convID uuid.UUID, staffOnline int) {

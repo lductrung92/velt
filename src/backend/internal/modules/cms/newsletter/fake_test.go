@@ -76,16 +76,18 @@ func (r *fakeRepo) DeleteSubscriber(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *fakeRepo) Subscribe(_ context.Context, email string, source, _ *string) error {
+// Reports whether the address was new, like the real ON CONFLICT ... RETURNING
+// xmax = 0 does: re-activating an existing row is not a new subscriber.
+func (r *fakeRepo) Subscribe(_ context.Context, email string, source, _ *string) (bool, error) {
 	for _, s := range r.subscribers {
 		if s.Email == email { // idempotent upsert: re-activate
 			s.UnsubscribedAt = nil
-			return nil
+			return false, nil
 		}
 	}
 	s := &Subscriber{ID: uuid.New(), Email: email, SourceKey: source, CreatedAt: r.now}
 	r.subscribers[s.ID] = s
-	return nil
+	return true, nil
 }
 
 type tenv struct {

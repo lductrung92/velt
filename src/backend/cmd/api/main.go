@@ -265,7 +265,7 @@ func run() error {
 	// ai bounded context: the site assistant. It reads the catalog through the
 	// SAME public service the site uses (published snapshots only) and the
 	// public member roster — no second path to the data with its own rules.
-	ai.Register(r, pool, settingsSvc, logger, authMW, ai.Deps{
+	notifySvc := ai.Register(r, pool, settingsSvc, logger, authMW, ai.Deps{
 		Catalog: productsWiring.PublicCatalog,
 		Leads:   crmLeads,
 		// Push services want somebody to contact if a sender misbehaves; the
@@ -359,6 +359,10 @@ func run() error {
 	productsWiring.Base.SetActivity(acts)
 	membersSvc.SetActivity(acts)
 	crmLeads.SetActivity(acts)
+	// One duty roster, one set of registered browsers: the notifier built
+	// for the chat also rings for a lead and for a newsletter sign-up.
+	crmLeads.SetNotifier(notifySvc)
+	cmsWiring.Newsletter.SetNotifier(notifySvc)
 	authSvc.SetRecorder(acts)
 	accountSvc.SetRecorder(acts)
 	settingsSvc.SetRecorder(acts)

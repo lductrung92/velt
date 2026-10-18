@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Alert } from "@/components/common/Alert";
@@ -158,7 +158,14 @@ export default function LeadList() {
   // belongs to the site, and someone who manages leads is not automatically
   // allowed to read a mailing list.
   const canNewsletter = hasPermission("cms.newsletter.manage");
-  const [tab, setTab] = useState<"leads" | "newsletter">("leads");
+  // The tab lives in the URL so a desktop notification about a newsletter
+  // sign-up can land on the newsletter tab, and so the choice survives a
+  // reload. Read once into state rather than driven by the parameter: a tab
+  // the operator switches by hand should not need a navigation.
+  const [params, setParams] = useSearchParams();
+  const [tab, setTab] = useState<"leads" | "newsletter">(
+    params.get("tab") === "newsletter" ? "newsletter" : "leads",
+  );
   // Page, page size and pager style all come from the shared settings
   // (Settings → General → Pagination), so every list pages the same way.
   const paging = usePaging();
@@ -356,7 +363,15 @@ export default function LeadList() {
       {canNewsletter && (
         <Tabs
           value={tab}
-          onValueChange={(value) => setTab(value as "leads" | "newsletter")}
+          onValueChange={(value) => {
+            const next = value as "leads" | "newsletter";
+            setTab(next);
+            // Keep the address bar honest, without stacking history entries
+            // for a tab click.
+            if (next === "newsletter") params.set("tab", "newsletter");
+            else params.delete("tab");
+            setParams(params, { replace: true });
+          }}
         >
           <TabsList>
             <TabsTrigger value="leads">{t("leads.tabs.leads")}</TabsTrigger>

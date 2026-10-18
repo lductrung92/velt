@@ -21,7 +21,22 @@ const (
 type Service struct {
 	*shared.Base
 	repo Repository
+	// notify rings the people who chase leads. Optional: a deployment with
+	// nobody subscribed leaves it nil and nothing changes.
+	notify NotifyPort
 }
+
+// NotifyPort is the one thing this module asks of the notification stack.
+//
+// An interface rather than the service itself so a lead can be captured in a
+// test with no push infrastructure, and so this module does not depend on
+// how a notification is delivered.
+type NotifyPort interface {
+	LeadCreated(ctx context.Context, leadID uuid.UUID)
+}
+
+// SetNotifier supplies the notification sink.
+func (s *Service) SetNotifier(n NotifyPort) { s.notify = n }
 
 // NewService builds the leads service.
 func NewService(base *shared.Base, repo Repository) *Service {
@@ -324,8 +339,14 @@ func (s *Service) CaptureFromForm(ctx context.Context, in FormCapture) error {
 	if err := validateContact(w); err != nil {
 		return err
 	}
-	if _, err := s.repo.Create(ctx, w, in.ProductIDs); err != nil {
+	created, err := s.repo.Create(ctx, w, in.ProductIDs)
+	if err != nil {
 		return s.MapRepoErr(ctx, "capture form lead", err)
+	}
+	// After the row exists, never before: a notification about a lead that
+	// failed to save would send somebody looking for nothing.
+	if s.notify != nil {
+		s.notify.LeadCreated(ctx, created.ID)
 	}
 	return nil
 }

@@ -2029,7 +2029,8 @@
       "ai": "AI",
       "cache": "Cache",
       "security": "Security",
-      "chatbot": "AI chatbot"
+      "chatbot": "AI chatbot",
+      "notify": "Notifications"
     },
     "secret": {
       "set": "Set",
@@ -2110,7 +2111,11 @@
       "security_recaptcha_site_key": "Site key",
       "security_recaptcha_secret": "Secret key",
       "ai_chat_require_captcha": "Require reCAPTCHA on the first message",
-      "ai_chat_max_per_day": "Conversations per visitor per day"
+      "ai_chat_max_per_day": "Conversations per visitor per day",
+      "notify_push_visitor_waiting": "Visitor waiting for a person",
+      "notify_push_chat_message": "Visitor opens a conversation",
+      "notify_push_lead_new": "Contact form submitted",
+      "notify_push_newsletter_new": "Newsletter sign-up"
     },
     "help": {
       "app_name": "Shown in the console and used as the site's brand name.",
@@ -2155,7 +2160,11 @@
       "site_blog_page_size": "Posts shown per blog page. From 1 to 24.",
       "site_products_page_size": "Products shown per catalogue page. From 1 to 48.",
       "ai_chat_require_captcha": "Asked once, when the conversation opens — not on every message. Needs the reCAPTCHA site key and secret under Security; without them this switch does nothing.",
-      "ai_chat_max_per_day": "Counted per visitor cookie, per calendar day. Set 0 for no limit."
+      "ai_chat_max_per_day": "Counted per visitor cookie, per calendar day. Set 0 for no limit.",
+      "notify_push_visitor_waiting": "Only when nobody is online. Goes to people who can answer chats.",
+      "notify_push_chat_message": "First message of each conversation only, not every line. Goes to people who can answer chats.",
+      "notify_push_lead_new": "Goes to people who can view leads.",
+      "notify_push_newsletter_new": "New addresses only; a repeat sign-up is silent. Goes to people who manage the mailing list."
     },
     "value": {
       "local": "Server disk",
@@ -2284,6 +2293,10 @@
       "chatbot_abuse": {
         "title": "Abuse controls",
         "help": "The chat is the only public surface that calls an AI provider directly, which makes it the most expensive one to leave open."
+      },
+      "notify_push": {
+        "title": "Desktop notifications",
+        "help": "Shown even with the console closed. Each person switches them on per browser, under the chat inbox."
       }
     },
     "cache_purge": {

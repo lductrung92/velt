@@ -1,4 +1,5 @@
 import {
+  Bell,
   Bot,
   Building2,
   DatabaseZap,
@@ -88,6 +89,7 @@ const GROUPS: { key: string; icon: LucideIcon }[] = [
   { key: "storage", icon: HardDrive },
   { key: "ai", icon: Bot },
   { key: "chatbot", icon: MessageSquare },
+  { key: "notify", icon: Bell },
   { key: "security", icon: ShieldCheck },
 ];
 const groupIcon = (group: string) =>
@@ -270,6 +272,18 @@ const SECTIONS: Record<
   // a stranger on the internet spend of ours", which is a different question
   // from how the assistant is wired or what voice it uses. They were mixed in
   // with the provider settings, where a ceiling is easy to miss.
+  notify: [
+    {
+      id: "push",
+      icon: Bell,
+      keys: [
+        "notify.push.visitor_waiting",
+        "notify.push.chat_message",
+        "notify.push.lead_new",
+        "notify.push.newsletter_new",
+      ],
+    },
+  ],
   chatbot: [
     {
       id: "limits",

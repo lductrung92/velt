@@ -23,9 +23,15 @@ const notifyWindow = 5 * time.Minute
 // one must not hold up the visitor's own reply, which is already on its way.
 const pushTimeout = 10 * time.Second
 
-// permHandle is the permission that makes somebody a recipient: the same one
-// that lets them answer a chat.
-const permHandle = "ai.chat.handle"
+// Who hears what. A kind goes to the people who can act on it, which is not
+// one list: whoever answers chats is not necessarily whoever chases leads,
+// and a mailing list is a third job again. Sending everything to everyone is
+// how a team learns to ignore the sound.
+const (
+	permHandle     = "ai.chat.handle"
+	permLeads      = "crm.leads.view_all"
+	permNewsletter = "cms.newsletter.manage"
+)
 
 // Service registers browsers and pushes to them.
 type Service struct {
@@ -33,7 +39,14 @@ type Service struct {
 	aead    *crypto.AEAD
 	log     *slog.Logger
 	subject string
+	// settings answers whether a kind is switched on. Optional: nil means
+	// every kind is delivered, which is what this module did before the
+	// switches existed.
+	settings SettingsPort
 }
+
+// SetSettings supplies the per-kind switches.
+func (s *Service) SetSettings(p SettingsPort) { s.settings = p }
 
 // NewService wires the service. subject is the "mailto:" or URL a push service
 // can use to reach the sender; VAPID requires one.
@@ -131,14 +144,11 @@ func (s *Service) VisitorWaiting(ctx context.Context, convID uuid.UUID, staffOnl
 	if staffOnline > 0 {
 		return
 	}
-	pub, priv, err := s.keys(ctx, false)
-	if err != nil {
-		s.log.Error("notify: keys", "err", err)
+	if !s.enabled(ctx, KeyVisitorWaiting) {
 		return
 	}
-	if pub == "" {
-		return // nobody has turned notifications on yet
-	}
+	// Debounced per conversation: a visitor typing several lines is one event
+	// to the person at the other end.
 	ok, err := s.repo.ClaimNotify(ctx, convID, notifyWindow)
 	if err != nil {
 		s.log.Error("notify: claim", "err", err)
@@ -147,7 +157,77 @@ func (s *Service) VisitorWaiting(ctx context.Context, convID uuid.UUID, staffOnl
 	if !ok {
 		return // already rang for this conversation recently
 	}
-	subs, err := s.repo.Recipients(ctx, permHandle)
+	s.push(ctx, permHandle, payload{
+		Kind: KindVisitorWaiting, ConversationID: convID.String(),
+	})
+}
+
+// ChatMessage notifies that a visitor has started talking.
+//
+// Only the FIRST message of a conversation reaches here — the caller decides
+// that, because only it knows the turn count. A notification per message
+// would be one per line typed, which is how somebody ends up muting the
+// console. Later messages in a thread that nobody picks up are covered by
+// VisitorWaiting instead.
+func (s *Service) ChatMessage(ctx context.Context, convID uuid.UUID) {
+	if !s.enabled(ctx, KeyChatMessage) {
+		return
+	}
+	ok, err := s.repo.ClaimNotify(ctx, convID, notifyWindow)
+	if err != nil {
+		s.log.Error("notify: claim", "err", err)
+		return
+	}
+	if !ok {
+		return
+	}
+	s.push(ctx, permHandle, payload{
+		Kind: KindChatMessage, ConversationID: convID.String(),
+	})
+}
+
+// LeadCreated notifies that somebody filled in the contact form.
+//
+// Not debounced: a form submission is one discrete act, not a stream, and the
+// public endpoint is already rate-limited per IP. It goes to whoever can read
+// leads, which is a different set of people from the chat roster.
+func (s *Service) LeadCreated(ctx context.Context, leadID uuid.UUID) {
+	if !s.enabled(ctx, KeyLeadNew) {
+		return
+	}
+	s.push(ctx, permLeads, payload{Kind: KindLeadNew, EntityID: leadID.String()})
+}
+
+// NewsletterSubscribed notifies that somebody signed up for the newsletter.
+// No id: the notification opens the subscriber list, not a row, and the
+// public opt-in deliberately does not report which record it touched.
+func (s *Service) NewsletterSubscribed(ctx context.Context) {
+	if !s.enabled(ctx, KeyNewsletterNew) {
+		return
+	}
+	s.push(ctx, permNewsletter, payload{Kind: KindNewsletterNew})
+}
+
+// push is the shared path: find the keys, find the people, hand off.
+//
+// The decision to notify is made on the caller's goroutine and the delivery
+// is not: a visitor's request must not wait on a push service, but whether a
+// notification happens at all is something the caller can see and a test can
+// assert. Keeping the `go` in here rather than at every call site is also
+// what stops two callers disagreeing about it.
+//
+// Everything here is best-effort. Nothing a visitor does may fail because a
+// push service was unreachable, so problems are logged and swallowed.
+func (s *Service) push(ctx context.Context, perm string, p payload) {
+	pub, priv, err := s.keys(ctx, false)
+	if err != nil {
+		s.log.Error("notify: keys", "err", err)
+		return
+	}
+	if pub == "" {
+		return // nobody has turned notifications on yet
+	}
+	subs, err := s.repo.Recipients(ctx, perm)
 	if err != nil {
 		s.log.Error("notify: recipients", "err", err)
 		return
@@ -155,11 +235,10 @@ func (s *Service) VisitorWaiting(ctx context.Context, convID uuid.UUID, staffOnl
 	if len(subs) == 0 {
 		return
 	}
-	body, err := json.Marshal(payload{Kind: KindVisitorWaiting, ConversationID: convID.String()})
+	body, err := json.Marshal(p)
 	if err != nil {
 		return
 	}
-
 	go s.deliver(context.WithoutCancel(ctx), subs, body, pub, priv)
 }
 

@@ -2077,7 +2077,8 @@
       "ai": "AI",
       "cache": "Cache",
       "security": "Bảo mật",
-      "chatbot": "Chatbot AI"
+      "chatbot": "Chatbot AI",
+      "notify": "Thông báo"
     },
     "secret": {
       "set": "Đã đặt",
@@ -2158,7 +2159,11 @@
       "security_recaptcha_site_key": "Site key",
       "security_recaptcha_secret": "Secret key",
       "ai_chat_require_captcha": "Yêu cầu reCAPTCHA ở tin nhắn đầu",
-      "ai_chat_max_per_day": "Số hội thoại tối đa mỗi khách mỗi ngày"
+      "ai_chat_max_per_day": "Số hội thoại tối đa mỗi khách mỗi ngày",
+      "notify_push_visitor_waiting": "Khách chờ gặp người phụ trách",
+      "notify_push_chat_message": "Khách mở cuộc trò chuyện",
+      "notify_push_lead_new": "Có người gửi form liên hệ",
+      "notify_push_newsletter_new": "Có người đăng ký nhận tin"
     },
     "help": {
       "app_name": "Hiện ở console và làm tên thương hiệu trên site.",
@@ -2203,7 +2208,11 @@
       "site_blog_page_size": "Số bài hiện trên mỗi trang blog. Từ 1 đến 24.",
       "site_products_page_size": "Số sản phẩm hiện trên mỗi trang danh mục. Từ 1 đến 48.",
       "ai_chat_require_captcha": "Chỉ hỏi một lần khi khách mở hội thoại, không hỏi ở từng tin. Cần Khoá site và Khoá bí mật reCAPTCHA ở tab Bảo mật; thiếu thì công tắc này không có tác dụng.",
-      "ai_chat_max_per_day": "Đếm theo cookie khách và theo ngày. Đặt 0 để bỏ giới hạn."
+      "ai_chat_max_per_day": "Đếm theo cookie khách và theo ngày. Đặt 0 để bỏ giới hạn.",
+      "notify_push_visitor_waiting": "Chỉ báo khi không có ai đang trực. Gửi cho người có quyền trả lời chat.",
+      "notify_push_chat_message": "Chỉ báo ở tin nhắn đầu của mỗi cuộc trò chuyện, không báo từng tin. Gửi cho người có quyền trả lời chat.",
+      "notify_push_lead_new": "Gửi cho người có quyền xem khách hàng.",
+      "notify_push_newsletter_new": "Chỉ báo với địa chỉ mới; đăng ký lại không báo. Gửi cho người có quyền quản lý nhận tin."
     },
     "value": {
       "local": "Ổ đĩa máy chủ",
@@ -2332,6 +2341,10 @@
       "chatbot_abuse": {
         "title": "Chống lạm dụng",
         "help": "Khung chat là bề mặt công khai duy nhất gọi thẳng tới nhà cung cấp AI, nên cũng là chỗ tốn tiền nhất khi bị khai thác."
+      },
+      "notify_push": {
+        "title": "Thông báo trên máy",
+        "help": "Hiện trên màn hình kể cả khi không mở console. Mỗi người phải tự bật trên từng trình duyệt ở mục Hộp thư trò chuyện."
       }
     },
     "cache_purge": {

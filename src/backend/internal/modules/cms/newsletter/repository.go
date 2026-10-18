@@ -18,7 +18,8 @@ type Repository interface {
 	ListSubscribers(ctx context.Context, p ListParams) ([]Subscriber, int, error)
 	GetSubscriber(ctx context.Context, id uuid.UUID) (*Subscriber, error)
 	DeleteSubscriber(ctx context.Context, id uuid.UUID) error
-	Subscribe(ctx context.Context, email string, source, ip *string) error
+	// Subscribe reports whether the address was new; see the implementation.
+	Subscribe(ctx context.Context, email string, source, ip *string) (bool, error)
 }
 
 type pgxRepository struct {
@@ -84,13 +85,23 @@ func (r *pgxRepository) DeleteSubscriber(ctx context.Context, id uuid.UUID) erro
 
 // Subscribe upserts an opt-in: idempotent on the unique email; re-subscribing
 // clears a prior unsubscribe. Keeps the original source_key when one exists.
-func (r *pgxRepository) Subscribe(ctx context.Context, email string, source, ip *string) error {
-	_, err := r.pool.Exec(ctx, `
+// The second return says whether this was a NEW subscriber. The opt-in is
+// idempotent on purpose — a repeat must not leak whether the address was
+// already on the list — but "somebody subscribed" is only worth telling
+// anyone about the first time. xmax = 0 is Postgres' own answer to "did this
+// ON CONFLICT insert or update".
+func (r *pgxRepository) Subscribe(ctx context.Context, email string, source, ip *string) (bool, error) {
+	var created bool
+	err := r.pool.QueryRow(ctx, `
 		INSERT INTO cms_newsletter_subscribers (email, source_key, ip_address)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (email) DO UPDATE
 		   SET unsubscribed_at = NULL,
-		       source_key = COALESCE(cms_newsletter_subscribers.source_key, EXCLUDED.source_key)`,
-		email, source, ip)
-	return shared.Wrap("subscribe newsletter", err)
+		       source_key = COALESCE(cms_newsletter_subscribers.source_key, EXCLUDED.source_key)
+		RETURNING xmax = 0`,
+		email, source, ip).Scan(&created)
+	if err != nil {
+		return false, shared.Wrap("subscribe newsletter", err)
+	}
+	return created, nil
 }

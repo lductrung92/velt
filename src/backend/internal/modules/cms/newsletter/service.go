@@ -17,7 +17,18 @@ import (
 type Service struct {
 	*shared.Base
 	repo Repository
+	// notify rings whoever looks after the mailing list. Optional.
+	notify NotifyPort
 }
+
+// NotifyPort is the one thing this module asks of the notification stack.
+// An interface so a subscription can be tested with no push infrastructure.
+type NotifyPort interface {
+	NewsletterSubscribed(ctx context.Context)
+}
+
+// SetNotifier supplies the notification sink.
+func (s *Service) SetNotifier(n NotifyPort) { s.notify = n }
 
 // NewService wires the newsletter service onto the shared CMS base.
 func NewService(base *shared.Base, repo Repository) *Service {
@@ -66,10 +77,18 @@ func (s *Service) Subscribe(ctx context.Context, req SubscribeRequest, ip string
 	if net.ParseIP(ip) != nil {
 		ipp = &ip
 	}
-	if err := s.repo.Subscribe(ctx, email, source, ipp); err != nil {
+	created, err := s.repo.Subscribe(ctx, email, source, ipp)
+	if err != nil {
 		return apperr.Internal()
 	}
-	s.Sec(ctx).Info("cms newsletter subscribe", "source", req.Source)
+	s.Sec(ctx).Info("cms newsletter subscribe", "source", req.Source, "new", created)
+	// Only a genuinely new address is worth interrupting somebody for. A
+	// repeat is the same person pressing the button twice, and the endpoint
+	// is public: without this guard one script could ring the team all day.
+	//
+	if created && s.notify != nil {
+		s.notify.NewsletterSubscribed(ctx)
+	}
 	return nil
 }
 
