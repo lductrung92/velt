@@ -44,6 +44,18 @@ echo "==> dumping schema -> deploy/sql/ddl.sql"
   --schema-only --no-owner --no-privileges --no-comments \
   -f "$here/ddl.sql"
 
+# pg_dump 17+ writes `SET transaction_timeout = 0;`. The production server runs
+# Postgres 16, which does not know that parameter and refuses the whole script
+# over it. Zero is the default, so dropping the line changes nothing — but it
+# has to be dropped on every regeneration, not by hand once, which is how it
+# came back the first time.
+echo "==> removing SET transaction_timeout (unknown to Postgres 16)"
+if grep -q '^SET transaction_timeout' "$here/ddl.sql"; then
+  sed -i '/^SET transaction_timeout/d' "$here/ddl.sql"
+else
+  echo "    (not emitted by this pg_dump)"
+fi
+
 echo "==> dumping reference data"
 "$pg_dump" -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$SCRATCH" \
   --data-only --no-owner --no-privileges --column-inserts --rows-per-insert=1000 \

@@ -320,6 +320,8 @@ INSERT INTO public.goose_db_version (id, version_id, is_applied, tstamp) VALUES 
 INSERT INTO public.goose_db_version (id, version_id, is_applied, tstamp) VALUES (34, 49, true, '2026-10-16 13:57:58.45339');
 INSERT INTO public.goose_db_version (id, version_id, is_applied, tstamp) VALUES (35, 50, true, '2026-10-16 16:59:08.53237');
 INSERT INTO public.goose_db_version (id, version_id, is_applied, tstamp) VALUES (36, 51, true, '2026-10-16 17:11:12.820499');
+INSERT INTO public.goose_db_version (id, version_id, is_applied, tstamp) VALUES (37, 52, true, '2026-10-18 07:33:51.832578');
+INSERT INTO public.goose_db_version (id, version_id, is_applied, tstamp) VALUES (38, 53, true, '2026-10-18 10:11:00.730205');
 
 
 ALTER TABLE public.goose_db_version ENABLE TRIGGER ALL;
@@ -655,7 +657,7 @@ SELECT pg_catalog.setval('public.activity_log_id_seq', 1, false);
 -- Name: goose_db_version_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.goose_db_version_id_seq', 36, true);
+SELECT pg_catalog.setval('public.goose_db_version_id_seq', 38, true);
 
 
 --

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 9fF1C37NBblyczMgPeCaYqv0PHwIxQaGhF8nJjfausopx8TtXgk2Sr9ibT802lt
+\restrict b091RgnjPDh4ZLJ8zYmzCRbVuNIjYFDehopvYPXUGXyAvtCedNi1LroR8LZcBAf
 
 -- Dumped from database version 18.6
 -- Dumped by pg_dump version 18.6
@@ -10,7 +10,6 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
--- (pg_dump 17+ phát ra 'SET transaction_timeout' ở đây; server production chạy-- Postgres 16 và không biết tham số này, nên nó bị gỡ. Giá trị 0 là mặc định,-- bỏ đi không đổi hành vi. regenerate.sh gỡ lại sau mỗi lần dump.)
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -611,6 +610,9 @@ CREATE TABLE public.product_media (
     caption text,
     sort_order integer DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    device text,
+    is_hero boolean DEFAULT false NOT NULL,
+    CONSTRAINT product_media_device_check CHECK (((device IS NULL) OR (device = ANY (ARRAY['phone'::text, 'tablet'::text, 'desktop'::text])))),
     CONSTRAINT product_media_kind_check CHECK ((kind = ANY (ARRAY['image'::text, 'video'::text]))),
     CONSTRAINT product_media_source_xor CHECK ((((kind = 'image'::text) AND (path IS NOT NULL) AND (video_url IS NULL)) OR ((kind = 'video'::text) AND (video_url IS NOT NULL) AND (path IS NULL))))
 );
@@ -1553,6 +1555,13 @@ CREATE INDEX idx_product_categories_sort ON public.product_categories USING btre
 
 
 --
+-- Name: idx_product_media_hero; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_product_media_hero ON public.product_media USING btree (product_id, device) WHERE is_hero;
+
+
+--
 -- Name: idx_product_media_order; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1989,5 +1998,5 @@ ALTER TABLE ONLY public.user_roles
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 9fF1C37NBblyczMgPeCaYqv0PHwIxQaGhF8nJjfausopx8TtXgk2Sr9ibT802lt
+\unrestrict b091RgnjPDh4ZLJ8zYmzCRbVuNIjYFDehopvYPXUGXyAvtCedNi1LroR8LZcBAf
 
