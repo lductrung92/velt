@@ -241,6 +241,7 @@ func (s *PublicService) toPublicDetail(ctx context.Context, f Response, locale s
 	for _, g := range f.Gallery {
 		gallery = append(gallery, PublicMediaItem{
 			Kind: g.Kind, URL: g.URL, VideoURL: g.VideoURL, Caption: g.Caption,
+			Device: g.Device, IsHero: g.IsHero,
 		})
 	}
 	out := PublicDetail{

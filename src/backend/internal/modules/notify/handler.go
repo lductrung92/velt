@@ -53,6 +53,22 @@ func (h *Handler) PublicKey(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, PublicKeyResponse{PublicKey: key})
 }
 
+// SendTest handles POST /api/notify/push/test: a notification to the
+// caller's own browsers, so the chain can be exercised without waiting for a
+// visitor to turn up.
+func (h *Handler) SendTest(w http.ResponseWriter, r *http.Request) {
+	id := h.caller(w, r)
+	if id == nil {
+		return
+	}
+	res, err := h.svc.SendTest(r.Context(), id.UserID)
+	if err != nil {
+		h.fail(w, "send test", err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, res)
+}
+
 // ListDevices handles GET /api/notify/push/devices.
 func (h *Handler) ListDevices(w http.ResponseWriter, r *http.Request) {
 	id := h.caller(w, r)
@@ -109,6 +125,7 @@ func (h *Handler) Routes(r chi.Router) {
 	r.Get("/push/devices", h.ListDevices)
 	r.Post("/push/devices", h.Subscribe)
 	r.Delete("/push/devices/{id}", h.Unsubscribe)
+	r.Post("/push/test", h.SendTest)
 }
 
 // fail maps a store error onto the wire. A missing row is a 404; anything else

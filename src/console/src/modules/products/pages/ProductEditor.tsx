@@ -275,12 +275,15 @@ export default function ProductEditor() {
           id: productId,
           file: item.file,
           caption,
+          // The tab it was dropped into before the product existed.
+          device: item.device,
         });
       } else if (item.kind === "video" && item.video_url) {
         await addGalleryVideo.mutateAsync({
           id: productId,
           videoUrl: item.video_url,
           caption,
+          device: item.device,
         });
       }
     }

@@ -39,14 +39,15 @@ var textAlignElements = []string{"p", "h1", "h2", "h3", "h4", "h5", "h6"}
 
 // bodyPolicy is bluemonday's UGC allowlist: common formatting (p, headings,
 // lists, blockquote, code/pre, tables), links and images on http/https/mailto
-// only, plus the alignment classes above. It drops <script>, inline event
-// handlers, <style>, <iframe>, <svg> and data:/javascript: URLs. Policies are
-// safe for concurrent Sanitize use, so we build it once at package init.
+// only, the alignment classes above, and the inline-SVG drawing vocabulary in
+// svg.go. It drops <script>, inline event handlers, <style>, <iframe> and
+// data:/javascript: URLs. Policies are safe for concurrent Sanitize use, so we
+// build it once at package init.
 var bodyPolicy = func() *bluemonday.Policy {
 	p := bluemonday.UGCPolicy()
 	p.AllowAttrs("class").Matching(imgAlignPattern).OnElements("img")
 	p.AllowAttrs("class").Matching(textAlignPattern).OnElements(textAlignElements...)
-	return p
+	return allowInlineSVG(p)
 }()
 
 // Body sanitizes page/article body HTML to the allowlist above. Embeds (iframe)
@@ -56,7 +57,7 @@ func Body(html string) string {
 	if html == "" {
 		return ""
 	}
-	return bodyPolicy.Sanitize(html)
+	return restoreSVGAttrCase(bodyPolicy.Sanitize(html))
 }
 
 // bodyWidgetsPolicy is the body allowlist plus the inline-widget placeholder:
@@ -69,7 +70,7 @@ var bodyWidgetsPolicy = func() *bluemonday.Policy {
 	p.AllowAttrs("class").Matching(textAlignPattern).OnElements(textAlignElements...)
 	p.AllowElements("div")
 	p.AllowAttrs("data-kd-widget").OnElements("div")
-	return p
+	return allowInlineSVG(p)
 }()
 
 // BodyWithWidgets sanitizes page body HTML that may contain inline-widget
@@ -79,7 +80,7 @@ func BodyWithWidgets(html string) string {
 	if html == "" {
 		return ""
 	}
-	return bodyWidgetsPolicy.Sanitize(html)
+	return restoreSVGAttrCase(bodyWidgetsPolicy.Sanitize(html))
 }
 
 // strictPolicy strips ALL HTML, leaving plain text (used for SEO/OG fields that

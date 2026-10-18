@@ -1,4 +1,4 @@
-import { Bell, Laptop, Loader2, Trash2, X } from "lucide-react";
+import { Bell, BellRing, Laptop, Loader2, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -23,8 +23,16 @@ export function PushDevicesDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
-  const { supported, permission, devices, enable, remove, thisEndpoint } =
-    usePushDevices();
+  const {
+    supported,
+    permission,
+    devices,
+    enable,
+    remove,
+    thisEndpoint,
+    sendTest,
+    workerVersion,
+  } = usePushDevices();
 
   const items = devices.data ?? [];
   const here = items.find((device) => device.endpoint === thisEndpoint);
@@ -43,6 +51,30 @@ export function PushDevicesDialog({
   const drop = (id: string, label: string) =>
     remove.mutate(id, {
       onSuccess: () => toast.success(t("chat.push.removed", { label })),
+      onError: (error) => toast.error(parseApiError(error, t).message),
+    });
+
+  // The test reports per device, and the counts matter: a push service can
+  // accept for one browser and refuse for another. Saying which is which is
+  // the point — "notifications do not work" is usually one of them.
+  const runTest = () =>
+    sendTest.mutate(undefined, {
+      onSuccess: (result) => {
+        const gone = result.devices.filter((d) => d.status === "gone").length;
+        const failed = result.devices.filter(
+          (d) => d.status === "failed",
+        ).length;
+        if (result.accepted === 0) {
+          toast.error(t("chat.push.test_none"));
+          return;
+        }
+        toast.success(
+          t("chat.push.test_sent", { count: result.accepted }) +
+            (gone || failed
+              ? " " + t("chat.push.test_problems", { gone, failed })
+              : ""),
+        );
+      },
       onError: (error) => toast.error(parseApiError(error, t).message),
     });
 
@@ -119,6 +151,18 @@ export function PushDevicesDialog({
           </ul>
         )}
 
+        {here && (
+          <p className="text-muted-ink text-xs">
+            {t("chat.push.test_hint")}
+            {workerVersion && (
+              <>
+                {" · "}
+                {t("chat.push.worker_version", { version: workerVersion })}
+              </>
+            )}
+          </p>
+        )}
+
         <DialogFooter>
           <Button
             type="button"
@@ -128,6 +172,21 @@ export function PushDevicesDialog({
             <X className="size-4" />
             {t("common.close")}
           </Button>
+          {here && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={sendTest.isPending}
+              onClick={runTest}
+            >
+              {sendTest.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <BellRing className="size-4" aria-hidden />
+              )}
+              {t("chat.push.test")}
+            </Button>
+          )}
           {supported && !here && permission !== "denied" && (
             <Button type="button" disabled={enable.isPending} onClick={turnOn}>
               {enable.isPending ? (

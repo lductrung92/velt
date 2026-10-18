@@ -146,7 +146,7 @@ func (r *pgxRepository) ListArticles(ctx context.Context, p ArticleListParams) (
 	}
 
 	args = append(args, p.PageSize, (p.Page-1)*p.PageSize)
-	q := `SELECT a.id, a.title, a.slug, a.status, a.category_id, c.name, c.slug, a.author_id, u.full_name, a.published_at, a.updated_at
+	q := `SELECT a.id, a.title, a.slug, a.status, a.category_id, c.name, c.slug, a.author_id, u.full_name, a.published_at, a.updated_at, a.featured_path
 	        FROM cms_articles a
 	        LEFT JOIN cms_categories c ON c.id = a.category_id
 	        JOIN users u ON u.id = a.author_id
@@ -161,7 +161,7 @@ func (r *pgxRepository) ListArticles(ctx context.Context, p ArticleListParams) (
 	for rows.Next() {
 		var x articleListRow
 		if err := rows.Scan(&x.ID, &x.Title, &x.Slug, &x.Status, &x.CategoryID, &x.CategoryName, &x.CategorySlug,
-			&x.AuthorID, &x.AuthorName, &x.PublishedAt, &x.UpdatedAt); err != nil {
+			&x.AuthorID, &x.AuthorName, &x.PublishedAt, &x.UpdatedAt, &x.FeaturedPath); err != nil {
 			return nil, 0, fmt.Errorf("scan article row: %w", err)
 		}
 		out = append(out, x)

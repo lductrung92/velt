@@ -80,6 +80,28 @@ func (r *Repository) Delete(ctx context.Context, userID, id uuid.UUID) error {
 // chat. The permission is resolved here, in the query, so a person who loses
 // the role stops being notified without anybody remembering to unsubscribe
 // them.
+// Own returns one person's own registered browsers, for the test push. Not
+// Recipients with a filter: a test must never reach a colleague's desk, and
+// the way to guarantee that is to never load anybody else's rows.
+func (r *Repository) Own(ctx context.Context, userID uuid.UUID) ([]subscription, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, user_id, endpoint, p256dh, auth, label
+		   FROM staff_push_subs WHERE user_id = $1 ORDER BY created_at`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("own push subs: %w", err)
+	}
+	defer rows.Close()
+	out := []subscription{}
+	for rows.Next() {
+		var s subscription
+		if err := rows.Scan(&s.ID, &s.UserID, &s.Endpoint, &s.P256dh, &s.Auth, &s.Label); err != nil {
+			return nil, fmt.Errorf("scan own sub: %w", err)
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
 func (r *Repository) Recipients(ctx context.Context, permission string) ([]subscription, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT s.id, s.user_id, s.endpoint, s.p256dh, s.auth

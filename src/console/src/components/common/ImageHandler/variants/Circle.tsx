@@ -18,7 +18,10 @@ interface Props {
 export function Circle({ width, children, className }: Props) {
   return (
     <div
-      className={cn("relative inline-block rounded-full bg-muted", className)}
+      className={cn(
+        "relative isolate inline-block rounded-full bg-muted",
+        className,
+      )}
       style={{ width, height: width }}
     >
       {children}

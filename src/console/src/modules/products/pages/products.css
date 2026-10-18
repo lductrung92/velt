@@ -50,8 +50,11 @@
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  /* 16:9, the shape every cover is authored at — a square box cropped the
+     sides off each one, which is the half of a screenshot that says what the
+     product is. Wide enough to read at a glance from across the list. */
+  width: 96px;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid hsl(var(--border));
   border-radius: calc(var(--radius) - 2px);

@@ -300,9 +300,21 @@ func (s *Service) Update(ctx context.Context, id *httpx.Identity, productID uuid
 		shared.DeleteOldMedia(ctx, s.store, s.MediaForget(), prefix, cur.CoverPath, updated.CoverPath)
 		shared.DeleteOldMedia(ctx, s.store, s.MediaForget(), prefix, cur.SEO.OGPath, updated.SEO.OGPath)
 	}
-	// A published product keeps the body it was published with, but its address
-	// is the live slug: re-syncing here is what lets a rename take effect without
-	// forcing a republish, and leaves a 301 behind on the old URL.
+	// Saving a published product republishes it.
+	//
+	// The public copy is a SNAPSHOT taken when the product was published, so
+	// without this an edit — new screenshots, a rewritten summary — sat in the
+	// console while the site kept serving the old frozen copy, and the only way
+	// to push it out was to unpublish and publish again. The gallery is part of
+	// the snapshot too, which is why uploading images and pressing save is
+	// enough now.
+	//
+	// A draft is left alone: it has nothing public to refresh.
+	if updated.Status == StatusPublished {
+		if updated, err = s.resnapshot(ctx, updated); err != nil {
+			return Response{}, err
+		}
+	}
 	if err := s.syncPublic(ctx, updated); err != nil {
 		return Response{}, err
 	}
@@ -356,6 +368,28 @@ func (s *Service) Publish(ctx context.Context, id *httpx.Identity, productID uui
 // kept: re-publishing later is a restore, not a new release.
 func (s *Service) Unpublish(ctx context.Context, id *httpx.Identity, productID uuid.UUID) (Response, error) {
 	return s.transition(ctx, id, productID, StatusDraft)
+}
+
+// resnapshot retakes the frozen public copy from the live record, keeping the
+// product published under the date it was first published.
+//
+// Same status and stampPublishedAt=false: this is the same publication showing
+// current content, not a new release, so "published since" must not move.
+func (s *Service) resnapshot(ctx context.Context, p *Product) (*Product, error) {
+	full, err := s.detail(ctx, *p)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := json.Marshal(full)
+	if err != nil {
+		s.Sec(ctx).Error("products: snapshot encode", "product_id", p.ID, "err", err)
+		return nil, apperr.Internal()
+	}
+	next, err := s.repo.SetStatus(ctx, p.ID, p.Status, raw, false)
+	if err != nil {
+		return nil, s.MapRepoErr(ctx, "refresh product snapshot", err)
+	}
+	return next, nil
 }
 
 // Archive takes the product off the site but keeps the row and its URL.

@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/velt/backend/internal/apperr"
 	"github.com/velt/backend/internal/httpx"
 )
 
@@ -158,7 +161,7 @@ func TestAddGalleryImage_StoresTheFileAndTheRow(t *testing.T) {
 	ctx, id := context.Background(), author()
 	p := create(t, svc, id, CreateRequest{Name: "A"})
 
-	item, err := svc.AddGalleryImage(ctx, id, p.ID, str("Màn hình chính"), bytes.NewReader(pngBytes))
+	item, err := svc.AddGalleryImage(ctx, id, p.ID, str("Màn hình chính"), nil, bytes.NewReader(pngBytes))
 	require.NoError(t, err)
 	require.Equal(t, MediaImage, item.Kind)
 	require.NotNil(t, item.URL)
@@ -174,7 +177,7 @@ func TestAddGalleryImage_RejectsNonImageWithoutStoringAnything(t *testing.T) {
 	ctx, id := context.Background(), author()
 	p := create(t, svc, id, CreateRequest{Name: "A"})
 
-	_, err := svc.AddGalleryImage(ctx, id, p.ID, nil, strings.NewReader("<?php echo 1; ?>"))
+	_, err := svc.AddGalleryImage(ctx, id, p.ID, nil, nil, strings.NewReader("<?php echo 1; ?>"))
 	require.Equal(t, 415, status(t, err))
 	require.Empty(t, store.saved)
 }
@@ -209,9 +212,9 @@ func TestGallery_AppendsInOrderAndReorders(t *testing.T) {
 	ctx, id := context.Background(), author()
 	p := create(t, svc, id, CreateRequest{Name: "A"})
 
-	a, err := svc.AddGalleryImage(ctx, id, p.ID, str("one"), bytes.NewReader(pngBytes))
+	a, err := svc.AddGalleryImage(ctx, id, p.ID, str("one"), nil, bytes.NewReader(pngBytes))
 	require.NoError(t, err)
-	b, err := svc.AddGalleryImage(ctx, id, p.ID, str("two"), bytes.NewReader(pngBytes))
+	b, err := svc.AddGalleryImage(ctx, id, p.ID, str("two"), nil, bytes.NewReader(pngBytes))
 	require.NoError(t, err)
 	require.Equal(t, 0, a.SortOrder)
 	require.Equal(t, 1, b.SortOrder)
@@ -235,7 +238,7 @@ func TestDeleteGalleryItem_RemovesTheRowAndTheFile(t *testing.T) {
 	svc, _, store, _ := newSvcWithLinks(t)
 	ctx, id := context.Background(), author()
 	p := create(t, svc, id, CreateRequest{Name: "A"})
-	item, err := svc.AddGalleryImage(ctx, id, p.ID, nil, bytes.NewReader(pngBytes))
+	item, err := svc.AddGalleryImage(ctx, id, p.ID, nil, nil, bytes.NewReader(pngBytes))
 	require.NoError(t, err)
 
 	require.NoError(t, svc.DeleteGalleryItem(ctx, id, p.ID, item.ID))
@@ -262,16 +265,22 @@ func TestUpdateGalleryCaption(t *testing.T) {
 	svc, _, _, _ := newSvcWithLinks(t)
 	ctx, id := context.Background(), author()
 	p := create(t, svc, id, CreateRequest{Name: "A"})
-	item, err := svc.AddGalleryImage(ctx, id, p.ID, str("cũ"), bytes.NewReader(pngBytes))
+	item, err := svc.AddGalleryImage(ctx, id, p.ID, str("cũ"), nil, bytes.NewReader(pngBytes))
 	require.NoError(t, err)
 
-	got, err := svc.UpdateGalleryCaption(ctx, id, p.ID, item.ID, str("mới"))
+	got, err := svc.UpdateGalleryItem(ctx, id, p.ID, item.ID,
+		UpdateMediaRequest{Caption: str("mới"), Device: str(DeviceTablet)})
 	require.NoError(t, err)
 	require.Equal(t, "mới", *got.Caption)
+	require.Equal(t, DeviceTablet, *got.Device)
 
-	cleared, err := svc.UpdateGalleryCaption(ctx, id, p.ID, item.ID, str(""))
+	// The request carries the whole editable state, so a field left out is
+	// cleared — that is how a screenshot goes back to "unassigned".
+	cleared, err := svc.UpdateGalleryItem(ctx, id, p.ID, item.ID,
+		UpdateMediaRequest{Caption: str("")})
 	require.NoError(t, err)
 	require.Nil(t, cleared.Caption)
+	require.Nil(t, cleared.Device)
 }
 
 // --- Detail + snapshot ---
@@ -286,7 +295,7 @@ func TestGet_IncludesRelations(t *testing.T) {
 	require.NoError(t, err)
 	_, err = svc.SetMembers(ctx, id, p.ID, []MemberLinkInput{{MemberID: m.ID, Role: str("Backend")}})
 	require.NoError(t, err)
-	_, err = svc.AddGalleryImage(ctx, id, p.ID, nil, bytes.NewReader(pngBytes))
+	_, err = svc.AddGalleryImage(ctx, id, p.ID, nil, nil, bytes.NewReader(pngBytes))
 	require.NoError(t, err)
 
 	got, err := svc.Get(ctx, id, p.ID)
@@ -357,4 +366,120 @@ func captionsOf(in []MediaItem) []string {
 		}
 	}
 	return out
+}
+
+func TestGalleryDevice_UploadLandsInTheTabItWasDroppedInto(t *testing.T) {
+	svc, _, _, _ := newSvcWithLinks(t)
+	ctx, id := context.Background(), author()
+	p := create(t, svc, id, CreateRequest{Name: "A"})
+
+	phone, err := svc.AddGalleryImage(ctx, id, p.ID, nil, str(DevicePhone), bytes.NewReader(pngBytes))
+	require.NoError(t, err)
+	require.Equal(t, DevicePhone, *phone.Device)
+
+	// No tab chosen is a real state, not a default: the console shows those
+	// in their own pile until somebody files them.
+	loose, err := svc.AddGalleryImage(ctx, id, p.ID, nil, nil, bytes.NewReader(pngBytes))
+	require.NoError(t, err)
+	require.Nil(t, loose.Device)
+}
+
+func TestGalleryDevice_RejectsAValueTheColumnWouldRefuse(t *testing.T) {
+	// The multipart upload has no struct tag to validate it, so the handler
+	// checks the value itself; this is that check. Without it a typo reaches
+	// the CHECK constraint and comes back as a 500.
+	require.True(t, validDevice(DevicePhone))
+	require.True(t, validDevice(DeviceTablet))
+	require.True(t, validDevice(DeviceDesktop))
+	require.False(t, validDevice("laptop"), "laptop shares the desktop tab")
+	require.False(t, validDevice("Phone"))
+	require.False(t, validDevice(""))
+}
+
+func TestUpdateMediaRequest_AcceptsWhatTheConsoleSends(t *testing.T) {
+	// The decoder rejects unknown fields (httpx.DecodeAndValidate), so a body
+	// carrying `device` against a server that does not know the field comes
+	// back as a flat 400 bad_request with no details — which is exactly what
+	// a stale local binary looked like. This pins the contract.
+	decode := func(body string) (UpdateMediaRequest, error) {
+		var req UpdateMediaRequest
+		r := httptest.NewRequest(http.MethodPatch, "/x", strings.NewReader(body))
+		return req, httpx.DecodeAndValidate(r, &req)
+	}
+
+	req, err := decode(`{"caption":"Màn hình chính","device":"tablet"}`)
+	require.NoError(t, err)
+	require.Equal(t, "Màn hình chính", *req.Caption)
+	require.Equal(t, DeviceTablet, *req.Device)
+
+	// Unfiling a screenshot: both fields explicitly null.
+	req, err = decode(`{"caption":null,"device":null}`)
+	require.NoError(t, err)
+	require.Nil(t, req.Caption)
+	require.Nil(t, req.Device)
+
+	// laptop shares the desktop tab, so it is not a value the API takes.
+	_, err = decode(`{"caption":null,"device":"laptop"}`)
+	ae, ok := apperr.As(err)
+	require.True(t, ok)
+	require.Equal(t, http.StatusUnprocessableEntity, ae.Status)
+}
+
+func TestGalleryHero_OnePerDevice(t *testing.T) {
+	svc, _, _, _ := newSvcWithLinks(t)
+	ctx, id := context.Background(), author()
+	p := create(t, svc, id, CreateRequest{Name: "A"})
+	add := func(device string) MediaItem {
+		m, err := svc.AddGalleryImage(ctx, id, p.ID, nil, str(device), bytes.NewReader(pngBytes))
+		require.NoError(t, err)
+		return m
+	}
+	phone1, phone2, desk := add(DevicePhone), add(DevicePhone), add(DeviceDesktop)
+
+	promote := func(m MediaItem, device string) {
+		_, err := svc.UpdateGalleryItem(ctx, id, p.ID, m.ID,
+			UpdateMediaRequest{Device: str(device), IsHero: boolp(true)})
+		require.NoError(t, err)
+	}
+	heroes := func() map[uuid.UUID]bool {
+		all, err := svc.Gallery(ctx, id, p.ID)
+		require.NoError(t, err)
+		out := map[uuid.UUID]bool{}
+		for _, m := range all {
+			out[m.ID] = m.IsHero
+		}
+		return out
+	}
+
+	promote(phone1, DevicePhone)
+	promote(desk, DeviceDesktop)
+	require.True(t, heroes()[phone1.ID])
+	require.True(t, heroes()[desk.ID], "moi thiet bi co hero rieng")
+
+	// Promoting the other phone capture moves the flag within the phone tab
+	// and leaves the desktop hero alone.
+	promote(phone2, DevicePhone)
+	got := heroes()
+	require.False(t, got[phone1.ID])
+	require.True(t, got[phone2.ID])
+	require.True(t, got[desk.ID], "doi hero dien thoai khong duoc dung toi desktop")
+}
+
+func TestGalleryHero_CaptionEditLeavesTheFlagAlone(t *testing.T) {
+	// The caption field and the hero checkbox are edited from different places
+	// in the console; a caption save must not un-feature the picture.
+	svc, _, _, _ := newSvcWithLinks(t)
+	ctx, id := context.Background(), author()
+	p := create(t, svc, id, CreateRequest{Name: "A"})
+	m, err := svc.AddGalleryImage(ctx, id, p.ID, nil, str(DevicePhone), bytes.NewReader(pngBytes))
+	require.NoError(t, err)
+	_, err = svc.UpdateGalleryItem(ctx, id, p.ID, m.ID,
+		UpdateMediaRequest{Device: str(DevicePhone), IsHero: boolp(true)})
+	require.NoError(t, err)
+
+	after, err := svc.UpdateGalleryItem(ctx, id, p.ID, m.ID,
+		UpdateMediaRequest{Caption: str("Màn hình chính"), Device: str(DevicePhone)})
+	require.NoError(t, err)
+	require.True(t, after.IsHero)
+	require.Equal(t, "Màn hình chính", *after.Caption)
 }

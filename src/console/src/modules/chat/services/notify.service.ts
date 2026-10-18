@@ -13,6 +13,22 @@ export interface PushDevice {
   created_at: string;
 }
 
+export interface PushTestResult {
+  id: string;
+  label: string;
+  /** ok = a push service took it · gone = subscription dead, row removed ·
+   *  failed = the push service refused or could not be reached. */
+  status: "ok" | "gone" | "failed";
+}
+
+export interface PushTestResponse {
+  /** Browsers a push service accepted the message for — NOT notifications
+   *  anybody saw. What the machine does after that is not observable from
+   *  the server. */
+  accepted: number;
+  devices: PushTestResult[];
+}
+
 export const notifyService = {
   /** The server's VAPID public key, minted on first request. */
   async publicKey(): Promise<string> {
@@ -38,5 +54,11 @@ export const notifyService = {
 
   async remove(id: string): Promise<void> {
     await api.delete(`/notify/push/devices/${id}`);
+  },
+
+  /** Pushes a test notification to this account's own browsers. */
+  async test(): Promise<PushTestResponse> {
+    const { data } = await api.post<PushTestResponse>("/notify/push/test");
+    return data;
   },
 };

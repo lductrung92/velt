@@ -7,6 +7,7 @@ import {
   CalendarClock,
   FileText,
   FolderTree,
+  Image as ImageIcon,
   Pencil,
   PenLine,
   Plus,
@@ -23,6 +24,7 @@ import { toast } from "sonner";
 import i18n from "@/app/i18n";
 import { Alert } from "@/components/common/Alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { fileUrl } from "@/utils/fileUrl";
 import { FilterChips, type FilterChip } from "@/components/common/FilterChips";
 import { PageHeader } from "@/components/common/PageHeader";
 import { RowAction, RowActions } from "@/components/common/RowActions";
@@ -268,13 +270,24 @@ export default function ArticleList() {
   // Both lines ellipsize in the column, so each carries its full string as a
   // title — otherwise the clipped tail is unreachable.
   const titleCell = (a: ArticleListItem) => (
-    <div className="article-title">
-      <Link to={`/cms/articles/${a.id}`} title={a.title}>
-        {a.title}
-      </Link>
-      <span className="article-slug" title={a.slug}>
-        {a.slug}
+    <div className="article-identity">
+      {/* The cover, same box whether or not there is one: a missing image
+          must not shift every title in the column. */}
+      <span className="article-cover">
+        {a.featured_url ? (
+          <img src={fileUrl(a.featured_url)} alt="" loading="lazy" />
+        ) : (
+          <ImageIcon className="size-4" aria-label={t("cms.articles.no_cover")} />
+        )}
       </span>
+      <div className="article-title">
+        <Link to={`/cms/articles/${a.id}`} title={a.title}>
+          {a.title}
+        </Link>
+        <span className="article-slug" title={a.slug}>
+          {a.slug}
+        </span>
+      </div>
     </div>
   );
   const taxonomy = (a: ArticleListItem) =>

@@ -123,7 +123,7 @@ func (s *Service) galleryOf(ctx context.Context, productID uuid.UUID) ([]MediaIt
 // AddGalleryImage uploads an image and appends it to the gallery in one step:
 // a stored file with no row would be an orphan nobody can see or delete.
 // Requires products.edit.
-func (s *Service) AddGalleryImage(ctx context.Context, id *httpx.Identity, productID uuid.UUID, caption *string, r io.Reader) (MediaItem, error) {
+func (s *Service) AddGalleryImage(ctx context.Context, id *httpx.Identity, productID uuid.UUID, caption, device *string, r io.Reader) (MediaItem, error) {
 	if err := s.Require(ctx, id, permEdit); err != nil {
 		return MediaItem{}, err
 	}
@@ -149,7 +149,7 @@ func (s *Service) AddGalleryImage(ctx context.Context, id *httpx.Identity, produ
 		s.Sec(ctx).Error("products: gallery save failed", "product_id", productID, "err", err)
 		return MediaItem{}, apperr.Internal()
 	}
-	item, err := s.links.AddMedia(ctx, productID, MediaImage, &key, nil, trimPtr(caption))
+	item, err := s.links.AddMedia(ctx, productID, MediaImage, &key, nil, trimPtr(caption), device)
 	if err != nil {
 		_ = s.store.Delete(ctx, key) // roll back the just-saved file
 		return MediaItem{}, s.MapRepoErr(ctx, "gallery: add image", err)
@@ -177,21 +177,32 @@ func (s *Service) AddGalleryVideo(ctx context.Context, id *httpx.Identity, produ
 	if !isEmbeddableVideo(raw) {
 		return MediaItem{}, apperr.Validation(map[string]string{"video_url": "unsupported_host"})
 	}
-	item, err := s.links.AddMedia(ctx, productID, MediaVideo, nil, &raw, trimPtr(req.Caption))
+	item, err := s.links.AddMedia(ctx, productID, MediaVideo, nil, &raw, trimPtr(req.Caption), req.Device)
 	if err != nil {
 		return MediaItem{}, s.MapRepoErr(ctx, "gallery: add video", err)
 	}
 	return *item, nil
 }
 
-// UpdateGalleryCaption edits one entry's caption. Requires products.edit.
-func (s *Service) UpdateGalleryCaption(ctx context.Context, id *httpx.Identity, productID, mediaID uuid.UUID, caption *string) (MediaItem, error) {
+// UpdateGalleryItem edits what describes one entry: its caption and which
+// device tab it belongs to. Requires products.edit. Both are replaced by what
+// the request carries, so a field left out is cleared.
+func (s *Service) UpdateGalleryItem(ctx context.Context, id *httpx.Identity, productID, mediaID uuid.UUID, req UpdateMediaRequest) (MediaItem, error) {
 	if err := s.Require(ctx, id, permEdit); err != nil {
 		return MediaItem{}, err
 	}
-	item, err := s.links.UpdateMediaCaption(ctx, productID, mediaID, trimPtr(caption))
+	item, err := s.links.UpdateMedia(ctx, productID, mediaID, trimPtr(req.Caption), req.Device, req.IsHero)
 	if err != nil {
-		return MediaItem{}, s.MapRepoErr(ctx, "gallery: update caption", err)
+		return MediaItem{}, s.MapRepoErr(ctx, "gallery: update item", err)
+	}
+	// One hero per device. Clearing the others AFTER the promotion means the
+	// worst a failure here can leave is two flagged captures, which the site
+	// resolves by taking the first — rather than none at all, which is what
+	// clearing first would risk.
+	if item.IsHero {
+		if err := s.links.ClearHero(ctx, productID, item.ID, item.Device); err != nil {
+			return MediaItem{}, s.MapRepoErr(ctx, "gallery: clear hero", err)
+		}
 	}
 	item.URL = s.mediaURL(ctx, item.path)
 	return *item, nil

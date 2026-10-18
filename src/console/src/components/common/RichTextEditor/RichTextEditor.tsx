@@ -16,15 +16,20 @@ import {
   List,
   ListOrdered,
   Quote,
+  Shapes,
   Strikethrough,
+  Table as TableIcon,
   type LucideIcon,
 } from "lucide-react";
-import { memo, useEffect, useRef, type ReactNode } from "react";
+import { memo, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import { SvgDialog } from "./SvgDialog";
+import { SvgNode } from "./SvgExtension";
+import { TableExtensions } from "./TableExtension";
 import { TextAlignExtension } from "./TextAlignExtension";
 
 export type RichTextDoc = Record<string, unknown>;
@@ -54,7 +59,7 @@ export interface RichTextEditorProps {
 }
 
 // Toolbar verbs allowlisted to match the backend bluemonday sanitizer
-// (media-handling §3): no headings above H3, no tables/iframes in the body.
+// (media-handling §3): no headings above H3, no iframes in the body.
 const ACTIONS: {
   key: string;
   icon: LucideIcon;
@@ -131,6 +136,19 @@ const ACTIONS: {
     isActive: (e) => e.isActive("blockquote"),
     run: (e) => e.chain().focus().toggleBlockquote().run(),
   },
+  // Three columns with a header row is the shape nearly every table in the
+  // articles has; Tab past the last cell adds the next row.
+  {
+    key: "table",
+    icon: TableIcon,
+    isActive: (e) => e.isActive("table"),
+    run: (e) =>
+      e
+        .chain()
+        .focus()
+        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+        .run(),
+  },
 ];
 
 // Tiptap WYSIWYG that emits body_html + body_json. Memo'd so the heavy useEditor
@@ -147,8 +165,30 @@ function RichTextEditorBase({
   initialJSON,
 }: RichTextEditorProps) {
   const { t } = useTranslation();
+  const [svgOpen, setSvgOpen] = useState(false);
+  const [svgDraft, setSvgDraft] = useState<{
+    code: string;
+    tab: "code" | "preview";
+    apply?: (code: string) => void;
+  }>({ code: "", tab: "code" });
   const editor = useEditor({
-    extensions: [StarterKit, TextAlignExtension, ...(extraExtensions ?? [])],
+    extensions: [
+      StarterKit,
+      TextAlignExtension,
+      // Without the table nodes Tiptap has nowhere to put a <table> it parses:
+      // it drops the element and keeps the cells as one run of text, so opening
+      // an article with a table and saving it destroyed the table for good.
+      ...TableExtensions,
+      // The dialog belongs to the editor, not to each drawing: a drawing's
+      // buttons ask for it and say what to do with the answer.
+      SvgNode.configure({
+        onEdit: ({ code, tab, apply }) => {
+          setSvgDraft({ code, tab, apply });
+          setSvgOpen(true);
+        },
+      }),
+      ...(extraExtensions ?? []),
+    ],
     content: initialJSON ?? value,
     editable,
     immediatelyRender: false,
@@ -218,10 +258,41 @@ function RichTextEditorBase({
               <Icon className="size-4" />
             </Button>
           ))}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label={t("editor.svg.insert")}
+            title={t("editor.svg.insert")}
+            aria-pressed={editor?.isActive("svgBlock") ?? false}
+            className={
+              editor?.isActive("svgBlock")
+                ? "bg-accent text-accent-foreground"
+                : ""
+            }
+            onClick={() => {
+              setSvgDraft({ code: "", tab: "code" });
+              setSvgOpen(true);
+            }}
+          >
+            <Shapes className="size-4" />
+          </Button>
           {renderToolbarExtras?.(editor)}
         </div>
       )}
       <EditorContent editor={editor} />
+      <SvgDialog
+        open={svgOpen}
+        onOpenChange={setSvgOpen}
+        initial={svgDraft.code}
+        initialTab={svgDraft.tab}
+        onSubmit={(code) => {
+          // An existing drawing is replaced in place; a new one is inserted
+          // where the caret is.
+          if (svgDraft.apply) svgDraft.apply(code);
+          else editor?.chain().focus().setSvg(code).run();
+        }}
+      />
     </div>
   );
 }

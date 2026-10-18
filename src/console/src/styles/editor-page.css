@@ -144,6 +144,69 @@
   border-radius: var(--radius);
   background: hsl(var(--muted));
 }
+/* Tables: the same lines the public article shows (blog.css), so what is being
+   edited looks like what gets published. Fixed layout because a cell being
+   typed into must not move the other columns on every keystroke. */
+.editor-body .ProseMirror table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: 0 0 0.75rem;
+}
+.editor-body .ProseMirror :is(th, td) {
+  border: 1px solid hsl(var(--border));
+  padding: 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+.editor-body .ProseMirror :is(th, td) > p:last-child {
+  margin-bottom: 0;
+}
+.editor-body .ProseMirror th {
+  background: hsl(var(--muted) / 0.5);
+  font-weight: 500;
+}
+/* prosemirror-tables marks the cells the selection covers. */
+.editor-body .ProseMirror .selectedCell {
+  background: hsl(var(--primary) / 0.1);
+}
+/* A drawing is one block the editor does not type into, so it needs to look
+   selectable: full width, its own space, and a visible outline when picked. */
+.editor-body .ProseMirror figure.kd-svg {
+  position: relative;
+  margin: 1rem 0;
+  max-width: 100%;
+}
+/* The drawing scrolls, the figure does not: the action bar sits on the figure
+   and must stay put while the drawing is panned. */
+.editor-body .ProseMirror .kd-svg-art {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.editor-body .ProseMirror .kd-svg-art svg {
+  display: block;
+  width: 100%;
+  min-width: 34rem;
+  height: auto;
+}
+.editor-body .ProseMirror figure.kd-svg[data-selected] .kd-svg-art {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+/* The dialog's preview: the labels are what gets clicked, so they say so. */
+.svg-preview svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+.svg-preview :is(text, tspan) {
+  cursor: text;
+}
+.svg-preview :is(text, tspan):hover {
+  outline: 1px dashed hsl(var(--primary));
+}
 
 .editor-page .editor-image {
   display: block;
@@ -244,7 +307,8 @@
   right: -7px;
 }
 
-.editor-body .ProseMirror .kd-image-bar {
+.editor-body .ProseMirror .kd-image-bar,
+.editor-body .ProseMirror .kd-svg-bar {
   position: absolute;
   top: -0.75rem;
   left: 50%;
@@ -260,7 +324,8 @@
   line-height: 1;
   white-space: nowrap;
 }
-.editor-body .ProseMirror .kd-image-bar button {
+.editor-body .ProseMirror .kd-image-bar button,
+.editor-body .ProseMirror .kd-svg-bar button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -271,20 +336,34 @@
   font-size: var(--font-size-xs);
   color: hsl(var(--muted-foreground));
 }
-.editor-body .ProseMirror .kd-image-bar button:hover {
+.editor-body .ProseMirror .kd-image-bar button:hover,
+.editor-body .ProseMirror .kd-svg-bar button:hover {
   background: hsl(var(--muted));
   color: hsl(var(--foreground));
 }
-.editor-body .ProseMirror .kd-image-bar button[aria-pressed="true"] {
+.editor-body .ProseMirror .kd-image-bar button[aria-pressed="true"],
+.editor-body .ProseMirror .kd-svg-bar button[aria-pressed="true"] {
   background: hsl(var(--primary) / 0.12);
   color: hsl(var(--primary));
 }
 /* The one verb on this bar that cannot be undone by clicking again. */
-.editor-body .ProseMirror .kd-image-bar button.is-destructive:hover {
+.editor-body .ProseMirror .kd-image-bar button.is-destructive:hover,
+.editor-body .ProseMirror .kd-svg-bar button.is-destructive:hover {
   background: hsl(var(--destructive) / 0.1);
   color: hsl(var(--destructive-ink));
 }
-.editor-body .ProseMirror .kd-image-bar-sep {
+/* A diagram fills the column, so its bar sits inside its own top-right
+   corner. The shared rule above centres the bar ABOVE the block, which for a
+   full-width figure lands on the paragraph before it. */
+.editor-body .ProseMirror .kd-svg-bar {
+  top: 0.5rem;
+  left: auto;
+  right: 0.5rem;
+  transform: none;
+  z-index: 1;
+}
+.editor-body .ProseMirror .kd-image-bar-sep,
+.editor-body .ProseMirror .kd-svg-bar .kd-image-bar-sep {
   width: 1px;
   height: 1.125rem;
   margin: 0 0.125rem;
@@ -324,4 +403,214 @@
 }
 .editor-body .ProseMirror .kd-text--right {
   text-align: right;
+}
+
+/* The device shells, mirrored from the public product page (site:
+   product-detail.css .pd-device) so the console shows what gets published.
+   Two sizes: a grid thumbnail sizes itself by the height it is given, the
+   viewer by its width. */
+.kd-device {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+.kd-device[data-size="mini"] {
+  height: 100%;
+}
+/* In the viewer the binding constraint depends on the shape. A portrait
+   capture runs out of height first, so it is sized by height; a desktop one
+   runs out of width first, so it is sized by width. Trying to do both at once
+   leaves a phone the size of a thumbnail in a dialog with room to spare. */
+.kd-device[data-size="full"] {
+  width: 100%;
+}
+.kd-device[data-device="phone"][data-size="full"],
+.kd-device[data-device="tablet"][data-size="full"] {
+  height: 70vh;
+  width: auto;
+}
+.kd-device[data-device="phone"][data-size="full"] .kd-device-shell,
+.kd-device[data-device="tablet"][data-size="full"] .kd-device-shell {
+  flex: 1;
+  min-height: 0;
+}
+.kd-device[data-device="phone"][data-size="full"] .kd-device-screen,
+.kd-device[data-device="tablet"][data-size="full"] .kd-device-screen {
+  height: 100%;
+  width: auto;
+}
+.kd-device-shell {
+  position: relative;
+  min-height: 0;
+  padding: 0.5rem;
+  border: 1px solid #1d304e;
+  border-radius: 0.875rem 0.875rem 0.25rem 0.25rem;
+  background: linear-gradient(135deg, #253450, #101a2b);
+  box-shadow: 0 1.25rem 2.5rem #1c3c6526, inset 0 1px 0 #ffffff30;
+}
+.kd-device[data-size="mini"] .kd-device-shell {
+  flex: 1;
+  min-height: 0;
+  padding: 0.25rem;
+  border-radius: 0.5rem 0.5rem 0.125rem 0.125rem;
+}
+.kd-device-screen {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  border-radius: 0.375rem;
+  background: #f2f5fa;
+}
+/* Height-driven in the grid, width-driven in the viewer. The aspect ratio
+   supplies the other side either way. */
+.kd-device[data-size="mini"] .kd-device-screen {
+  height: 100%;
+  width: auto;
+  border-radius: 0.1875rem;
+}
+.kd-device[data-size="full"] .kd-device-screen {
+  width: 100%;
+}
+.kd-device-screen img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+.kd-device-camera {
+  position: absolute;
+  z-index: 2;
+  top: 0.15625rem;
+  left: calc(50% - 0.09375rem);
+  width: 0.1875rem;
+  height: 0.1875rem;
+  border-radius: 50%;
+  background: #8191ad;
+}
+.kd-device[data-size="mini"] .kd-device-camera {
+  display: none;
+}
+.kd-device-base {
+  position: relative;
+  display: block;
+  width: 110%;
+  height: 0.6875rem;
+  margin-left: -5%;
+  border-radius: 0.125rem 0.125rem 55% 55%;
+  background: linear-gradient(#dce2ec, #9ba9bc);
+}
+.kd-device[data-size="mini"] .kd-device-base {
+  height: 0.25rem;
+  border-radius: 0 0 0.125rem 0.125rem;
+}
+.kd-device[data-device="tablet"] .kd-device-shell {
+  padding: 0.625rem;
+  border-radius: 1.25rem;
+}
+.kd-device[data-device="tablet"] .kd-device-screen {
+  aspect-ratio: 41 / 59;
+  border-radius: 0.75rem;
+}
+.kd-device[data-device="phone"] .kd-device-shell {
+  padding: 0.5rem 0.375rem;
+  border-radius: 1.75rem;
+}
+.kd-device[data-device="phone"] .kd-device-screen {
+  aspect-ratio: 9 / 19.5;
+  border-radius: 1.3125rem;
+}
+.kd-device[data-device="tablet"] .kd-device-base,
+.kd-device[data-device="phone"] .kd-device-base {
+  display: none;
+}
+.kd-device[data-device="tablet"][data-size="mini"] .kd-device-shell,
+.kd-device[data-device="phone"][data-size="mini"] .kd-device-shell {
+  padding: 0.1875rem;
+  border-radius: 0.5rem;
+}
+.kd-device[data-device="phone"][data-size="mini"] .kd-device-screen,
+.kd-device[data-device="tablet"][data-size="mini"] .kd-device-screen {
+  border-radius: 0.3125rem;
+}
+.kd-device[data-device="desktop"] .kd-device-shell {
+  padding: 0.625rem 0.625rem 1.125rem;
+  border-radius: 0.75rem;
+}
+.kd-device[data-device="desktop"][data-size="mini"] .kd-device-shell {
+  padding: 0.25rem 0.25rem 0.375rem;
+  border-radius: 0.375rem;
+}
+.kd-device[data-device="desktop"] .kd-device-base {
+  width: 32%;
+  height: 0.75rem;
+  margin: 0 auto;
+  border-radius: 0 0 0.25rem 0.25rem;
+}
+/* No shell to put it in: a capture nobody has filed yet is shown plain. */
+.kd-device-bare {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* The gallery grid is cut to the shape of the tab it shows.
+ *
+ * Every tab holds one device, so the cell can be the shape of that device
+ * instead of a compromise between all of them. The old 4-up grid of 112px
+ * boxes rendered a phone capture about 50px wide — present, but unreadable
+ * without opening it, which is the whole point of a thumbnail.
+ *
+ * The cell widths below are chosen so the frame, which sizes itself by the
+ * height it is given, never grows wider than its cell. */
+.kd-gallery-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(var(--kd-cell), 1fr));
+}
+.kd-gallery-thumb {
+  height: var(--kd-thumb);
+}
+.kd-gallery-grid[data-device="phone"] {
+  --kd-cell: 9.5rem;
+  --kd-thumb: 19rem;
+}
+.kd-gallery-grid[data-device="tablet"] {
+  --kd-cell: 14rem;
+  --kd-thumb: 18rem;
+}
+.kd-gallery-grid[data-device="desktop"] {
+  --kd-cell: 22rem;
+}
+/* A landscape capture fills the cell's WIDTH and takes whatever height the
+   ratio asks for. Sizing it by height instead leaves it floating in the
+   middle of a wide cell, and a height that filled a wide cell would overflow
+   a narrow one — the grid is fluid, the frame has to follow it. */
+.kd-gallery-grid[data-device="desktop"] .kd-gallery-thumb {
+  height: auto;
+}
+.kd-gallery-grid[data-device="desktop"] .kd-device[data-size="mini"] {
+  width: 100%;
+  height: auto;
+}
+.kd-gallery-grid[data-device="desktop"] .kd-device[data-size="mini"] .kd-device-shell {
+  width: 100%;
+}
+.kd-gallery-grid[data-device="desktop"] .kd-device[data-size="mini"] .kd-device-screen {
+  width: 100%;
+  height: auto;
+}
+/* Nothing is known about the shape of an unfiled capture, so it gets a plain
+   box and is shown whole inside it. Roomier than the shaped tabs, not
+   smaller: this is the one tab where the picture has to be read before
+   anything can be decided about it. */
+.kd-gallery-grid[data-device="unassigned"] {
+  --kd-cell: 18rem;
+  --kd-thumb: 13rem;
+}
+.kd-gallery-grid[data-device="unassigned"] .kd-device-bare {
+  width: 100%;
+  height: 100%;
 }

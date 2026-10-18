@@ -53,6 +53,8 @@ export interface ArticleListItem {
   author: ArticleAuthor;
   published_at: string | null;
   updated_at: string;
+  /** The cover, so the list reads by picture as well as by title. */
+  featured_url: string | null;
 }
 
 // body_json is the Tiptap document (opaque JSON re-edited by the editor).

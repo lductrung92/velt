@@ -36,6 +36,12 @@ type PublicMediaItem struct {
 	Height   int     `json:"height,omitempty"`
 	VideoURL *string `json:"video_url"`
 	Caption  *string `json:"caption"`
+	// Which device tab the site files this under. Null means nobody has said;
+	// the site decides what to do with those rather than guessing a device
+	// from the caption, which is what it used to do (migration 0052).
+	Device *string `json:"device"`
+	// The capture the hero shows for that device, chosen in the console.
+	IsHero bool `json:"is_hero,omitempty"`
 }
 
 // PublicSEO is the meta block the site needs to render <head>.

@@ -317,9 +317,10 @@ func (f *fakeLinks) Media(_ context.Context, productID uuid.UUID) ([]MediaItem, 
 	return out, nil
 }
 
-func (f *fakeLinks) AddMedia(_ context.Context, productID uuid.UUID, kind string, path, videoURL, caption *string) (*MediaItem, error) {
+func (f *fakeLinks) AddMedia(_ context.Context, productID uuid.UUID, kind string, path, videoURL, caption, device *string) (*MediaItem, error) {
 	item := MediaItem{
 		ID: uuid.New(), Kind: kind, path: path, VideoURL: videoURL, Caption: caption,
+		Device:    device,
 		SortOrder: len(f.media[productID]), CreatedAt: f.now,
 	}
 	f.media[productID] = append(f.media[productID], item)
@@ -327,15 +328,34 @@ func (f *fakeLinks) AddMedia(_ context.Context, productID uuid.UUID, kind string
 	return &cp, nil
 }
 
-func (f *fakeLinks) UpdateMediaCaption(_ context.Context, productID, mediaID uuid.UUID, caption *string) (*MediaItem, error) {
+func (f *fakeLinks) UpdateMedia(_ context.Context, productID, mediaID uuid.UUID, caption, device *string, hero *bool) (*MediaItem, error) {
 	for i, m := range f.media[productID] {
 		if m.ID == mediaID {
 			f.media[productID][i].Caption = caption
+			f.media[productID][i].Device = device
+			if hero != nil {
+				f.media[productID][i].IsHero = *hero
+			}
 			cp := f.media[productID][i]
 			return &cp, nil
 		}
 	}
 	return nil, shared.ErrNotFound
+}
+
+func (f *fakeLinks) ClearHero(_ context.Context, productID, keepID uuid.UUID, device *string) error {
+	same := func(a, b *string) bool {
+		if a == nil || b == nil {
+			return a == b
+		}
+		return *a == *b
+	}
+	for i, m := range f.media[productID] {
+		if m.ID != keepID && same(m.Device, device) {
+			f.media[productID][i].IsHero = false
+		}
+	}
+	return nil
 }
 
 func (f *fakeLinks) DeleteMedia(_ context.Context, productID, mediaID uuid.UUID) (*MediaItem, error) {

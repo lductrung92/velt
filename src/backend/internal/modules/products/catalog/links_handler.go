@@ -119,7 +119,18 @@ func (h *Handler) AddGalleryImage(w http.ResponseWriter, r *http.Request) {
 	if c := r.FormValue("caption"); c != "" {
 		caption = &c
 	}
-	res, err := h.svc.AddGalleryImage(r.Context(), id, productID, caption, file)
+	// The tab the upload was dropped into. Checked here rather than trusted:
+	// a multipart field carries no schema, and the column's CHECK would turn
+	// a typo into a 500 instead of a 422.
+	var device *string
+	if d := r.FormValue("device"); d != "" {
+		if !validDevice(d) {
+			httpx.WriteError(w, apperr.Validation(map[string]string{"device": "invalid_value"}))
+			return
+		}
+		device = &d
+	}
+	res, err := h.svc.AddGalleryImage(r.Context(), id, productID, caption, device, file)
 	if err != nil {
 		httpx.WriteError(w, err)
 		return
@@ -169,7 +180,7 @@ func (h *Handler) UpdateGalleryItem(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, err)
 		return
 	}
-	res, err := h.svc.UpdateGalleryCaption(r.Context(), id, productID, mid, req.Caption)
+	res, err := h.svc.UpdateGalleryItem(r.Context(), id, productID, mid, req)
 	if err != nil {
 		httpx.WriteError(w, err)
 		return

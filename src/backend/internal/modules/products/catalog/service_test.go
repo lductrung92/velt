@@ -319,11 +319,17 @@ func TestPublish_FreezesSnapshotAndStampsDate(t *testing.T) {
 	require.Equal(t, "Bản gốc", *snap.Summary)
 }
 
-func TestPublish_SnapshotDoesNotFollowLaterEdits(t *testing.T) {
+func TestUpdate_SnapshotOfAnUnpublishedProductStaysFrozen(t *testing.T) {
+	// Saving a PUBLISHED product now republishes it (see
+	// TestUpdate_PublishedProductRepublishesWhatWasSaved). Once it is off the
+	// site, editing it must not quietly rewrite the copy it would come back
+	// with: that copy is the record of what was last public.
 	svc, repo, _ := newSvc(t)
 	ctx, id := context.Background(), publisher()
 	p := create(t, svc, id, CreateRequest{Name: "A", Summary: str("Bản gốc")})
 	_, err := svc.Publish(ctx, id, p.ID)
+	require.NoError(t, err)
+	_, err = svc.Unpublish(ctx, id, p.ID)
 	require.NoError(t, err)
 
 	_, err = svc.Update(ctx, id, p.ID, UpdateRequest{Summary: str("Bản nháp mới")})
@@ -331,7 +337,7 @@ func TestPublish_SnapshotDoesNotFollowLaterEdits(t *testing.T) {
 
 	var snap Response
 	require.NoError(t, json.Unmarshal(repo.rows[p.ID].PublishedSnapshot, &snap))
-	require.Equal(t, "Bản gốc", *snap.Summary, "the public copy must not follow the draft")
+	require.Equal(t, "Bản gốc", *snap.Summary)
 }
 
 func TestUnpublish_KeepsSnapshotAndFirstPublishedDate(t *testing.T) {
@@ -471,4 +477,59 @@ func TestList_FiltersByFeatured(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, res.Total)
 	require.Equal(t, "Starred", res.Items[0].Name)
+}
+
+func TestUpdate_PublishedProductRepublishesWhatWasSaved(t *testing.T) {
+	// The site reads a snapshot frozen at publish time. Before this, saving an
+	// edit left that snapshot untouched, so the change showed in the console
+	// and nowhere else — the only way out was unpublish, then publish.
+	svc, repo, _, links := newSvcWithLinks(t)
+	ctx, id := context.Background(), publisher()
+	p := create(t, svc, id, CreateRequest{Name: "Kho Gọn", Summary: str("Cũ")})
+	_, err := svc.Publish(ctx, id, p.ID)
+	require.NoError(t, err)
+
+	first := storedSnapshot(t, repo, p.ID)
+	require.Equal(t, "Cũ", first["summary"])
+	publishedAt := repo.rows[p.ID].PublishedAt
+	require.NotNil(t, publishedAt)
+
+	// An image added to the gallery is part of the record the snapshot freezes.
+	_, err = links.AddMedia(ctx, p.ID, MediaImage, str("products/x/a.png"), nil,
+		str("Màn hình chính"), str(DevicePhone))
+	require.NoError(t, err)
+
+	_, err = svc.Update(ctx, id, p.ID, UpdateRequest{Summary: str("Mới")})
+	require.NoError(t, err)
+
+	after := storedSnapshot(t, repo, p.ID)
+	require.Equal(t, "Mới", after["summary"], "ban luu phai vao snapshot")
+	gallery, _ := after["gallery"].([]any)
+	require.Len(t, gallery, 1, "anh vua them phai nam trong snapshot")
+	// Still the same publication: the date it went live must not move.
+	require.Equal(t, publishedAt, repo.rows[p.ID].PublishedAt)
+	require.Equal(t, StatusPublished, repo.rows[p.ID].Status)
+}
+
+func TestUpdate_DraftGetsNoSnapshot(t *testing.T) {
+	// A draft has nothing public to refresh, and writing a snapshot for one
+	// would make it look published to every reader that checks for one.
+	svc, repo, _ := newSvc(t)
+	ctx, id := context.Background(), author()
+	p := create(t, svc, id, CreateRequest{Name: "Nháp"})
+
+	_, err := svc.Update(ctx, id, p.ID, UpdateRequest{Summary: str("Sửa")})
+	require.NoError(t, err)
+	require.Nil(t, repo.rows[p.ID].PublishedSnapshot)
+}
+
+// storedSnapshot decodes the frozen copy the row is carrying right now.
+// (snapshotOf, in public_service_test.go, freezes one instead.)
+func storedSnapshot(t *testing.T, repo *fakeRepo, id uuid.UUID) map[string]any {
+	t.Helper()
+	raw := repo.rows[id].PublishedSnapshot
+	require.NotNil(t, raw)
+	var out map[string]any
+	require.NoError(t, json.Unmarshal(raw, &out))
+	return out
 }

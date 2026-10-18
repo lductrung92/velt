@@ -17,7 +17,10 @@ interface Props {
 export function Rounded({ width, height, children, className }: Props) {
   return (
     <div
-      className={cn("relative inline-block rounded-lg bg-muted", className)}
+      className={cn(
+        "relative isolate inline-block rounded-lg bg-muted",
+        className,
+      )}
       style={{ width, height }}
     >
       {children}

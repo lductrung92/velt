@@ -304,6 +304,49 @@ func (s *Service) send(ctx context.Context, sub subscription, body []byte, pub, 
 	}
 }
 
+// SendTest pushes to the caller's OWN browsers and reports what each one
+// did. Synchronous, unlike every other push here: the point of the button is
+// the answer, so the request waits for it.
+//
+// What it can and cannot tell you. "ok" means a push service accepted the
+// message for that browser — Google, Mozilla, Apple. Whether a notification
+// then appears depends on the service worker installed in that browser and on
+// the operating system's own settings, neither of which reports back. So an
+// "ok" with nothing on screen is a real and useful answer: it rules out this
+// server, the keys, the subscription and the network, and leaves the machine.
+func (s *Service) SendTest(ctx context.Context, userID uuid.UUID) (TestResponse, error) {
+	pub, priv, err := s.keys(ctx, true)
+	if err != nil {
+		return TestResponse{}, err
+	}
+	subs, err := s.repo.Own(ctx, userID)
+	if err != nil {
+		return TestResponse{}, err
+	}
+	body, err := json.Marshal(payload{Kind: KindTest})
+	if err != nil {
+		return TestResponse{}, err
+	}
+
+	out := TestResponse{Devices: make([]TestResult, 0, len(subs))}
+	var delivered, dead []uuid.UUID
+	for _, sub := range subs {
+		status := "failed"
+		switch s.send(ctx, sub, body, pub, priv) {
+		case resultOK:
+			status, out.Accepted = "ok", out.Accepted+1
+			delivered = append(delivered, sub.ID)
+		case resultGone:
+			status = "gone"
+			dead = append(dead, sub.ID)
+		}
+		out.Devices = append(out.Devices, TestResult{ID: sub.ID, Label: sub.Label, Status: status})
+	}
+	s.repo.MarkUsed(ctx, delivered)
+	s.repo.Prune(ctx, dead)
+	return out, nil
+}
+
 // HasRecipients reports whether a notification would reach anybody.
 func (s *Service) HasRecipients(ctx context.Context) bool {
 	ok, err := s.repo.HasRecipients(ctx, permHandle)

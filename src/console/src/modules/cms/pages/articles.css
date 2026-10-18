@@ -43,6 +43,31 @@
   width: 38%;
   max-width: 0;
 }
+/* Title cell = cover + wording. The cover keeps its box whether or not the
+   article has one, so a list of mixed rows still reads as a column. */
+.article-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.article-cover {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 96px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  background: hsl(var(--muted) / 0.5);
+  color: hsl(var(--muted-foreground) / 0.7);
+}
+.article-cover > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .article-title {
   display: flex;
   flex-direction: column;

@@ -1145,7 +1145,8 @@
         "archived_hint": "Đã lưu trữ"
       },
       "one": "bài viết",
-      "archive": "Lưu trữ"
+      "archive": "Lưu trữ",
+      "no_cover": "Chưa có ảnh bìa"
     },
     "appearance": {
       "title": "Giao diện",
@@ -1299,7 +1300,21 @@
     "image_align_center": "Canh giữa",
     "image_align_right": "Canh phải, chữ chảy bên trái",
     "image_replace": "Thay ảnh khác",
-    "image_remove": "Xoá ảnh"
+    "image_remove": "Xoá ảnh",
+    "table": "Chèn bảng",
+    "svg": {
+      "insert": "Chèn hình SVG",
+      "title": "Hình minh hoạ SVG",
+      "subject": "Dán mã SVG, rồi sửa chữ ngay trên hình",
+      "tab_code": "Mã",
+      "tab_preview": "Xem trước",
+      "code_ph": "<svg viewBox=\"0 0 800 300\">…</svg>",
+      "code_hint": "Chỉ giữ phần vẽ: thẻ script, style, class và liên kết ngoài đều bị loại bỏ.",
+      "preview_hint": "Bấm vào một dòng chữ trong hình để sửa tại chỗ.",
+      "edit_code": "Sửa mã SVG",
+      "edit_labels": "Sửa chữ trên hình",
+      "remove": "Xoá hình"
+    }
   },
   "members": {
     "title": "Thành viên",
@@ -1520,7 +1535,18 @@
       "video_hosts": "Chỉ hỗ trợ YouTube và Vimeo (https).",
       "replace": "Đổi ảnh",
       "replace_video": "Đổi video",
-      "preview": "Xem trước"
+      "preview": "Xem trước",
+      "device": "Thiết bị",
+      "device_phone": "Điện thoại",
+      "device_tablet": "Máy tính bảng",
+      "device_desktop": "Desktop",
+      "device_unassigned": "Chưa gán",
+      "empty_tab": "Chưa có ảnh nào cho thiết bị này.",
+      "expand": "Xem lớn",
+      "previous": "Ảnh trước",
+      "next": "Ảnh sau",
+      "hero": "Ảnh đại diện",
+      "hero_hint": "Dùng ảnh này ở đầu trang sản phẩm (mỗi thiết bị một ảnh)"
     },
     "members": {
       "add": "Thêm thành viên",
@@ -1778,7 +1804,13 @@
       "last_used": "Nhận gần nhất {{at}}",
       "never_used": "Chưa nhận thông báo nào",
       "unsupported": "Trình duyệt này không hỗ trợ thông báo đẩy.",
-      "blocked": "Trình duyệt đang chặn thông báo. Hãy mở cài đặt trang và cho phép, rồi thử lại."
+      "blocked": "Trình duyệt đang chặn thông báo. Hãy mở cài đặt trang và cho phép, rồi thử lại.",
+      "test": "Gửi thử",
+      "test_sent": "Đã gửi tới {{count}} máy. Nếu không thấy thông báo hiện lên, lỗi nằm ở cài đặt thông báo của máy chứ không phải máy chủ.",
+      "test_problems": "({{gone}} máy đã hết hạn, {{failed}} máy lỗi)",
+      "test_none": "Không gửi được tới máy nào. Hãy bật lại thông báo cho trình duyệt này.",
+      "test_hint": "Gửi thử chỉ tới máy của chính bạn, không làm phiền người khác.",
+      "worker_version": "worker {{version}}"
     }
   },
   "leads": {

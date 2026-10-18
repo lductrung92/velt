@@ -49,11 +49,16 @@ type MemberRef struct {
 
 // MediaItem is one gallery entry.
 type MediaItem struct {
-	ID        uuid.UUID `json:"id"`
-	Kind      string    `json:"kind"`
-	URL       *string   `json:"url"`       // image only — built from path
-	VideoURL  *string   `json:"video_url"` // video only
-	Caption   *string   `json:"caption"`
+	ID       uuid.UUID `json:"id"`
+	Kind     string    `json:"kind"`
+	URL      *string   `json:"url"`       // image only — built from path
+	VideoURL *string   `json:"video_url"` // video only
+	Caption  *string   `json:"caption"`
+	// Which device shell the site frames this capture in. Null until somebody
+	// says; the site used to guess it from the caption (migration 0052).
+	Device *string `json:"device"`
+	// Whether this is the capture the hero shows for that device.
+	IsHero    bool      `json:"is_hero"`
 	SortOrder int       `json:"sort_order"`
 	CreatedAt time.Time `json:"created_at"`
 	// path stays internal; the response exposes only the built URL.
@@ -84,15 +89,41 @@ type SetMembersRequest struct {
 type AddVideoRequest struct {
 	VideoURL string  `json:"video_url" validate:"required,max=500"`
 	Caption  *string `json:"caption" validate:"omitempty,max=300"`
+	Device   *string `json:"device" validate:"omitempty,oneof=phone tablet desktop"`
 }
 
-// UpdateMediaRequest edits a gallery entry. Only the caption is mutable — the
-// source is replaced by deleting and re-adding, which keeps the XOR honest.
+// UpdateMediaRequest edits a gallery entry. The source itself is replaced by
+// deleting and re-adding, which keeps the XOR honest; what can be edited in
+// place is what describes the entry.
+//
+// The request carries the WHOLE editable state: a field left out is cleared,
+// which is how the caption has always behaved here. So a client moving a
+// screenshot to another device tab sends its caption back with it.
 type UpdateMediaRequest struct {
 	Caption *string `json:"caption" validate:"omitempty,max=300"`
+	Device  *string `json:"device" validate:"omitempty,oneof=phone tablet desktop"`
+	// Absent means "leave the hero flag as it is": the caption field and the
+	// hero checkbox are edited from different places in the console, and a
+	// caption edit must not quietly un-feature a picture.
+	IsHero *bool `json:"is_hero"`
 }
 
 // ReorderMediaRequest is the full id list in the desired display order.
 type ReorderMediaRequest struct {
 	IDs []uuid.UUID `json:"ids" validate:"required,min=1,max=200"`
+}
+
+// Devices are the gallery tabs. Laptop and desktop monitor share one: both
+// show the wide layout, and a team does not capture the same screen twice.
+const (
+	DevicePhone   = "phone"
+	DeviceTablet  = "tablet"
+	DeviceDesktop = "desktop"
+)
+
+// validDevice guards the multipart upload, where there is no struct tag to do
+// it. The JSON endpoints use `oneof` above, and the column has a CHECK; this
+// is the third gate on the one path that would otherwise reach it unchecked.
+func validDevice(v string) bool {
+	return v == DevicePhone || v == DeviceTablet || v == DeviceDesktop
 }

@@ -16,11 +16,15 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ChevronLeft,
+  ChevronRight,
   GripVertical,
   ImageIcon,
   ImagePlus,
+  Maximize2,
   Pencil,
   Play,
+  Star,
   Trash2,
   Video,
 } from "lucide-react";
@@ -37,16 +41,31 @@ import { cn } from "@/lib/utils";
 import { parseApiError } from "@/utils/apiError";
 import { fileUrl } from "@/utils/fileUrl";
 
+import { DEVICE_ICON, DeviceFrame } from "./DeviceFrame";
 import {
   useAddGalleryImage,
   useAddGalleryVideo,
   useRemoveGalleryItem,
   useReorderGallery,
-  useUpdateGalleryCaption,
+  useUpdateGalleryItem,
 } from "../hooks/useProducts";
-import type { ProductMedia } from "../services/products.service";
+import {
+  MEDIA_DEVICES,
+  type MediaDevice,
+  type ProductMedia,
+} from "../services/products.service";
 
 const IMAGE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
+
+/**
+ * The tabs. Three devices plus the pile nobody has sorted yet.
+ *
+ * "unassigned" is not a device and never reaches the API: it is where entries
+ * from before the device column live, and where anything uploaded without
+ * choosing a tab lands. It disappears from the bar once it is empty, which is
+ * the point — it exists to be emptied.
+ */
+type Tab = MediaDevice | "unassigned";
 
 // A pinned round control over the thumbnail, the same affordance the cover
 // image carries (see ImageUpload): a disc that reads on any photo.
@@ -79,7 +98,7 @@ function embedUrl(raw: string): string | null {
 /** The fields a card renders — satisfied by both a saved row and a local draft. */
 type GalleryCardItem = Pick<
   ProductMedia,
-  "id" | "kind" | "url" | "video_url" | "caption"
+  "id" | "kind" | "url" | "video_url" | "caption" | "device" | "is_hero"
 >;
 
 /** A gallery entry picked before the product exists. `file` is the blob waiting
@@ -93,6 +112,9 @@ function Card({
   item,
   disabled,
   onCaption,
+  onDevice,
+  onHero,
+  onExpand,
   onRemove,
   onReplaceImage,
   onEditVideo,
@@ -101,6 +123,9 @@ function Card({
   item: GalleryCardItem;
   disabled?: boolean;
   onCaption: (caption: string) => void;
+  onDevice: (device: MediaDevice | null) => void;
+  onHero: (isHero: boolean) => void;
+  onExpand: () => void;
   onRemove: () => void;
   onReplaceImage: (file: File) => void;
   onEditVideo: () => void;
@@ -130,12 +155,34 @@ function Card({
       )}
       data-testid="gallery-item"
     >
-      <div className="relative flex h-28 items-center justify-center overflow-hidden rounded-md bg-muted">
+      {/* Keep thumbnail actions in their own layer, below the sticky form bar. */}
+      <div
+        className={cn(
+          "kd-gallery-thumb relative isolate flex items-center justify-center overflow-hidden rounded-md bg-muted",
+          item.kind === "image" && item.url && "cursor-zoom-in",
+        )}
+        // The picture itself opens the viewer. The button stays for keyboard
+        // and for screen readers, which cannot click a div.
+        //
+        // The controls sit ON the picture, so their clicks bubble to here:
+        // without this guard, emptying the bin or picking a replacement also
+        // threw the viewer open on top of what you were doing. Asking the
+        // event where it came from covers every control, including ones added
+        // later — four stopPropagation calls would not.
+        onClick={(e) => {
+          if (item.kind !== "image" || !item.url) return;
+          if ((e.target as HTMLElement).closest("button, input, a, label")) {
+            return;
+          }
+          onExpand();
+        }}
+      >
         {item.kind === "image" && item.url ? (
-          <img
+          <DeviceFrame
             src={fileUrl(item.url)}
             alt=""
-            className="size-full object-cover"
+            device={item.device}
+            className="py-1.5"
           />
         ) : (
           <div className="flex flex-col items-center gap-1 px-2 text-center text-xs text-muted-foreground">
@@ -154,7 +201,18 @@ function Card({
             <GripVertical className="size-4" />
           </button>
         )}
-        {/* Watching the video is not an edit, so it stays available read-only. */}
+        {/* Looking is not an edit, so both stay available read-only. */}
+        {item.kind === "image" && item.url && (
+          <button
+            type="button"
+            aria-label={t("products.gallery.expand")}
+            title={t("products.gallery.expand")}
+            className={cn(ACTION_BTN, "bottom-1 left-1")}
+            onClick={onExpand}
+          >
+            <Maximize2 className="size-3.5" />
+          </button>
+        )}
         {embed && (
           <button
             type="button"
@@ -182,19 +240,6 @@ function Card({
             </button>
             {item.kind === "image" ? (
               <>
-                <input
-                  ref={replaceRef}
-                  type="file"
-                  accept={IMAGE_ACCEPT}
-                  className="hidden"
-                  aria-hidden
-                  tabIndex={-1}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = ""; // allow re-picking the same file
-                    if (file) onReplaceImage(file);
-                  }}
-                />
                 <button
                   type="button"
                   aria-label={t("products.gallery.replace")}
@@ -218,6 +263,79 @@ function Card({
             )}
           </>
         )}
+      </div>
+      {/* The file picker lives outside the picture on purpose. The replace
+          button opens it with input.click(), and that click bubbles from the
+          input — which is not a button, so the guard above would wave it
+          through and the viewer would open behind the file dialog. */}
+      <input
+        ref={replaceRef}
+        type="file"
+        accept={IMAGE_ACCEPT}
+        className="hidden"
+        aria-hidden
+        tabIndex={-1}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = ""; // allow re-picking the same file
+          if (file) onReplaceImage(file);
+        }}
+      />
+      {/* Which tab this belongs to. Pressing the device it already has takes
+          it back to "chưa gán", the same toggle-off the image alignment
+          buttons use — so there is a way out without a fourth button. */}
+      <div className="flex gap-1" role="group" aria-label={t("products.gallery.device")}>
+        {MEDIA_DEVICES.map((device) => {
+          const Icon = DEVICE_ICON[device];
+          const active = item.device === device;
+          return (
+            <button
+              key={device}
+              type="button"
+              disabled={disabled}
+              aria-label={t(`products.gallery.device_${device}`)}
+              title={t(`products.gallery.device_${device}`)}
+              aria-pressed={active}
+              className={cn(
+                // Fixed width, not flex-1: stretched across a wide desktop
+                // card the three of them read as empty bars rather than
+                // buttons.
+                "flex h-7 w-9 items-center justify-center rounded-md border text-muted-foreground transition-colors",
+                active
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "hover:bg-muted hover:text-foreground",
+                disabled && "pointer-events-none opacity-50",
+              )}
+              onClick={() => onDevice(active ? null : device)}
+            >
+              <Icon className="size-3.5" />
+            </button>
+          );
+        })}
+        {/* The hero checkbox. One per device: the product page shows one
+            frame per device at the top, and this says which capture goes in
+            it. Sits with the device row because it only means anything
+            together with a device. */}
+        <label
+          className={cn(
+            "ml-auto flex h-7 cursor-pointer items-center gap-1.5 rounded-md border px-2 text-xs transition-colors",
+            item.is_hero
+              ? "border-primary bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            disabled && "pointer-events-none opacity-50",
+          )}
+          title={t("products.gallery.hero_hint")}
+        >
+          <input
+            type="checkbox"
+            className="size-3.5 accent-current"
+            checked={item.is_hero}
+            disabled={disabled}
+            onChange={(e) => onHero(e.target.checked)}
+          />
+          <Star className={cn("size-3.5", item.is_hero && "fill-current")} />
+          <span className="sr-only">{t("products.gallery.hero")}</span>
+        </label>
       </div>
       <Input
         value={caption}
@@ -263,10 +381,15 @@ export function GalleryPane({
   const [videoUrl, setVideoUrl] = useState("");
   const [videoCaption, setVideoCaption] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
+  // Which entry of the CURRENT TAB is open large, by position. Stepping holds
+  // to the tab being looked at: a phone walkthrough is a sequence, and
+  // wandering into the desktop captures halfway through breaks it.
+  const [viewing, setViewing] = useState<number | null>(null);
+  const [chosenTab, setChosenTab] = useState<Tab>("phone");
 
   const addImage = useAddGalleryImage();
   const addVideo = useAddGalleryVideo();
-  const setCaption = useUpdateGalleryCaption();
+  const update = useUpdateGalleryItem();
   const remove = useRemoveGalleryItem();
   const reorder = useReorderGallery();
 
@@ -274,8 +397,33 @@ export function GalleryPane({
   const [order, setOrder] = useState<ProductMedia[]>(items);
   useEffect(() => setOrder(items), [items]);
 
-  // What the grid renders. In draft mode the editor owns the list.
-  const view: GalleryCardItem[] = isDraft ? draft : order;
+  // Everything, in display order. In draft mode the editor owns the list.
+  const all: GalleryCardItem[] = isDraft ? draft : order;
+  // What the grid renders: one tab's worth. Entries keep their place in the
+  // product-wide sort_order — the tab is a filter, not a second ordering.
+  const countOf = (value: Tab) =>
+    all.filter((m) => (m.device ?? "unassigned") === value).length;
+  const unassigned = countOf("unassigned");
+  // Filing the last unsorted entry removes the tab being looked at, so the
+  // view falls back to a device rather than showing an empty pane with no way
+  // back. Derived, not stored: the choice is still whatever was clicked.
+  const tab: Tab =
+    chosenTab === "unassigned" && unassigned === 0 ? "phone" : chosenTab;
+  const view = all.filter((m) => (m.device ?? "unassigned") === tab);
+  // The device an upload lands on: the tab being looked at, or nothing at all
+  // while looking at the unsorted pile.
+  const dropInto: MediaDevice | null = tab === "unassigned" ? null : tab;
+
+  // What the viewer shows. Indexing into the filtered list means a deletion,
+  // or a switch of tab, can leave the index pointing past the end — then
+  // there is nothing to show and the dialog closes itself.
+  const shown = viewing === null ? null : (view[viewing] ?? null);
+  const step = (delta: number) =>
+    setViewing((at) =>
+      at === null || view.length === 0
+        ? at
+        : (at + delta + view.length) % view.length,
+    );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -341,8 +489,23 @@ export function GalleryPane({
         id: productId,
         file,
         caption: item.caption ?? undefined,
+        device: item.device,
       }),
     ).catch(fail);
+  };
+
+  /**
+   * Puts a tab's reordered entries back into the product-wide order.
+   *
+   * Only the slots this tab already occupies are rewritten, so moving two
+   * phone screenshots around cannot shuffle the desktop ones — which is what
+   * reordering the flat list by the visible indexes would have done.
+   */
+  const weave = <T extends GalleryCardItem>(full: T[], tabOrder: T[]): T[] => {
+    const queue = [...tabOrder];
+    return full.map((m) =>
+      (m.device ?? "unassigned") === tab ? (queue.shift() as T) : m,
+    );
   };
 
   const handleDragEnd = (e: DragEndEvent) => {
@@ -353,11 +516,21 @@ export function GalleryPane({
     if (from < 0 || to < 0) return;
 
     if (isDraft) {
-      onDraftChange?.(arrayMove(draft, from, to));
+      const moved = arrayMove(
+        draft.filter((m) => (m.device ?? "unassigned") === tab),
+        from,
+        to,
+      );
+      onDraftChange?.(weave(draft, moved));
       return;
     }
 
-    const next = arrayMove(order, from, to);
+    const movedTab = arrayMove(
+      order.filter((m) => (m.device ?? "unassigned") === tab),
+      from,
+      to,
+    );
+    const next = weave(order, movedTab);
     const previous = order;
     setOrder(next);
     reorder.mutate(
@@ -372,8 +545,42 @@ export function GalleryPane({
     );
   };
 
+  // The unsorted tab is only there while something is unsorted: it exists to
+  // be emptied.
+  const tabs: Tab[] = unassigned > 0 ? [...MEDIA_DEVICES, "unassigned"] : [...MEDIA_DEVICES];
+
   return (
     <div className="space-y-3">
+      <div
+        className="flex flex-wrap gap-1 rounded-lg bg-muted p-1"
+        role="tablist"
+        aria-label={t("products.gallery.device")}
+      >
+        {tabs.map((value) => {
+          const Icon = value === "unassigned" ? ImageIcon : DEVICE_ICON[value];
+          const count = countOf(value);
+          return (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={tab === value}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                tab === value
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              onClick={() => setChosenTab(value)}
+            >
+              <Icon className="size-4" aria-hidden />
+              {t(`products.gallery.device_${value}`)}
+              <span className="text-xs text-muted-foreground">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {view.length > 0 && (
         <DndContext
           sensors={sensors}
@@ -385,7 +592,12 @@ export function GalleryPane({
             strategy={rectSortingStrategy}
           >
             <ul
-              className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+              // Each tab holds one shape, so the grid is cut for that shape:
+              // a column of phone captures is narrow and tall, a row of
+              // desktop ones is wide and short. One grid for all three left
+              // every picture too small to read without opening it.
+              className="kd-gallery-grid"
+              data-device={tab}
               data-testid="gallery-grid"
             >
               {view.map((m) => (
@@ -396,9 +608,46 @@ export function GalleryPane({
                     onCaption={(caption) =>
                       isDraft
                         ? patchDraftItem(m.id, { caption })
-                        : setCaption.mutate(
-                            { id: productId, mediaId: m.id, caption },
+                        : update.mutate(
+                            {
+                              id: productId,
+                              mediaId: m.id,
+                              caption,
+                              device: m.device,
+                            },
                             { onError: fail },
+                          )
+                    }
+                    onHero={(isHero) =>
+                      isDraft
+                        ? patchDraftItem(m.id, { is_hero: isHero })
+                        : update.mutate(
+                            {
+                              id: productId,
+                              mediaId: m.id,
+                              caption: m.caption,
+                              device: m.device,
+                              is_hero: isHero,
+                            },
+                            { onError: fail },
+                          )
+                    }
+                    onDevice={(device) =>
+                      isDraft
+                        ? patchDraftItem(m.id, { device })
+                        : update.mutate(
+                            {
+                              id: productId,
+                              mediaId: m.id,
+                              caption: m.caption,
+                              device,
+                            },
+                            {
+                              // Moving it means the tab it was in no longer
+                              // holds it; the list refetches and the card
+                              // appears under its new tab.
+                              onError: fail,
+                            },
                           )
                     }
                     onRemove={() =>
@@ -409,6 +658,7 @@ export function GalleryPane({
                             { onError: fail },
                           )
                     }
+                    onExpand={() => setViewing(view.indexOf(m))}
                     onReplaceImage={(file) => replaceImage(m, file)}
                     onEditVideo={() => {
                       setVideoUrl(m.video_url ?? "");
@@ -422,6 +672,12 @@ export function GalleryPane({
             </ul>
           </SortableContext>
         </DndContext>
+      )}
+
+      {view.length === 0 && (
+        <p className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+          {t("products.gallery.empty_tab")}
+        </p>
       )}
 
       {!disabled && (
@@ -447,6 +703,8 @@ export function GalleryPane({
                     url: URL.createObjectURL(file),
                     video_url: null,
                     caption: "",
+                    device: dropInto,
+                    is_hero: false,
                     file,
                   })),
                 ]);
@@ -457,7 +715,11 @@ export function GalleryPane({
               // rather than the order they were picked in.
               for (const file of files) {
                 try {
-                  await addImage.mutateAsync({ id: productId, file });
+                  await addImage.mutateAsync({
+                    id: productId,
+                    file,
+                    device: dropInto,
+                  });
                 } catch (err) {
                   fail(err);
                   return;
@@ -561,17 +823,21 @@ export function GalleryPane({
                       url: null,
                       video_url: url,
                       caption,
+                      device: dropInto,
+                      is_hero: false,
                     });
                   }
                   done();
                   return;
                 }
                 if (editing) {
+                  const was = order.find((m) => m.id === editing)?.device ?? null;
                   replaceSaved(productId, editing, () =>
                     addVideo.mutateAsync({
                       id: productId,
                       videoUrl: url,
                       caption: caption || undefined,
+                      device: was,
                     }),
                   )
                     .then(done)
@@ -583,6 +849,7 @@ export function GalleryPane({
                     id: productId,
                     videoUrl: url,
                     caption: caption || undefined,
+                    device: dropInto,
                   },
                   { onSuccess: done, onError: fail },
                 );
@@ -612,6 +879,68 @@ export function GalleryPane({
               allowFullScreen
               className="aspect-video w-full rounded-md border"
             />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={shown !== null}
+        onOpenChange={(open) => !open && setViewing(null)}
+      >
+        {/* Wider than a form dialog: the point of opening it is the pixels. */}
+        <DialogContent
+          className="max-w-[min(96vw,64rem)]"
+          closeLabel={t("common.close")}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft") step(-1);
+            if (e.key === "ArrowRight") step(1);
+          }}
+        >
+          <ModalHeader
+            icon={Maximize2}
+            title={t("products.gallery.expand")}
+            subject={
+              shown
+                ? `${t(`products.gallery.device_${shown.device ?? "unassigned"}`)} · ${(viewing ?? 0) + 1}/${view.length}`
+                : t("products.editor.gallery")
+            }
+          />
+          {shown && (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={t("products.gallery.previous")}
+                disabled={view.length < 2}
+                onClick={() => step(-1)}
+              >
+                <ChevronLeft className="size-5" />
+              </Button>
+              <div className="flex min-w-0 flex-1 justify-center">
+                <DeviceFrame
+                  src={shown.url ? fileUrl(shown.url) : null}
+                  alt={shown.caption ?? ""}
+                  device={shown.device}
+                  size="full"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={t("products.gallery.next")}
+                disabled={view.length < 2}
+                onClick={() => step(1)}
+              >
+                <ChevronRight className="size-5" />
+              </Button>
+            </div>
+          )}
+          {shown?.caption && (
+            <p className="text-center text-sm text-muted-foreground">
+              {shown.caption}
+            </p>
           )}
         </DialogContent>
       </Dialog>

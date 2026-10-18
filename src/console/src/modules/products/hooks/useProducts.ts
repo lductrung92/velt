@@ -9,6 +9,7 @@ import {
 import {
   productsService,
   type CreateProductBody,
+  type MediaDevice,
   type ProductListParams,
   type UpdateProductBody,
 } from "../services/products.service";
@@ -143,11 +144,13 @@ export function useAddGalleryImage() {
       id,
       file,
       caption,
+      device,
     }: {
       id: string;
       file: File | Blob;
       caption?: string;
-    }) => productsService.addGalleryImage(id, file, caption),
+      device?: MediaDevice | null;
+    }) => productsService.addGalleryImage(id, file, caption, device),
     onSuccess: () => qc.invalidateQueries({ queryKey: productKeys.all }),
   });
 }
@@ -159,27 +162,38 @@ export function useAddGalleryVideo() {
       id,
       videoUrl,
       caption,
+      device,
     }: {
       id: string;
       videoUrl: string;
       caption?: string;
-    }) => productsService.addGalleryVideo(id, videoUrl, caption),
+      device?: MediaDevice | null;
+    }) => productsService.addGalleryVideo(id, videoUrl, caption, device),
     onSuccess: () => qc.invalidateQueries({ queryKey: productKeys.all }),
   });
 }
 
-export function useUpdateGalleryCaption() {
+export function useUpdateGalleryItem() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({
       id,
       mediaId,
       caption,
+      device,
+      is_hero,
     }: {
       id: string;
       mediaId: string;
-      caption: string;
-    }) => productsService.updateGalleryCaption(id, mediaId, caption),
+      caption: string | null;
+      device: MediaDevice | null;
+      is_hero?: boolean;
+    }) =>
+      productsService.updateGalleryItem(id, mediaId, {
+        caption,
+        device,
+        is_hero,
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: productKeys.all }),
   });
 }

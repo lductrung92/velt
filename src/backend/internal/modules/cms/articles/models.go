@@ -180,6 +180,10 @@ type ArticleListItem struct {
 	Author      ArticleAuthor       `json:"author"`
 	PublishedAt *time.Time          `json:"published_at"`
 	UpdatedAt   time.Time           `json:"updated_at"`
+	// The cover, so the list can be read by picture as well as by title.
+	// Null where the article has none — the console draws a placeholder of
+	// the same size rather than letting the rows jump.
+	FeaturedURL *string `json:"featured_url"`
 }
 
 // ArticleResponse is the full article detail returned by GET/{id} and mutations.
@@ -219,6 +223,7 @@ type articleListRow struct {
 	AuthorName   string
 	PublishedAt  *time.Time
 	UpdatedAt    time.Time
+	FeaturedPath *string
 }
 
 // articleSnapshot is the public-facing subset frozen into published_snapshot.

@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
-import { notifyService } from "../services/notify.service";
+import {
+  notifyService,
+  type PushTestResponse,
+} from "../services/notify.service";
 
 const SW_PATH = "/push-sw.js";
 
@@ -101,7 +104,15 @@ export function usePushDevices() {
       setPermission(granted);
       if (granted !== "granted") throw new Error("denied");
 
-      const reg = await navigator.serviceWorker.register(SW_PATH);
+      // updateViaCache "none": check the worker against the network, never
+      // the browser's HTTP cache. Without it a worker cached with a long
+      // max-age keeps being handed back as current, and a version that drops
+      // a newly added kind goes on dropping it for as long as the cache
+      // lives. This governs the BROWSER's cache only — a CDN in front still
+      // needs telling separately.
+      const reg = await navigator.serviceWorker.register(SW_PATH, {
+        updateViaCache: "none",
+      });
       // register() on an EXISTING registration hands back the old worker and
       // schedules an update check whenever the browser feels like it. Until
       // that lands, pushes are handled by whatever version was installed the
@@ -150,6 +161,39 @@ export function usePushDevices() {
     onSuccess: () => qc.invalidateQueries({ queryKey: pushKeys.devices }),
   });
 
+  // What the worker running in THIS browser says it is. The file on the
+  // server and the copy installed here are different things — an installed
+  // worker keeps handling pushes until the browser replaces it — so a kind
+  // added last week can be dropped in silence by a worker from last month.
+  // Asking it directly turns that into something a person can read.
+  const workerVersion = useQuery({
+    queryKey: ["chat", "push-sw-version"],
+    queryFn: async () => {
+      const reg = await navigator.serviceWorker.getRegistration(SW_PATH);
+      const worker = reg?.active;
+      if (!worker) return null;
+      return await new Promise<string | null>((resolve) => {
+        const channel = new MessageChannel();
+        // A worker too old to answer will never reply; the timeout is the
+        // answer in that case.
+        const timer = window.setTimeout(() => resolve(null), 1500);
+        channel.port1.onmessage = (event) => {
+          window.clearTimeout(timer);
+          resolve(event.data?.version ?? null);
+        };
+        worker.postMessage({ type: "version" }, [channel.port2]);
+      });
+    },
+    enabled: pushSupported(),
+    staleTime: 30_000,
+  });
+
+  const sendTest = useMutation<PushTestResponse>({
+    mutationFn: () => notifyService.test(),
+    // A test can retire a dead subscription, so the list may have changed.
+    onSuccess: () => qc.invalidateQueries({ queryKey: pushKeys.devices }),
+  });
+
   const refreshEndpoint = useCallback(
     () => qc.invalidateQueries({ queryKey: pushKeys.devices }),
     [qc],
@@ -163,5 +207,7 @@ export function usePushDevices() {
     remove,
     thisEndpoint: thisEndpoint.data ?? null,
     refreshEndpoint,
+    sendTest,
+    workerVersion: workerVersion.data ?? null,
   };
 }

@@ -23,6 +23,8 @@ function image(over: Partial<ProductMedia> = {}): ProductMedia {
     url: "/api/files/products/p1/gallery-1.png",
     video_url: null,
     caption: "Màn hình chính",
+    device: "phone",
+    is_hero: false,
     sort_order: 0,
     created_at: "2026-01-01T00:00:00Z",
     ...over,
@@ -36,6 +38,8 @@ function video(over: Partial<ProductMedia> = {}): ProductMedia {
     url: null,
     video_url: "https://youtu.be/abc",
     caption: null,
+    device: "phone",
+    is_hero: false,
     sort_order: 1,
     created_at: "2026-01-02T00:00:00Z",
     ...over,
@@ -311,6 +315,221 @@ describe("GalleryPane", () => {
     const frame = within(dialog).getByTitle(i18n.t("products.gallery.preview"));
     // youtu.be/abc is a watch link; only the player path renders in an iframe.
     expect(frame).toHaveAttribute("src", "https://www.youtube.com/embed/abc");
+  });
+
+  it("shows one device's entries at a time, and counts the rest", async () => {
+    renderPane([
+      image({ id: "m1", device: "phone" }),
+      image({ id: "m2", device: "desktop" }),
+      image({ id: "m3", device: "desktop" }),
+    ]);
+    // The phone tab opens first, so only its one entry is on screen.
+    expect(screen.getAllByTestId("gallery-item")).toHaveLength(1);
+
+    await userEvent.click(
+      screen.getByRole("tab", { name: /Desktop/ }),
+    );
+    expect(screen.getAllByTestId("gallery-item")).toHaveLength(2);
+
+    // A tab with nothing in it says so rather than showing a bare toolbar.
+    await userEvent.click(screen.getByRole("tab", { name: /Máy tính bảng/ }));
+    expect(screen.queryAllByTestId("gallery-item")).toHaveLength(0);
+    expect(
+      screen.getByText(i18n.t("products.gallery.empty_tab")),
+    ).toBeInTheDocument();
+  });
+
+  it("offers the unsorted tab only while something is unsorted", async () => {
+    const { unmount } = renderPane([image({ device: null })]);
+    const unsorted = screen.getByRole("tab", { name: /Chưa gán/ });
+    expect(unsorted).toBeInTheDocument();
+    unmount();
+
+    renderPane([image({ device: "phone" })]);
+    expect(screen.queryByRole("tab", { name: /Chưa gán/ })).toBeNull();
+  });
+
+  it("moves an entry to another device, keeping its caption", async () => {
+    const patched = vi.fn();
+    server.use(
+      http.patch(`${API}/products/${PID}/media/m1`, async ({ request }) => {
+        patched(await request.json());
+        return HttpResponse.json(image({ device: "tablet" }));
+      }),
+    );
+    renderPane([image({ caption: "Màn hình chính", device: "phone" })]);
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: i18n.t("products.gallery.device_tablet"),
+      }),
+    );
+    await waitFor(() => expect(patched).toHaveBeenCalledTimes(1));
+    // The whole editable state travels, or the API would clear the caption.
+    expect(patched.mock.calls[0][0]).toEqual({
+      caption: "Màn hình chính",
+      device: "tablet",
+    });
+  });
+
+  it("files an upload under the tab it was dropped into", async () => {
+    const bodies: string[] = [];
+    server.use(
+      http.post(`${API}/products/${PID}/media`, async ({ request }) => {
+        bodies.push(await request.text());
+        return HttpResponse.json(image({ id: `m${bodies.length}` }), {
+          status: 201,
+        });
+      }),
+    );
+    renderPane([image({ device: "phone" })]);
+
+    await userEvent.click(screen.getByRole("tab", { name: /Desktop/ }));
+    await userEvent.upload(addInput(), [png("a")]);
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(part(bodies[0], "device")).toBe("desktop");
+  });
+
+  it("sends no device while the unsorted tab is open", async () => {
+    const bodies: string[] = [];
+    server.use(
+      http.post(`${API}/products/${PID}/media`, async ({ request }) => {
+        bodies.push(await request.text());
+        return HttpResponse.json(image({ id: "m9" }), { status: 201 });
+      }),
+    );
+    renderPane([image({ device: null })]);
+
+    await userEvent.click(screen.getByRole("tab", { name: /Chưa gán/ }));
+    await userEvent.upload(addInput(), [png("a")]);
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(part(bodies[0], "device")).toBe("");
+  });
+
+  it("opens one image large and steps through that tab only", async () => {
+    renderPane([
+      image({ id: "m1", caption: "Một", device: "phone" }),
+      image({ id: "m2", caption: "Hai", device: "phone" }),
+      image({ id: "m3", caption: "Ba", device: "desktop" }),
+    ]);
+
+    const cards = screen.getAllByTestId("gallery-item");
+    await userEvent.click(
+      within(cards[0]).getByRole("button", {
+        name: i18n.t("products.gallery.expand"),
+      }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Một")).toBeInTheDocument();
+    // Two phone captures, so the header counts within the phone tab.
+    expect(within(dialog).getByText(/1\/2/)).toBeInTheDocument();
+
+    await userEvent.click(
+      within(dialog).getByRole("button", {
+        name: i18n.t("products.gallery.next"),
+      }),
+    );
+    expect(within(dialog).getByText("Hai")).toBeInTheDocument();
+
+    // Wrapping stays inside the tab: the desktop capture is never reached.
+    await userEvent.click(
+      within(dialog).getByRole("button", {
+        name: i18n.t("products.gallery.next"),
+      }),
+    );
+    expect(within(dialog).getByText("Một")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Ba")).toBeNull();
+  });
+
+  it("frames a screenshot as the device it was taken on", () => {
+    renderPane([
+      image({ id: "m1", device: "phone" }),
+      image({ id: "m2", device: null }),
+    ]);
+    const framed = screen
+      .getAllByTestId("gallery-item")[0]
+      .querySelector(".kd-device");
+    expect(framed).toHaveAttribute("data-device", "phone");
+
+    // Nothing to frame it as until somebody files it.
+    screen.getByRole("tab", { name: /Chưa gán/ }).click();
+  });
+
+  it("does not throw the viewer open when a control on the picture is clicked", async () => {
+    const removed = vi.fn();
+    server.use(
+      http.delete(`${API}/products/${PID}/media/m1`, () => {
+        removed();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderPane([image({ id: "m1", device: "phone" })]);
+    const card = screen.getAllByTestId("gallery-item")[0];
+
+    // The bin sits ON the picture, and the picture opens the viewer.
+    await userEvent.click(
+      within(card).getByRole("button", { name: i18n.t("common.remove") }),
+    );
+    await waitFor(() => expect(removed).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    // Replacing: the button clicks a hidden <input type=file>, and that
+    // programmatic click bubbles from the input, which is not a button.
+    await userEvent.click(
+      within(card).getByRole("button", {
+        name: i18n.t("products.gallery.replace"),
+      }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    // Moving it to another tab is a control too.
+    await userEvent.click(
+      within(card).getByRole("button", {
+        name: i18n.t("products.gallery.device_tablet"),
+      }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    // A real mouse lands on the <svg> inside the button, not on the button —
+    // userEvent aims at the element it is given, so the icon is clicked
+    // directly here to make sure the guard climbs out of the SVG too.
+    const binIcon = within(card)
+      .getByRole("button", { name: i18n.t("common.remove") })
+      .querySelector("svg")!;
+    await userEvent.click(binIcon);
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    // The picture itself still opens it.
+    await userEvent.click(card.querySelector(".kd-device-screen")!);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("features one capture per device, and moving the star frees the old one", async () => {
+    const sent: unknown[] = [];
+    server.use(
+      http.patch(`${API}/products/${PID}/media/:mediaId`, async ({ request }) => {
+        sent.push(await request.json());
+        return HttpResponse.json(image({ is_hero: true }));
+      }),
+    );
+    renderPane([
+      image({ id: "m1", device: "phone", caption: "Một" }),
+      image({ id: "m2", device: "phone", caption: "Hai" }),
+    ]);
+
+    const cards = screen.getAllByTestId("gallery-item");
+    await userEvent.click(within(cards[1]).getByRole("checkbox"));
+
+    // Looked up rather than indexed: a request still in flight from an
+    // earlier test can land in this handler and shift the positions.
+    const hero = () =>
+      sent.find((body) => (body as Record<string, unknown>).is_hero === true);
+    await waitFor(() => expect(hero()).toBeTruthy());
+    // The caption travels with it: the API replaces what it is given, so a
+    // body carrying only the flag would wipe the caption.
+    expect(hero()).toEqual({ caption: "Hai", device: "phone", is_hero: true });
   });
 
   it("hides every write affordance when read-only", () => {

@@ -165,6 +165,7 @@ func (s *Service) ListArticles(ctx context.Context, id *httpx.Identity, p Articl
 	items := make([]ArticleListItem, 0, len(rows))
 	for _, r := range rows {
 		item := toArticleListItem(r)
+		item.FeaturedURL = s.mediaURL(ctx, r.FeaturedPath)
 		item.Title = localize.Str(tr[r.ID], "title", item.Title)
 		if item.Category != nil {
 			item.Category.Name = localize.Str(

@@ -37,6 +37,9 @@ type subscription struct {
 	Endpoint string
 	P256dh   string
 	Auth     string
+	// Label is only read by the test push, which reports per device; the
+	// fan-out paths never need it.
+	Label string
 }
 
 // SubscribeRequest is the console registering this browser.
@@ -86,4 +89,33 @@ const (
 	KindLeadNew = "lead_new"
 	// KindNewsletterNew: somebody subscribed to the newsletter.
 	KindNewsletterNew = "newsletter_new"
+	// KindTest: the console's "send a test" button. It exists because the
+	// chain from this server to a notification on somebody's screen runs
+	// through a push service, a service worker and an operating system, and
+	// until now the only way to exercise it was to wait for a real visitor —
+	// so a failure anywhere in it looked the same from here: nothing.
+	KindTest = "test"
 )
+
+// TestResult is what one browser did with the test push.
+//
+// Reported per device, because "notifications do not work" is usually one
+// device: a browser whose subscription expired, or one whose worker is older
+// than the kinds being sent.
+type TestResult struct {
+	ID    uuid.UUID `json:"id"`
+	Label string    `json:"label"`
+	// ok | gone | failed. `gone` means the push service has dropped this
+	// browser for good and the row has just been deleted.
+	Status string `json:"status"`
+}
+
+// TestResponse answers the console's test button.
+type TestResponse struct {
+	// Accepted counts the browsers the push service took the message for.
+	// It is NOT a count of notifications anybody saw: acceptance happens at
+	// Google or Mozilla, and what the machine does afterwards is the one
+	// part of this chain the server cannot observe.
+	Accepted int          `json:"accepted"`
+	Devices  []TestResult `json:"devices"`
+}

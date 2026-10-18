@@ -24,7 +24,7 @@
 // question with no obvious answer. The page can ask: see the message handler
 // at the bottom. Without this, a stale worker silently dropping a new kind
 // looks exactly like a server that never sent one.
-const VERSION = "2026-10-18.4-kinds";
+const VERSION = "2026-10-18.6-icon";
 
 const KINDS = {
   visitor_waiting: {
@@ -46,6 +46,14 @@ const KINDS = {
     title: "Có người đăng ký nhận tin",
     body: "Một địa chỉ mới vừa đăng ký. Bấm để xem danh sách.",
     path: "/leads?tab=newsletter",
+  },
+  // Sent by the console's test button. Seeing THIS text is the proof the
+  // whole chain works; seeing the generic "khách đang chờ" one instead means
+  // the worker running in this browser is older than the test feature.
+  test: {
+    title: "Thông báo thử",
+    body: "Nếu bạn thấy tin này, thông báo đẩy đang hoạt động trên máy này.",
+    path: "/chat",
   },
 };
 
@@ -94,8 +102,14 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(copy.title, {
       body: copy.body,
-      icon: "/web-app-manifest-192x192.png",
-      badge: "/favicon-96x96.png",
+      // The same mark the app itself wears (index.html, site.webmanifest).
+      // These two used to point at web-app-manifest-192x192.png and
+      // favicon-96x96.png, which are the PREVIOUS brand — nothing else in
+      // the console references them any more, so the only place the old
+      // logo still appeared was on notifications, where nobody looks for a
+      // stale asset.
+      icon: "/favicon.png",
+      badge: "/favicon.png",
       // Collapses repeats for the same thing into one entry instead of
       // stacking them while nobody is looking. Keyed by kind as well as id,
       // so a lead does not replace a waiting visitor.

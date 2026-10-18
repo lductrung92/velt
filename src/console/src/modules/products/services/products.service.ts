@@ -47,12 +47,25 @@ export interface ProductMemberRef {
 }
 
 /** One gallery entry: an uploaded image OR an embedded video, never both. */
+/**
+ * Which device tab a gallery entry belongs to. Null means nobody has said yet.
+ *
+ * A laptop and a desktop monitor share `desktop`: both show the wide layout,
+ * and a team does not capture the same screen twice to fill two tabs that
+ * would look alike.
+ */
+export type MediaDevice = "phone" | "tablet" | "desktop";
+export const MEDIA_DEVICES: MediaDevice[] = ["phone", "tablet", "desktop"];
+
 export interface ProductMedia {
   id: string;
   kind: "image" | "video";
   url: string | null;
   video_url: string | null;
   caption: string | null;
+  device: MediaDevice | null;
+  /** The capture the product page's hero shows for that device. */
+  is_hero: boolean;
   sort_order: number;
   created_at: string;
 }
@@ -223,10 +236,12 @@ export const productsService = {
     id: string,
     file: File | Blob,
     caption?: string,
+    device?: MediaDevice | null,
   ): Promise<ProductMedia> {
     const form = new FormData();
     form.append("file", file);
     if (caption) form.append("caption", caption);
+    if (device) form.append("device", device);
     const { data } = await api.post<ProductMedia>(
       `/products/${id}/media`,
       form,
@@ -241,25 +256,41 @@ export const productsService = {
     id: string,
     videoUrl: string,
     caption?: string,
+    device?: MediaDevice | null,
   ): Promise<ProductMedia> {
     const { data } = await api.post<ProductMedia>(
       `/products/${id}/media/video`,
       {
         video_url: videoUrl,
         caption,
+        device: device ?? null,
       },
     );
     return data;
   },
 
-  async updateGalleryCaption(
+  /**
+   * Edits what describes one entry. The request carries the WHOLE editable
+   * state — the API clears a field left out — so both travel together even
+   * when only one of them changed.
+   */
+  async updateGalleryItem(
     id: string,
     mediaId: string,
-    caption: string,
+    patch: {
+      caption: string | null;
+      device: MediaDevice | null;
+      /** Omitted leaves the hero flag as it is. */
+      is_hero?: boolean;
+    },
   ): Promise<ProductMedia> {
     const { data } = await api.patch<ProductMedia>(
       `/products/${id}/media/${mediaId}`,
-      { caption },
+      {
+        caption: patch.caption || null,
+        device: patch.device,
+        ...(patch.is_hero === undefined ? {} : { is_hero: patch.is_hero }),
+      },
     );
     return data;
   },

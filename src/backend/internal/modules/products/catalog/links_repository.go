@@ -22,8 +22,9 @@ type LinksRepository interface {
 	SetMembers(ctx context.Context, productID uuid.UUID, links []MemberLinkInput) error
 
 	Media(ctx context.Context, productID uuid.UUID) ([]MediaItem, error)
-	AddMedia(ctx context.Context, productID uuid.UUID, kind string, path, videoURL, caption *string) (*MediaItem, error)
-	UpdateMediaCaption(ctx context.Context, productID, mediaID uuid.UUID, caption *string) (*MediaItem, error)
+	AddMedia(ctx context.Context, productID uuid.UUID, kind string, path, videoURL, caption, device *string) (*MediaItem, error)
+	UpdateMedia(ctx context.Context, productID, mediaID uuid.UUID, caption, device *string, hero *bool) (*MediaItem, error)
+	ClearHero(ctx context.Context, productID, keepID uuid.UUID, device *string) error
 	DeleteMedia(ctx context.Context, productID, mediaID uuid.UUID) (*MediaItem, error)
 	ReorderMedia(ctx context.Context, productID uuid.UUID, ids []uuid.UUID) error
 }
@@ -142,11 +143,11 @@ func (r *pgxLinksRepository) SetMembers(ctx context.Context, productID uuid.UUID
 
 // --- Gallery ---
 
-const mediaColumns = `id, kind, path, video_url, caption, sort_order, created_at`
+const mediaColumns = `id, kind, path, video_url, caption, device, is_hero, sort_order, created_at`
 
 func scanMedia(row pgx.Row) (*MediaItem, error) {
 	var m MediaItem
-	err := row.Scan(&m.ID, &m.Kind, &m.path, &m.VideoURL, &m.Caption, &m.SortOrder, &m.CreatedAt)
+	err := row.Scan(&m.ID, &m.Kind, &m.path, &m.VideoURL, &m.Caption, &m.Device, &m.IsHero, &m.SortOrder, &m.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, shared.ErrNotFound
 	}
@@ -176,21 +177,36 @@ func (r *pgxLinksRepository) Media(ctx context.Context, productID uuid.UUID) ([]
 	return out, shared.Wrap("list product media", rows.Err())
 }
 
-func (r *pgxLinksRepository) AddMedia(ctx context.Context, productID uuid.UUID, kind string, path, videoURL, caption *string) (*MediaItem, error) {
+func (r *pgxLinksRepository) AddMedia(ctx context.Context, productID uuid.UUID, kind string, path, videoURL, caption, device *string) (*MediaItem, error) {
 	return scanMedia(r.pool.QueryRow(ctx,
-		`INSERT INTO product_media (product_id, kind, path, video_url, caption, sort_order)
-		 VALUES ($1, $2, $3, $4, $5,
+		`INSERT INTO product_media (product_id, kind, path, video_url, caption, device, sort_order)
+		 VALUES ($1, $2, $3, $4, $5, $6,
 		         (SELECT COALESCE(max(sort_order), -1) + 1 FROM product_media WHERE product_id = $1))
 		 RETURNING `+mediaColumns,
-		productID, kind, path, videoURL, caption))
+		productID, kind, path, videoURL, caption, device))
 }
 
-// UpdateMediaCaption scopes the update by product_id as well as media id, so a
-// caption cannot be edited through a product the caller does not hold.
-func (r *pgxLinksRepository) UpdateMediaCaption(ctx context.Context, productID, mediaID uuid.UUID, caption *string) (*MediaItem, error) {
+// UpdateMedia scopes the update by product_id as well as media id, so an entry
+// cannot be edited through a product the caller does not hold.
+func (r *pgxLinksRepository) UpdateMedia(ctx context.Context, productID, mediaID uuid.UUID, caption, device *string, hero *bool) (*MediaItem, error) {
+	// COALESCE: a nil hero means the caller did not mention the flag.
 	return scanMedia(r.pool.QueryRow(ctx,
-		`UPDATE product_media SET caption = $3 WHERE product_id = $1 AND id = $2
-		 RETURNING `+mediaColumns, productID, mediaID, caption))
+		`UPDATE product_media SET caption = $3, device = $4,
+		        is_hero = COALESCE($5, is_hero)
+		 WHERE product_id = $1 AND id = $2
+		 RETURNING `+mediaColumns, productID, mediaID, caption, device, hero))
+}
+
+// ClearHero unflags every OTHER capture of the same device, so the hero of a
+// device is always exactly one picture. Scoped by product, and by the device
+// of the row being promoted — promoting a phone capture must leave the
+// desktop hero alone.
+func (r *pgxLinksRepository) ClearHero(ctx context.Context, productID, keepID uuid.UUID, device *string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE product_media SET is_hero = FALSE
+		 WHERE product_id = $1 AND id <> $2 AND is_hero
+		   AND device IS NOT DISTINCT FROM $3`, productID, keepID, device)
+	return shared.Wrap("clear product hero", err)
 }
 
 // DeleteMedia returns the removed row so the service can reclaim its file.

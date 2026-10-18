@@ -1097,7 +1097,8 @@
         "archived_hint": "Put away"
       },
       "one": "article",
-      "archive": "Archive"
+      "archive": "Archive",
+      "no_cover": "No cover image"
     },
     "appearance": {
       "title": "Appearance",
@@ -1251,7 +1252,21 @@
     "image_align_center": "Align centre",
     "image_align_right": "Align right, text wraps left",
     "image_replace": "Replace the image",
-    "image_remove": "Remove the image"
+    "image_remove": "Remove the image",
+    "table": "Insert table",
+    "svg": {
+      "insert": "Insert SVG drawing",
+      "title": "SVG drawing",
+      "subject": "Paste the SVG markup, then fix the wording on the drawing",
+      "tab_code": "Code",
+      "tab_preview": "Preview",
+      "code_ph": "<svg viewBox=\"0 0 800 300\">…</svg>",
+      "code_hint": "Only the drawing is kept: script, style, class and external links are removed.",
+      "preview_hint": "Click a label on the drawing to edit it in place.",
+      "edit_code": "Edit the SVG markup",
+      "edit_labels": "Edit the labels",
+      "remove": "Remove the drawing"
+    }
   },
   "members": {
     "title": "Members",
@@ -1472,7 +1487,18 @@
       "video_hosts": "YouTube and Vimeo only (https).",
       "replace": "Change image",
       "replace_video": "Change video",
-      "preview": "Preview"
+      "preview": "Preview",
+      "device": "Device",
+      "device_phone": "Phone",
+      "device_tablet": "Tablet",
+      "device_desktop": "Desktop",
+      "device_unassigned": "Unassigned",
+      "empty_tab": "No images for this device yet.",
+      "expand": "View large",
+      "previous": "Previous image",
+      "next": "Next image",
+      "hero": "Hero image",
+      "hero_hint": "Show this one at the top of the product page (one per device)"
     },
     "members": {
       "add": "Add member",
@@ -1730,7 +1756,13 @@
       "last_used": "Last received {{at}}",
       "never_used": "Nothing received yet",
       "unsupported": "This browser does not support push notifications.",
-      "blocked": "This browser is blocking notifications. Allow them in the site settings and try again."
+      "blocked": "This browser is blocking notifications. Allow them in the site settings and try again.",
+      "test": "Send a test",
+      "test_sent": "Sent to {{count}} device(s). If no notification appears, the problem is this machine's notification settings, not the server.",
+      "test_problems": "({{gone}} expired, {{failed}} failed)",
+      "test_none": "No device accepted it. Turn notifications on again for this browser.",
+      "test_hint": "A test only reaches your own devices; nobody else is disturbed.",
+      "worker_version": "worker {{version}}"
     }
   },
   "leads": {
