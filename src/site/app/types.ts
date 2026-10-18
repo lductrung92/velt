@@ -40,6 +40,55 @@ export interface Product {
   demoAccess?: string;
   demoInstructions?: string[];
   forwardReferral?: boolean;
+  /** HTML only from the backend's sanitized, published product snapshot. */
+  bodyHtml?: string;
+  highlights?: string[];
+  platforms?: string[];
+  audiences?: string[];
+  techStack?: string[];
+  version?: string;
+  releasedAt?: string;
+  gallery?: ProductMedia[];
+  developers?: Pick<
+    Member,
+    "id" | "name" | "role" | "image" | "imageWidth" | "imageHeight"
+  >[];
+  seo?: ProductSEO;
+  alternates?: { locale: string; slug: string; x_default?: boolean }[];
+}
+/**
+ * Which device a capture was taken on. Chosen in the console and stored with
+ * the image; the page no longer guesses it from the caption. A laptop and a
+ * desktop monitor share `desktop` — both show the wide layout.
+ */
+export type DeviceKind = "phone" | "tablet" | "desktop";
+
+export interface ProductMedia {
+  kind: "image" | "video";
+  url: string;
+  width?: number;
+  height?: number;
+  videoUrl?: string;
+  caption: string;
+  /** Null for captures uploaded before the device column existed. */
+  device?: DeviceKind | null;
+  /** The one capture the hero shows for that device. */
+  isHero?: boolean;
+}
+export interface ProductSEO {
+  title?: string | null;
+  description?: string | null;
+  canonical_url?: string | null;
+  noindex?: boolean;
+  nofollow?: boolean;
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image_url?: string | null;
+}
+export interface ProductPageState {
+  status: "ready" | "not-found" | "unavailable" | "redirect";
+  product?: Product;
+  redirect?: string;
 }
 export interface SiteContent {
   brand: string;
@@ -63,6 +112,7 @@ export interface AppProps {
   locale?: string;
   /** The other languages the console configured, for the switcher + hreflang. */
   locales?: string[];
+  productPage?: ProductPageState;
 }
 /** One navigation entry, as the backend's menus.PublicItem sends it. The
  *  values come from the console, so every field is treated as untrusted. */

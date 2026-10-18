@@ -580,3 +580,16 @@ button.text-link{padding:0;background:transparent;border:0;align-self:flex-start
   .site-header .mobile-menu:not([hidden]) { animation: none; }
   .site-header .menu-toggle span { transition: none; }
 }
+
+/* The same enquiry form inside the product page's dialog. The dialog already
+   draws the white card, so only the field layout carries over. */
+#advice-dialog > .contact-form {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}

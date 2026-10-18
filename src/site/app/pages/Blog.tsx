@@ -43,7 +43,7 @@ export function Blog() {
   return (
     <div className="blog-page">
       <header className="blog-masthead page-hero page-hero--blog">
-        <div className="container">
+        <div className="page-hero-inner">
           <nav
             className="blog-breadcrumb"
             aria-label={t("blog.a11y.breadcrumb")}

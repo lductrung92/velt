@@ -8,6 +8,8 @@ import "./styles/team.css";
 import "./styles/chat.css";
 import "./styles/blog.css";
 import "./styles/regions.css";
+import "./styles/product-detail.css";
+import "./styles/hero-layout.css";
 
 const props: AppProps = JSON.parse(
   document.getElementById("site-data")!.textContent!,

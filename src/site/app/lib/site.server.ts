@@ -23,7 +23,7 @@ const API_BASE =
   "http://127.0.0.1:8081/api";
 
 /** Public product list item, as the catalog module publishes it. */
-interface ApiProduct {
+export interface ApiProduct {
   slug: string;
   name: string;
   summary: string | null;
@@ -84,7 +84,7 @@ function absolute(url: string | null | undefined): string {
   }
 }
 
-function toProduct(p: ApiProduct, t: T): Product {
+export function toProduct(p: ApiProduct, t: T): Product {
   return {
     id: p.slug,
     name: p.name,
@@ -101,6 +101,8 @@ function toProduct(p: ApiProduct, t: T): Product {
     imageWidth: p.cover_width,
     imageHeight: p.cover_height,
     skills: (p.platforms ?? []).map((c) => coded(t, "platform", c)),
+    platforms: p.platforms ?? [],
+    audiences: p.audience ?? [],
   };
 }
 

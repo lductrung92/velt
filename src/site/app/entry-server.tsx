@@ -1,9 +1,15 @@
 import { renderToString } from "react-dom/server";
 import { App, resolveRoute } from "./App";
-import type { AppProps, PublicSection, SiteContent } from "./types";
+import type {
+  AppProps,
+  ProductPageState,
+  PublicSection,
+  SiteContent,
+} from "./types";
 import { blogPath, emptyBlog, type BlogState } from "./lib/blog";
 import { loadBlog, articleRedirect } from "./lib/blog.server";
 import { loadSiteContent } from "./lib/site.server";
+import { loadProductPage, productDetailPath } from "./lib/product.server";
 import { loadHomeSections } from "./lib/landing.server";
 import { loadLayout } from "./lib/layout.server";
 import { DEFAULT_HEAD, type SiteLayout } from "./lib/layout";
@@ -24,13 +30,14 @@ export function render(
   layout?: SiteLayout,
   locale: string = BASE_LOCALE,
   locales: string[] = [],
+  productPage?: ProductPageState,
 ) {
   // `path` is already stripped of its language prefix: the router matches the
   // same routes in every language, and the prefix is put back by every link
   // the page writes (see App's href).
   const t = translator(locale);
   const url = new URL(path, "http://site.local"),
-    route = resolveRoute(url, data, blog);
+    route = resolveRoute(url, data, blog, productPage);
   const props: AppProps = {
     url: url.pathname + url.search,
     year: new Date().getUTCFullYear(),
@@ -40,6 +47,7 @@ export function render(
     layout,
     locale,
     locales,
+    productPage,
   };
   const title = route.home
     ? t("seo.home_title")
@@ -51,8 +59,9 @@ export function render(
         : route.catalog
           ? t("seo.catalog_title")
           : route.product
-            ? t("seo.product_title", { name: route.product.name }) +
-              (route.product.example ? t("seo.product_example_suffix") : "")
+            ? route.product.seo?.title ||
+              t("seo.product_title", { name: route.product.name }) +
+                (route.product.example ? t("seo.product_example_suffix") : "")
             : t("seo.notfound_title");
   const description =
     (route.blogDetail
@@ -60,6 +69,7 @@ export function render(
       : route.blogList
         ? t("seo.blog_description")
         : undefined) ||
+    route.product?.seo?.description ||
     route.product?.summary ||
     t("seo.default_description");
   return {
@@ -68,8 +78,12 @@ export function render(
     status: route.status,
     title,
     description,
-    ogTitle: blog.article?.seo?.og_title || title,
-    ogDescription: blog.article?.seo?.og_description || description,
+    ogTitle:
+      blog.article?.seo?.og_title || route.product?.seo?.og_title || title,
+    ogDescription:
+      blog.article?.seo?.og_description ||
+      route.product?.seo?.og_description ||
+      description,
     ogType: route.blogDetail && blog.article ? "article" : "website",
     lang: locale,
     // Everything the document head needs that is not a word on the page: the
@@ -95,10 +109,18 @@ export function render(
               blogPath(alt.slug),
             ]),
           )
-        : undefined,
+        : route.product?.alternates?.length
+          ? Object.fromEntries(
+              route.product.alternates.map((alt) => [
+                alt.locale,
+                productDetailPath(alt.slug),
+              ]),
+            )
+          : undefined,
     ),
     canonical: withLocale(
       blog.article?.seo?.canonical_url ||
+        route.product?.seo?.canonical_url ||
         (route.blogList
           ? "/blog"
           : route.blogDetail && blog.article
@@ -109,10 +131,15 @@ export function render(
     noindex:
       (layout?.head ?? DEFAULT_HEAD).noindexAll ||
       !!blog.article?.seo?.noindex ||
+      !!route.product?.seo?.noindex ||
       route.status !== 200 ||
       (route.blogList && !!url.searchParams.get("q")),
-    nofollow: !!blog.article?.seo?.nofollow,
-    image: blog.article?.cover_url || (layout?.head ?? DEFAULT_HEAD).ogImageUrl,
+    nofollow: !!blog.article?.seo?.nofollow || !!route.product?.seo?.nofollow,
+    image:
+      blog.article?.cover_url ||
+      route.product?.seo?.og_image_url ||
+      route.product?.image ||
+      (layout?.head ?? DEFAULT_HEAD).ogImageUrl,
   };
 }
 
@@ -137,26 +164,34 @@ export async function renderRequest(path: string) {
   // The blog's page size is a setting, and the layout read is what carries it:
   // load that first so the list asks the API for the right number of cards.
   const layoutFirst = await loadLayout(fetch, locale);
-  const [blog, site, sections, layout] = await Promise.all([
+  const [blog, site, sections, layout, productPage] = await Promise.all([
     needsBlog
-      ? loadBlog(
-          inner,
-          fetch,
-          undefined,
-          locale,
-          layoutFirst.head.blogPageSize,
-        )
+      ? loadBlog(inner, fetch, undefined, locale, layoutFirst.head.blogPageSize)
       : Promise.resolve(emptyBlog()),
     loadSiteContent(fetch, locale),
     isHome ? loadHomeSections(fetch, locale) : Promise.resolve([]),
     // Already loaded above; the cache makes this free.
     Promise.resolve(layoutFirst),
+    loadProductPage(inner, fetch, locale),
   ]);
   const redirect = url.pathname.startsWith("/blog/")
     ? articleRedirect(inner, blog)
-    : undefined;
+    : (productPage?.redirect ? productPage.redirect + url.search : undefined) ||
+      (productPage?.product &&
+      url.pathname !== productDetailPath(productPage.product.id)
+        ? productDetailPath(productPage.product.id) + url.search
+        : undefined);
   return {
-    ...render(inner, blog, site.content, sections, layout, locale, extras),
+    ...render(
+      inner,
+      blog,
+      site.content,
+      sections,
+      layout,
+      locale,
+      extras,
+      productPage,
+    ),
     // A redirect is computed on the un-prefixed path, so it has to go back
     // into the language it came from or the reader changes language by
     // following a renamed link.

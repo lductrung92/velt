@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 // The sizes the media package actually serves. A width outside this set is a
 // 404, not a clamp, so a srcset may never name one.
 const WIDTHS = [320, 640, 960, 1280, 1920];
@@ -7,6 +9,12 @@ const WIDTHS = [320, 640, 960, 1280, 1920];
 // dimensions; that one has to keep rendering exactly as it did.
 const MEDIA = /^((?:https?:\/\/[^/]+)?)\/img\/([^/]+)\.(webp|jpg|png)$/;
 
+/** /files serves unchanged bytes; /img can resize and encode them again. */
+export function originalImageUrl(src: string) {
+  const media = MEDIA.exec(src);
+  return media ? `${media[1]}/files/${media[2]}.${media[3]}` : src;
+}
+
 export function Img({
   src,
   width,
@@ -14,6 +22,7 @@ export function Img({
   alt,
   sizes,
   priority = false,
+  original = false,
   className,
   onError,
 }: {
@@ -26,9 +35,12 @@ export function Img({
   sizes: string;
   /** The page's LCP image, and nothing else. */
   priority?: boolean;
+  /** Preserve source resolution for interface screenshots and full-image views. */
+  original?: boolean;
   className?: string;
   onError?: () => void;
 }) {
+  const [failedOriginal, setFailedOriginal] = useState("");
   // width/height are what reserve the box before the bytes land, so they go on
   // the tag whether or not a srcset can be built below.
   const common = {
@@ -45,6 +57,22 @@ export function Img({
   // Never advertise a width above the source's own: the server does not
   // upscale, so a wider variant would only cost bytes for the same pixels.
   const widths = width ? WIDTHS.filter((w) => w <= width) : [];
+  if (original) {
+    const raw = originalImageUrl(src);
+    const source = failedOriginal === raw ? src : raw;
+    return (
+      <img
+        src={source}
+        {...common}
+        onError={() => {
+          // An image-only CDN or a legacy extension may not expose /files. Keep
+          // full pixel dimensions via the unsized image URL in that case.
+          if (source !== src) setFailedOriginal(raw);
+          else onError?.();
+        }}
+      />
+    );
+  }
   if (!media || !height || widths.length === 0)
     return <img src={src} {...common} />;
   const [, origin, slug, ext] = media;

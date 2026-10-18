@@ -71,7 +71,7 @@ export function plainArticle(html: string) {
   return html
     .replace(/<[^>]*>/g, " ")
     .replace(
-      /&(?:nbsp|amp|lt|gt|quot|#39);/g,
+      /&(?:nbsp|amp|lt|gt|quot|#34|#38|#39|#60|#62);/g,
       (entity) =>
         ({
           "&nbsp;": " ",
@@ -79,7 +79,14 @@ export function plainArticle(html: string) {
           "&lt;": "<",
           "&gt;": ">",
           "&quot;": '"',
+          // The numeric forms are what the backend's sanitizer actually emits
+          // (Go escapes a quote as &#34;, never &quot;), so a heading with
+          // quotation marks reached the table of contents still escaped.
+          "&#34;": '"',
+          "&#38;": "&",
           "&#39;": "'",
+          "&#60;": "<",
+          "&#62;": ">",
         })[entity] || entity,
     )
     .replace(/\s+/g, " ")

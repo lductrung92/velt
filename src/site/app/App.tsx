@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { AppProps, SiteContent } from "./types";
+import type { AppProps, ProductPageState, SiteContent } from "./types";
 import { content } from "./data/content";
 import { getCatalog } from "./lib/catalog";
 import { withReferral } from "./lib/links";
@@ -22,6 +22,7 @@ export function resolveRoute(
   url: URL,
   data: SiteContent = content,
   blog: BlogState = emptyBlog(),
+  productPage?: ProductPageState,
 ) {
   const { products } = getCatalog(data);
   const home = url.pathname === "/" || url.pathname === "/index.html";
@@ -39,7 +40,11 @@ export function resolveRoute(
   const detail =
     url.pathname === "/product.html" || url.pathname.startsWith("/products/");
   const product =
-    detail && !catalog ? products.find((item) => item.id === id) : undefined;
+    detail && !catalog
+      ? productPage
+        ? productPage.product
+        : products.find((item) => item.id === id)
+      : undefined;
   const blogList = /^\/blog\/?$/.test(url.pathname);
   const blogDetail = !blogList && url.pathname.startsWith("/blog/");
   return {
@@ -55,9 +60,11 @@ export function resolveRoute(
           : blogDetail && !blog.article
             ? 404
             : 200
-        : home || catalog || product
-          ? 200
-          : 404,
+        : detail && productPage?.status === "unavailable"
+          ? 503
+          : home || catalog || product
+            ? 200
+            : 404,
   };
 }
 
@@ -91,13 +98,14 @@ export function App({
   layout,
   locale = BASE_LOCALE,
   locales = [],
+  productPage,
 }: AppProps & { data?: SiteContent }) {
   const url = useMemo(() => new URL(path, "http://site.local"), [path]);
   // The site's own words, and the header/footer it falls back to, both follow
   // the language — so they are resolved once here and handed down.
   const t = useMemo(() => translator(locale), [locale]);
   const chrome = useMemo(() => layout ?? defaultLayout(t), [layout, t]);
-  const route = resolveRoute(url, data, blog);
+  const route = resolveRoute(url, data, blog, productPage);
   const group = pageGroup(route);
   const context = useMemo(() => {
     const referrer = data.members.find(
@@ -124,18 +132,31 @@ export function App({
       // from console data.
       href: (path: string) => withLocale(withReferral(path, referrer), locale),
       localeHref: (target: string) => {
-        // An article has its own slug per language; anything else is the same
-        // path under a different prefix.
-        const alternate = blog?.article?.alternates?.find(
-          (alt) => alt.locale === target,
-        );
+        // Published articles and products can each have a different slug per
+        // language; other routes keep the same path under a different prefix.
+        const alternate = (
+          blog?.article?.alternates || productPage?.product?.alternates
+        )?.find((alt) => alt.locale === target);
         const path = alternate
-          ? blogPath(alternate.slug)
+          ? productPage?.product
+            ? `/products/${encodeURIComponent(alternate.slug)}`
+            : blogPath(alternate.slug)
           : url.pathname + url.search;
         return withLocale(withReferral(path, referrer), target);
       },
     };
-  }, [data, url, blog, sections, chrome, group, locale, locales, t]);
+  }, [
+    data,
+    url,
+    blog,
+    sections,
+    chrome,
+    group,
+    locale,
+    locales,
+    t,
+    productPage,
+  ]);
   return (
     <SiteContext value={context}>
       <a className="skip-link" href="#main">
@@ -147,7 +168,9 @@ export function App({
         id="main"
         className={
           !route.home && !route.catalog && !route.blogList && !route.blogDetail
-            ? "product-page"
+            ? route.product
+              ? "product-page product-showcase"
+              : "product-page"
             : undefined
         }
       >
@@ -158,8 +181,7 @@ export function App({
                 {context.referrer.name.slice(0, 1)}
               </span>
               <p>
-                {t("referral.intro")}{" "}
-                <strong>{context.referrer.name}</strong>
+                {t("referral.intro")} <strong>{context.referrer.name}</strong>
               </p>
               <a href={context.href("/#contact")}>{t("referral.cta")}</a>
             </div>
@@ -176,7 +198,7 @@ export function App({
         ) : route.product ? (
           <ProductDetail product={route.product} />
         ) : (
-          <NotFound />
+          <NotFound unavailable={productPage?.status === "unavailable"} />
         )}
       </main>
       <Footer href={context.href} year={year} layout={chrome} />

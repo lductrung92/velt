@@ -90,6 +90,15 @@ test("article SSR renders readable CMS HTML, stable heading links and article SE
   assert.equal(articleOutline("<p></p>").minutes, 1);
 });
 
+test("a heading with quotation marks reads as text in the table of contents", () => {
+  // The backend's sanitizer writes a double quote as &#34;, so the outline has
+  // to decode the numeric form, not just &quot;.
+  const { headings } = articleOutline(
+    "<h2>Bẫy 4: &#34;nạp được&#34; không có nghĩa là &#34;đúng&#34;</h2>",
+  );
+  assert.equal(headings[0].label, 'Bẫy 4: "nạp được" không có nghĩa là "đúng"');
+});
+
 test("the article cover offers only served widths it has pixels for, and an image without dimensions keeps its plain tag", () => {
   const sized = render("/blog/bai-viet-thu", {
     ...emptyBlog(),

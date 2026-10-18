@@ -90,7 +90,7 @@ export function Catalog() {
   return (
     <>
       <section className="catalog-hero page-hero page-hero--products">
-        <div className="container">
+        <div className="page-hero-inner">
           <nav className="breadcrumbs" aria-label={t("catalog.breadcrumb")}>
             <a href={href("/")}>{t("catalog.breadcrumb_home")}</a>
             <span aria-hidden="true">/</span>

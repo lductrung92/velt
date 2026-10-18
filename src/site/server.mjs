@@ -291,9 +291,23 @@ async function serve(req, res) {
     const entry = manifest?.["app/entry-client.tsx"];
     const styles = production
       ? (entry.css || []).map((file) => `/${file}`)
-      : ["styles", "catalog", "profile", "team", "chat", "blog"].map(
-          (file) => `/app/styles/${file}.css`,
-        );
+      : [
+          "styles",
+          "catalog",
+          "profile",
+          "team",
+          "chat",
+          "blog",
+          "regions",
+          "product-detail",
+          "hero-layout",
+        ]
+          // ?direct or Vite answers these links with a JS module, which the
+          // browser refuses as a stylesheet: the page then paints unstyled and
+          // only settles when entry-client injects the CSS. That late settle is
+          // the reload flash, and the hero snapping from full width to its
+          // 100rem column is the most visible part of it.
+          .map((file) => `/app/styles/${file}.css?direct`);
     const serialized = JSON.stringify(result.props)
       .replace(/</g, "\\u003c")
       .replace(/\u2028/g, "\\u2028")

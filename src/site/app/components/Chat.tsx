@@ -49,6 +49,7 @@ function speaker(t: T, role: ChatMessage["role"], degraded: boolean): string {
 export function Chat() {
   const { referrer, url, locale, layout, t } = useSite();
   const [open, setOpen] = useState(false);
+  const [showInvitation, setShowInvitation] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState("");
@@ -63,6 +64,45 @@ export function Chat() {
   const log = useRef<HTMLDivElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const invitation = useRef<HTMLDivElement>(null);
+  const invitationSeen = useRef(false);
+
+  const dismissInvitation = useCallback(() => {
+    invitationSeen.current = true;
+    setShowInvitation(false);
+    try {
+      sessionStorage.setItem("zukatek-chat-invitation", "seen");
+    } catch {
+      // The invitation still works when browser storage is unavailable.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open || invitationSeen.current) return;
+    try {
+      if (sessionStorage.getItem("zukatek-chat-invitation")) return;
+    } catch {
+      // Keep this optional invitation independent of the conversation itself.
+    }
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
+    const revealTimer = setTimeout(() => {
+      invitationSeen.current = true;
+      setShowInvitation(true);
+      try {
+        sessionStorage.setItem("zukatek-chat-invitation", "seen");
+      } catch {
+        // No storage is required to use chat.
+      }
+      hideTimer = setTimeout(() => {
+        if (!invitation.current?.contains(document.activeElement))
+          setShowInvitation(false);
+      }, 12000);
+    }, 4000);
+    return () => {
+      clearTimeout(revealTimer);
+      clearTimeout(hideTimer);
+    };
+  }, [open]);
 
   const attach = useCallback((id: string) => {
     closeStream.current?.();
@@ -134,16 +174,21 @@ export function Chat() {
     }
   }, [open, draft, messages, streaming]);
 
-  const toggle = useCallback((value: boolean, restoreFocus = false) => {
-    setOpen(value);
-    requestAnimationFrame(() => {
-      if (value) {
-        if (matchMedia("(min-width:768px)").matches)
-          input.current?.focus({ preventScroll: true });
-        else closeButton.current?.focus({ preventScroll: true });
-      } else if (restoreFocus) launcher.current?.focus({ preventScroll: true });
-    });
-  }, []);
+  const toggle = useCallback(
+    (value: boolean, restoreFocus = false) => {
+      if (value) dismissInvitation();
+      setOpen(value);
+      requestAnimationFrame(() => {
+        if (value) {
+          if (matchMedia("(min-width:768px)").matches)
+            input.current?.focus({ preventScroll: true });
+          else closeButton.current?.focus({ preventScroll: true });
+        } else if (restoreFocus)
+          launcher.current?.focus({ preventScroll: true });
+      });
+    },
+    [dismissInvitation],
+  );
 
   async function submit(text: string) {
     const message = text.trim().slice(0, 2000);
@@ -406,16 +451,65 @@ export function Chat() {
         </div>
       </section>
 
+      <div
+        ref={invitation}
+        className="chat-invitation"
+        hidden={open || !showInvitation}
+      >
+        <button
+          className="chat-invitation-open"
+          type="button"
+          onClick={() => toggle(true)}
+        >
+          <strong>{t("chat.invitation_title")}</strong>
+          <span>{t("chat.invitation_body")}</span>
+        </button>
+        <button
+          className="chat-invitation-dismiss"
+          type="button"
+          aria-label={t("chat.invitation_dismiss")}
+          onClick={() => {
+            dismissInvitation();
+            launcher.current?.focus({ preventScroll: true });
+          }}
+        >
+          <Icon name="close" />
+        </button>
+      </div>
+
       <button
         ref={launcher}
         className="floating-contact chat-launcher"
+        data-open={open}
         type="button"
         aria-label={t(open ? "chat.launcher_close" : "chat.launcher_open")}
         aria-controls="zukatek-chat"
         aria-expanded={open}
         onClick={() => toggle(!open, open)}
       >
-        <Icon name={open ? "close" : "chat"} />
+        <span className="chat-launcher-sheen" aria-hidden="true" />
+        {open ? (
+          <Icon name="close" />
+        ) : (
+          <svg
+            className="chat-launcher-glyph"
+            viewBox="0 0 32 32"
+            aria-hidden="true"
+          >
+            <path
+              d="M27 15.3a11 11 0 0 1-11.2 10.9 12 12 0 0 1-4.6-.9L5 27l1.7-6a10.6 10.6 0 0 1-2-6.1A11 11 0 0 1 16 4a11 11 0 0 1 11 11.3Z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+            />
+            <g fill="currentColor" className="chat-launcher-dots">
+              <circle cx="11" cy="15.5" r="1.35" />
+              <circle cx="16" cy="15.5" r="1.35" />
+              <circle cx="21" cy="15.5" r="1.35" />
+            </g>
+          </svg>
+        )}
       </button>
     </div>
   );

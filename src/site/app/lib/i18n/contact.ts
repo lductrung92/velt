@@ -96,6 +96,9 @@ export const vi = {
   "chat.minimize": "Thu nhỏ chatbox",
   "chat.launcher_close": "Thu nhỏ chatbox ZUKATEK",
   "chat.launcher_open": "Mở chatbox ZUKATEK",
+  "chat.invitation_title": "Bạn cần tư vấn?",
+  "chat.invitation_body": "Nhắn Zukatek để chọn sản phẩm phù hợp.",
+  "chat.invitation_dismiss": "Đóng lời mời trò chuyện",
   "chat.degraded_badge": "RÚT GỌN",
   "chat.degraded_note":
     "Trợ lý đang trả lời rút gọn · Người phụ trách vẫn hỗ trợ được",
@@ -213,6 +216,9 @@ export const en: Record<keyof typeof vi, string> = {
   "chat.minimize": "Minimise the chat",
   "chat.launcher_close": "Minimise the ZUKATEK chat",
   "chat.launcher_open": "Open the ZUKATEK chat",
+  "chat.invitation_title": "Need a hand?",
+  "chat.invitation_body": "Chat with Zukatek to find the right product.",
+  "chat.invitation_dismiss": "Dismiss the chat invitation",
   "chat.degraded_badge": "SHORT ANSWERS",
   "chat.degraded_note":
     "The assistant is giving short answers · Our team can still help",

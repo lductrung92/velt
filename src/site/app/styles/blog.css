@@ -202,7 +202,10 @@
   height: 100%;
 }
 .blog-cover {
-  aspect-ratio: 3/2;
+  /* 16:9 — the shape covers are authored at, and the one the product list
+     uses, so the two lists on this site do not disagree about what a card
+     looks like. */
+  aspect-ratio: 16/9;
   position: relative;
   background: #edf3fc;
   overflow: hidden;
@@ -467,7 +470,7 @@
   grid-template-columns: 22rem 1fr;
 }
 .blog-grid-single .blog-cover {
-  aspect-ratio: 3/2;
+  aspect-ratio: 16/9;
 }
 .blog-grid-single .blog-card-copy {
   padding: 2rem;
@@ -623,12 +626,12 @@
 .blog-share .article-share-feedback { margin: .375rem 0 0; font-size: .8125rem; line-height: 1.7; color: #78889f; }
 .blog-prose {
   color: #34465e;
-  font-size: 1.125rem;
+  font-size: 1rem;
   line-height: 1.95;
   overflow-wrap: anywhere;
 }
 .blog-prose p {
-  margin: 0 0 1.5rem;
+  margin: 0;
 }
 .blog-prose h2,
 .blog-prose h3 {
@@ -769,6 +772,24 @@
 .blog-prose th {
   background: #f4f7fc;
   font-weight: 600;
+}
+/* Diagrams travel inline, so their labels stay real text — selectable,
+   searchable and translated with the article.
+
+   The figure scrolls rather than the drawing shrinking. A diagram drawn 800
+   units wide, squeezed into a 358px column, renders its 13px labels at 6px:
+   present, and unreadable. Below the floor it keeps its size and the reader
+   pans, which is what a wide table does here too. */
+.blog-prose figure.kd-svg {
+  margin: 1.75rem 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.blog-prose figure.kd-svg > svg {
+  display: block;
+  width: 100%;
+  min-width: 34rem;
+  height: auto;
 }
 .blog-prose hr {
   border: 0;
@@ -1035,7 +1056,7 @@
 .listing-post-card:focus-within { outline: 2px solid var(--primary); outline-offset: 3px; }
 .listing-post-link { display: flex; flex-direction: column; height: 100%; text-decoration: none; }
 .listing-post-link:hover { text-decoration: none; }
-.listing-post-card .blog-cover { aspect-ratio: 16 / 10; border-bottom: 1px solid #eaf0f7; }
+.listing-post-card .blog-cover { aspect-ratio: 16 / 9; border-bottom: 1px solid #eaf0f7; }
 .listing-post-copy { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 1.375rem; }
 .listing-post-copy h3 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0 0 .75rem; color: var(--navy); font-size: 1.25rem; line-height: 1.6; font-weight: 600; letter-spacing: -.025em; overflow-wrap: anywhere; transition: color .18s; }
 .listing-post-link:hover h3 { color: var(--primary); }
